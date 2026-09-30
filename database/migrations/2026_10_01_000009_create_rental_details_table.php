@@ -18,7 +18,6 @@ return new class extends Migration
                 ->constrained('item_units')->nullOnDelete();
 
             $table->decimal('daily_rate_snapshot', 10, 2);
-            $table->decimal('deposit_snapshot', 10, 2)->default(0);
             $table->decimal('late_fee_per_day_snapshot', 10, 2)->default(0);
 
             $table->enum('condition_before', ['excellent', 'good', 'fair', 'damaged'])->nullable();

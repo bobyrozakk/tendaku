@@ -39,18 +39,18 @@ return new class extends Migration
             $table->decimal('subtotal', 12, 2);
             $table->decimal('delivery_fee', 12, 2)->default(0);
             $table->decimal('discount_amount', 12, 2)->default(0);
-            $table->decimal('grand_total', 12, 2); // subtotal + delivery_fee - discount_amount
+            $table->decimal('grand_total', 12, 2); // subtotal + delivery_fee - discount_amount (langsung lunas)
 
-            $table->decimal('total_deposit', 12, 2)->default(0);
-            $table->decimal('dp_required', 12, 2)->default(0);
+            // Jaminan Fisik KTP (Tanpa Deposit Uang)
+            $table->string('ktp_collateral_photo_url', 255)->nullable(); // Foto penyewa memegang KTP & verifikasi wajah cocok
+            $table->enum('ktp_collateral_status', ['pending', 'held', 'returned'])->default('pending'); // pending (sebelum pickup), held (KTP ditahan toko), returned (KTP dikembalikan)
+            $table->timestamp('ktp_received_at')->nullable(); // Ditahan saat pickup
+            $table->timestamp('ktp_returned_at')->nullable(); // Dikembalikan saat return
+            $table->text('ktp_collateral_notes')->nullable();
 
             $table->decimal('total_late_fee', 12, 2)->default(0);
             $table->decimal('total_damage_fee', 12, 2)->default(0);
-            $table->decimal('final_total', 12, 2)->nullable(); // terisi saat return
-
-            $table->enum('deposit_status', ['pending', 'held', 'partially_refunded', 'refunded', 'forfeited'])
-                ->default('pending');
-            $table->decimal('deposit_refund_amount', 12, 2)->default(0);
+            $table->decimal('final_total', 12, 2)->nullable(); // grand_total + late_fee + damage_fee
 
             $table->enum('status', [
                 'pending', 'confirmed', 'picked_up', 'returned', 'completed', 'cancelled', 'expired',

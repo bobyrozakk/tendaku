@@ -1,58 +1,142 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🏕️ TENDAKU - Platform Penyewaan Alat Camping & Outdoor Multi-Vendor
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+[![Laravel](https://img.shields.io/badge/Laravel-11%2F12-FF2D20?style=flat-square&logo=laravel&logoColor=white)](https://laravel.com)
+[![PHP](https://img.shields.io/badge/PHP-8.3-777BB4?style=flat-square&logo=php&logoColor=white)](https://php.net)
+[![Livewire](https://img.shields.io/badge/Livewire-3.x-4E5BA6?style=flat-square&logo=livewire&logoColor=white)](https://livewire.laravel.com)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 
-## About Laravel
+**Tendaku** adalah platform web penyewaan perlengkapan *outdoor* & camping berbasis **Multi-Tenant (Multi-Vendor)**. Platform ini memungkinkan penyedia jasa sewa perlengkapan outdoor (Vendor) untuk mengelola katalog produk, melacak unit fisik alat secara terperinci (serialized unit tracking), memproses reservasi sewa (pembayaran lunas), mengelola alur serah-terima dengan **Jaminan KTP Fisik & Verifikasi Foto Wajah**, serta menerima pembayaran terintegrasi via **Midtrans**.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📌 Fitur Utama Platform (Update Revisi)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 🏢 **1. Multi-Tenancy (Isolasi Data Vendor)**
+- Isolasi data otomatis per toko sewa berbasis `vendor_id` (`BelongsToVendor` Trait).
+- Setiap vendor memiliki dashboard, katalog, unit barang, dan pengaturan rekening/gateway pembayaran secara mandiri.
 
-## Learning Laravel
+### ⛺ **2. Manajemen Katalog & Unit Fisik (Serialized Tracking)**
+- **Master Item:** Pengaturan tarif sewa per hari dan denda keterlambatan per hari *(Tanpa deposit uang tunai)*.
+- **Item Unit:** Pengelolaan unit fisik barang individual (menggunakan kode unit / barcode), pencatatan harga pembelian, serta riwayat status unit (`available`, `rented`, `maintenance`, `lost`).
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 🪪 **3. Jaminan Fisik KTP & Foto Verifikasi (Tanpa Deposit Uang)**
+- **Bayar Lunas di Awal:** Seluruh transaksi sewa dibayar lunas melalui Midtrans atau tunai.
+- **Penahanan KTP Fisik saat Pickup:** Penyewa menyerahkan KTP fisik asli sebagai jaminan sewa saat serah-terima barang.
+- **Foto Verifikasi KTP + Wajah:** Admin toko wajib mengambil foto penyewa memegang KTP fisiknya langsung melalui sistem untuk memastikan kesesuaian identitas.
+- **Bukti Digital Tanda Terima Jaminan:** Foto dan bukti penahanan KTP tersimpan di sistem, sehingga penyewa & toko memiliki bukti sah digital penahanan jaminan KTP.
+- **Pengembalian KTP saat Return:** KTP fisik diserahkan kembali saat barang dikembalikan dan status jaminan di-update menjadi `returned`.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 🔄 **4. Alur Penyewaan & Inspeksi Barang (Pickup & Return Flow)**
+- **Inspeksi Serah Terima:** Pencatatan kondisi barang sebelum sewa (`condition_before`) dan sesudah sewa (`condition_after`).
+- Perhitungan otomatis denda keterlambatan (*late fee*) dan denda kerusakan (*damage fee*).
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### ☀️ **5. Kalender Prediksi Cuaca (Weather Calendar Integration)**
+- Fitur bagi pelanggan untuk mengecek prakiraan cuaca di lokasi camping tujuan pada tanggal reservasi yang dipilih.
 
-## Agentic Development
+---
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## 📁 Struktur Direktori & Arsitektur Utama
 
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+tendaku/
+├── app/
+│   ├── Http/Controllers/
+│   │   ├── Customer/             # Controller katalog & checkout pelanggan
+│   │   ├── Vendor/               # Controller produk & manajemen rental vendor
+│   │   └── Webhook/              # Webhook handler Midtrans
+│   ├── Livewire/                 # Komponen interaktif Livewire 3
+│   │   ├── Customer/             # Booking & Weather Calendar
+│   │   └── Vendor/               # Item Unit Manager & Pickup/Return Flow (Upload Foto KTP)
+│   ├── Models/                   # Eloquent Models (User, Vendor, MasterItem, ItemUnit, Rental, dll.)
+│   ├── Services/                 # Layer Logika Bisnis
+│   │   ├── AvailabilityService.php   # Cek ketersediaan unit barang per rentang tanggal
+│   │   ├── RentalService.php         # Kalkulasi pelunasan, foto KTP jaminan, denda
+│   │   ├── MidtransService.php       # Integrasi Snap Payment & Webhook
+│   │   └── WeatherService.php        # Integrasi OpenWeather API
+│   └── Traits/
+│       └── BelongsToVendor.php       # Global scope isolasi multi-tenant vendor
+├── database/migrations/          # Skema database berurutan
+├── PRD.md                        # Product Requirement Document & Panduan Tim Lengkap
+└── resources/views/              # Template Blade (Customer & Vendor UI)
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## 📄 Dokumen Kebutuhan Produk (PRD)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Untuk informasi terperinci mengenai **Spesifikasi Produk, Skema Database, Peran Pengguna (Role Matrix), Lifecycle Transaksi, serta Standar Pengkodean Tim**, silakan baca dokumen resmi kami:
+👉 **[PRD.md](file:///PRD.md)**
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 🛠️ Panduan Memulai Development (Quick Start)
 
-## Security Vulnerabilities
+### Prerequisites
+- PHP 8.3+
+- Composer 2.x
+- Node.js 18+ & NPM
+- Database MySQL / PostgreSQL
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Langkah Instalasi
 
-## License
+1. **Clone Repository & Masuk ke Direktori Project:**
+   ```bash
+   git clone https://github.com/bobyrozakk/tendaku.git
+   cd tendaku
+   ```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+2. **Install Dependency PHP & JavaScript:**
+   ```bash
+   composer install
+   npm install
+   ```
+
+3. **Salin File Environment & Generate Application Key:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+4. **Konfigurasi Database di File `.env`:**
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=tendaku
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
+
+5. **Jalankan Migrasi Database & Seeder:**
+   ```bash
+   php artisan migrate --seed
+   ```
+
+6. **Jalankan Server Development:**
+   ```bash
+   php artisan serve
+   ```
+   *Di terminal terpisah, jalankan bundling aset:*
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 🧪 Pengujian & Code Formatting
+
+- **Menjalankan Test Suite:**
+  ```bash
+  php artisan test
+  ```
+
+- **Format Kode PHP (Laravel Pint):**
+  ```bash
+  vendor/bin/pint --format agent
+  ```
+
+---
+
+## 👥 Tim & Kontribusi
+
+Proyek ini dikembangkan untuk penyewaan peralatan outdoor modern. Pastikan seluruh perubahan kode mengacu pada acuan arsitektur di [PRD.md](file:///PRD.md).

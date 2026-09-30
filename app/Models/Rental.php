@@ -17,8 +17,8 @@ class Rental extends Model
         'pickup_date', 'return_date', 'picked_up_at', 'returned_at',
         'pickup_method', 'delivery_address', 'rental_days',
         'subtotal', 'delivery_fee', 'discount_amount', 'grand_total',
-        'total_deposit', 'dp_required', 'total_late_fee', 'total_damage_fee',
-        'final_total', 'deposit_status', 'deposit_refund_amount',
+        'ktp_collateral_photo_url', 'ktp_collateral_status', 'ktp_received_at', 'ktp_returned_at', 'ktp_collateral_notes',
+        'total_late_fee', 'total_damage_fee', 'final_total',
         'status', 'expires_at', 'notes',
     ];
 
@@ -32,17 +32,16 @@ class Rental extends Model
         'return_date' => 'date',
         'picked_up_at' => 'datetime',
         'returned_at' => 'datetime',
+        'ktp_received_at' => 'datetime',
+        'ktp_returned_at' => 'datetime',
         'expires_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'grand_total' => 'decimal:2',
-        'total_deposit' => 'decimal:2',
-        'dp_required' => 'decimal:2',
         'total_late_fee' => 'decimal:2',
         'total_damage_fee' => 'decimal:2',
         'final_total' => 'decimal:2',
-        'deposit_refund_amount' => 'decimal:2',
     ];
 
     public function vendor(): BelongsTo
