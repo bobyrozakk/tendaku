@@ -10,6 +10,8 @@ class NotificationLog extends Model
 {
     use BelongsToVendor;
 
+    protected $table = 'notifications';
+
     protected $fillable = [
         'vendor_id', 'user_id', 'rental_id', 'recipient_phone',
         'channel', 'type', 'message', 'status', 'sent_at',

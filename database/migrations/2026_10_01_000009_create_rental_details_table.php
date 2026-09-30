@@ -18,16 +18,18 @@ return new class extends Migration
                 ->constrained('item_units')->nullOnDelete();
 
             $table->decimal('daily_rate_snapshot', 10, 2);
-            $table->decimal('late_fee_per_day_snapshot', 10, 2)->default(0);
+            $table->decimal('deposit_snapshot', 10, 2)->default(0);          // snapshot deposit per unit (dari ERD)
+            $table->decimal('late_fee_per_day_snapshot', 10, 2)->default(0); // BARU: snapshot denda per hari
 
             $table->enum('condition_before', ['excellent', 'good', 'fair', 'damaged'])->nullable();
             $table->enum('condition_after', ['excellent', 'good', 'fair', 'damaged', 'lost'])->nullable();
             $table->text('checklist_notes')->nullable();
 
-            $table->timestamp('returned_at')->nullable();
+            $table->timestamp('returned_at')->nullable();                    // BARU: waktu presisi return per unit
             $table->unsignedInteger('late_days')->default(0);
             $table->decimal('late_fee', 10, 2)->default(0);
             $table->decimal('damage_fee', 10, 2)->default(0);
+            $table->boolean('is_returned')->default(false);                  // flag unit dikembalikan (dari ERD)
 
             $table->timestamps();
 

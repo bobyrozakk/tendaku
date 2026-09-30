@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('slug', 160);
             $table->text('description')->nullable();
             $table->decimal('daily_rate', 10, 2);
+            $table->decimal('deposit_amount', 10, 2)->default(0);
             $table->decimal('late_fee_per_day', 10, 2)->default(0);
             $table->string('image_url', 255)->nullable();
             $table->boolean('is_active')->default(true);

@@ -28,8 +28,9 @@ return new class extends Migration
 
             $table->date('pickup_date');
             $table->date('return_date');
-            $table->timestamp('picked_up_at')->nullable();
-            $table->timestamp('returned_at')->nullable();
+            $table->date('actual_return_date')->nullable(); // tanggal aktual pengembalian (dari ERD)
+            $table->timestamp('picked_up_at')->nullable();  // BARU: waktu presisi pickup
+            $table->timestamp('returned_at')->nullable();   // BARU: waktu presisi return
 
             $table->enum('pickup_method', ['self_pickup', 'delivery'])->default('self_pickup');
             $table->text('delivery_address')->nullable();
@@ -37,26 +38,28 @@ return new class extends Migration
             $table->unsignedInteger('rental_days');
 
             $table->decimal('subtotal', 12, 2);
-            $table->decimal('delivery_fee', 12, 2)->default(0);
-            $table->decimal('discount_amount', 12, 2)->default(0);
-            $table->decimal('grand_total', 12, 2); // subtotal + delivery_fee - discount_amount (langsung lunas)
+            $table->decimal('delivery_fee', 12, 2)->default(0);       // BARU: biaya ongkir
+            $table->decimal('discount_amount', 12, 2)->default(0);    // BARU: diskon
+            $table->decimal('total_deposit', 12, 2)->default(0);      // total uang jaminan (dari ERD)
+            $table->decimal('dp_amount', 12, 2)->default(0);          // uang muka DP (dari ERD)
+            $table->decimal('grand_total', 12, 2);                    // total tagihan akhir
 
-            // Jaminan Fisik KTP (Tanpa Deposit Uang)
-            $table->string('ktp_collateral_photo_url', 255)->nullable(); // Foto penyewa memegang KTP & verifikasi wajah cocok
-            $table->enum('ktp_collateral_status', ['pending', 'held', 'returned'])->default('pending'); // pending (sebelum pickup), held (KTP ditahan toko), returned (KTP dikembalikan)
-            $table->timestamp('ktp_received_at')->nullable(); // Ditahan saat pickup
-            $table->timestamp('ktp_returned_at')->nullable(); // Dikembalikan saat return
+            // BARU: Jaminan Fisik KTP (tambahan codebase)
+            $table->string('ktp_collateral_photo_url', 255)->nullable();
+            $table->enum('ktp_collateral_status', ['pending', 'held', 'returned'])->default('pending');
+            $table->timestamp('ktp_received_at')->nullable();
+            $table->timestamp('ktp_returned_at')->nullable();
             $table->text('ktp_collateral_notes')->nullable();
 
             $table->decimal('total_late_fee', 12, 2)->default(0);
             $table->decimal('total_damage_fee', 12, 2)->default(0);
-            $table->decimal('final_total', 12, 2)->nullable(); // grand_total + late_fee + damage_fee
+            $table->decimal('final_total', 12, 2)->nullable();        // BARU: grand_total + denda
 
             $table->enum('status', [
                 'pending', 'confirmed', 'picked_up', 'returned', 'completed', 'cancelled', 'expired',
             ])->default('pending');
 
-            $table->timestamp('expires_at')->nullable();
+            $table->timestamp('expires_at')->nullable();              // BARU: batas waktu bayar
             $table->text('notes')->nullable();
 
             $table->timestamps();

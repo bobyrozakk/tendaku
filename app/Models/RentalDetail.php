@@ -12,17 +12,19 @@ class RentalDetail extends Model
 
     protected $fillable = [
         'rental_id', 'master_item_id', 'item_unit_id',
-        'daily_rate_snapshot', 'late_fee_per_day_snapshot',
+        'daily_rate_snapshot', 'deposit_snapshot', 'late_fee_per_day_snapshot',
         'condition_before', 'condition_after', 'checklist_notes',
-        'returned_at', 'late_days', 'late_fee', 'damage_fee',
+        'returned_at', 'late_days', 'late_fee', 'damage_fee', 'is_returned',
     ];
 
     protected $casts = [
         'daily_rate_snapshot' => 'decimal:2',
+        'deposit_snapshot' => 'decimal:2',
         'late_fee_per_day_snapshot' => 'decimal:2',
         'late_fee' => 'decimal:2',
         'damage_fee' => 'decimal:2',
         'returned_at' => 'datetime',
+        'is_returned' => 'boolean',
     ];
 
     public function rental(): BelongsTo

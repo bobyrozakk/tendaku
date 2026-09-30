@@ -8,9 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('notification_logs', function (Blueprint $table) {
+        Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('vendor_id')->constrained('vendors')->cascadeOnDelete();
+            $table->foreignId('vendor_id')->constrained('vendors')->cascadeOnDelete(); // BARU: scoping multi-tenant
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('rental_id')->nullable()->constrained('rentals')->nullOnDelete();
 
@@ -30,6 +30,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('notification_logs');
+        Schema::dropIfExists('notifications');
     }
 };
