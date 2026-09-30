@@ -26,7 +26,7 @@ trait BelongsToVendor
 
             if ($user && $user->vendor_id !== null) {
                 $builder->where(
-                    $builder->getModel()->getTable() . '.vendor_id',
+                    $builder->getModel()->getTable().'.vendor_id',
                     $user->vendor_id
                 );
             }
