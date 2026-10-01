@@ -1,3 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    /* Tendaku Brand Palette (User Specified) */
+    --color-wheat: #F9E3B6;
+    --color-sunglow: #FBCE6B;
+    --color-goldenrod: #D5A007;
+    --color-avocado: #6C8B08;
+    --color-dark-brown: #2B2202;
+
+    /* Semantic Mappings */
+    --brand-primary: var(--color-avocado);
+    --brand-accent: var(--color-goldenrod);
+    --brand-highlight: var(--color-sunglow);
+    --brand-surface: var(--color-wheat);
+    --brand-dark: var(--color-dark-brown);
+}
+
+@layer base {
+    body {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #2B2202;
+        background-color: #FDFBF7;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+        color: #2B2202;
+    }
+
+    ::selection {
+        background-color: #FBCE6B;
+        color: #2B2202;
+    }
+}
+
+@layer components {
+    /* Tendaku Custom Buttons */
+    .btn-tendaku-primary {
+        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-avocado-500 hover:bg-avocado-600 active:bg-avocado-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
+    }
+
+    .btn-tendaku-accent {
+        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-darkbrown-800 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-500 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2;
+    }
+
+    .btn-tendaku-gold {
+        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-goldenrod-500 hover:bg-goldenrod-600 active:bg-goldenrod-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2;
+    }
+
+    .btn-tendaku-secondary {
+        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-medium text-sm text-darkbrown-800 bg-wheat-100 hover:bg-wheat-200 border border-wheat-300/80 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-wheat-400 focus:ring-offset-2;
+    }
+
+    .btn-tendaku-dark {
+        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-wheat-200 bg-darkbrown-800 hover:bg-darkbrown-900 active:bg-darkbrown-950 shadow-sm transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-darkbrown-800 focus:ring-offset-2;
+    }
+
+    .btn-tendaku-outline {
+        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-avocado-600 border border-avocado-500/40 hover:bg-avocado-50 active:bg-avocado-100 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
+    }
+
+    /* Tendaku Cards */
+    .card-tendaku {
+        @apply bg-white rounded-2xl border border-wheat-200/90 shadow-tendaku-sm hover:shadow-tendaku transition duration-200;
+    }
+
+    .card-tendaku-warm {
+        @apply bg-[#FDFBF7] rounded-2xl border border-wheat-200/80 shadow-tendaku-sm transition duration-200;
+    }
+
+    .card-tendaku-dark {
+        @apply bg-darkbrown-800 text-wheat-100 rounded-2xl border border-darkbrown-700 shadow-tendaku;
+    }
+
+    /* Badges */
+    .badge-avocado {
+        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-avocado-100/80 text-avocado-800 border border-avocado-200;
+    }
+
+    .badge-goldenrod {
+        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-goldenrod-100/90 text-goldenrod-800 border border-goldenrod-200;
+    }
+
+    .badge-sunglow {
+        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sunglow-100 text-sunglow-900 border border-sunglow-200;
+    }
+
+    .badge-wheat {
+        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-wheat-200/70 text-darkbrown-800 border border-wheat-300;
+    }
+
+    .badge-dark {
+        @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-darkbrown-800 text-wheat-200 border border-darkbrown-700;
+    }
+
+    /* Input Fields */
+    .input-tendaku {
+        @apply w-full rounded-xl border-wheat-300 bg-white/90 text-darkbrown-800 shadow-sm focus:border-avocado-500 focus:ring-2 focus:ring-avocado-400/40 text-sm placeholder:text-darkbrown-400 transition duration-150;
+    }
+}
+
+/* Custom Nature/Camping Accent Gradient */
+.bg-gradient-tendaku {
+    background: linear-gradient(135deg, #F9E3B6 0%, #FBCE6B 40%, #E8BE65 100%);
+}
+
+.bg-gradient-outdoor {
+    background: linear-gradient(135deg, #2B2202 0%, #3C311B 60%, #546E06 100%);
+}
+
+.bg-gradient-avocado {
+    background: linear-gradient(135deg, #6C8B08 0%, #546E06 100%);
+}
+
+.bg-gradient-gold {
+    background: linear-gradient(135deg, #FBCE6B 0%, #D5A007 100%);
+}
+
+/* Camping Pattern Subtle Texture */
+.bg-camping-pattern {
+    background-color: #FDFBF7;
+    background-image: radial-gradient(#F9E3B6 0.75px, transparent 0.75px), radial-gradient(#F9E3B6 0.75px, #FDFBF7 0.75px);
+    background-size: 30px 30px;
+    background-position: 0 0, 15px 15px;
+}
