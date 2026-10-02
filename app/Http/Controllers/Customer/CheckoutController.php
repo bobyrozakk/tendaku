@@ -152,11 +152,12 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Proses pemesanan/checkout rental.
+     * Proses pemesanan/checkout rental & simulasi pembayaran Midtrans.
      */
     public function store(Request $request): RedirectResponse
     {
         $pickupMethod = $request->input('pickup_method', 'self_pickup');
+        $paymentChannel = $request->input('payment_channel', 'qris');
 
         // Validasi aturan: Opsi delivery hanya diizinkan bagi user yang telah login
         if ($pickupMethod === 'delivery' && ! Auth::check()) {
@@ -165,6 +166,14 @@ class CheckoutController extends Controller
 
         $methodLabel = $pickupMethod === 'delivery' ? 'Diantar ke Lokasi (Kurir Vendor)' : 'Ambil di Tempat (Self-Pickup)';
 
-        return redirect()->route('booking.status', 'TDK-2026-B8921')->with('success', "Pembayaran booking #TDK-2026-B8921 ({$methodLabel}) berhasil diproses! Vendor Mahameru Outdoor telah menerima konfirmasi dan mempersiapkan alat sewa Anda.");
+        $channelNames = [
+            'qris' => 'QRIS Realtime',
+            'bca_va' => 'BCA Virtual Account',
+            'mandiri_va' => 'Mandiri Bill Payment',
+            'bri_va' => 'BRI Virtual Account (BRIVA)',
+        ];
+        $channelLabel = $channelNames[$paymentChannel] ?? 'Midtrans Sandbox';
+
+        return redirect()->route('booking.status', 'TDK-2026-B8921')->with('success', "Pembayaran booking #TDK-2026-B8921 ({$methodLabel}) via simulasi {$channelLabel} berhasil diverifikasi! Vendor Mahameru Outdoor telah menerima konfirmasi.");
     }
 }
