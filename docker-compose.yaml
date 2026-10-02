@@ -1,65 +1,81 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: tendaku-app
-    container_name: tendaku_app
-    restart: unless-stopped
-    working_dir: /var/www
-    volumes:
-      - ./:/var/www
-    networks:
-      - tendaku-network
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: tendaku-app
+        container_name: tendaku_app
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+        networks:
+            - tendaku-network
 
-  nginx:
-    image: nginx:alpine
-    container_name: tendaku_nginx
-    restart: unless-stopped
-    ports:
-      - "8002:80"
-    volumes:
-      - ./:/var/www
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-    networks:
-      - tendaku-network
-    depends_on:
-      - app
+    nginx:
+        image: nginx:alpine
+        container_name: tendaku_nginx
+        restart: unless-stopped
+        ports:
+            - "8002:80"
+        volumes:
+            - ./:/var/www
+            - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+        networks:
+            - tendaku-network
+        depends_on:
+            - app
 
-  db:
-    image: mysql:8.0
-    container_name: tendaku_db
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_USER: ${DB_USERNAME:-laravel}
-    ports:
-      - "33060:3306"
-    volumes:
-      - db-data:/var/lib/mysql
-    networks:
-      - tendaku-network
+    # open comment if use mysql
+    db:
+        image: mysql:8.0
+        container_name: tendaku_db
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+            MYSQL_USER: ${DB_USERNAME:-laravel}
+        ports:
+            - "33060:3306"
+        volumes:
+            - db-data:/var/lib/mysql
+        networks:
+            - tendaku-network
 
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: tendaku_phpmyadmin
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-    environment:
-      PMA_HOST: db
-      PMA_USER: ${DB_USERNAME:-laravel}
-      PMA_PASSWORD: ${DB_PASSWORD:-secret}
-    networks:
-      - tendaku-network
-    depends_on:
-      - db
+    # postgre
+    # postgres_db:
+    #     image: postgres:15
+    #     container_name: tendaku_postgres
+    #     restart: unless-stopped
+    #     environment:
+    #         POSTGRES_DB: ${DB_DATABASE:-laravel}
+    #         POSTGRES_USER: ${DB_USERNAME:-postgres}
+    #         POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    #     ports:
+    #         - "54320:5432"
+    #     volumes:
+    #         - db-data:/var/lib/postgresql/data
+    #     networks:
+    #         - tendaku-network
+
+    adminer:
+        image: adminer:latest
+        container_name: tendaku_adminer
+        restart: unless-stopped
+        ports:
+            - "8080:8080"
+        environment:
+            ADMINER_DEFAULT_SERVER: db
+        networks:
+            - tendaku-network
+        depends_on:
+            - db
+            # - postgres_db
 
 networks:
-  tendaku-network:
-    driver: bridge
+    tendaku-network:
+        driver: bridge
 
 volumes:
-  db-data:
+    db-data:
