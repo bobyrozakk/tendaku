@@ -165,6 +165,6 @@ class CheckoutController extends Controller
 
         $methodLabel = $pickupMethod === 'delivery' ? 'Diantar ke Lokasi (Kurir Vendor)' : 'Ambil di Tempat (Self-Pickup)';
 
-        return redirect()->route('checkout.index')->with('success', "Pembayaran booking #TDK-2026-B8921 ({$methodLabel}) berhasil diproses! Vendor Mahameru Outdoor telah menerima konfirmasi dan mempersiapkan alat sewa Anda.");
+        return redirect()->route('booking.status', 'TDK-2026-B8921')->with('success', "Pembayaran booking #TDK-2026-B8921 ({$methodLabel}) berhasil diproses! Vendor Mahameru Outdoor telah menerima konfirmasi dan mempersiapkan alat sewa Anda.");
     }
 }
