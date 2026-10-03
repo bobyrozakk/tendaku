@@ -39,6 +39,7 @@
     <div x-data="{
         isLoggedIn: {{ $isLoggedIn ? 'true' : 'false' }},
         pickupMethod: '{{ $booking['pickup_method'] }}',
+        selectedChannel: 'qris',
         subtotal: {{ $booking['subtotal'] }},
         deposit: {{ $booking['deposit'] }},
         deliveryFeeAmount: 25000,
@@ -49,7 +50,24 @@
             return this.subtotal + this.deposit + this.deliveryFee;
         },
         formatRupiah(num) {
-            return 'Rp ' + num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            return 'Rp ' + (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        },
+        payWithMidtrans() {
+            // Validasi aturan: Opsi delivery hanya diizinkan untuk user login
+            if (this.pickupMethod === 'delivery' && !this.isLoggedIn) {
+                window.location.href = '{{ route('login') }}';
+                return;
+            }
+
+            // Panggil API Gateway Midtrans (Snap Ready)
+            window.tendakuMidtrans.pay({
+                bookingCode: '{{ $booking['booking_code'] }}',
+                grossAmount: this.grandTotal,
+                pickupMethod: this.pickupMethod,
+                selectedChannel: this.selectedChannel,
+                redirectUrl: '{{ route('booking.status', $booking['booking_code']) }}',
+                formAction: '{{ route('checkout.store') }}'
+            });
         }
     }" class="py-2 sm:py-4">
 
@@ -604,14 +622,19 @@
 
                     <!-- Payment Method Selector -->
                     <div class="mt-6 pt-5 border-t border-wheat-200">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-3">
-                            Pilih Metode Pembayaran
-                        </label>
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700">
+                                Pilih Saluran Pembayaran
+                            </label>
+                            <span class="text-[10px] font-bold text-darkbrown-500 uppercase tracking-widest bg-wheat-100 px-2 py-0.5 rounded border border-wheat-200">
+                                Midtrans Gateway
+                            </span>
+                        </div>
 
                         <div class="space-y-2.5">
                             @foreach ($booking['payment_methods'] as $index => $channel)
                             <label class="flex items-start gap-3 p-3 rounded-xl border border-wheat-300/80 bg-[#FAF6ED] hover:bg-wheat-100/70 hover:border-goldenrod-400 cursor-pointer transition select-none">
-                                <input type="radio" name="payment_channel" value="{{ $channel['id'] }}" {{ $index === 0 ? 'checked' : '' }} class="mt-1 text-avocado-600 focus:ring-avocado-500 border-wheat-400">
+                                <input type="radio" name="checkout_channel" value="{{ $channel['id'] }}" x-model="selectedChannel" class="mt-1 text-avocado-600 focus:ring-avocado-500 border-wheat-400">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center justify-between gap-1">
                                         <span class="font-bold text-xs sm:text-sm text-darkbrown-900">{{ $channel['name'] }}</span>
@@ -628,13 +651,18 @@
 
                     <!-- FORM & TOMBOL BAYAR SEKARANG -->
                     <div class="mt-6 pt-2">
-                        <form action="{{ route('checkout.store') }}" method="POST">
+                        <form id="checkout-payment-form" action="{{ route('checkout.store') }}" method="POST">
                             @csrf
                             <input type="hidden" name="booking_code" value="{{ $booking['booking_code'] }}">
                             <input type="hidden" name="pickup_method" :value="pickupMethod">
                             <input type="hidden" name="amount" :value="grandTotal">
+                            <input type="hidden" name="payment_channel" :value="selectedChannel">
 
-                            <button type="submit" class="w-full py-4 px-6 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 shadow-tendaku hover:shadow-tendaku-lg transition duration-200 flex items-center justify-center gap-2 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
+                            <button
+                                type="button"
+                                x-on:click="payWithMidtrans()"
+                                class="w-full py-4 px-6 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 shadow-tendaku hover:shadow-tendaku-lg transition duration-200 flex items-center justify-center gap-2 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2"
+                            >
                                 <svg class="w-5 h-5 text-darkbrown-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
@@ -672,4 +700,54 @@
 
         </div>
     </div>
+    <!-- MODAL SIMULASI MIDTRANS SNAP -->
+    <x-midtrans-simulation-modal :booking="$booking" />
+
+    <!--
+    ====================================================================================
+    ARSITEKTUR JAVASCRIPT MIDTRANS SNAP GATEWAY
+    ====================================================================================
+    Ketika Server Key dan Client Key Midtrans asli sudah tersedia di project:
+    1. Masukkan SDK Midtrans Snap di template:
+       <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('services.midtrans.client_key') }}"></script>
+    2. Ubah `window.tendakuMidtrans.isSimulation = false;`
+    3. Controller backend akan mengembalikan `snap_token`, dan fungsi window.tendakuMidtrans.pay()
+       akan langsung memicu `window.snap.pay(paymentData.snapToken, ...)` secara otomatis.
+    ====================================================================================
+    -->
+    <script>
+        window.tendakuMidtrans = {
+            // Ubah menjadi false saat Server Key & Client Key Midtrans asli siap
+            isSimulation: true,
+
+            pay: function(paymentData, callbacks = {}) {
+                // 1. JIKA SUDAH MENGGUNAKAN SNAP ASLI
+                if (!this.isSimulation && typeof window.snap !== 'undefined' && paymentData.snapToken) {
+                    window.snap.pay(paymentData.snapToken, {
+                        onSuccess: function(result) {
+                            if (callbacks.onSuccess) callbacks.onSuccess(result);
+                            window.location.href = paymentData.redirectUrl;
+                        },
+                        onPending: function(result) {
+                            if (callbacks.onPending) callbacks.onPending(result);
+                            window.location.href = paymentData.redirectUrl;
+                        },
+                        onError: function(result) {
+                            if (callbacks.onError) callbacks.onError(result);
+                            alert("Pembayaran belum berhasil: " + (result.status_message || "Dibatalkan"));
+                        },
+                        onClose: function() {
+                            if (callbacks.onClose) callbacks.onClose();
+                        }
+                    });
+                    return;
+                }
+
+                // 2. MODE SIMULASI SANDBOX DEMO (DEFAULT SEMENTARA)
+                window.dispatchEvent(new CustomEvent('open-midtrans-simulation', {
+                    detail: paymentData
+                }));
+            }
+        };
+    </script>
 </x-layouts.customer>
