@@ -1,0 +1,44 @@
+{
+  "id": "6bc5ac1f-22b8-493b-9262-17934180c52d",
+  "name": "Tendaku Local / ngrok",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "rental_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "gross_amount",
+      "value": "10000.00",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "session_cookie",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "csrf_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_using": "Postman/11"
+}

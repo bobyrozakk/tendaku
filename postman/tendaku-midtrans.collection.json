@@ -1,0 +1,75 @@
+{
+  "info": {
+    "_postman_id": "454e69d7-6d15-4c1e-bcf4-587540a7fb13",
+    "name": "Tendaku - Midtrans Sandbox",
+    "description": "Requests for the Role 2 payment API. The notification request deliberately uses an invalid signature; use a real Sandbox transaction to test successful notifications.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Snap Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-CSRF-TOKEN",
+            "value": "{{csrf_token}}"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{session_cookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/rentals/{{rental_id}}/pay",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "rentals",
+            "{{rental_id}}",
+            "pay"
+          ]
+        },
+        "description": "Requires the logged-in owner’s Laravel session, CSRF token, and a saved pending Payment with payment_method=midtrans_snap. The response contains payment_id, order_id, and snap_token."
+      },
+      "response": []
+    },
+    {
+      "name": "Reject unsigned notification (negative test)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"transaction_status\": \"settlement\",\n  \"transaction_id\": \"postman-negative-test\",\n  \"status_code\": \"200\",\n  \"gross_amount\": \"{{gross_amount}}\",\n  \"fraud_status\": \"accept\",\n  \"signature_key\": \"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/webhook/midtrans",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "webhook",
+            "midtrans"
+          ]
+        },
+        "description": "Expected response: 403 Invalid notification signature. This is only a negative test and must never mark a payment as paid."
+      },
+      "response": []
+    }
+  ]
+}
