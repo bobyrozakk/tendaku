@@ -1,49 +1,49 @@
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: tendaku-app
-    container_name: tendaku_app
-    restart: unless-stopped
-    working_dir: /var/www
-    volumes:
-      - ./:/var/www
-    networks:
-      - tendaku-network
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: tendaku-app
+        container_name: tendaku_app
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+        networks:
+            - tendaku-network
 
-  nginx:
-    image: nginx:alpine
-    container_name: tendaku_nginx
-    restart: unless-stopped
-    ports:
-      - "8002:80"
-    volumes:
-      - ./:/var/www
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
-    networks:
-      - tendaku-network
-    depends_on:
-      - app
+    nginx:
+        image: nginx:alpine
+        container_name: tendaku_nginx
+        restart: unless-stopped
+        ports:
+            - "8002:80"
+        volumes:
+            - ./:/var/www
+            - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+        networks:
+            - tendaku-network
+        depends_on:
+            - app
 
-  db:
-    image: postgres:15
-    container_name: tendaku_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DB_DATABASE:-laravel}
-      POSTGRES_USER: ${DB_USERNAME:-laravel}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
-    ports:
-      - "54320:5432"
-    volumes:
-      - db-data:/var/lib/postgresql/data
-    networks:
-      - tendaku-network
+    db:
+        image: postgres:15
+        container_name: tendaku_db
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-laravel}
+            POSTGRES_USER: ${DB_USERNAME:-laravel}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+        ports:
+            - "54320:5432"
+        volumes:
+            - db-data:/var/lib/postgresql/data
+        networks:
+            - tendaku-network
 
 networks:
-  tendaku-network:
-    driver: bridge
+    tendaku-network:
+        driver: bridge
 
 volumes:
-  db-data:
+    db-data:
