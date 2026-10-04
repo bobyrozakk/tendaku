@@ -5,15 +5,16 @@ namespace Tests\Feature;
 use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\User;
-use App\Models\Vendor;
 use App\Services\MidtransService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use Mockery\MockInterface;
+use Tests\Concerns\CreatesMidtransFixtures;
 use Tests\TestCase;
 
 class MidtransPaymentTest extends TestCase
 {
+    use CreatesMidtransFixtures;
     use LazilyRefreshDatabase;
 
     private const SERVER_KEY = 'test-midtrans-server-key';
@@ -173,63 +174,4 @@ class MidtransPaymentTest extends TestCase
         ]);
     }
 
-    /**
-     * @return array{User, Rental, Payment}
-     */
-    private function createRentalWithPendingPayment(): array
-    {
-        $vendor = Vendor::query()->create([
-            'name' => 'Sandbox Vendor',
-            'slug' => 'sandbox-vendor',
-            'phone' => '081200000001',
-            'address' => 'Sandbox address',
-            'status' => 'active',
-        ]);
-        $owner = User::factory()->create(['role' => 'customer']);
-        $rental = Rental::query()->create([
-            'vendor_id' => $vendor->getKey(),
-            'user_id' => $owner->getKey(),
-            'booking_code' => 'TDK-TEST-001',
-            'pickup_date' => '2026-10-10',
-            'return_date' => '2026-10-11',
-            'rental_days' => 1,
-            'subtotal' => 10000,
-            'grand_total' => 10000,
-            'status' => 'pending',
-        ]);
-        $payment = Payment::query()->create([
-            'rental_id' => $rental->getKey(),
-            'vendor_id' => $vendor->getKey(),
-            'payment_type' => 'settlement',
-            'payment_method' => 'midtrans_snap',
-            'amount' => 10000,
-            'midtrans_order_id' => 'TENDA-INV-001',
-            'status' => 'pending',
-        ]);
-
-        return [$owner, $rental, $payment];
-    }
-
-    /**
-     * @param  array<string, string>  $overrides
-     * @return array<string, string>
-     */
-    private function signedNotification(array $overrides = []): array
-    {
-        $notification = array_merge([
-            'order_id' => 'TENDA-INV-001',
-            'status_code' => '200',
-            'gross_amount' => '10000.00',
-            'transaction_status' => 'settlement',
-            'transaction_id' => 'sandbox-transaction',
-            'fraud_status' => 'accept',
-            'signature_key' => '',
-        ], $overrides);
-        $notification['signature_key'] = hash(
-            'sha512',
-            $notification['order_id'].$notification['status_code'].$notification['gross_amount'].self::SERVER_KEY,
-        );
-
-        return $notification;
-    }
 }

@@ -27,35 +27,19 @@ services:
       - app
 
   db:
-    image: mysql:8.0
+    image: postgres:15
     container_name: tendaku_db
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_USER: ${DB_USERNAME:-laravel}
+      POSTGRES_DB: ${DB_DATABASE:-laravel}
+      POSTGRES_USER: ${DB_USERNAME:-laravel}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
     ports:
-      - "33060:3306"
+      - "54320:5432"
     volumes:
-      - db-data:/var/lib/mysql
+      - db-data:/var/lib/postgresql/data
     networks:
       - tendaku-network
-
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: tendaku_phpmyadmin
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-    environment:
-      PMA_HOST: db
-      PMA_USER: ${DB_USERNAME:-laravel}
-      PMA_PASSWORD: ${DB_PASSWORD:-secret}
-    networks:
-      - tendaku-network
-    depends_on:
-      - db
 
 networks:
   tendaku-network:
