@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'midtrans' => [
+        // Notes: This currently represents one platform Midtrans account.
+        // Resolve credentials per payment.vendor_id here if the vendor owns its own account.
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+        'is_sanitized' => true,
+        'is_3ds' => true,
+    ],
+
 ];
