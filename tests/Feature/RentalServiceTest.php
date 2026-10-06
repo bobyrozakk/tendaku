@@ -113,6 +113,56 @@ class RentalServiceTest extends TestCase
         $this->assertStringStartsWith('TDK-', $rental->booking_code);
     }
 
+    public function test_create_booking_automatically_creates_pending_settlement_payment(): void
+    {
+        $this->createUnit($this->item1, 'TD-001');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-12', // 3 hari: 50.000 x 3 = 150.000
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $this->assertDatabaseHas('payments', [
+            'rental_id' => $rental->id,
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'settlement',
+            'payment_method' => 'midtrans_snap',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_create_booking_payment_amount_matches_grand_total_with_delivery_and_discount(): void
+    {
+        $this->createUnit($this->item1, 'TD-001');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-10', // 1 hari: 50.000
+            'pickup_method' => 'delivery',
+            'delivery_address' => 'Jl. Merbabu No. 12',
+            'delivery_fee' => 20000,
+            'discount_amount' => 5000,
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        // grand_total = 50.000 + 20.000 - 5.000 = 65.000
+        $this->assertDatabaseHas('payments', [
+            'rental_id' => $rental->id,
+            'amount' => 65000,
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_create_booking_throws_exception_when_stock_is_insufficient(): void
     {
         // Hanya 1 unit tersedia, tapi minta 2 unit
