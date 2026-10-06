@@ -7,12 +7,16 @@ use Livewire\Component;
 class Pos extends Component
 {
     public $activeTab = 'pending'; // all, pending, ready
+
     public $selectedOrder = null;
-    
+
     // Modal state for scanning
     public $showScanModal = false;
+
     public $modalBarcode = '';
+
     public $scanError = '';
+
     public $scanSuccessMessage = '';
 
     // Mock KPI Data (Removed Stock Cepat)
@@ -33,8 +37,8 @@ class Pos extends Component
             'payment_status' => 'Lunas',
             'items' => [
                 ['name' => 'Tenda Dome 4P', 'qty' => 2, 'allocated_units' => ['A-001', 'A-002'], 'scanned_units' => [], 'status' => 'Reserved'],
-                ['name' => 'Carrier 60L', 'qty' => 1, 'allocated_units' => ['CR-011'], 'scanned_units' => [], 'status' => 'Reserved']
-            ]
+                ['name' => 'Carrier 60L', 'qty' => 1, 'allocated_units' => ['CR-011'], 'scanned_units' => [], 'status' => 'Reserved'],
+            ],
         ],
         [
             'id' => 'ORD-1002',
@@ -44,8 +48,8 @@ class Pos extends Component
             'status' => 'pending',
             'payment_status' => 'Lunas',
             'items' => [
-                ['name' => 'Kompor Portable', 'qty' => 2, 'allocated_units' => ['KP-001', 'KP-002'], 'scanned_units' => [], 'status' => 'Reserved']
-            ]
+                ['name' => 'Kompor Portable', 'qty' => 2, 'allocated_units' => ['KP-001', 'KP-002'], 'scanned_units' => [], 'status' => 'Reserved'],
+            ],
         ],
         [
             'id' => 'ORD-1003',
@@ -55,9 +59,9 @@ class Pos extends Component
             'status' => 'ready', // Siap Pickup
             'payment_status' => 'Lunas',
             'items' => [
-                ['name' => 'Sleeping Bag', 'qty' => 3, 'allocated_units' => ['SB-100', 'SB-101', 'SB-102'], 'scanned_units' => ['SB-100', 'SB-101', 'SB-102'], 'status' => 'Siap Pickup']
-            ]
-        ]
+                ['name' => 'Sleeping Bag', 'qty' => 3, 'allocated_units' => ['SB-100', 'SB-101', 'SB-102'], 'scanned_units' => ['SB-100', 'SB-101', 'SB-102'], 'status' => 'Siap Pickup'],
+            ],
+        ],
     ];
 
     public function selectOrder($orderId)
@@ -79,23 +83,27 @@ class Pos extends Component
 
     public function processScan()
     {
-        if (!$this->selectedOrder) return;
-        
+        if (! $this->selectedOrder) {
+            return;
+        }
+
         $barcode = trim($this->modalBarcode);
-        if (empty($barcode)) return;
+        if (empty($barcode)) {
+            return;
+        }
 
         $items = $this->selectedOrder['items'];
         $foundAndValid = false;
-        
+
         foreach ($items as &$item) {
             // Check if this barcode is part of the allocated units and not yet scanned
-            if (in_array($barcode, $item['allocated_units']) && !in_array($barcode, $item['scanned_units'])) {
+            if (in_array($barcode, $item['allocated_units']) && ! in_array($barcode, $item['scanned_units'])) {
                 $item['scanned_units'][] = $barcode;
                 $foundAndValid = true;
                 break;
             }
         }
-        
+
         if ($foundAndValid) {
             $this->selectedOrder['items'] = $items;
             $this->scanSuccessMessage = '✓ Sesuai';
@@ -117,9 +125,10 @@ class Pos extends Component
                     $item['status'] = 'Siap Pickup';
                 }
             }
+
             return $order;
         })->toArray();
-        
+
         $this->kpi['pending']--;
         if ($this->selectedOrder && $this->selectedOrder['id'] === $orderId) {
             $this->selectedOrder['status'] = 'ready';
@@ -132,7 +141,10 @@ class Pos extends Component
     public function getFilteredOrdersProperty()
     {
         return collect($this->orders)->filter(function ($order) {
-            if ($this->activeTab === 'all') return true;
+            if ($this->activeTab === 'all') {
+                return true;
+            }
+
             return $order['status'] === $this->activeTab;
         })->values()->toArray();
     }
@@ -142,4 +154,3 @@ class Pos extends Component
         return view('livewire.vendor.pos');
     }
 }
-

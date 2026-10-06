@@ -10,16 +10,21 @@ class Pickup extends Component
     use WithFileUploads;
 
     public $searchPickup = '';
+
     public $selectedPickupId = null;
 
     // Tenant Photo & KTP Verification
     public $tenantPhoto = null;
+
     public $tenantPhotoUploaded = false;
+
     public $tenantKtpUploaded = false;
 
     // Checklist Flags
     public $checkIdentity = false;
+
     public $checkUnits = false;
+
     public $checkHandover = false;
 
     // Success Banner
@@ -68,7 +73,7 @@ class Pickup extends Component
 
     public function mount()
     {
-        if (!empty($this->pickupOrders)) {
+        if (! empty($this->pickupOrders)) {
             $this->selectPickup($this->pickupOrders[0]['id']);
         }
     }
@@ -105,7 +110,7 @@ class Pickup extends Component
 
     public function getIsPhotoVerifiedProperty()
     {
-        return $this->tenantPhotoUploaded || !empty($this->tenantPhoto);
+        return $this->tenantPhotoUploaded || ! empty($this->tenantPhoto);
     }
 
     public function getIsPickupReadyProperty()
@@ -119,12 +124,12 @@ class Pickup extends Component
 
     public function confirmPickup()
     {
-        if (!$this->isPickupReady) {
+        if (! $this->isPickupReady) {
             return;
         }
 
         $order = $this->getSelectedOrderProperty();
-        if (!$order) {
+        if (! $order) {
             return;
         }
 
@@ -138,7 +143,7 @@ class Pickup extends Component
 
         $this->pickupSuccessMessage = "Serah Terima Berhasil! Transaksi {$completedOrderId} ({$customerName}) telah diperbarui menjadi 'Sedang Disewa'. Status unit fisik berubah menjadi 'Sedang Disewa'.";
 
-        if (!empty($this->pickupOrders)) {
+        if (! empty($this->pickupOrders)) {
             $this->selectPickup($this->pickupOrders[0]['id']);
             $this->pickupSuccessMessage = "Serah Terima Berhasil! Transaksi {$completedOrderId} ({$customerName}) telah diperbarui menjadi 'Sedang Disewa'. Status unit fisik berubah menjadi 'Sedang Disewa'.";
         } else {
@@ -152,6 +157,7 @@ class Pickup extends Component
             if (empty($this->searchPickup)) {
                 return true;
             }
+
             return stripos($order['id'], $this->searchPickup) !== false ||
                    stripos($order['customer_name'], $this->searchPickup) !== false;
         });

@@ -7,13 +7,16 @@ use Livewire\Component;
 class ItemUnitManager extends Component
 {
     public $search = '';
+
     public $showAddModal = false;
 
     // Form inputs
     public $newItemCode = '';
+
     public $newStatus = 'available';
+
     public $newPurchasePrice = '';
-    
+
     // Mock Data
     public $units = [
         ['id' => 1, 'item_name' => 'Tenda Dome 4 Orang', 'unit_code' => 'TND-001', 'status' => 'available', 'purchase_price' => 500000],
@@ -28,7 +31,7 @@ class ItemUnitManager extends Component
         $this->validate([
             'newItemCode' => 'required|string',
             'newStatus' => 'required|string',
-            'newPurchasePrice' => 'required|numeric'
+            'newPurchasePrice' => 'required|numeric',
         ]);
 
         $this->units[] = [
@@ -44,13 +47,13 @@ class ItemUnitManager extends Component
 
     public function deleteUnit($id)
     {
-        $this->units = collect($this->units)->reject(fn($unit) => $unit['id'] == $id)->toArray();
+        $this->units = collect($this->units)->reject(fn ($unit) => $unit['id'] == $id)->toArray();
     }
 
     public function updateStatus($unitId, $newStatus)
     {
         // Pastikan status yang dipilih tidak kosong
-        if (!empty($newStatus)) {
+        if (! empty($newStatus)) {
             foreach ($this->units as &$unit) {
                 if ($unit['id'] == $unitId) {
                     $unit['status'] = $newStatus;
@@ -59,6 +62,7 @@ class ItemUnitManager extends Component
             }
         }
     }
+
     public function render()
     {
         return view('livewire.vendor.item-unit-manager');
