@@ -66,4 +66,3 @@ Route::view('vendor/pickup', 'vendor.pickup.index')
     ->name('vendor.pickup');
 
 require __DIR__.'/auth.php';
-

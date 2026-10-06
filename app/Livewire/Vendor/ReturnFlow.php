@@ -10,16 +10,19 @@ class ReturnFlow extends Component
     public $activeTab = 'return';
 
     public $activeOrder = null;
+
     public $searchOrder = '';
-    
+
     // History Search & Filter
     public $searchHistory = '';
+
     public $statusFilter = 'all';
 
     // Form Inputs for Inspection
     public $inspectionNotes = [];
+
     public $damageFees = [];
-    
+
     // Mock Active Rentals (Orders currently rented out)
     public $activeRentals = [
         [
@@ -31,8 +34,8 @@ class ReturnFlow extends Component
             'ktp_held' => true,
             'items' => [
                 ['id' => 1, 'name' => 'Tenda Dome 4 Orang', 'barcode' => 'TD-04-002', 'returned' => false, 'condition' => 'good'],
-                ['id' => 2, 'name' => 'Carrier 60L', 'barcode' => 'CR-60-011', 'returned' => false, 'condition' => 'good']
-            ]
+                ['id' => 2, 'name' => 'Carrier 60L', 'barcode' => 'CR-60-011', 'returned' => false, 'condition' => 'good'],
+            ],
         ],
         [
             'id' => 'RNT-9002',
@@ -42,9 +45,9 @@ class ReturnFlow extends Component
             'late_fee' => 0,
             'ktp_held' => true,
             'items' => [
-                ['id' => 3, 'name' => 'Kompor Portable', 'barcode' => 'KP-02-001', 'returned' => false, 'condition' => 'good']
-            ]
-        ]
+                ['id' => 3, 'name' => 'Kompor Portable', 'barcode' => 'KP-02-001', 'returned' => false, 'condition' => 'good'],
+            ],
+        ],
     ];
 
     // Mock Completed History
@@ -56,7 +59,7 @@ class ReturnFlow extends Component
             'total' => 350000,
             'status' => 'Selesai & Dikembalikan',
             'date' => '30 Sep 2026',
-            'items' => '1x Tenda Dome 4P, 2x Sleeping Bag'
+            'items' => '1x Tenda Dome 4P, 2x Sleeping Bag',
         ],
         [
             'id' => 'RNT-8885',
@@ -65,7 +68,7 @@ class ReturnFlow extends Component
             'total' => 180000,
             'status' => 'Selesai & Dikembalikan',
             'date' => '27 Sep 2026',
-            'items' => '1x Kompor Portable, 1x Nesting'
+            'items' => '1x Kompor Portable, 1x Nesting',
         ],
         [
             'id' => 'RNT-8872',
@@ -74,8 +77,8 @@ class ReturnFlow extends Component
             'total' => 520000,
             'status' => 'Selesai (Ada Denda Rusak)',
             'date' => '23 Sep 2026',
-            'items' => '1x Carrier Eiger 60L'
-        ]
+            'items' => '1x Carrier Eiger 60L',
+        ],
     ];
 
     public function selectRental($rentalId)
@@ -83,7 +86,7 @@ class ReturnFlow extends Component
         $this->activeOrder = collect($this->activeRentals)->firstWhere('id', $rentalId);
         $this->inspectionNotes = [];
         $this->damageFees = [];
-        
+
         if ($this->activeOrder) {
             foreach ($this->activeOrder['items'] as $item) {
                 $this->inspectionNotes[$item['id']] = 'good';
@@ -94,8 +97,10 @@ class ReturnFlow extends Component
 
     public function markItemReturned($itemId)
     {
-        if (!$this->activeOrder) return;
-        
+        if (! $this->activeOrder) {
+            return;
+        }
+
         $items = $this->activeOrder['items'];
         foreach ($items as &$item) {
             if ($item['id'] === $itemId) {
@@ -108,11 +113,14 @@ class ReturnFlow extends Component
 
     public function completeReturn()
     {
-        if (!$this->activeOrder) return;
+        if (! $this->activeOrder) {
+            return;
+        }
 
-        $allReturned = collect($this->activeOrder['items'])->every(fn($item) => $item['returned']);
-        if (!$allReturned) {
+        $allReturned = collect($this->activeOrder['items'])->every(fn ($item) => $item['returned']);
+        if (! $allReturned) {
             $this->addError('general', 'Semua barang harus diinspeksi dan dikembalikan.');
+
             return;
         }
 
@@ -124,13 +132,13 @@ class ReturnFlow extends Component
             'total' => 250000 + $this->totalCharge,
             'status' => 'Selesai & Dikembalikan',
             'date' => date('d M Y'),
-            'items' => count($this->activeOrder['items']) . ' Item Alat Camping'
+            'items' => count($this->activeOrder['items']).' Item Alat Camping',
         ]);
 
         $this->activeRentals = collect($this->activeRentals)->reject(function ($rental) {
             return $rental['id'] === $this->activeOrder['id'];
         })->toArray();
-        
+
         $this->activeOrder = null;
         session()->flash('message', 'Pengembalian berhasil diselesaikan! KTP pelanggan telah diserahkan kembali.');
     }
@@ -139,10 +147,11 @@ class ReturnFlow extends Component
     {
         return array_sum(array_map('floatval', $this->damageFees));
     }
-    
+
     public function getTotalChargeProperty()
     {
         $lateFee = $this->activeOrder ? $this->activeOrder['late_fee'] : 0;
+
         return $lateFee + $this->totalDamageFee;
     }
 
@@ -150,17 +159,17 @@ class ReturnFlow extends Component
     {
         // Filter history based on search and status
         $filteredHistory = collect($this->historyTransactions)->filter(function ($item) {
-            $matchSearch = empty($this->searchHistory) || 
-                stripos($item['id'], $this->searchHistory) !== false || 
+            $matchSearch = empty($this->searchHistory) ||
+                stripos($item['id'], $this->searchHistory) !== false ||
                 stripos($item['customer'], $this->searchHistory) !== false;
-            
+
             $matchStatus = $this->statusFilter === 'all' || stripos($item['status'], $this->statusFilter) !== false;
 
             return $matchSearch && $matchStatus;
         });
 
         return view('livewire.vendor.return-flow', [
-            'filteredHistory' => $filteredHistory
+            'filteredHistory' => $filteredHistory,
         ]);
     }
 }

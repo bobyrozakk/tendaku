@@ -175,8 +175,8 @@ class DatabaseSeeder extends Seeder
                 ItemUnit::create([
                     'vendor_id' => $vendor->id,
                     'master_item_id' => $item->id,
-                    'unit_code' => strtoupper(Str::slug($item->name, '-')) . '-UNIT-' . $u,
-                    'barcode' => 'BC-' . rand(100000, 999999),
+                    'unit_code' => strtoupper(Str::slug($item->name, '-')).'-UNIT-'.$u,
+                    'barcode' => 'BC-'.rand(100000, 999999),
                     'condition' => 'good',
                     'status' => 'available',
                     'purchase_date' => now()->subMonths(6),
@@ -187,4 +187,3 @@ class DatabaseSeeder extends Seeder
         }
     }
 }
-
