@@ -21,6 +21,12 @@ class MidtransPaymentController extends Controller
             404,
         );
 
+        abort_unless(
+            $rental->status === 'pending',
+            422,
+            'Rental ini tidak lagi menunggu pembayaran.',
+        );
+
         $payment = $rental->payments()
             ->where('status', 'pending')
             ->where('payment_type', 'settlement')
