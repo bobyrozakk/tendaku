@@ -7,11 +7,11 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <nav class="flex items-center gap-2 text-xs text-darkbrown-500 mb-1.5">
-                    <a href="{{ url('/') }}" class="hover:text-avocado-600 transition">Beranda</a>
+                    <a href="{{ route('home') }}" class="hover:text-avocado-600 transition">Beranda</a>
                     <span class="text-wheat-400">/</span>
-                    <a href="{{ url('/katalog') }}" class="hover:text-avocado-600 transition">Katalog</a>
+                    <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-600 transition">Katalog</a>
                     <span class="text-wheat-400">/</span>
-                    <span class="text-darkbrown-800 font-semibold">Checkout Booking</span>
+                    <span class="text-darkbrown-800 font-semibold">Booking</span>
                 </nav>
                 <div class="flex items-center gap-3">
                     <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-800 tracking-tight">
