@@ -243,6 +243,144 @@ class RentalServiceTest extends TestCase
         ]);
     }
 
+    public function test_process_pickup_successfully_assigns_units_holds_ktp_and_updates_status(): void
+    {
+        $unit1 = $this->createUnit($this->item1, 'TD-001');
+        $unit2 = $this->createUnit($this->item2, 'SB-001');
+        $staff = User::factory()->create(['role' => 'vendor_admin']);
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-12',
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+                ['master_item_id' => $this->item2->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $detail1 = $rental->details->where('master_item_id', $this->item1->id)->first();
+        $detail2 = $rental->details->where('master_item_id', $this->item2->id)->first();
+
+        $pickedUpRental = $this->service->processPickup(
+            $rental,
+            [
+                $detail1->id => ['item_unit_id' => $unit1->id, 'condition_before' => 'excellent'],
+                $detail2->id => ['item_unit_id' => $unit2->id, 'condition_before' => 'good', 'checklist_notes' => 'Lengkap dengan cover'],
+            ],
+            'https://storage.tendaku.com/collaterals/ktp_budi_20261010.jpg',
+            $staff->id,
+            'Disimpan di Loker Jaminan A-04'
+        );
+
+        $this->assertSame('picked_up', $pickedUpRental->status);
+        $this->assertSame('held', $pickedUpRental->ktp_collateral_status);
+        $this->assertSame('https://storage.tendaku.com/collaterals/ktp_budi_20261010.jpg', $pickedUpRental->ktp_collateral_photo_url);
+        $this->assertSame($staff->id, $pickedUpRental->picked_up_by);
+        $this->assertSame('Disimpan di Loker Jaminan A-04', $pickedUpRental->ktp_collateral_notes);
+        $this->assertNotNull($pickedUpRental->picked_up_at);
+        $this->assertNotNull($pickedUpRental->ktp_received_at);
+
+        // Pastikan status unit fisik berubah jadi rented
+        $this->assertSame('rented', $unit1->fresh()->status);
+        $this->assertSame('rented', $unit2->fresh()->status);
+
+        // Pastikan detail terupdate dengan unit dan kondisi awal
+        $this->assertSame($unit1->id, $detail1->fresh()->item_unit_id);
+        $this->assertSame('excellent', $detail1->fresh()->condition_before);
+        $this->assertSame($unit2->id, $detail2->fresh()->item_unit_id);
+        $this->assertSame('Lengkap dengan cover', $detail2->fresh()->checklist_notes);
+    }
+
+    public function test_process_pickup_throws_exception_when_ktp_photo_is_empty(): void
+    {
+        $unit1 = $this->createUnit($this->item1, 'TD-001');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-11',
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $detail1 = $rental->details->first();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Foto verifikasi wajah penyewa memegang KTP fisik wajib disertakan');
+
+        $this->service->processPickup(
+            $rental,
+            [$detail1->id => $unit1->id],
+            '   '
+        );
+    }
+
+    public function test_process_pickup_throws_exception_when_unit_is_in_maintenance(): void
+    {
+        // Siapkan 1 unit bagus agar booking berhasil dibuat
+        $this->createUnit($this->item1, 'TD-001');
+
+        $brokenUnit = ItemUnit::query()->create([
+            'vendor_id' => $this->vendor->id,
+            'master_item_id' => $this->item1->id,
+            'unit_code' => 'TD-BROKEN',
+            'condition' => 'damaged',
+            'status' => 'maintenance',
+        ]);
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-11',
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $detail1 = $rental->details->first();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage("Unit fisik 'TD-BROKEN' tidak siap pakai");
+
+        $this->service->processPickup(
+            $rental,
+            [$detail1->id => $brokenUnit->id],
+            'https://storage.tendaku.com/ktp.jpg'
+        );
+    }
+
+    public function test_process_pickup_throws_exception_when_same_unit_assigned_twice(): void
+    {
+        $unit1 = $this->createUnit($this->item1, 'TD-001');
+        $this->createUnit($this->item1, 'TD-002');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-11',
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 2],
+            ],
+        ]);
+
+        $details = $rental->details->values();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('tidak boleh dialokasikan lebih dari satu kali');
+
+        $this->service->processPickup(
+            $rental,
+            [
+                $details[0]->id => $unit1->id,
+                $details[1]->id => $unit1->id,
+            ],
+            'https://storage.tendaku.com/ktp.jpg'
+        );
+    }
+
     private function createUnit(MasterItem $item, string $code): ItemUnit
     {
         return ItemUnit::query()->create([
