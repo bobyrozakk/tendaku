@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Models\Rental;
 use Carbon\Carbon;
@@ -146,10 +147,100 @@ class RentalService
 
     /**
      * Proses serah terima / pickup barang oleh penyewa.
+     * Mengalokasikan unit fisik ber-barcode, mencatat kondisi awal, menyimpan foto jaminan KTP, dan jejak audit staf.
+     *
+     * @param  Rental  $rental  Transaksi rental yang akan di-pickup
+     * @param  array<int|string, array{item_unit_id: int, condition_before?: string|null, checklist_notes?: string|null}|int>  $unitAssignments
+     *                                                                                                                                           Daftar alokasi unit fisik, format: [rental_detail_id => ['item_unit_id' => 10, 'condition_before' => 'good']] atau [rental_detail_id => 10]
+     * @param  string  $ktpPhotoUrl  URL/path foto verifikasi wajah penyewa memegang KTP asli fisik
+     * @param  int|null  $staffUserId  ID user staf vendor yang menyerahkan barang
+     * @param  string|null  $ktpNotes  Catatan penahanan KTP (misal: nomor loker penyimpanan)
+     *
+     * @throws InvalidArgumentException Jika foto KTP kosong atau unit tidak cocok
+     * @throws RuntimeException Jika status rental tidak valid atau unit tidak tersedia
      */
-    public function processPickup(Rental $rental, array $unitAssignments): void
-    {
-        // Logika serah terima barang (akan dikerjakan pada sprint selanjutnya)
+    public function processPickup(
+        Rental $rental,
+        array $unitAssignments,
+        string $ktpPhotoUrl,
+        ?int $staffUserId = null,
+        ?string $ktpNotes = null
+    ): Rental {
+        if (in_array($rental->status, ['picked_up', 'returned', 'completed', 'cancelled', 'expired'], true)) {
+            throw new RuntimeException("Rental dengan status '{$rental->status}' tidak dapat diproses serah-terima/pickup.");
+        }
+
+        if (trim($ktpPhotoUrl) === '') {
+            throw new InvalidArgumentException('Foto verifikasi wajah penyewa memegang KTP fisik wajib disertakan saat serah terima barang.');
+        }
+
+        $rental->loadMissing('details');
+
+        if ($rental->details->isEmpty()) {
+            throw new RuntimeException('Transaksi sewa ini tidak memiliki rincian barang.');
+        }
+
+        return DB::transaction(function () use ($rental, $unitAssignments, $ktpPhotoUrl, $staffUserId, $ktpNotes) {
+            $assignedUnitIds = [];
+
+            foreach ($rental->details as $detail) {
+                $assignment = $unitAssignments[$detail->id] ?? null;
+
+                if ($assignment === null) {
+                    throw new InvalidArgumentException("Alokasi unit fisik untuk baris rincian ID #{$detail->id} belum ditentukan.");
+                }
+
+                $itemUnitId = is_array($assignment) ? (int) ($assignment['item_unit_id'] ?? 0) : (int) $assignment;
+                $conditionBefore = is_array($assignment) ? ($assignment['condition_before'] ?? null) : null;
+                $checklistNotes = is_array($assignment) ? ($assignment['checklist_notes'] ?? null) : null;
+
+                if ($itemUnitId <= 0) {
+                    throw new InvalidArgumentException("ID unit fisik tidak valid untuk baris rincian ID #{$detail->id}.");
+                }
+
+                if (in_array($itemUnitId, $assignedUnitIds, true)) {
+                    throw new InvalidArgumentException("Unit fisik ID #{$itemUnitId} tidak boleh dialokasikan lebih dari satu kali dalam transaksi yang sama.");
+                }
+
+                $assignedUnitIds[] = $itemUnitId;
+
+                /** @var ItemUnit $itemUnit */
+                $itemUnit = ItemUnit::query()
+                    ->where('vendor_id', $rental->vendor_id)
+                    ->findOrFail($itemUnitId);
+
+                if ((int) $itemUnit->master_item_id !== (int) $detail->master_item_id) {
+                    throw new InvalidArgumentException("Unit fisik '{$itemUnit->unit_code}' bukan merupakan jenis alat yang sesuai dengan pesanan.");
+                }
+
+                if (in_array($itemUnit->status, ['maintenance', 'retired'], true) || $itemUnit->condition === 'lost') {
+                    throw new RuntimeException("Unit fisik '{$itemUnit->unit_code}' tidak siap pakai (status: {$itemUnit->status}, kondisi: {$itemUnit->condition}).");
+                }
+
+                // Update detail dengan unit fisik dan kondisi awal
+                $detail->update([
+                    'item_unit_id' => $itemUnit->id,
+                    'condition_before' => $conditionBefore ?? $itemUnit->condition ?? 'good',
+                    'checklist_notes' => $checklistNotes,
+                ]);
+
+                // Update status unit menjadi rented
+                $itemUnit->update(['status' => 'rented']);
+            }
+
+            // Update header rental
+            $rental->update([
+                'status' => 'picked_up',
+                'picked_up_at' => now(),
+                'picked_up_by' => $staffUserId,
+                'ktp_collateral_photo_url' => $ktpPhotoUrl,
+                'ktp_collateral_status' => 'held',
+                'ktp_received_at' => now(),
+                'ktp_collateral_notes' => $ktpNotes,
+            ]);
+
+            return $rental->fresh(['details.itemUnit', 'details.masterItem', 'pickedUpBy', 'vendor']);
+        });
     }
 
     /**
