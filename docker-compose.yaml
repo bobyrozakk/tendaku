@@ -41,6 +41,16 @@ services:
         networks:
             - tendaku-network
 
+    mailpit:
+        image: 'axllent/mailpit:latest'
+        container_name: tendaku_mailpit
+        restart: unless-stopped
+        ports:
+            - "1025:1025"
+            - "8025:8025"
+        networks:
+            - tendaku-network
+
 networks:
     tendaku-network:
         driver: bridge

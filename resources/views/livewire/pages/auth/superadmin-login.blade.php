@@ -9,14 +9,11 @@ new #[Layout('layouts.guest')] class extends Component
 {
     public LoginForm $form;
 
-    /**
-     * Handle an incoming authentication request.
-     */
     public function login(): void
     {
         $this->validate();
 
-        $this->form->authenticate();
+        $this->form->authenticate(true);
 
         Session::regenerate();
 
@@ -25,5 +22,11 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    @include('livewire.pages.auth.partials.login-form')
+    <h1 class="mb-4 text-xl font-semibold text-darkbrown-800">Super Admin Login</h1>
+
+    @include('livewire.pages.auth.partials.login-form', [
+        'showForgotPassword' => false,
+        'showGoogleLogin' => false,
+        'showRegisterLink' => false,
+    ])
 </div>

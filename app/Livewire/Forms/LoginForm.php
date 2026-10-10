@@ -26,11 +26,24 @@ class LoginForm extends Form
      *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(bool $isSuperAdminLogin = false): void
     {
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt($this->only(['email', 'password']), $this->remember)) {
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'form.email' => trans('auth.failed'),
+            ]);
+        }
+
+        $allowedRoles = $isSuperAdminLogin
+            ? ['super_admin']
+            : ['customer', 'vendor_owner', 'vendor_admin'];
+
+        if (! in_array(Auth::user()?->role, $allowedRoles, true)) {
+            Auth::logout();
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

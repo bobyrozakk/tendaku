@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -60,7 +61,7 @@ class PasswordResetTest extends TestCase
     {
         Notification::fake();
 
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'vendor_admin']);
 
         Volt::test('pages.auth.forgot-password')
             ->set('email', $user->email)
@@ -69,14 +70,28 @@ class PasswordResetTest extends TestCase
         Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
             $component = Volt::test('pages.auth.reset-password', ['token' => $notification->token])
                 ->set('email', $user->email)
-                ->set('password', 'password')
-                ->set('password_confirmation', 'password');
+                ->set('password', 'new-password')
+                ->set('password_confirmation', 'new-password');
 
             $component->call('resetPassword');
 
             $component
                 ->assertRedirect('/login')
                 ->assertHasNoErrors();
+
+            $this->assertTrue(Hash::check('new-password', $user->fresh()->password));
+
+            $login = Volt::test('pages.auth.login')
+                ->set('form.email', $user->email)
+                ->set('form.password', 'new-password');
+
+            $login->call('login');
+
+            $login
+                ->assertHasNoErrors()
+                ->assertRedirect(route('dashboard', absolute: false));
+
+            $this->assertAuthenticatedAs($user);
 
             return true;
         });

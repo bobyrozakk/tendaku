@@ -35,6 +35,15 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env(
+            'GOOGLE_REDIRECT_URI',
+            rtrim((string) env('APP_URL', 'http://localhost'), '/').'/auth/google/callback'
+        ),
+    ],
+
     'midtrans' => [
         // Notes: This currently represents one platform Midtrans account.
         // Resolve credentials per payment.vendor_id here if the vendor owns its own account.
