@@ -45,24 +45,12 @@ Route::view('dashboard', 'dashboard')
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
-// Rute untuk Vendor Dashboard
-Route::view('vendor/dashboard', 'vendor.dashboard.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.dashboard');
-
-// Rute untuk Vendor Units Management
-Route::view('vendor/units', 'vendor.units.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.units');
-
-// Rute untuk Return & Inspeksi Barang
-Route::view('vendor/return', 'vendor.return.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.return');
-
-// Rute untuk Pickup / Serah Terima Barang
-Route::view('vendor/pickup', 'vendor.pickup.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.pickup');
+// Rute untuk Vendor (Dilindungi Role Vendor Owner & Admin)
+Route::middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])->prefix('vendor')->name('vendor.')->group(function () {
+    Route::view('dashboard', 'vendor.dashboard.index')->name('dashboard');
+    Route::view('units', 'vendor.units.index')->name('units');
+    Route::view('return', 'vendor.return.index')->name('return');
+    Route::view('pickup', 'vendor.pickup.index')->name('pickup');
+});
 
 require __DIR__.'/auth.php';

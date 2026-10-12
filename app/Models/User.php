@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasRoles;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, MustVerifyEmailTrait, Notifiable, SoftDeletes;
+    use HasFactory, HasRoles, MustVerifyEmailTrait, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'vendor_id',
@@ -60,15 +61,5 @@ class User extends Authenticatable implements MustVerifyEmail
     public function paymentsReceived(): HasMany
     {
         return $this->hasMany(Payment::class, 'received_by');
-    }
-
-    public function isSuperAdmin(): bool
-    {
-        return $this->role === 'super_admin';
-    }
-
-    public function isVendorStaff(): bool
-    {
-        return in_array($this->role, ['vendor_owner', 'vendor_admin']);
     }
 }
