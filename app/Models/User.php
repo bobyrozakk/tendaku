@@ -17,6 +17,7 @@ class User extends Authenticatable
         'vendor_id',
         'name',
         'email',
+        'google_id',
         'password',
         'phone',
         'address',
