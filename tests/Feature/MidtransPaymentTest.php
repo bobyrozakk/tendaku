@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Payment;
-use App\Models\Rental;
 use App\Models\User;
 use App\Services\MidtransService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -173,5 +172,4 @@ class MidtransPaymentTest extends TestCase
             'status' => 'pending',
         ]);
     }
-
 }
