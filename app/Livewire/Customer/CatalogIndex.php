@@ -4,6 +4,9 @@ namespace App\Livewire\Customer;
 
 use App\Models\ItemCategory;
 use App\Models\MasterItem;
+use App\Models\Vendor;
+use App\Services\AvailabilityService;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -13,63 +16,108 @@ class CatalogIndex extends Component
 {
     use WithPagination;
 
-    /**
-     * Real-time search string (synced with URL ?search=...).
-     */
     #[Url(as: 'search', history: true, keep: false)]
     public string $search = '';
 
-    /**
-     * Selected category ID filter (synced with URL ?category_id=...).
-     */
     #[Url(as: 'category_id', history: true, keep: false)]
     public ?int $categoryId = null;
 
-    /**
-     * Reset pagination to page 1 when real-time search term updates.
-     */
+    #[Url(as: 'vendor_id', history: true, keep: false)]
+    public ?int $vendorId = null;
+
+    #[Url(as: 'min_price', history: true, keep: false)]
+    public ?string $minPrice = null;
+
+    #[Url(as: 'max_price', history: true, keep: false)]
+    public ?string $maxPrice = null;
+
+    #[Url(as: 'sort', history: true, keep: false)]
+    public string $sort = 'latest';
+
+    #[Url(as: 'start_date', history: true, keep: false)]
+    public ?string $startDate = null;
+
+    #[Url(as: 'end_date', history: true, keep: false)]
+    public ?string $endDate = null;
+
     public function updatedSearch(): void
     {
         $this->resetPage();
     }
 
-    /**
-     * Reset pagination to page 1 when category selection changes.
-     */
     public function updatedCategoryId(): void
     {
         $this->resetPage();
     }
 
-    /**
-     * Select or toggle active category filter.
-     */
+    public function updatedVendorId(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedMinPrice(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedMaxPrice(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedSort(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStartDate(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedEndDate(): void
+    {
+        $this->resetPage();
+    }
+
     public function selectCategory(?int $id = null): void
     {
         $this->categoryId = ($this->categoryId === $id) ? null : $id;
         $this->resetPage();
     }
 
-    /**
-     * Reset search query and category filters back to default.
-     */
     public function resetFilters(): void
     {
-        $this->reset(['search', 'categoryId']);
+        $this->reset([
+            'search',
+            'categoryId',
+            'vendorId',
+            'minPrice',
+            'maxPrice',
+            'sort',
+            'startDate',
+            'endDate',
+        ]);
+        $this->sort = 'latest';
         $this->resetPage();
     }
 
-    /**
-     * Render catalog items with pagination.
-     */
-    public function render(): View
+    public function render(AvailabilityService $availabilityService): View
     {
         $categories = ItemCategory::withCount(['items' => function ($query) {
-            $query->where('is_active', true);
+            $query->publicCatalog();
         }])->get();
 
-        $itemsQuery = MasterItem::with(['category', 'vendor', 'units'])
-            ->where('is_active', true);
+        $vendors = Vendor::whereIn('status', ['active', 'approved'])
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $itemsQuery = MasterItem::publicCatalog()
+            ->with(['category', 'vendor'])
+            ->withCount(['units' => function ($query) {
+                $query->whereNotIn('status', ['maintenance', 'retired'])
+                    ->whereNotIn('condition', ['damaged', 'lost']);
+            }]);
 
         $trimmedSearch = trim($this->search);
         if ($trimmedSearch !== '') {
@@ -83,11 +131,51 @@ class CatalogIndex extends Component
             $itemsQuery->where('category_id', $this->categoryId);
         }
 
-        $items = $itemsQuery->latest()->paginate(12);
+        if ($this->vendorId) {
+            $itemsQuery->where('vendor_id', $this->vendorId);
+        }
+
+        if ($this->minPrice !== null && is_numeric($this->minPrice)) {
+            $itemsQuery->where('daily_rate', '>=', (float) $this->minPrice);
+        }
+
+        if ($this->maxPrice !== null && is_numeric($this->maxPrice)) {
+            $itemsQuery->where('daily_rate', '<=', (float) $this->maxPrice);
+        }
+
+        match ($this->sort) {
+            'price_asc' => $itemsQuery->orderBy('daily_rate', 'asc'),
+            'price_desc' => $itemsQuery->orderBy('daily_rate', 'desc'),
+            'name_asc' => $itemsQuery->orderBy('name', 'asc'),
+            default => $itemsQuery->latest(),
+        };
+
+        $items = $itemsQuery->paginate(12);
+
+        $dateStockMap = [];
+        if (! empty($this->startDate) && ! empty($this->endDate)) {
+            try {
+                $sDate = Carbon::parse($this->startDate);
+                $eDate = Carbon::parse($this->endDate);
+                if ($eDate->gte($sDate) && $sDate->gte(Carbon::today())) {
+                    foreach ($items->items() as $item) {
+                        $dateStockMap[$item->id] = $availabilityService->checkAvailability(
+                            $item->id,
+                            $this->startDate,
+                            $this->endDate
+                        );
+                    }
+                }
+            } catch (\Throwable) {
+                // Ignore parsing errors
+            }
+        }
 
         return view('livewire.customer.catalog-index', [
             'categories' => $categories,
+            'vendors' => $vendors,
             'items' => $items,
+            'dateStockMap' => $dateStockMap,
         ]);
     }
 }
