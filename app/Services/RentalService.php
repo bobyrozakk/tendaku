@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Exceptions\InsufficientStockException;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Models\Rental;
 use Carbon\Carbon;
 use DateTimeInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -36,11 +38,11 @@ class RentalService
      *     discount_amount?: float|int,
      *     expires_in_hours?: int,
      *     notes?: string|null,
-     *     items: array<int, array{master_item_id: int, quantity?: int}>
+     *     items: array<int, array{master_item_id: int, quantity?: int, qty?: int}>
      * } $data
      *
-     * @throws InvalidArgumentException Jika data tidak lengkap atau rentang tanggal salah
-     * @throws RuntimeException Jika stok unit fisik tidak mencukupi
+     * @throws InvalidArgumentException Jika data tidak valid atau guest delivery
+     * @throws InsufficientStockException Jika stok unit fisik tidak mencukupi
      */
     public function createBooking(array $data): Rental
     {
@@ -48,27 +50,92 @@ class RentalService
             throw new InvalidArgumentException('Vendor ID wajib diisi.');
         }
 
+        $vendorId = (int) $data['vendor_id'];
+
         if (empty($data['items']) || ! is_array($data['items'])) {
             throw new InvalidArgumentException('Pilihan perlengkapan camping (items) tidak boleh kosong.');
         }
 
-        [$pickupDate, $returnDate] = $this->parseRentalDates($data['pickup_date'], $data['return_date']);
-        $rentalDays = (int) $pickupDate->diffInDays($returnDate) + 1;
+        // Cek apakah user adalah guest
+        $isGuest = empty($data['user_id']);
+        if ($isGuest) {
+            if (empty($data['guest_name']) || empty($data['guest_phone']) || empty($data['guest_id_number'])) {
+                throw new InvalidArgumentException('Data guest (nama, nomor telepon, dan nomor identitas/KTP) wajib diisi untuk pemesanan tanpa akun.');
+            }
+        }
 
-        return DB::transaction(function () use ($data, $pickupDate, $returnDate, $rentalDays) {
+        $pickupMethod = $data['pickup_method'] ?? 'self_pickup';
+        if ($pickupMethod === 'delivery') {
+            if ($isGuest) {
+                throw new InvalidArgumentException('Metode pengantaran (delivery) hanya diperbolehkan untuk pengguna yang telah masuk (login). Guest hanya boleh self pickup.');
+            }
+            if (empty($data['delivery_address'])) {
+                throw new InvalidArgumentException('Alamat pengantaran (delivery_address) wajib diisi jika memilih metode delivery.');
+            }
+        }
+
+        [$pickupDate, $returnDate] = $this->parseRentalDates($data['pickup_date'], $data['return_date']);
+        $rentalDays = max(1, (int) $pickupDate->diffInDays($returnDate) + 1);
+
+        // Normalize dan ekstrak item list
+        $itemRequirements = [];
+        foreach ($data['items'] as $itemData) {
+            $masterItemId = (int) ($itemData['master_item_id'] ?? 0);
+            $qty = (int) ($itemData['quantity'] ?? $itemData['qty'] ?? 1);
+            if ($masterItemId <= 0 || $qty <= 0) {
+                throw new InvalidArgumentException('ID item dan kuantitas sewa harus berupa bilangan bulat positif.');
+            }
+            $itemRequirements[$masterItemId] = ($itemRequirements[$masterItemId] ?? 0) + $qty;
+        }
+
+        // Urutkan id master item ascending untuk mencegah deadlock pada DB transaction locking
+        $sortedItemIds = array_keys($itemRequirements);
+        sort($sortedItemIds);
+
+        return DB::transaction(function () use (
+            $data,
+            $vendorId,
+            $isGuest,
+            $pickupDate,
+            $returnDate,
+            $rentalDays,
+            $pickupMethod,
+            $itemRequirements,
+            $sortedItemIds
+        ) {
+            // Kunci baris master_items terkait dengan lockForUpdate() urut berdasarkan ID
+            /** @var Collection<int, MasterItem> $masterItems */
+            $masterItems = MasterItem::query()
+                ->whereIn('id', $sortedItemIds)
+                ->orderBy('id', 'asc')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            // Pastikan semua item ditemukan dan milik vendor yang sama
+            foreach ($sortedItemIds as $masterItemId) {
+                if (! $masterItems->has($masterItemId)) {
+                    throw new InvalidArgumentException("Master item dengan ID #{$masterItemId} tidak ditemukan.");
+                }
+
+                $masterItem = $masterItems->get($masterItemId);
+                if ((int) $masterItem->vendor_id !== $vendorId) {
+                    throw new InvalidArgumentException("Item '{$masterItem->name}' berasal dari vendor yang berbeda. Satu transaksi rental hanya boleh untuk satu vendor.");
+                }
+            }
+
+            // Cek ulang AvailabilityService di dalam transaksi
             $subtotal = 0.0;
             $detailsToCreate = [];
 
-            // 1. Validasi ketersediaan dan kalkulasi subtotal per item
-            foreach ($data['items'] as $itemData) {
-                $masterItemId = (int) ($itemData['master_item_id'] ?? 0);
-                $quantity = max(1, (int) ($itemData['quantity'] ?? 1));
+            foreach ($itemRequirements as $masterItemId => $quantity) {
+                $masterItem = $masterItems->get($masterItemId);
 
-                $masterItem = MasterItem::query()->findOrFail($masterItemId);
-
-                // Cek ketersediaan via AvailabilityService
                 if (! $this->availabilityService->isAvailable($masterItemId, $quantity, $pickupDate, $returnDate)) {
-                    throw new RuntimeException("Stok alat camping '{$masterItem->name}' tidak mencukupi untuk tanggal {$pickupDate->format('d M Y')} s/d {$returnDate->format('d M Y')}.");
+                    throw new InsufficientStockException(
+                        $masterItem,
+                        "Stok alat camping '{$masterItem->name}' tidak mencukupi untuk tanggal {$pickupDate->format('d M Y')} s/d {$returnDate->format('d M Y')}."
+                    );
                 }
 
                 $dailyRate = (float) $masterItem->daily_rate;
@@ -77,20 +144,19 @@ class RentalService
                 $itemTotal = $dailyRate * $rentalDays * $quantity;
                 $subtotal += $itemTotal;
 
-                // Masukkan tiap unit individual ke daftar rental_details
                 for ($i = 0; $i < $quantity; $i++) {
                     $detailsToCreate[] = [
                         'master_item_id' => $masterItem->id,
-                        'item_unit_id' => null, // Unit fisik ditetapkan saat pickup di toko
+                        'item_unit_id' => null, // null sebelum pickup
                         'daily_rate_snapshot' => $dailyRate,
-                        'deposit_snapshot' => 0.0, // Tanpa deposit uang tunai
+                        'deposit_snapshot' => 0.0,
                         'late_fee_per_day_snapshot' => $lateFeePerDay,
                         'is_returned' => false,
                     ];
                 }
             }
 
-            // 2. Kalkulasi grand total (Full Payment)
+            // Hitung grand total (subtotal + delivery_fee - discount_amount)
             $deliveryFee = (float) ($data['delivery_fee'] ?? 0.0);
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
             $grandTotal = max(0.0, $subtotal + $deliveryFee - $discountAmount);
@@ -98,19 +164,18 @@ class RentalService
             $expiresInHours = (int) ($data['expires_in_hours'] ?? 2);
             $bookingCode = $this->generateBookingCode();
 
-            // 3. Simpan record Rental (Header)
             $rental = Rental::query()->create([
-                'vendor_id' => (int) $data['vendor_id'],
-                'user_id' => ! empty($data['user_id']) ? (int) $data['user_id'] : null,
+                'vendor_id' => $vendorId,
+                'user_id' => ! $isGuest ? (int) $data['user_id'] : null,
                 'created_by' => ! empty($data['created_by']) ? (int) $data['created_by'] : null,
                 'booking_code' => $bookingCode,
-                'guest_name' => $data['guest_name'] ?? null,
-                'guest_phone' => $data['guest_phone'] ?? null,
-                'guest_id_number' => $data['guest_id_number'] ?? null,
+                'guest_name' => $isGuest ? ($data['guest_name'] ?? null) : null,
+                'guest_phone' => $isGuest ? ($data['guest_phone'] ?? null) : null,
+                'guest_id_number' => $isGuest ? ($data['guest_id_number'] ?? null) : null,
                 'pickup_date' => $pickupDate->format('Y-m-d'),
                 'return_date' => $returnDate->format('Y-m-d'),
-                'pickup_method' => $data['pickup_method'] ?? 'self_pickup',
-                'delivery_address' => $data['delivery_address'] ?? null,
+                'pickup_method' => $pickupMethod,
+                'delivery_address' => $pickupMethod === 'delivery' ? ($data['delivery_address'] ?? null) : null,
                 'rental_days' => $rentalDays,
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,
@@ -120,11 +185,10 @@ class RentalService
                 'grand_total' => $grandTotal,
                 'ktp_collateral_status' => 'pending',
                 'status' => 'pending',
-                'expires_at' => now()->addHours($expiresInHours),
+                'expires_at' => Carbon::now()->addHours($expiresInHours),
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            // 4. Simpan record RentalDetail (Line Items)
             foreach ($detailsToCreate as $detail) {
                 $rental->details()->create($detail);
             }
@@ -134,12 +198,15 @@ class RentalService
     }
 
     /**
-     * Generate kode booking unik dengan format TDK-YYYYMMDD-XXXXX.
+     * Generate kode booking unik format TDK-YYYY-XXXXX (<= 20 karakter, retry jika bentrok).
      */
     public function generateBookingCode(): string
     {
+        $year = date('Y');
+
         do {
-            $code = 'TDK-'.date('Ymd').'-'.strtoupper(Str::random(5));
+            $randomString = strtoupper(Str::random(5));
+            $code = "TDK-{$year}-{$randomString}";
         } while (Rental::query()->where('booking_code', $code)->exists());
 
         return $code;
@@ -147,17 +214,6 @@ class RentalService
 
     /**
      * Proses serah terima / pickup barang oleh penyewa.
-     * Mengalokasikan unit fisik ber-barcode, mencatat kondisi awal, menyimpan foto jaminan KTP, dan jejak audit staf.
-     *
-     * @param  Rental  $rental  Transaksi rental yang akan di-pickup
-     * @param  array<int|string, array{item_unit_id: int, condition_before?: string|null, checklist_notes?: string|null}|int>  $unitAssignments
-     *                                                                                                                                           Daftar alokasi unit fisik, format: [rental_detail_id => ['item_unit_id' => 10, 'condition_before' => 'good']] atau [rental_detail_id => 10]
-     * @param  string  $ktpPhotoUrl  URL/path foto verifikasi wajah penyewa memegang KTP asli fisik
-     * @param  int|null  $staffUserId  ID user staf vendor yang menyerahkan barang
-     * @param  string|null  $ktpNotes  Catatan penahanan KTP (misal: nomor loker penyimpanan)
-     *
-     * @throws InvalidArgumentException Jika foto KTP kosong atau unit tidak cocok
-     * @throws RuntimeException Jika status rental tidak valid atau unit tidak tersedia
      */
     public function processPickup(
         Rental $rental,
