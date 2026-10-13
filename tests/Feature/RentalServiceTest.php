@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Vendor;
 use App\Services\AvailabilityService;
 use App\Services\RentalService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use InvalidArgumentException;
 use RuntimeException;
@@ -32,6 +33,8 @@ class RentalServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        Carbon::setTestNow('2026-10-10 10:00:00');
 
         $availabilityService = new AvailabilityService;
         $this->service = new RentalService($availabilityService);
@@ -73,6 +76,12 @@ class RentalServiceTest extends TestCase
             'late_fee_per_day' => 10000,
             'is_active' => true,
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
     }
 
     public function test_create_booking_successfully_creates_rental_and_details_when_stock_available(): void
