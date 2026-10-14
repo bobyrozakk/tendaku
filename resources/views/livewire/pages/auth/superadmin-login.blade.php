@@ -27,7 +27,8 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <h1 class="mb-4 text-xl font-semibold text-darkbrown-800">Super Admin Login</h1>
+    <x-slot:heading>Super Admin Login</x-slot:heading>
+    <x-slot:subheading>Akses panel super admin Tendaku.</x-slot:subheading>
 
     @include('livewire.pages.auth.partials.login-form', [
         'showForgotPassword' => false,
@@ -35,3 +36,4 @@ new #[Layout('layouts.guest')] class extends Component
         'showRegisterLink' => false,
     ])
 </div>
+

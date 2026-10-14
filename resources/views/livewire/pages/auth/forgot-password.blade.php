@@ -37,25 +37,27 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
-    </div>
+    <x-slot:heading>Lupa password?</x-slot:heading>
+    <x-slot:subheading>Masukkan email akunmu. Kami kirim tautan untuk membuat password baru.</x-slot:subheading>
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
-
-    <form wire:submit="sendPasswordResetLink">
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+    @if (session('status'))
+        <div role="status" class="mb-6 rounded-lg border border-tendaku-brown/15 bg-tendaku-avocado/10 px-4 py-3 text-sm text-tendaku-brown">
+            {{ session('status') }}
         </div>
+    @endif
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
-        </div>
+    <form wire:submit="sendPasswordResetLink" class="space-y-5">
+        @csrf
+
+        <x-auth.field name="email" label="Email" type="email"
+                      wire:model="email"
+                      placeholder="nama@email.com" autocomplete="username" required autofocus />
+
+        <x-auth.button class="w-full">Kirim tautan reset</x-auth.button>
     </form>
+
+    <p class="mt-8 text-sm text-tendaku-brown/70">
+        Ingat passwordnya?
+        <a href="{{ route('login') }}" wire:navigate class="font-semibold text-tendaku-moss underline-offset-4 hover:underline">Kembali masuk</a>
+    </p>
 </div>

@@ -44,23 +44,27 @@ new #[Layout('layouts.guest')] class extends Component
 }; ?>
 
 <div>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
-    </div>
+    <x-slot:heading>Cek emailmu</x-slot:heading>
+    <x-slot:subheading>Kami sudah mengirim tautan verifikasi. Klik tautan itu untuk mengaktifkan akun sebelum mulai booking.</x-slot:subheading>
 
-    @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
+    @if (session('status') === 'verification-link-sent')
+        <div role="status" class="mb-6 rounded-lg border border-tendaku-brown/15 bg-tendaku-avocado/10 px-4 py-3 text-sm text-tendaku-brown">
+            Tautan verifikasi baru sudah dikirim ke email yang kamu daftarkan.
         </div>
     @endif
 
-    <div class="mt-4 flex items-center justify-between">
-        <x-primary-button wire:click="sendVerification">
-            {{ __('Resend Verification Email') }}
-        </x-primary-button>
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <form wire:submit="sendVerification">
+            @csrf
+            <x-auth.button class="w-full sm:w-auto">Kirim ulang email</x-auth.button>
+        </form>
 
-        <button wire:click="logout" type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-            {{ __('Log Out') }}
+        <button wire:click="logout" type="button"
+                class="rounded text-sm font-medium text-tendaku-brown/70 underline-offset-4 hover:text-tendaku-brown hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-brown/40">
+            Keluar
         </button>
     </div>
+
+    <p class="mt-8 text-sm text-tendaku-brown/70">Email belum masuk? Cek juga folder spam.</p>
 </div>
+
