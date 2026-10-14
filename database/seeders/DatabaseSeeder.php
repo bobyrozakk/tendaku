@@ -20,12 +20,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. User
+        // 1. User Customer
         $user = User::create([
             'name' => 'Test Customer',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
             'role' => 'customer',
+            'email_verified_at' => now(),
         ]);
 
         // 2. Vendor
@@ -38,9 +39,19 @@ class DatabaseSeeder extends Seeder
             'address' => 'Jl. Outdoor Adventure No. 45, Lowokwaru',
             'city' => 'Malang',
             'logo_url' => 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=400&q=80',
-            'status' => 'approved',
+            'status' => 'active',
             'approved_at' => now(),
             'approved_by' => $user->id,
+        ]);
+
+        // 2b. User Vendor Owner & Admin
+        User::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Vendor Admin',
+            'email' => 'vendor@tendaku.com',
+            'password' => bcrypt('password'),
+            'role' => 'vendor_owner',
+            'email_verified_at' => now(),
         ]);
 
         // 3. Categories
