@@ -34,7 +34,8 @@ class RegistrationTest extends TestCase
 
         $component->call('register');
 
-        $component->assertRedirect(route('home', absolute: false));
+        // Setelah register, customer diarahkan ke halaman verifikasi email
+        $component->assertRedirect(route('verification.notice', absolute: false));
 
         $this->assertAuthenticated();
         $user = User::where('email', 'test@example.com')->firstOrFail();

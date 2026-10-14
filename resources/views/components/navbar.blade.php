@@ -29,18 +29,24 @@
                :class="open ? 'opacity-60' : 'opacity-0 h-0 mb-0 overflow-hidden'" style="color: rgba(245,233,200,0.5);">Menu Utama</p>
 
             <!-- Dashboard & POS -->
-            <a href="{{ route('vendor.dashboard') }}"
+            @php
+                $dashboardUrl = auth()->user()?->isVendorOwner() ? route('vendor.owner.dashboard') : (auth()->user()?->isVendorAdmin() ? route('vendor.admin.dashboard') : route('vendor.dashboard'));
+                $isDashboardActive = request()->routeIs('vendor.dashboard', 'vendor.owner.dashboard', 'vendor.admin.dashboard');
+            @endphp
+            <a href="{{ $dashboardUrl }}"
                class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
                :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-               style="{{ request()->routeIs('vendor.dashboard')
+               style="{{ $isDashboardActive
                    ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
                    : 'color: rgba(245,233,200,0.65);' }}"
-               onmouseover="if (!{{ request()->routeIs('vendor.dashboard') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-               onmouseout="if (!{{ request()->routeIs('vendor.dashboard') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+               onmouseover="if (!{{ $isDashboardActive ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+               onmouseout="if (!{{ $isDashboardActive ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
                 <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                 </svg>
-                <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Dashboard & POS</span>
+                <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">
+                    {{ auth()->user()?->isVendorOwner() ? 'Dashboard Owner' : 'Dashboard Kasir' }}
+                </span>
             </a>
 
             <!-- Kelola Alat & Stok -->
@@ -168,13 +174,18 @@
 
                 <!-- Auth -->
                 @auth
-                    @if (auth()->user()->isVendorStaff() || auth()->user()->isSuperAdmin())
-                        {{-- Vendor & Admin: tampilkan tombol ke Dashboard vendor --}}
+                    @if (auth()->user()->isVendorStaff())
+                        {{-- Vendor Owner / Vendor Admin: ke Dashboard Vendor --}}
                         <a href="{{ route('vendor.dashboard') }}" class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
-                            Dashboard
+                            Dashboard Vendor
+                        </a>
+                    @elseif (auth()->user()->isSuperAdmin())
+                        {{-- Super Admin: ke Dashboard Admin --}}
+                        <a href="{{ route('dashboard') }}" class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Dashboard Admin
                         </a>
                     @else
-                        {{-- Customer (verified or not): tampilkan Akun Saya, bukan dashboard vendor --}}
+                        {{-- Customer (verified or not): tampilkan Akun Saya, bukan dashboard --}}
                         <a href="{{ route('profile') }}" class="hidden sm:inline-flex btn-tendaku-secondary !py-2 !px-3.5 text-xs sm:text-sm">
                             Akun Saya
                         </a>

@@ -21,7 +21,7 @@ class GoogleAuthController extends Controller
         }
 
         return Socialite::driver('google')
-            ->redirectUrl($request->getSchemeAndHttpHost() . '/auth/google/callback')
+            ->redirectUrl($request->getSchemeAndHttpHost().'/auth/google/callback')
             ->stateless()
             ->redirect();
     }
@@ -39,7 +39,7 @@ class GoogleAuthController extends Controller
         try {
             /** @var GoogleUser $googleUser */
             $googleUser = Socialite::driver('google')
-                ->redirectUrl($request->getSchemeAndHttpHost() . '/auth/google/callback')
+                ->redirectUrl($request->getSchemeAndHttpHost().'/auth/google/callback')
                 ->stateless()
                 ->user();
         } catch (InvalidStateException) {
@@ -94,6 +94,22 @@ class GoogleAuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('home')); //customer kembali ke landing page
+        $destination = match (true) {
+            $user->isVendorStaff() => route('dashboard'),
+            $user->isSuperAdmin() => route('dashboard'),
+            default => route('home'), // customer
+        };
+
+        $welcomeMessage = match (true) {
+            $user->isVendorOwner() => "Selamat datang Owner {$user->name}!",
+            $user->isVendorAdmin() => "Selamat datang Vendor {$user->name}!",
+            $user->isSuperAdmin() => "Hi Superadmin {$user->name}!",
+            default => "Selamat datang kembali, {$user->name}!",
+        };
+
+        $request->session()->flash('status', $welcomeMessage);
+        $request->session()->flash('success', $welcomeMessage);
+
+        return redirect()->intended($destination);
     }
 }

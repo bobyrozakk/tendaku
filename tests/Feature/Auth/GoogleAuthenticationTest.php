@@ -40,7 +40,8 @@ class GoogleAuthenticationTest extends TestCase
 
         $response = $this->get(route('google.callback'));
 
-        $response->assertRedirect(route('dashboard'));
+        // Customer baru diarahkan ke halaman utama (home)
+        $response->assertRedirect(route('home'));
 
         $user = User::where('email', 'google-customer@example.com')->firstOrFail();
 
@@ -62,6 +63,7 @@ class GoogleAuthenticationTest extends TestCase
 
         $response = $this->get(route('google.callback'));
 
+        // Vendor diarahkan ke dashboard
         $response->assertRedirect(route('dashboard'));
         $this->assertDatabaseCount('users', 1);
         $this->assertSame('google-user-123', $vendorAdmin->fresh()->google_id);

@@ -40,7 +40,7 @@ class AuthenticationTest extends TestCase
 
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'customer']);
 
         $component = Volt::test('pages.auth.login')
             ->set('form.email', $user->email)
@@ -50,13 +50,13 @@ class AuthenticationTest extends TestCase
 
         $component
             ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
+            ->assertRedirect(route('home', absolute: false));
 
         $this->assertAuthenticated();
     }
 
     #[DataProvider('vendorRoles')]
-    public function test_vendor_users_can_authenticate_using_the_public_login_screen(string $role): void
+    public function test_vendor_users_can_authenticate_using_the_public_login_screen(string $role, string $expectedRoute): void
     {
         $vendorUser = User::factory()->create(['role' => $role]);
 
@@ -68,7 +68,7 @@ class AuthenticationTest extends TestCase
 
         $component
             ->assertHasNoErrors()
-            ->assertRedirect(route('dashboard', absolute: false));
+            ->assertRedirect(route($expectedRoute, absolute: false));
 
         $this->assertAuthenticatedAs($vendorUser);
     }
@@ -76,8 +76,8 @@ class AuthenticationTest extends TestCase
     public static function vendorRoles(): array
     {
         return [
-            'owner' => ['vendor_owner'],
-            'admin or cashier' => ['vendor_admin'],
+            'owner' => ['vendor_owner', 'dashboard'],
+            'admin or cashier' => ['vendor_admin', 'dashboard'],
         ];
     }
 
@@ -151,7 +151,7 @@ class AuthenticationTest extends TestCase
 
     public function test_navigation_menu_can_be_rendered(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'super_admin']);
 
         $this->actingAs($user);
 

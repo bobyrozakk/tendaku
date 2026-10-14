@@ -23,10 +23,20 @@ new #[Layout('layouts.guest')] class extends Component
         $user = auth()->user();
 
         $destination = match (true) {
-            $user->isVendorStaff() => route('vendor.dashboard', absolute: false),
+            $user->isVendorStaff() => route('dashboard', absolute: false),
             $user->isCustomer()    => route('home', absolute: false),
             default                => route('dashboard', absolute: false), // super_admin
         };
+
+        $welcomeMessage = match (true) {
+            $user->isVendorOwner() => "Selamat datang Owner {$user->name}!",
+            $user->isVendorAdmin() => "Selamat datang Vendor {$user->name}!",
+            $user->isSuperAdmin()  => "Hi Superadmin {$user->name}!",
+            default                => "Selamat datang kembali, {$user->name}!",
+        };
+
+        Session::flash('status', $welcomeMessage);
+        Session::flash('success', $welcomeMessage);
 
         $this->redirectIntended(default: $destination, navigate: true);
     }

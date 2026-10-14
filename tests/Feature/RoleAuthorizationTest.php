@@ -55,7 +55,57 @@ class RoleAuthorizationTest extends TestCase
 
         $response = $this->actingAs($customer)->get('/vendor/dashboard');
 
-        $response->assertForbidden();
+        // middleware mengarahkan customer ke home
+        $response->assertRedirect(route('home'));
+    }
+
+    public function test_customer_cannot_access_admin_dashboard(): void
+    {
+        $customer = User::factory()->create([
+            'role' => User::ROLE_CUSTOMER,
+            'email_verified_at' => now(),
+        ]);
+
+        $response = $this->actingAs($customer)->get('/dashboard');
+
+        // Customer diarahkan ke home
+        $response->assertRedirect(route('home'));
+    }
+
+    public function test_super_admin_can_access_admin_dashboard(): void
+    {
+        $superAdmin = User::factory()->create([
+            'role' => User::ROLE_SUPER_ADMIN,
+            'email_verified_at' => now(),
+        ]);
+
+        $response = $this->actingAs($superAdmin)->get('/dashboard');
+
+        $response->assertOk();
+    }
+
+    public function test_vendor_owner_can_access_dashboard(): void
+    {
+        $owner = User::factory()->create([
+            'role' => User::ROLE_VENDOR_OWNER,
+            'email_verified_at' => now(),
+        ]);
+
+        $response = $this->actingAs($owner)->get('/dashboard');
+
+        $response->assertOk();
+    }
+
+    public function test_vendor_admin_can_access_dashboard(): void
+    {
+        $admin = User::factory()->create([
+            'role' => User::ROLE_VENDOR_ADMIN,
+            'email_verified_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->get('/dashboard');
+
+        $response->assertOk();
     }
 
     public function test_vendor_owner_can_access_vendor_routes(): void

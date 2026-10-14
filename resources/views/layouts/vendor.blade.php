@@ -34,7 +34,7 @@
                         <span class="w-2 h-2 rounded-full animate-pulse" style="background:#6c8b08;"></span>
                         Toko Rental Buka
                     </span>
-                    <span class="text-xs hidden sm:inline" style="color: #b8a882;">• Tendaku Central Camp</span>
+                    <span class="text-xs hidden sm:inline" style="color: #b8a882;">• {{ auth()->user()?->vendor?->name ?? 'Toko Rental' }}</span>
                 </div>
 
                 <!-- Right: Actions -->
@@ -72,11 +72,21 @@
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-xl font-bold flex items-center justify-center text-xs text-white"
                              style="background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 2px 8px rgba(108,139,8,0.3);">
-                            TK
+                            {{ strtoupper(substr(auth()->user()?->name ?? 'TK', 0, 2)) }}
                         </div>
                         <div class="hidden sm:block">
-                            <p class="text-xs font-bold leading-none" style="color: #2b2202;">Admin Vendor</p>
-                            <p class="text-[10px] mt-0.5" style="color: #9a8060;">Tendaku Portal</p>
+                            <p class="text-xs font-bold leading-none" style="color: #2b2202;">
+                                @if (auth()->user()?->isVendorOwner())
+                                    Owner ({{ auth()->user()->name }})
+                                @elseif (auth()->user()?->isVendorAdmin())
+                                    Admin ({{ auth()->user()->name }})
+                                @else
+                                    {{ auth()->user()?->name ?? 'Vendor' }}
+                                @endif
+                            </p>
+                            <p class="text-[10px] mt-0.5" style="color: #9a8060;">
+                                {{ auth()->user()?->isVendorOwner() ? 'Vendor Owner Portal' : 'Kasir & Admin Portal' }}
+                            </p>
                         </div>
                     </div>
                 </div>

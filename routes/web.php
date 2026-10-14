@@ -38,16 +38,21 @@ Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
 Route::view('design-system', 'design-system')->name('design-system');
 
 // Authenticated Routes (Dashboard & Profile)
+// Super Admin, Vendor Owner, dan Vendor Admin/Kasir bisa masuk /dashboard. Customer dilarang.
 Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role:super_admin,vendor_owner,vendor_admin'])
     ->name('dashboard');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
-// Rute untuk Vendor (Dilindungi Role Vendor Owner & Admin)
+
+// Rute untuk Vendor
 Route::middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])->prefix('vendor')->name('vendor.')->group(function () {
-    Route::view('dashboard', 'vendor.dashboard.index')->name('dashboard');
+    // Dashboard Vendor (tampilan sama seperti dashboard awal dengan pembeda role)
+    Route::view('dashboard', 'dashboard')->name('dashboard');
+
+    // Modul Operasional Toko
     Route::view('units', 'vendor.units.index')->name('units');
     Route::view('return', 'vendor.return.index')->name('return');
     Route::view('pickup', 'vendor.pickup.index')->name('pickup');

@@ -17,6 +17,11 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
+        $user = auth()->user();
+        $welcomeMessage = "Hi Superadmin {$user->name}!";
+        Session::flash('status', $welcomeMessage);
+        Session::flash('success', $welcomeMessage);
+
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
 }; ?>
