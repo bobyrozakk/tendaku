@@ -4,6 +4,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -23,10 +24,22 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function register(): void
     {
+        $this->email = Str::lower(trim($this->email));
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => [
+                'required',
+                'string',
+                'lowercase',
+                'email',
+                'max:255',
+                'unique:'.User::class,
+                'ends_with:@gmail.com',
+            ],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'email.ends_with' => 'Email harus menggunakan @gmail.com.',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
@@ -53,7 +66,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         <x-auth.field name="email" label="Email" type="email"
                       wire:model="email"
-                      placeholder="nama@email.com" autocomplete="username" required />
+                      placeholder="nama@gmail.com" autocomplete="username" required />
 
         <x-auth.field name="password" label="Password" type="password"
                       wire:model="password"

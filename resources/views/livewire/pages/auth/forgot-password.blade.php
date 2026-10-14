@@ -51,7 +51,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         <x-auth.field name="email" label="Email" type="email"
                       wire:model="email"
-                      placeholder="nama@email.com" autocomplete="username" required autofocus />
+                      placeholder="nama@gmail.com" autocomplete="username" required autofocus />
 
         <x-auth.button class="w-full">Kirim tautan reset</x-auth.button>
     </form>

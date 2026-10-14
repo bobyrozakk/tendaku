@@ -31,8 +31,8 @@ new #[Layout('layouts.guest')] class extends Component
         $welcomeMessage = match (true) {
             $user->isVendorOwner() => "Selamat datang Owner {$user->name}!",
             $user->isVendorAdmin() => "Selamat datang Vendor {$user->name}!",
-            $user->isSuperAdmin()  => "Hi Superadmin {$user->name}!",
-            default                => "Selamat datang kembali, {$user->name}!",
+            $user->isSuperAdmin()  => "Halo Superadmin {$user->name}!",
+            default                => "Selamat datang, {$user->name}!",
         };
 
         Session::flash('status', $welcomeMessage);
@@ -44,7 +44,7 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     <x-slot:heading>Masuk ke Tendaku</x-slot:heading>
-    <x-slot:subheading>Lanjutkan booking perlengkapan campingmu.</x-slot:subheading>
+    <x-slot:subheading>Lanjutkan sewa perlengkapan campingmu.</x-slot:subheading>
 
     @if (session('status'))
         <div role="status" class="mb-6 rounded-lg border border-tendaku-brown/15 bg-tendaku-avocado/10 px-4 py-3 text-sm text-tendaku-brown">
@@ -57,7 +57,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         <x-auth.field name="form.email" label="Email" type="email"
                       wire:model="form.email"
-                      placeholder="nama@email.com" autocomplete="username" required autofocus />
+                      placeholder="nama@gmail.com" autocomplete="username" required autofocus />
 
         <x-auth.field name="form.password" label="Password" type="password"
                       wire:model="form.password"
@@ -92,4 +92,3 @@ new #[Layout('layouts.guest')] class extends Component
         </p>
     @endif
 </div>
-

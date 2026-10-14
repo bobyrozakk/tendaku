@@ -20,7 +20,7 @@ class AuthenticationTest extends TestCase
             ->assertOk()
             ->assertSeeVolt('pages.auth.login')
             ->assertSeeText('Belum punya akun?')
-            ->assertSeeText('Daftar sebagai customer')
+            ->assertSeeText('Daftar')
             ->assertSee(route('register'));
     }
 
@@ -34,7 +34,7 @@ class AuthenticationTest extends TestCase
             ->assertSeeText('Super Admin Login')
             ->assertDontSeeText('Forgot your password?')
             ->assertDontSeeText('Login customer/vendor')
-            ->assertDontSeeText('Daftar sebagai customer')
+            ->assertDontSeeText('Daftar')
             ->assertDontSeeText('Belum punya akun?');
     }
 

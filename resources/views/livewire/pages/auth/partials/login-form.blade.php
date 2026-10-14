@@ -5,7 +5,7 @@
 
     <x-auth.field name="form.email" label="Email" type="email"
                   wire:model="form.email"
-                  placeholder="nama@email.com" autocomplete="username" required autofocus />
+                  placeholder="nama@gmail.com" autocomplete="username" required autofocus />
 
     <x-auth.field name="form.password" label="Password" type="password"
                   wire:model="form.password"

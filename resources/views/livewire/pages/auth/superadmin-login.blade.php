@@ -18,7 +18,7 @@ new #[Layout('layouts.guest')] class extends Component
         Session::regenerate();
 
         $user = auth()->user();
-        $welcomeMessage = "Hi Superadmin {$user->name}!";
+        $welcomeMessage = "Halo Superadmin {$user->name}!";
         Session::flash('status', $welcomeMessage);
         Session::flash('success', $welcomeMessage);
 

@@ -45,7 +45,7 @@ new #[Layout('layouts.guest')] class extends Component
 
 <div>
     <x-slot:heading>Cek emailmu</x-slot:heading>
-    <x-slot:subheading>Kami sudah mengirim tautan verifikasi. Klik tautan itu untuk mengaktifkan akun sebelum mulai booking.</x-slot:subheading>
+    <x-slot:subheading>Kami sudah mengirim tautan verifikasi. Klik tautan itu untuk mengaktifkan akun sebelum mulai menyewa.</x-slot:subheading>
 
     @if (session('status') === 'verification-link-sent')
         <div role="status" class="mb-6 rounded-lg border border-tendaku-brown/15 bg-tendaku-avocado/10 px-4 py-3 text-sm text-tendaku-brown">
@@ -67,4 +67,3 @@ new #[Layout('layouts.guest')] class extends Component
 
     <p class="mt-8 text-sm text-tendaku-brown/70">Email belum masuk? Cek juga folder spam.</p>
 </div>
-

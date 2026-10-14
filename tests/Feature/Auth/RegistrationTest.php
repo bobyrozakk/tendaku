@@ -28,7 +28,7 @@ class RegistrationTest extends TestCase
 
         $component = Volt::test('pages.auth.register')
             ->set('name', 'Test User')
-            ->set('email', 'test@example.com')
+            ->set('email', 'test@gmail.com')
             ->set('password', 'password')
             ->set('password_confirmation', 'password');
 
@@ -38,11 +38,25 @@ class RegistrationTest extends TestCase
         $component->assertRedirect(route('verification.notice', absolute: false));
 
         $this->assertAuthenticated();
-        $user = User::where('email', 'test@example.com')->firstOrFail();
+        $user = User::where('email', 'test@gmail.com')->firstOrFail();
 
         $this->assertFalse($user->hasVerifiedEmail());
         Notification::assertSentTo($user, VerifyEmail::class);
         $this->assertSame('customer', $user->role);
         $this->get(route('vendor.dashboard'))->assertRedirect(route('verification.notice'));
+    }
+
+    public function test_email_must_use_gmail_domain(): void
+    {
+        $component = Volt::test('pages.auth.register')
+            ->set('name', 'Test User')
+            ->set('email', 'test@yahoo.com')
+            ->set('password', 'password')
+            ->set('password_confirmation', 'password');
+
+        $component->call('register');
+
+        $component->assertHasErrors(['email']);
+        $this->assertGuest();
     }
 }

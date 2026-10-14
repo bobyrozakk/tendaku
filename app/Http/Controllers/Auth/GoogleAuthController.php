@@ -104,7 +104,7 @@ class GoogleAuthController extends Controller
             $user->isVendorOwner() => "Selamat datang Owner {$user->name}!",
             $user->isVendorAdmin() => "Selamat datang Vendor {$user->name}!",
             $user->isSuperAdmin() => "Hi Superadmin {$user->name}!",
-            default => "Selamat datang kembali, {$user->name}!",
+            default => "Selamat datang, {$user->name}!",
         };
 
         $request->session()->flash('status', $welcomeMessage);

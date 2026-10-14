@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
         // 1. superAdmin
         $superAdmin = User::create([
             'name' => 'superAdmin',
-            'email' => 'superadmin@tendaku.com',
+            'email' => 'superadmin@gmail.com',
             'password' => bcrypt('password'),
             'role' => 'super_admin',
             'email_verified_at' => now(),
@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
         // 2. customer
         $customer = User::create([
             'name' => 'customer',
-            'email' => 'customer@tendaku.com',
+            'email' => 'customer@gmail.com',
             'password' => bcrypt('password'),
             'role' => 'customer',
             'email_verified_at' => now(),
@@ -44,7 +44,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'tendaku-store-central',
             'description' => 'Penyedia utama alat camping dan outdoor gear terlengkap di Malang.',
             'phone' => '081234567890',
-            'email' => 'store@tendaku.com',
+            'email' => 'store@gmail.com',
             'address' => 'Jl. Outdoor Adventure No. 45, Lowokwaru',
             'city' => 'Malang',
             'logo_url' => 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=400&q=80',
@@ -56,7 +56,7 @@ class DatabaseSeeder extends Seeder
         // 4. owner (Pemilik Toko / vendor_owner)
         $owner = User::create([
             'name' => 'owner',
-            'email' => 'owner@tendaku.com',
+            'email' => 'owner@gmail.com',
             'password' => bcrypt('password'),
             'role' => 'vendor_owner',
             'vendor_id' => $vendorStore->id,
@@ -66,7 +66,7 @@ class DatabaseSeeder extends Seeder
         // 5. vendor (Kasir / vendor_admin)
         $vendor = User::create([
             'name' => 'vendor',
-            'email' => 'vendor@tendaku.com',
+            'email' => 'vendor@gmail.com',
             'password' => bcrypt('password'),
             'role' => 'vendor_admin',
             'vendor_id' => $vendorStore->id,
