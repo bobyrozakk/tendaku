@@ -108,6 +108,18 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // Akun Vendor bawaan develop (agar rekan tim yang login pakai vendor@tendaku.com tetap bisa masuk)
+        User::updateOrCreate(
+            ['email' => 'vendor@tendaku.com'],
+            [
+                'name' => 'Vendor Admin',
+                'password' => Hash::make('password'),
+                'role' => 'vendor_owner',
+                'vendor_id' => $vendor1->id,
+                'email_verified_at' => now(),
+            ]
+        );
+
         // -------------------------------------------------------------
         // 3. VENDOR 2 (Mountaineer Outdoor Gear - Batu)
         // -------------------------------------------------------------
