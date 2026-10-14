@@ -168,9 +168,17 @@
 
                 <!-- Auth -->
                 @auth
-                    <a href="{{ route('dashboard') }}" class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
-                        Dashboard
-                    </a>
+                    @if (auth()->user()->isVendorStaff() || auth()->user()->isSuperAdmin())
+                        {{-- Vendor & Admin: tampilkan tombol ke Dashboard vendor --}}
+                        <a href="{{ route('vendor.dashboard') }}" class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Dashboard
+                        </a>
+                    @else
+                        {{-- Customer (verified or not): tampilkan Akun Saya, bukan dashboard vendor --}}
+                        <a href="{{ route('profile') }}" class="hidden sm:inline-flex btn-tendaku-secondary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Akun Saya
+                        </a>
+                    @endif
                 @else
                     <a href="{{ route('login') }}" class="hidden sm:inline-flex btn-tendaku-secondary !py-2 !px-3.5 text-xs sm:text-sm">
                         Masuk

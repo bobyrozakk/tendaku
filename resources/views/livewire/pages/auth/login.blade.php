@@ -20,7 +20,15 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $user = auth()->user();
+
+        $destination = match (true) {
+            $user->isVendorStaff() => route('vendor.dashboard', absolute: false),
+            $user->isCustomer()    => route('home', absolute: false),
+            default                => route('dashboard', absolute: false), // super_admin
+        };
+
+        $this->redirectIntended(default: $destination, navigate: true);
     }
 }; ?>
 

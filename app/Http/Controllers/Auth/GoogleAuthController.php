@@ -14,13 +14,16 @@ use Laravel\Socialite\Two\User as GoogleUser;
 
 class GoogleAuthController extends Controller
 {
-    public function redirect(): RedirectResponse
+    public function redirect(Request $request): RedirectResponse
     {
         if (! filled(config('services.google.client_id')) || ! filled(config('services.google.client_secret'))) {
             return redirect()->route('login')->with('status', 'Login Google belum dikonfigurasi.');
         }
 
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')
+            ->redirectUrl($request->getSchemeAndHttpHost() . '/auth/google/callback')
+            ->stateless()
+            ->redirect();
     }
 
     public function callback(Request $request): RedirectResponse
@@ -35,7 +38,10 @@ class GoogleAuthController extends Controller
 
         try {
             /** @var GoogleUser $googleUser */
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')
+                ->redirectUrl($request->getSchemeAndHttpHost() . '/auth/google/callback')
+                ->stateless()
+                ->user();
         } catch (InvalidStateException) {
             return redirect()->route('login')->with('status', 'Sesi login Google tidak valid. Silakan coba lagi.');
         }
@@ -88,6 +94,6 @@ class GoogleAuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(route('home')); //customer kembali ke landing page
     }
 }

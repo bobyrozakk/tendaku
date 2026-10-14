@@ -34,13 +34,14 @@ class RegistrationTest extends TestCase
 
         $component->call('register');
 
-        $component->assertRedirect(route('dashboard', absolute: false));
+        $component->assertRedirect(route('home', absolute: false));
 
         $this->assertAuthenticated();
         $user = User::where('email', 'test@example.com')->firstOrFail();
 
         $this->assertFalse($user->hasVerifiedEmail());
         Notification::assertSentTo($user, VerifyEmail::class);
-        $this->get(route('dashboard'))->assertRedirect(route('verification.notice'));
+        $this->assertSame('customer', $user->role);
+        $this->get(route('vendor.dashboard'))->assertRedirect(route('verification.notice'));
     }
 }

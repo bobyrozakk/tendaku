@@ -3,7 +3,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h2 class="font-extrabold text-2xl text-darkbrown-800 leading-tight">
-                    {{ __('Dashboard Tendaku') }}
+                    {{ __('Hi User') }}
                 </h2>
                 <p class="text-xs text-darkbrown-500 mt-0.5">Selamat datang di sistem manajemen rental perlengkapan camping</p>
             </div>
@@ -16,7 +16,7 @@
     <div class="space-y-6">
         <!-- Stat Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <x-stat-card 
+            <x-stat-card
                 title="Total Persewaan Aktif"
                 value="14 Unit"
                 trend="+2 hari ini"
@@ -24,19 +24,19 @@
                 description="Status disewa dan di lapangan"
                 color="avocado"
             />
-            <x-stat-card 
+            <x-stat-card
                 title="Booking Menunggu Diambil"
                 value="6 Pesanan"
                 description="Siap diserahterimakan"
                 color="goldenrod"
             />
-            <x-stat-card 
+            <x-stat-card
                 title="Stok Unit Siap Sewa"
                 value="78 Unit"
                 description="Kondisi bersih & kering"
                 color="sunglow"
             />
-            <x-stat-card 
+            <x-stat-card
                 title="Jatuh Tempo Pengembalian"
                 value="3 Transaksi"
                 trend="Perlu cek kondisi"
