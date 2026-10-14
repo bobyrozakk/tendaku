@@ -33,7 +33,7 @@ class CatalogIndexTest extends TestCase
             'phone' => '08123456789',
             'address' => 'Jl. Test No. 123',
             'city' => 'Malang',
-            'status' => 'approved',
+            'status' => 'active',
         ]);
 
         $category = ItemCategory::create([
@@ -79,7 +79,7 @@ class CatalogIndexTest extends TestCase
             'phone' => '08123456789',
             'address' => 'Jl. Test No. 123',
             'city' => 'Malang',
-            'status' => 'approved',
+            'status' => 'active',
         ]);
 
         $catTenda = ItemCategory::create([

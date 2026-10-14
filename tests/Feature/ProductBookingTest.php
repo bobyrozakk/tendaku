@@ -25,7 +25,7 @@ class ProductBookingTest extends TestCase
             'phone' => '08123456789',
             'address' => 'Jl. Outdoor No. 1, Malang',
             'city' => 'Malang',
-            'status' => 'approved',
+            'status' => 'active',
         ]);
 
         $category = ItemCategory::create([

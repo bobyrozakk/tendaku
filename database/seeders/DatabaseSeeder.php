@@ -20,16 +20,26 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. User
-        $user = User::create([
-            'name' => 'Test Customer',
-            'email' => 'test@example.com',
+        // 1. superAdmin
+        $superAdmin = User::create([
+            'name' => 'superAdmin',
+            'email' => 'superadmin@tendaku.com',
             'password' => bcrypt('password'),
-            'role' => 'customer',
+            'role' => 'super_admin',
+            'email_verified_at' => now(),
         ]);
 
-        // 2. Vendor
-        $vendor = Vendor::create([
+        // 2. customer
+        $customer = User::create([
+            'name' => 'customer',
+            'email' => 'customer@tendaku.com',
+            'password' => bcrypt('password'),
+            'role' => 'customer',
+            'email_verified_at' => now(),
+        ]);
+
+        // 3. Vendor (Toko di tabel 'vendors' - di DB namanya tetap vendor)
+        $vendorStore = Vendor::create([
             'name' => 'Tendaku Store Central',
             'slug' => 'tendaku-store-central',
             'description' => 'Penyedia utama alat camping dan outdoor gear terlengkap di Malang.',
@@ -38,42 +48,62 @@ class DatabaseSeeder extends Seeder
             'address' => 'Jl. Outdoor Adventure No. 45, Lowokwaru',
             'city' => 'Malang',
             'logo_url' => 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=400&q=80',
-            'status' => 'approved',
+            'status' => 'active',
             'approved_at' => now(),
-            'approved_by' => $user->id,
+            'approved_by' => $superAdmin->id,
+        ]);
+
+        // 4. owner (Pemilik Toko / vendor_owner)
+        $owner = User::create([
+            'name' => 'owner',
+            'email' => 'owner@tendaku.com',
+            'password' => bcrypt('password'),
+            'role' => 'vendor_owner',
+            'vendor_id' => $vendorStore->id,
+            'email_verified_at' => now(),
+        ]);
+
+        // 5. vendor (Kasir / vendor_admin)
+        $vendor = User::create([
+            'name' => 'vendor',
+            'email' => 'vendor@tendaku.com',
+            'password' => bcrypt('password'),
+            'role' => 'vendor_admin',
+            'vendor_id' => $vendorStore->id,
+            'email_verified_at' => now(),
         ]);
 
         // 3. Categories
         $catTenda = ItemCategory::create([
-            'vendor_id' => $vendor->id,
+            'vendor_id' => $vendorStore->id,
             'name' => 'Tenda & Canopy',
             'slug' => 'tenda-canopy',
             'icon' => 'tent',
         ]);
 
         $catSleeping = ItemCategory::create([
-            'vendor_id' => $vendor->id,
+            'vendor_id' => $vendorStore->id,
             'name' => 'Sleeping Gear',
             'slug' => 'sleeping-gear',
             'icon' => 'moon',
         ]);
 
         $catCooking = ItemCategory::create([
-            'vendor_id' => $vendor->id,
+            'vendor_id' => $vendorStore->id,
             'name' => 'Cooking Equipment',
             'slug' => 'cooking-equipment',
             'icon' => 'flame',
         ]);
 
         $catLighting = ItemCategory::create([
-            'vendor_id' => $vendor->id,
+            'vendor_id' => $vendorStore->id,
             'name' => 'Lighting & Power',
             'slug' => 'lighting-power',
             'icon' => 'sun',
         ]);
 
         $catBackpack = ItemCategory::create([
-            'vendor_id' => $vendor->id,
+            'vendor_id' => $vendorStore->id,
             'name' => 'Backpack & Carrier',
             'slug' => 'backpack-carrier',
             'icon' => 'bag',
@@ -82,7 +112,7 @@ class DatabaseSeeder extends Seeder
         // 4. Master Items
         $itemsData = [
             [
-                'vendor_id' => $vendor->id,
+                'vendor_id' => $vendorStore->id,
                 'category_id' => $catTenda->id,
                 'name' => 'Tenda Consina Magnum 4 Person Ultra',
                 'slug' => 'tenda-consina-magnum-4-person-ultra',
@@ -94,7 +124,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'vendor_id' => $vendor->id,
+                'vendor_id' => $vendorStore->id,
                 'category_id' => $catTenda->id,
                 'name' => 'Tenda Naturehike Mongar 2 Ultralight',
                 'slug' => 'tenda-naturehike-mongar-2-ultralight',
@@ -106,7 +136,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'vendor_id' => $vendor->id,
+                'vendor_id' => $vendorStore->id,
                 'category_id' => $catSleeping->id,
                 'name' => 'Sleeping Bag Eiger Compress 800 Warm',
                 'slug' => 'sleeping-bag-eiger-compress-800-warm',
@@ -118,7 +148,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'vendor_id' => $vendor->id,
+                'vendor_id' => $vendorStore->id,
                 'category_id' => $catCooking->id,
                 'name' => 'Kompor Portable Mawar Windproof Kovar',
                 'slug' => 'kompor-portable-mawar-windproof-kovar',
@@ -130,7 +160,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'vendor_id' => $vendor->id,
+                'vendor_id' => $vendorStore->id,
                 'category_id' => $catCooking->id,
                 'name' => 'Nesting Cooking Set DS-308 (4 in 1)',
                 'slug' => 'nesting-cooking-set-ds-308-4-in-1',
@@ -142,7 +172,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'vendor_id' => $vendor->id,
+                'vendor_id' => $vendorStore->id,
                 'category_id' => $catBackpack->id,
                 'name' => 'Carrier Osprey Atmosphere AG 65L Premium',
                 'slug' => 'carrier-osprey-atmosphere-ag-65l-premium',
@@ -154,7 +184,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'vendor_id' => $vendor->id,
+                'vendor_id' => $vendorStore->id,
                 'category_id' => $catLighting->id,
                 'name' => 'Lampu Tenda Gantung LED Solar Rechargeable',
                 'slug' => 'lampu-tenda-gantung-led-solar-rechargeable',
@@ -173,7 +203,7 @@ class DatabaseSeeder extends Seeder
             // Create 3 units per item
             for ($u = 1; $u <= 3; $u++) {
                 ItemUnit::create([
-                    'vendor_id' => $vendor->id,
+                    'vendor_id' => $vendorStore->id,
                     'master_item_id' => $item->id,
                     'unit_code' => strtoupper(Str::slug($item->name, '-')).'-UNIT-'.$u,
                     'barcode' => 'BC-'.rand(100000, 999999),
