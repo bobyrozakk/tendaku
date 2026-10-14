@@ -38,7 +38,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
-        // 3. Vendor (Toko di tabel 'vendors' - di DB namanya tetap vendor)
+        // 3. Vendor
         $vendorStore = Vendor::create([
             'name' => 'Tendaku Store Central',
             'slug' => 'tendaku-store-central',
@@ -53,7 +53,7 @@ class DatabaseSeeder extends Seeder
             'approved_by' => $superAdmin->id,
         ]);
 
-        // 4. owner (Pemilik Toko / vendor_owner)
+        // 4. owner (Vendor owner)
         $owner = User::create([
             'name' => 'owner',
             'email' => 'owner@gmail.com',
@@ -63,13 +63,23 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
-        // 5. vendor (Kasir / vendor_admin)
+        // 5. vendor (Kasir / vendor admin)
         $vendor = User::create([
             'name' => 'vendor',
             'email' => 'vendor@gmail.com',
             'password' => bcrypt('password'),
             'role' => 'vendor_admin',
             'vendor_id' => $vendorStore->id,
+            'email_verified_at' => now(),
+        ]);
+
+        // 2b. User Vendor Owner & Admin
+        User::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Vendor Admin',
+            'email' => 'vendor@tendaku.com',
+            'password' => bcrypt('password'),
+            'role' => 'vendor_owner',
             'email_verified_at' => now(),
         ]);
 
