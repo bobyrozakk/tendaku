@@ -23,6 +23,13 @@ new #[Layout('layouts.guest')] class extends Component
 
         $user = auth()->user();
 
+        // Jika email belum diverifikasi, arahkan ke halaman verifikasi email (resend email)
+        if (! $user->hasVerifiedEmail()) {
+            $this->redirect(route('verification.notice', absolute: false), navigate: true);
+
+            return;
+        }
+
         // Tentukan halaman tujuan berdasarkan role pengguna.
         $destination = match (true) {
             $user->isVendorOwner() => route(

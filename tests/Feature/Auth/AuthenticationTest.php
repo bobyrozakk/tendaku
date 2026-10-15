@@ -55,6 +55,23 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    public function test_unverified_customer_is_redirected_to_verification_notice(): void
+    {
+        $user = User::factory()->unverified()->create(['role' => 'customer']);
+
+        $component = Volt::test('pages.auth.login')
+            ->set('form.email', $user->email)
+            ->set('form.password', 'password');
+
+        $component->call('login');
+
+        $component
+            ->assertHasNoErrors()
+            ->assertRedirect(route('verification.notice', absolute: false));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
     #[DataProvider('vendorRoles')]
     public function test_vendor_users_can_authenticate_using_the_public_login_screen(string $role, string $expectedRoute): void
     {

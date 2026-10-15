@@ -29,6 +29,8 @@ class RegistrationTest extends TestCase
         $component = Volt::test('pages.auth.register')
             ->set('name', 'Test User')
             ->set('email', 'test@gmail.com')
+            ->set('phone', '081234567890')
+            ->set('nik', '1234567890123456')
             ->set('password', 'password')
             ->set('password_confirmation', 'password');
 
@@ -43,7 +45,77 @@ class RegistrationTest extends TestCase
         $this->assertFalse($user->hasVerifiedEmail());
         Notification::assertSentTo($user, VerifyEmail::class);
         $this->assertSame('customer', $user->role);
+        $this->assertSame('081234567890', $user->phone);
+        $this->assertSame('1234567890123456', $user->nik);
+        $this->assertNull($user->address);
         $this->get(route('vendor.dashboard'))->assertRedirect(route('verification.notice'));
+    }
+
+    public function test_new_users_can_register_with_address(): void
+    {
+        Notification::fake();
+
+        $component = Volt::test('pages.auth.register')
+            ->set('name', 'Test User')
+            ->set('email', 'test@gmail.com')
+            ->set('phone', '081234567890')
+            ->set('nik', '1234567890123456')
+            ->set('address', 'Jl. Merdeka No. 1, Jakarta')
+            ->set('password', 'password')
+            ->set('password_confirmation', 'password');
+
+        $component->call('register');
+
+        $component->assertRedirect(route('verification.notice', absolute: false));
+
+        $user = User::where('email', 'test@gmail.com')->firstOrFail();
+        $this->assertSame('Jl. Merdeka No. 1, Jakarta', $user->address);
+    }
+
+    public function test_phone_is_required_for_registration(): void
+    {
+        $component = Volt::test('pages.auth.register')
+            ->set('name', 'Test User')
+            ->set('email', 'test@gmail.com')
+            ->set('nik', '1234567890123456')
+            ->set('password', 'password')
+            ->set('password_confirmation', 'password');
+
+        $component->call('register');
+
+        $component->assertHasErrors(['phone']);
+        $this->assertGuest();
+    }
+
+    public function test_nik_is_required_for_registration(): void
+    {
+        $component = Volt::test('pages.auth.register')
+            ->set('name', 'Test User')
+            ->set('email', 'test@gmail.com')
+            ->set('phone', '081234567890')
+            ->set('password', 'password')
+            ->set('password_confirmation', 'password');
+
+        $component->call('register');
+
+        $component->assertHasErrors(['nik']);
+        $this->assertGuest();
+    }
+
+    public function test_nik_must_be_16_digits(): void
+    {
+        $component = Volt::test('pages.auth.register')
+            ->set('name', 'Test User')
+            ->set('email', 'test@gmail.com')
+            ->set('phone', '081234567890')
+            ->set('nik', '12345') // terlalu pendek
+            ->set('password', 'password')
+            ->set('password_confirmation', 'password');
+
+        $component->call('register');
+
+        $component->assertHasErrors(['nik']);
+        $this->assertGuest();
     }
 
     public function test_email_must_use_gmail_domain(): void
@@ -51,12 +123,43 @@ class RegistrationTest extends TestCase
         $component = Volt::test('pages.auth.register')
             ->set('name', 'Test User')
             ->set('email', 'test@yahoo.com')
+            ->set('phone', '081234567890')
+            ->set('nik', '1234567890123456')
             ->set('password', 'password')
             ->set('password_confirmation', 'password');
 
         $component->call('register');
 
         $component->assertHasErrors(['email']);
+        $this->assertGuest();
+    }
+
+    public function test_name_is_required_for_registration(): void
+    {
+        $component = Volt::test('pages.auth.register')
+            ->set('email', 'test@gmail.com')
+            ->set('phone', '081234567890')
+            ->set('nik', '1234567890123456')
+            ->set('password', 'password')
+            ->set('password_confirmation', 'password');
+
+        $component->call('register');
+
+        $component->assertHasErrors(['name']);
+        $this->assertGuest();
+    }
+
+    public function test_password_is_required_for_registration(): void
+    {
+        $component = Volt::test('pages.auth.register')
+            ->set('name', 'Test User')
+            ->set('email', 'test@gmail.com')
+            ->set('phone', '081234567890')
+            ->set('nik', '1234567890123456');
+
+        $component->call('register');
+
+        $component->assertHasErrors(['password']);
         $this->assertGuest();
     }
 }

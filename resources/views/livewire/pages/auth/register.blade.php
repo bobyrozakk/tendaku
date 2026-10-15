@@ -15,6 +15,12 @@ new #[Layout('layouts.guest')] class extends Component
 
     public string $email = '';
 
+    public string $phone = '';
+
+    public string $nik = '';
+
+    public ?string $address = null;
+
     public string $password = '';
 
     public string $password_confirmation = '';
@@ -37,11 +43,16 @@ new #[Layout('layouts.guest')] class extends Component
                 'unique:'.User::class,
                 'ends_with:@gmail.com',
             ],
+            'phone' => ['required', 'string', 'max:20'],
+            'nik' => ['required', 'string', 'digits:16'],
+            'address' => ['nullable', 'string', 'max:500'],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ], [
             'email.ends_with' => 'Email harus menggunakan @gmail.com.',
+            'nik.digits' => 'NIK harus terdiri dari 16 digit angka.',
         ]);
 
+        $validated['address'] = filled($validated['address'] ?? null) ? trim($validated['address']) : null;
         $validated['password'] = Hash::make($validated['password']);
         $validated['role'] = 'customer';
 
@@ -68,12 +79,24 @@ new #[Layout('layouts.guest')] class extends Component
                       wire:model="email"
                       placeholder="nama@gmail.com" autocomplete="username" required />
 
+        <x-auth.field name="phone" label="Nomor telepon" type="tel"
+                      wire:model="phone"
+                      placeholder="08xxxxxxxxxx" autocomplete="tel" required />
+
+        <x-auth.field name="nik" label="NIK (Nomor Induk Kependudukan)"
+                      wire:model="nik"
+                      placeholder="16 digit NIK" inputmode="numeric" maxlength="16" required />
+
+        <x-auth.field name="address" label="Alamat"
+                      wire:model="address"
+                      placeholder="Alamat lengkap (opsional)" />
+
         <x-auth.field name="password" label="Password" type="password"
-                      wire:model="password"
+                      wire:model="password" placeholder="Password"
                       autocomplete="new-password" hint="Minimal 8 karakter." required />
 
         <x-auth.field name="password_confirmation" label="Ulangi password" type="password"
-                      wire:model="password_confirmation"
+                      wire:model="password_confirmation" placeholder="Password"
                       autocomplete="new-password" required />
 
         <x-auth.button class="w-full">Buat akun</x-auth.button>
