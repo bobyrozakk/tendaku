@@ -27,8 +27,27 @@
             <div class="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 sm:px-6 py-3"
                  style="background: #ffffff; border-bottom: 1px solid #e8e0cc;">
 
-                <!-- Left: Spacer -->
-                <div></div>
+                <!-- Left: Status Toko & Nama Toko -->
+                <div class="flex items-center gap-3">
+                    <!-- Status Operasional Toko -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
+                        <span class="w-2 h-2 rounded-full bg-avocado-500 animate-pulse"></span>
+                        <span>Toko Rental Buka</span>
+                    </div>
+
+                    <!-- Nama Toko Vendor -->
+                    @if(auth()->check() && auth()->user()->vendor)
+                        <div class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold" style="color: #6a5732;">
+                            <span class="w-1.5 h-1.5 rounded-full bg-darkbrown-400"></span>
+                            <span>{{ auth()->user()->vendor->name }}</span>
+                        </div>
+                    @elseif(auth()->check())
+                        <div class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold" style="color: #6a5732;">
+                            <span class="w-1.5 h-1.5 rounded-full bg-darkbrown-400"></span>
+                            <span>Tendaku Store</span>
+                        </div>
+                    @endif
+                </div>
 
                 <!-- Right: Actions -->
                 <div class="flex items-center gap-2">
