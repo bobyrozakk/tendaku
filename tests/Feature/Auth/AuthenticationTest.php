@@ -76,8 +76,8 @@ class AuthenticationTest extends TestCase
     public static function vendorRoles(): array
     {
         return [
-            'owner' => ['vendor_owner', 'dashboard'],
-            'admin or cashier' => ['vendor_admin', 'dashboard'],
+            'owner' => ['vendor_owner', 'vendor.owner.dashboard'],
+            'admin or cashier' => ['vendor_admin', 'vendor.dashboard'],
         ];
     }
 

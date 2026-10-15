@@ -68,11 +68,11 @@
                     <!-- Divider -->
                     <div class="w-px h-6 mx-1" style="background: #e8e0cc;"></div>
 
-                    <!-- User Pill -->
+                    <!-- User Pill & Logout -->
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-xl font-bold flex items-center justify-center text-xs text-white"
                              style="background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 2px 8px rgba(108,139,8,0.3);">
-                            {{ strtoupper(substr(auth()->user()?->name ?? 'TK', 0, 2)) }}
+                            {{ strtoupper(substr(auth()->user()->name ?? 'TK', 0, 2)) }}
                         </div>
                         <div class="hidden sm:block">
                             <p class="text-xs font-bold leading-none" style="color: #2b2202;">
@@ -81,13 +81,27 @@
                                 @elseif (auth()->user()?->isVendorAdmin())
                                     Admin ({{ auth()->user()->name }})
                                 @else
-                                    {{ auth()->user()?->name ?? 'Vendor' }}
+                                    {{ auth()->user()?->name ?? 'Staf Vendor' }}
                                 @endif
                             </p>
-                            <p class="text-[10px] mt-0.5" style="color: #9a8060;">
-                                {{ auth()->user()?->isVendorOwner() ? 'Vendor Owner Portal' : 'Kasir & Admin Portal' }}
+                            <p class="text-[10px] mt-0.5 truncate max-w-[120px]" style="color: #9a8060;">
+                                {{ auth()->user()?->isVendorOwner()
+                                    ? 'Vendor Owner Portal'
+                                    : (auth()->user()?->isVendorAdmin()
+                                        ? 'Vendor Admin Portal'
+                                        : 'Kasir & Admin Portal') }}
                             </p>
                         </div>
+
+                        <!-- Form Logout -->
+                        <form method="POST" action="{{ route('logout') }}" class="inline-block ml-1">
+                            @csrf
+                            <button type="submit" class="p-1.5 rounded-lg text-darkbrown-500 hover:text-red-600 hover:bg-wheat-100 transition" title="Keluar / Logout">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

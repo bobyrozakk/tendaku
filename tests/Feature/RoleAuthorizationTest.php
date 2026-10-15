@@ -93,7 +93,7 @@ class RoleAuthorizationTest extends TestCase
 
         $response = $this->actingAs($owner)->get('/dashboard');
 
-        $response->assertOk();
+        $response->assertRedirect(route('vendor.owner.dashboard'));
     }
 
     public function test_vendor_admin_can_access_dashboard(): void
@@ -105,7 +105,7 @@ class RoleAuthorizationTest extends TestCase
 
         $response = $this->actingAs($admin)->get('/dashboard');
 
-        $response->assertOk();
+        $response->assertRedirect(route('vendor.dashboard'));
     }
 
     public function test_vendor_owner_can_access_vendor_routes(): void
@@ -117,7 +117,7 @@ class RoleAuthorizationTest extends TestCase
 
         $response = $this->actingAs($owner)->get('/vendor/dashboard');
 
-        $response->assertOk();
+        $response->assertRedirect(route('vendor.owner.dashboard'));
     }
 
     public function test_vendor_admin_can_access_vendor_routes(): void

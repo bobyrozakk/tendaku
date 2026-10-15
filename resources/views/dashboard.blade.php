@@ -84,12 +84,12 @@
                     Catat persewaan offline baru, cetak invoice nota, dan periksa kondisi tenda saat dikembalikan oleh pelanggan.
                 </p>
                 <div class="flex items-center gap-2">
-                    <x-primary-button variant="avocado" size="sm">
+                    <a href="{{ route('vendor.dashboard') }}" class="btn-tendaku-primary !py-1.5 !px-3 text-xs">
                         Buka POS Kasir
-                    </x-primary-button>
-                    <x-secondary-button size="sm">
+                    </a>
+                    <a href="{{ route('vendor.products.index') }}" class="btn-tendaku-secondary !py-1.5 !px-3 text-xs">
                         Kelola Inventori Alat
-                    </x-secondary-button>
+                    </a>
                 </div>
             </x-card>
 
