@@ -65,6 +65,21 @@ class User extends Authenticatable
         return $this->role === 'super_admin';
     }
 
+    public function isVendorOwner(): bool
+    {
+        return $this->role === 'vendor_owner';
+    }
+
+    public function isVendorAdmin(): bool
+    {
+        return $this->role === 'vendor_admin';
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->role === 'customer';
+    }
+
     public function isVendorStaff(): bool
     {
         return in_array($this->role, ['vendor_owner', 'vendor_admin']);

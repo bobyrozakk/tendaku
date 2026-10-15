@@ -20,7 +20,18 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $user = auth()->user();
+        if ($user?->isVendorOwner()) {
+            $this->redirectIntended(default: route('vendor.owner.dashboard', absolute: false), navigate: false);
+            return;
+        }
+
+        if ($user?->isVendorAdmin()) {
+            $this->redirectIntended(default: route('vendor.dashboard', absolute: false), navigate: false);
+            return;
+        }
+
+        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: false);
     }
 }; ?>
 

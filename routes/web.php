@@ -4,6 +4,10 @@ use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
+use App\Http\Controllers\Vendor\CategoryController;
+use App\Http\Controllers\Vendor\OwnerDashboardController;
+use App\Http\Controllers\Vendor\ProductController;
+use App\Http\Controllers\Vendor\UnitController;
 use App\Http\Controllers\Webhook\MidtransWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,30 +41,47 @@ Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
 // Design System Reference
 Route::view('design-system', 'design-system')->name('design-system');
 
-// Authenticated Routes (Dashboard & Profile)
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+// Authenticated Routes (Dashboard & Profile dengan Smart Role Redirect)
+Route::get('dashboard', function () {
+    $user = auth()->user();
+
+    if ($user?->isVendorOwner()) {
+        return redirect()->route('vendor.owner.dashboard');
+    }
+
+    if ($user?->isVendorAdmin()) {
+        return redirect()->route('vendor.dashboard');
+    }
+
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
-// Rute untuk Vendor Dashboard
-Route::view('vendor/dashboard', 'vendor.dashboard.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.dashboard');
+// Rute untuk Vendor Dashboard (Pengalihan peran: Owner -> Dashboard Owner, Staf -> POS Kasir)
+Route::get('vendor/dashboard', function () {
+    if (auth()->user()?->isVendorOwner()) {
+        return redirect()->route('vendor.owner.dashboard');
+    }
 
-// Rute untuk Vendor Units Management
-Route::view('vendor/units', 'vendor.units.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.units');
+    return view('vendor.dashboard.index');
+})->middleware(['auth', 'verified'])->name('vendor.dashboard');
 
-// Rute untuk Return & Inspeksi Barang
+// Rute Terproteksi Khusus OWNER VENDOR (CRUD Produk, Kategori, Unit, dan Analitik Dashboard)
+Route::middleware(['auth', 'vendor.owner'])->prefix('vendor')->name('vendor.')->group(function () {
+    Route::get('owner/dashboard', [OwnerDashboardController::class, 'index'])->name('owner.dashboard');
+    Route::resource('products', ProductController::class);
+    Route::resource('categories', CategoryController::class)->except(['show']);
+    Route::get('units', [UnitController::class, 'index'])->name('units');
+});
+
+// Rute untuk Return & Inspeksi Barang (Admin Vendor)
 Route::view('vendor/return', 'vendor.return.index')
     ->middleware(['auth', 'verified'])
     ->name('vendor.return');
 
-// Rute untuk Pickup / Serah Terima Barang
+// Rute untuk Pickup / Serah Terima Barang (Admin Vendor)
 Route::view('vendor/pickup', 'vendor.pickup.index')
     ->middleware(['auth', 'verified'])
     ->name('vendor.pickup');
