@@ -105,7 +105,7 @@ class RoleAuthorizationTest extends TestCase
 
         $response = $this->actingAs($admin)->get('/dashboard');
 
-        $response->assertRedirect(route('vendor.dashboard'));
+        $response->assertRedirect(route('kasir.dashboard'));
     }
 
     public function test_vendor_owner_can_access_vendor_routes(): void
@@ -127,7 +127,7 @@ class RoleAuthorizationTest extends TestCase
             'email_verified_at' => now(),
         ]);
 
-        $response = $this->actingAs($admin)->get('/vendor/dashboard');
+        $response = $this->actingAs($admin)->get('/kasir/dashboard');
 
         $response->assertOk();
     }

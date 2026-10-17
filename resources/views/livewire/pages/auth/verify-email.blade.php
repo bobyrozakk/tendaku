@@ -29,7 +29,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         Auth::user()->sendEmailVerificationNotification();
 
-        Session::flash('status', 'verification-link-sent');
+        Session::put('status', 'verification-link-sent');
     }
 
     /**

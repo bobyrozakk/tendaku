@@ -38,7 +38,7 @@ new #[Layout('layouts.guest')] class extends Component
             ),
 
             $user->isVendorAdmin() => route(
-                'vendor.dashboard',
+                'kasir.dashboard',
                 absolute: false
             ),
 
@@ -57,6 +57,7 @@ new #[Layout('layouts.guest')] class extends Component
                 absolute: false
             ),
         };
+
 
         // Pesan selamat datang.
         $welcomeMessage = match (true) {

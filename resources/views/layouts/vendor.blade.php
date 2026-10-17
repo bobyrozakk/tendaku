@@ -27,15 +27,31 @@
             <div class="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 sm:px-6 py-3"
                  style="background: #ffffff; border-bottom: 1px solid #e8e0cc;">
 
-                <!-- Left: Store Status -->
+                <!-- Left: Status Toko & Nama Toko -->
+
+                <!-- Left: Status Toko & Nama Toko -->
                 <div class="flex items-center gap-3">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border"
-                          style="background: rgba(108,139,8,0.08); color: #4e6506; border-color: rgba(108,139,8,0.25);">
-                        <span class="w-2 h-2 rounded-full animate-pulse" style="background:#6c8b08;"></span>
-                        Toko Rental Buka
+                    <!-- Status Operasional Toko -->
+                    <div
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border"
+                        style="background: rgba(108,139,8,0.08); color: #4e6506; border-color: rgba(108,139,8,0.25);"
+                    >
+                        <span
+                            class="w-2 h-2 rounded-full animate-pulse"
+                            style="background: #6c8b08;"
+                        ></span>
+                        <span>Toko Rental Buka</span>
+                    </div>
+
+                    <!-- Nama Toko Vendor -->
+                    <span
+                        class="text-xs hidden sm:inline"
+                        style="color: #b8a882;"
+                    >
+                        • {{ auth()->user()?->vendor?->name ?? 'Tendaku Store' }}
                     </span>
-                    <span class="text-xs hidden sm:inline" style="color: #b8a882;">• {{ auth()->user()?->vendor?->name ?? 'Toko Rental' }}</span>
                 </div>
+
 
                 <!-- Right: Actions -->
                 <div class="flex items-center gap-2">

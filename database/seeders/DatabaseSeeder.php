@@ -95,7 +95,7 @@ class DatabaseSeeder extends Seeder
         $kasir1 = User::updateOrCreate(
             ['email' => 'kasir@tendaku.com'],
             [
-                'name' => 'Bunga Admin Kasir',
+                'name' => 'Kasir Tendaku',
                 'password' => Hash::make('password'),
                 'role' => 'vendor_admin',
                 'vendor_id' => $vendor1->id,
@@ -504,6 +504,114 @@ class DatabaseSeeder extends Seeder
                 'condition_before' => 'good',
                 'late_days' => 2,
                 'late_fee' => 50000,
+                'is_returned' => false,
+            ]
+        );
+
+        // Transaksi 4: SIAP PICKUP HARI INI (Untuk Kasir Pickup & POS Persiapan)
+        $rentalReadyPickup = Rental::withoutGlobalScope('vendor')->updateOrCreate(
+            ['booking_code' => 'TND-PCK-004'],
+            [
+                'vendor_id' => $vendor1->id,
+                'user_id' => $customer1->id,
+                'created_by' => $customer1->id,
+                'pickup_date' => Carbon::today(),
+                'return_date' => Carbon::today()->addDays(2),
+                'pickup_method' => 'self_pickup',
+                'rental_days' => 2,
+                'subtotal' => 120000,
+                'grand_total' => 120000,
+                'final_total' => 120000,
+                'status' => 'confirmed',
+                'ktp_collateral_status' => 'pending',
+                'created_at' => Carbon::today(),
+            ]
+        );
+
+        RentalDetail::updateOrCreate(
+            ['rental_id' => $rentalReadyPickup->id, 'master_item_id' => $v1CreatedItems[1]->id],
+            [
+                'item_unit_id' => $allV1Units[3]->id,
+                'daily_rate_snapshot' => 60000,
+                'late_fee_per_day_snapshot' => 30000,
+                'condition_before' => 'excellent',
+                'is_returned' => false,
+            ]
+        );
+
+        Payment::withoutGlobalScope('vendor')->updateOrCreate(
+            ['rental_id' => $rentalReadyPickup->id, 'payment_type' => 'settlement'],
+            [
+                'vendor_id' => $vendor1->id,
+                'payment_method' => 'midtrans_snap',
+                'amount' => 120000,
+                'status' => 'paid',
+                'paid_at' => Carbon::today(),
+            ]
+        );
+
+        // Transaksi 5: SEDANG DISEWA & HARUS KEMBALI HARI INI (Untuk Return & Inspeksi Kasir)
+        $rentalReturnToday = Rental::withoutGlobalScope('vendor')->updateOrCreate(
+            ['booking_code' => 'TND-RTN-005'],
+            [
+                'vendor_id' => $vendor1->id,
+                'user_id' => $customer2->id,
+                'created_by' => $kasir1->id,
+                'picked_up_by' => $kasir1->id,
+                'pickup_date' => Carbon::today()->subDays(2),
+                'return_date' => Carbon::today(),
+                'picked_up_at' => Carbon::today()->subDays(2)->setHour(10),
+                'pickup_method' => 'self_pickup',
+                'rental_days' => 2,
+                'subtotal' => 100000,
+                'grand_total' => 100000,
+                'final_total' => 100000,
+                'status' => 'picked_up',
+                'ktp_collateral_status' => 'held',
+                'ktp_received_at' => Carbon::today()->subDays(2)->setHour(10),
+                'ktp_collateral_notes' => 'KTP Bunga Tersimpan di Loker Jaminan Kasir #02',
+                'created_at' => Carbon::today()->subDays(2),
+            ]
+        );
+
+        RentalDetail::updateOrCreate(
+            ['rental_id' => $rentalReturnToday->id, 'master_item_id' => $v1CreatedItems[4]->id],
+            [
+                'item_unit_id' => $allV1Units[8]->id,
+                'daily_rate_snapshot' => 50000,
+                'late_fee_per_day_snapshot' => 25000,
+                'condition_before' => 'good',
+                'is_returned' => false,
+            ]
+        );
+
+        // Transaksi 6: PENDING VALIDASI (Customer Baru Checkout, Perlu Validasi Barcode Kasir Terlebih Dahulu)
+        $rentalPending = Rental::withoutGlobalScope('vendor')->updateOrCreate(
+            ['booking_code' => 'TND-VAL-006'],
+            [
+                'vendor_id' => $vendor1->id,
+                'user_id' => $customer1->id,
+                'created_by' => $customer1->id,
+                'pickup_date' => Carbon::today(),
+                'return_date' => Carbon::today()->addDays(2),
+                'pickup_method' => 'self_pickup',
+                'rental_days' => 2,
+                'subtotal' => 90000,
+                'grand_total' => 90000,
+                'final_total' => 90000,
+                'status' => 'pending', // Pending validasi kasir
+                'ktp_collateral_status' => 'pending',
+                'created_at' => Carbon::today(),
+            ]
+        );
+
+        RentalDetail::updateOrCreate(
+            ['rental_id' => $rentalPending->id, 'master_item_id' => $v1CreatedItems[0]->id],
+            [
+                'item_unit_id' => $allV1Units[1]->id, // Unit sudah dialokasikan ke pesanan (misal unit 002 / BC-100002)
+                'daily_rate_snapshot' => 45000,
+                'late_fee_per_day_snapshot' => 25000,
+                'condition_before' => $allV1Units[1]->condition,
                 'is_returned' => false,
             ]
         );

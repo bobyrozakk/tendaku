@@ -94,7 +94,7 @@ class AuthenticationTest extends TestCase
     {
         return [
             'owner' => ['vendor_owner', 'vendor.owner.dashboard'],
-            'admin or cashier' => ['vendor_admin', 'vendor.dashboard'],
+            'admin or cashier' => ['vendor_admin', 'kasir.dashboard'],
         ];
     }
 

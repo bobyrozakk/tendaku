@@ -89,7 +89,7 @@ class PasswordResetTest extends TestCase
 
             $login
                 ->assertHasNoErrors()
-                ->assertRedirect(route('vendor.dashboard', absolute: false));
+                ->assertRedirect(route('kasir.dashboard', absolute: false));
 
             $this->assertAuthenticatedAs($user);
 
