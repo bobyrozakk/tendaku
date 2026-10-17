@@ -25,11 +25,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // -------------------------------------------------------------
-        // 1. PENGGUNA SISTEM (RBAC: super_admin, vendor_owner, vendor_admin, customer)
-        // -------------------------------------------------------------
-
-        // Super Admin
+        // 1. USERS
         $superAdmin = User::updateOrCreate(
             ['email' => 'admin@tendaku.com'],
             [
@@ -265,23 +261,29 @@ class DatabaseSeeder extends Seeder
 
         $v1CreatedItems = [];
         foreach ($v1ItemsData as $itemData) {
-            $cat = $v1CategoryModels[$itemData['category_slug']];
+            $category = $v1CategoryModels[$itemData['category_slug']];
 
-            $v1CreatedItems[] = MasterItem::withoutGlobalScope('vendor')->updateOrCreate(
-                ['vendor_id' => $vendor1->id, 'slug' => $itemData['slug']],
+            $item = MasterItem::withoutGlobalScope('vendor')->updateOrCreate(
                 [
-                    'category_id' => $cat->id,
+                    'vendor_id' => $vendor1->id,
+                    'slug' => $itemData['slug'],
+                ],
+                [
+                    'category_id' => $category->id,
                     'name' => $itemData['name'],
                     'description' => $itemData['description'],
                     'daily_rate' => $itemData['daily_rate'],
                     'deposit_amount' => 0,
                     'late_fee_per_day' => $itemData['late_fee_per_day'],
                     'image_url' => $itemData['image_url'],
-                    'is_active' => $itemData['is_active'],
+                    'is_active' => true,
                 ]
             );
+
+            $v1CreatedItems[] = $item;
         }
 
+        // 6. MASTER ITEM VENDOR 2
         // Produk untuk Vendor 2 (isolasi multi-tenant)
         $v2Item = MasterItem::withoutGlobalScope('vendor')->updateOrCreate(
             ['vendor_id' => $vendor2->id, 'slug' => 'tenda-arei-merapi-4p'],

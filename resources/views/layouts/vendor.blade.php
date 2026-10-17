@@ -28,26 +28,30 @@
                  style="background: #ffffff; border-bottom: 1px solid #e8e0cc;">
 
                 <!-- Left: Status Toko & Nama Toko -->
+
+                <!-- Left: Status Toko & Nama Toko -->
                 <div class="flex items-center gap-3">
                     <!-- Status Operasional Toko -->
-                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
-                        <span class="w-2 h-2 rounded-full bg-avocado-500 animate-pulse"></span>
+                    <div
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border"
+                        style="background: rgba(108,139,8,0.08); color: #4e6506; border-color: rgba(108,139,8,0.25);"
+                    >
+                        <span
+                            class="w-2 h-2 rounded-full animate-pulse"
+                            style="background: #6c8b08;"
+                        ></span>
                         <span>Toko Rental Buka</span>
                     </div>
 
                     <!-- Nama Toko Vendor -->
-                    @if(auth()->check() && auth()->user()->vendor)
-                        <div class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold" style="color: #6a5732;">
-                            <span class="w-1.5 h-1.5 rounded-full bg-darkbrown-400"></span>
-                            <span>{{ auth()->user()->vendor->name }}</span>
-                        </div>
-                    @elseif(auth()->check())
-                        <div class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold" style="color: #6a5732;">
-                            <span class="w-1.5 h-1.5 rounded-full bg-darkbrown-400"></span>
-                            <span>Tendaku Store</span>
-                        </div>
-                    @endif
+                    <span
+                        class="text-xs hidden sm:inline"
+                        style="color: #b8a882;"
+                    >
+                        • {{ auth()->user()?->vendor?->name ?? 'Tendaku Store' }}
+                    </span>
                 </div>
+
 
                 <!-- Right: Actions -->
                 <div class="flex items-center gap-2">
@@ -88,16 +92,20 @@
                         </div>
                         <div class="hidden sm:block">
                             <p class="text-xs font-bold leading-none" style="color: #2b2202;">
-                                @if (auth()->check() && auth()->user()->isVendorOwner())
-                                    Owner Vendor
-                                @elseif (auth()->check() && auth()->user()->isVendorAdmin())
-                                    Admin Vendor
+                                @if (auth()->user()?->isVendorOwner())
+                                    Owner ({{ auth()->user()->name }})
+                                @elseif (auth()->user()?->isVendorAdmin())
+                                    Admin ({{ auth()->user()->name }})
                                 @else
-                                    Staf Vendor
+                                    {{ auth()->user()?->name ?? 'Staf Vendor' }}
                                 @endif
                             </p>
                             <p class="text-[10px] mt-0.5 truncate max-w-[120px]" style="color: #9a8060;">
-                                {{ auth()->user()->name ?? 'Tendaku Portal' }}
+                                {{ auth()->user()?->isVendorOwner()
+                                    ? 'Vendor Owner Portal'
+                                    : (auth()->user()?->isVendorAdmin()
+                                        ? 'Vendor Admin Portal'
+                                        : 'Kasir & Admin Portal') }}
                             </p>
                         </div>
 

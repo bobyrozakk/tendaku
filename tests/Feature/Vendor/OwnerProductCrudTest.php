@@ -90,7 +90,7 @@ class OwnerProductCrudTest extends TestCase
     {
         $this->actingAs($this->owner1);
 
-        $file = UploadedFile::fake()->image('product.jpg');
+        $file = UploadedFile::fake()->image('product.png');
 
         $response = $this->post(route('vendor.products.store'), [
             'name' => 'Tenda Dome Arpenaz 4.1',

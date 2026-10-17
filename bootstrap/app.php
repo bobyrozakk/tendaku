@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureVendorOwner;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -13,8 +14,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(
+            at: '*',
+            headers: Request::HEADER_X_FORWARDED_PROTO,
+        );
         $middleware->validateCsrfTokens(except: ['webhook/midtrans']);
         $middleware->alias([
+            'role' => EnsureUserHasRole::class,
             'vendor.owner' => EnsureVendorOwner::class,
         ]);
     })

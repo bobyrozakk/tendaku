@@ -2,8 +2,8 @@
 
 @if ($role === 'vendor')
     <!-- Vendor Sidebar — Collapse to Icons, Expand on Hover -->
-    <aside x-data="{ open: false }" 
-           @mouseenter="open = true" 
+    <aside x-data="{ open: false }"
+           @mouseenter="open = true"
            @mouseleave="open = false"
            :class="open ? 'w-64' : 'w-[72px]'"
            class="sticky top-0 h-screen shrink-0 z-40 flex flex-col transition-all duration-300 ease-in-out shadow-xl"
@@ -25,24 +25,48 @@
 
         <!-- Navigation Links -->
         <nav class="flex-1 pt-4 px-2.5 space-y-1 overflow-hidden">
-            <p class="px-2 text-[10px] font-bold uppercase tracking-widest mb-3 transition-all duration-200 whitespace-nowrap" 
+            <p class="px-2 text-[10px] font-bold uppercase tracking-widest mb-3 transition-all duration-200 whitespace-nowrap"
                :class="open ? 'opacity-60' : 'opacity-0 h-0 mb-0 overflow-hidden'" style="color: rgba(245,233,200,0.5);">Menu Utama</p>
 
-            @if (auth()->check() && auth()->user()->isVendorOwner())
-                <!-- Dashboard Owner -->
-                <a href="{{ route('vendor.owner.dashboard') }}"
-                   class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
-                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-                   style="{{ request()->routeIs('vendor.owner.dashboard')
-                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                       : 'color: rgba(245,233,200,0.65);' }}"
-                   onmouseover="if (!{{ request()->routeIs('vendor.owner.dashboard') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-                   onmouseout="if (!{{ request()->routeIs('vendor.owner.dashboard') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                    </svg>
-                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Dashboard Owner</span>
-                </a>
+            @php
+                $user = auth()->user();
+
+                $isOwner = $user && $user->isVendorOwner();
+
+                $dashboardUrl = $isOwner
+                    ? route('vendor.owner.dashboard')
+                    : route('kasir.dashboard');
+
+                $isDashboardActive = request()->routeIs(
+                    'vendor.dashboard',
+                    'vendor.owner.dashboard',
+                    'kasir.dashboard'
+                );
+            @endphp
+
+            {{-- Dashboard sesuai role --}}
+            <a href="{{ $dashboardUrl }}"
+               class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
+               :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+               style="{{ $isDashboardActive
+                   ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                   : 'color: rgba(245,233,200,0.65);' }}">
+                <svg class="w-5 h-5 shrink-0" fill="none"
+                     viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+
+                <span class="whitespace-nowrap transition-all duration-200"
+                      :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">
+                    {{ $isOwner ? 'Dashboard Owner' : 'Dashboard Kasir' }}
+                </span>
+            </a>
+
+            @if ($isOwner)
+                {{-- Menu khusus Vendor Owner --}}
+                {{-- Pertahankan menu Produk Owner, Kategori Owner, dan Unit Owner --}}
 
                 <!-- Produk Owner -->
                 <a href="{{ route('vendor.products.index') }}"
@@ -230,9 +254,30 @@
 
                 <!-- Auth -->
                 @auth
-                    <a href="{{ route('dashboard') }}" class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
-                        Dashboard
-                    </a>
+                    @if (auth()->user()->isVendorStaff())
+                        @php
+                            $user = auth()->user();
+
+                            $vendorDashboard = $user->isVendorOwner()
+                                ? route('vendor.owner.dashboard')
+                                : route('kasir.dashboard');
+                        @endphp
+
+                        <a href="{{ $vendorDashboard }}"
+                           class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Dashboard Vendor
+                        </a>
+                    @elseif (auth()->user()->isSuperAdmin())
+                        <a href="{{ route('dashboard') }}"
+                           class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Dashboard Admin
+                        </a>
+                    @else
+                        <a href="{{ route('profile') }}"
+                           class="hidden sm:inline-flex btn-tendaku-secondary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Akun Saya
+                        </a>
+                    @endif
                 @else
                     <a href="{{ route('login') }}" class="hidden sm:inline-flex btn-tendaku-secondary !py-2 !px-3.5 text-xs sm:text-sm">
                         Masuk

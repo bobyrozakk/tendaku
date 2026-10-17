@@ -26,7 +26,7 @@ class LoginForm extends Form
      *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(bool $isSuperAdminLogin = false): void
     {
         $this->ensureIsNotRateLimited();
 
@@ -35,6 +35,31 @@ class LoginForm extends Form
 
             throw ValidationException::withMessages([
                 'form.email' => trans('auth.failed'),
+            ]);
+        }
+
+        $allowedRoles = $isSuperAdminLogin
+            ? ['super_admin']
+            : ['customer', 'vendor_owner', 'vendor_admin'];
+
+        $user = Auth::user();
+
+        if (! in_array($user?->role, $allowedRoles, true)) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'form.email' => trans('auth.failed'),
+            ]);
+        }
+
+        // Multi-tenant check: jika akun vendor sedang ditangguhkan (suspended)
+        if ($user->isVendorStaff() && $user->vendor?->status === 'suspended') {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'form.email' => 'Akun toko vendor Anda sedang dinonaktifkan/ditangguhkan.',
             ]);
         }
 

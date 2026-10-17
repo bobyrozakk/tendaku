@@ -24,24 +24,27 @@ Route::prefix('katalog/booking')->group(function () {
 
 // 3. Katalog (menggunakan nama route dari tim)
 Route::get('/katalog', [CatalogController::class, 'index'])->name('customer.catalog.index');
-Route::get('/katalog/{id}', [CatalogController::class, 'show'])->whereNumber('id')->name('customer.product.show');
+Route::get('/katalog/{id}', [CatalogController::class, 'show'])
+    ->whereNumber('id')
+    ->name('customer.product.show');
 
 // Alias Route URL langsung (untuk backward compatibility & kemudahan akses)
 Route::get('checkout', fn () => redirect()->route('checkout.index'));
 Route::get('booking/status/{code?}', fn ($code = null) => redirect()->route('booking.status', $code ? ['code' => $code] : []));
 Route::get('booking/receipt/{code?}', fn ($code = null) => redirect()->route('booking.receipt', $code ? ['code' => $code] : []));
 
-// TODO(Role 1 + 3B): Add guest payment only after defining a secure way to prove rental ownership without login.
+// TODO: Add guest payment only after defining a secure way to prove rental ownership without login.
 Route::post('rentals/{rental}/pay', [MidtransPaymentController::class, 'store'])
     ->middleware('auth')
     ->name('rentals.pay');
+
 Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
     ->name('webhook.midtrans');
 
 // Design System Reference
 Route::view('design-system', 'design-system')->name('design-system');
 
-// Authenticated Routes (Dashboard & Profile dengan Smart Role Redirect)
+// Authenticated Routes (Dashboard & Profile)
 Route::get('dashboard', function () {
     $user = auth()->user();
 
@@ -54,27 +57,40 @@ Route::get('dashboard', function () {
     }
 
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})
+    ->middleware(['auth', 'verified', 'role:super_admin,vendor_owner,vendor_admin'])
+    ->name('dashboard');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
 // Rute Modul KASIR & POS Toko (Role: vendor_admin / Kasir)
-Route::middleware(['auth', 'verified'])->prefix('kasir')->name('kasir.')->group(function () {
-    Route::view('dashboard', 'kasir.dashboard.index')->name('dashboard');
-    Route::view('units', 'kasir.units.index')->name('units');
-    Route::view('pickup', 'kasir.pickup.index')->name('pickup');
-    Route::view('return', 'kasir.return.index')->name('return');
-});
+Route::middleware(['auth', 'verified', 'role:vendor_admin'])
+    ->prefix('kasir')
+    ->name('kasir.')
+    ->group(function () {
+        Route::view('dashboard', 'kasir.dashboard.index')->name('dashboard');
+        Route::view('units', 'kasir.units.index')->name('units');
+        Route::view('pickup', 'kasir.pickup.index')->name('pickup');
+        Route::view('return', 'kasir.return.index')->name('return');
+    });
 
-// Rute Terproteksi Khusus OWNER VENDOR (CRUD Produk, Kategori, Unit, dan Analitik Dashboard)
-Route::middleware(['auth', 'vendor.owner'])->prefix('vendor')->name('vendor.')->group(function () {
-    Route::get('owner/dashboard', [OwnerDashboardController::class, 'index'])->name('owner.dashboard');
-    Route::resource('products', ProductController::class);
-    Route::resource('categories', CategoryController::class)->except(['show']);
-    Route::get('units', [UnitController::class, 'index'])->name('units');
-});
+// Rute khusus Owner Vendor
+Route::middleware(['auth', 'verified', 'vendor.owner'])
+    ->prefix('vendor')
+    ->name('vendor.')
+    ->group(function () {
+        Route::get('owner/dashboard', [OwnerDashboardController::class, 'index'])
+            ->name('owner.dashboard');
+
+        Route::resource('products', ProductController::class);
+        Route::resource('categories', CategoryController::class)
+            ->except(['show']);
+
+        Route::get('units', [UnitController::class, 'index'])
+            ->name('units');
+    });
 
 // Backward compatibility redirect untuk rute lama /vendor/*
 Route::get('vendor/dashboard', function () {
@@ -83,14 +99,14 @@ Route::get('vendor/dashboard', function () {
     }
 
     return redirect()->route('kasir.dashboard');
-})->middleware(['auth', 'verified'])->name('vendor.dashboard');
+})->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])->name('vendor.dashboard');
 
 Route::get('vendor/pickup', fn () => redirect()->route('kasir.pickup'))
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])
     ->name('vendor.pickup');
 
 Route::get('vendor/return', fn () => redirect()->route('kasir.return'))
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])
     ->name('vendor.return');
 
 require __DIR__.'/auth.php';

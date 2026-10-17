@@ -13,6 +13,7 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Plus Jakarta Sans', 'Figtree', ...defaultTheme.fontFamily.sans],
+                display: ['DM Serif Display', 'ui-serif', 'Georgia', 'serif'],
             },
             colors: {
                 // Exact palette tokens provided by user
@@ -23,6 +24,7 @@ export default {
                     avocado: '#6C8B08',
                     brown: '#2B2202',
                     dark: '#2B2202',
+                    moss: '#566F06',
                 },
                 // Full tonal shade scales for versatile UI components
                 wheat: {
