@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Vendor;
+namespace App\Livewire\Kasir;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -162,7 +162,7 @@ class Pickup extends Component
                    stripos($order['customer_name'], $this->searchPickup) !== false;
         });
 
-        return view('livewire.vendor.pickup', [
+        return view('livewire.kasir.pickup', [
             'filteredOrders' => $filteredOrders,
         ]);
     }

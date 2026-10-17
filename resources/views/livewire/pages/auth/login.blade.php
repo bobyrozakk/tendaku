@@ -27,7 +27,7 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         if ($user?->isVendorAdmin()) {
-            $this->redirectIntended(default: route('vendor.dashboard', absolute: false), navigate: false);
+            $this->redirectIntended(default: route('kasir.dashboard', absolute: false), navigate: false);
             return;
         }
 
