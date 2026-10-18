@@ -149,6 +149,36 @@ class DatabaseSeeder extends Seeder
         );
 
         // -------------------------------------------------------------
+        // 3b. VENDOR 3 (Bromo Camp Adventure - Status Pending Approval)
+        // -------------------------------------------------------------
+        $vendor3 = Vendor::updateOrCreate(
+            ['slug' => 'bromo-camp-adventure'],
+            [
+                'name' => 'Bromo Camp Adventure',
+                'description' => 'Penyedia tenda kemping kawasan Taman Nasional Bromo Tengger Semeru.',
+                'phone' => '083344556677',
+                'email' => 'bromo@campadventure.id',
+                'address' => 'Jl. Raya Bromo No. 12, Sukapura',
+                'city' => 'Probolinggo',
+                'status' => 'pending',
+                'approved_at' => null,
+                'approved_by' => null,
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'owner3@tendaku.com'],
+            [
+                'name' => 'Owner Bromo Camp',
+                'password' => Hash::make('password'),
+                'role' => 'vendor_owner',
+                'vendor_id' => $vendor3->id,
+                'phone' => '083344556688',
+                'email_verified_at' => now(),
+            ]
+        );
+
+        // -------------------------------------------------------------
         // 4. KATEGORI ALAT VENDOR 1
         // -------------------------------------------------------------
         $v1Categories = [

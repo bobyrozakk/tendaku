@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureVendorOwner;
 use App\Http\Middleware\SetActiveVendor;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'vendor.owner' => EnsureVendorOwner::class,
             'vendor.active' => SetActiveVendor::class,
+            'super_admin' => EnsureSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
