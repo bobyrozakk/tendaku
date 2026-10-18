@@ -73,7 +73,7 @@ Route::view('profile', 'profile')
     ->name('profile');
 
 // Rute Modul KASIR & POS Toko (Role: vendor_admin / Kasir)
-Route::middleware(['auth', 'verified', 'role:vendor_admin'])
+Route::middleware(['auth', 'verified', 'role:vendor_admin', 'vendor.active'])
     ->prefix('kasir')
     ->name('kasir.')
     ->group(function () {
@@ -84,7 +84,7 @@ Route::middleware(['auth', 'verified', 'role:vendor_admin'])
     });
 
 // Rute khusus Owner Vendor
-Route::middleware(['auth', 'verified', 'vendor.owner'])
+Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
     ->prefix('vendor')
     ->name('vendor.')
     ->group(function () {
@@ -106,14 +106,14 @@ Route::get('vendor/dashboard', function () {
     }
 
     return redirect()->route('kasir.dashboard');
-})->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])->name('vendor.dashboard');
+})->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin', 'vendor.active'])->name('vendor.dashboard');
 
 Route::get('vendor/pickup', fn () => redirect()->route('kasir.pickup'))
-    ->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])
+    ->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin', 'vendor.active'])
     ->name('vendor.pickup');
 
 Route::get('vendor/return', fn () => redirect()->route('kasir.return'))
-    ->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])
+    ->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin', 'vendor.active'])
     ->name('vendor.return');
 
 require __DIR__.'/auth.php';
