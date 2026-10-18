@@ -301,10 +301,123 @@ class RentalService
 
     /**
      * Proses pengembalian barang (return) dan kalkulasi denda (keterlambatan/kerusakan).
+     * Inspeksi kondisi fisik barang, hitung denda, kembalikan unit fisik, dan kembalikan KTP fisik kepada penyewa.
+     *
+     * @param  Rental  $rental  Transaksi rental yang akan di-return
+     * @param  array<int|string, array{condition_after: string, damage_fee?: float|int, checklist_notes?: string|null}>  $returnDetails
+     *                                                                                                                                   Format: [rental_detail_id => ['condition_after' => 'good', 'damage_fee' => 0, 'checklist_notes' => '...']]
+     * @param  int|null  $staffUserId  ID user staf vendor yang memproses pengembalian
+     * @param  string|null  $ktpReturnNotes  Catatan pengembalian KTP (misal: 'KTP dikembalikan langsung ke penyewa')
+     *
+     * @throws RuntimeException Jika status rental tidak valid untuk pengembalian
+     * @throws InvalidArgumentException Jika data inspeksi tidak lengkap
      */
-    public function processReturn(Rental $rental, array $returnDetails): void
-    {
-        // Logika pengembalian & hitung denda (akan dikerjakan pada sprint selanjutnya)
+    public function processReturn(
+        Rental $rental,
+        array $returnDetails,
+        ?int $staffUserId = null,
+        ?string $ktpReturnNotes = null
+    ): Rental {
+        if ($rental->status !== 'picked_up') {
+            throw new RuntimeException("Rental dengan status '{$rental->status}' tidak dapat diproses pengembalian. Hanya rental dengan status 'picked_up' yang dapat dikembalikan.");
+        }
+
+        $rental->loadMissing('details.itemUnit');
+
+        if ($rental->details->isEmpty()) {
+            throw new RuntimeException('Transaksi sewa ini tidak memiliki rincian barang.');
+        }
+
+        return DB::transaction(function () use ($rental, $returnDetails, $staffUserId, $ktpReturnNotes) {
+            $totalLateFee = 0.0;
+            $totalDamageFee = 0.0;
+            $actualReturnDate = now();
+
+            // Hitung hari keterlambatan berdasarkan tanggal kontrak vs tanggal aktual pengembalian
+            $contractReturnDate = Carbon::parse($rental->return_date)->endOfDay();
+            $lateDays = 0;
+
+            if ($actualReturnDate->gt($contractReturnDate)) {
+                $lateDays = (int) $contractReturnDate->startOfDay()->diffInDays($actualReturnDate->startOfDay());
+            }
+
+            foreach ($rental->details as $detail) {
+                $inspection = $returnDetails[$detail->id] ?? null;
+
+                if ($inspection === null) {
+                    throw new InvalidArgumentException("Data inspeksi pengembalian untuk baris rincian ID #{$detail->id} belum diisi.");
+                }
+
+                $conditionAfter = $inspection['condition_after'] ?? null;
+
+                if (empty($conditionAfter)) {
+                    throw new InvalidArgumentException("Kondisi barang setelah pengembalian (condition_after) wajib diisi untuk baris rincian ID #{$detail->id}.");
+                }
+
+                $damageFee = (float) ($inspection['damage_fee'] ?? 0.0);
+                $checklistNotes = $inspection['checklist_notes'] ?? $detail->checklist_notes;
+
+                // Kalkulasi denda keterlambatan per unit
+                $unitLateFee = 0.0;
+                if ($lateDays > 0) {
+                    $lateFeePerDay = (float) ($detail->late_fee_per_day_snapshot ?? 0);
+                    $unitLateFee = $lateFeePerDay * $lateDays;
+                }
+
+                $totalLateFee += $unitLateFee;
+                $totalDamageFee += $damageFee;
+
+                // Update detail dengan hasil inspeksi pengembalian
+                $detail->update([
+                    'condition_after' => $conditionAfter,
+                    'late_days' => $lateDays,
+                    'late_fee' => $unitLateFee,
+                    'damage_fee' => $damageFee,
+                    'checklist_notes' => $checklistNotes,
+                    'returned_at' => $actualReturnDate,
+                    'is_returned' => true,
+                ]);
+
+                // Kembalikan status unit fisik berdasarkan kondisi pengembalian
+                if ($detail->itemUnit) {
+                    $newUnitStatus = match ($conditionAfter) {
+                        'lost' => 'retired',
+                        'damaged' => 'maintenance',
+                        default => 'available',
+                    };
+
+                    $detail->itemUnit->update([
+                        'status' => $newUnitStatus,
+                        'condition' => $conditionAfter === 'lost' ? 'lost' : $conditionAfter,
+                    ]);
+                }
+            }
+
+            // Kalkulasi final total (grand_total + denda)
+            $finalTotal = (float) $rental->grand_total + $totalLateFee + $totalDamageFee;
+
+            // Update KTP notes: gabungkan catatan penahanan dan pengembalian
+            $combinedKtpNotes = $rental->ktp_collateral_notes;
+            if ($ktpReturnNotes) {
+                $combinedKtpNotes = trim(($combinedKtpNotes ? $combinedKtpNotes.' | ' : '').$ktpReturnNotes);
+            }
+
+            // Update header rental
+            $rental->update([
+                'status' => 'completed',
+                'actual_return_date' => $actualReturnDate->format('Y-m-d'),
+                'returned_at' => $actualReturnDate,
+                'returned_by' => $staffUserId,
+                'total_late_fee' => $totalLateFee,
+                'total_damage_fee' => $totalDamageFee,
+                'final_total' => $finalTotal,
+                'ktp_collateral_status' => 'returned',
+                'ktp_returned_at' => $actualReturnDate,
+                'ktp_collateral_notes' => $combinedKtpNotes,
+            ]);
+
+            return $rental->fresh(['details.itemUnit', 'details.masterItem', 'returnedBy', 'vendor']);
+        });
     }
 
     /**

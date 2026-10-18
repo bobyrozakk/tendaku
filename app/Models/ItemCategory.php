@@ -12,7 +12,7 @@ class ItemCategory extends Model
 {
     use BelongsToVendor, SoftDeletes;
 
-    protected $fillable = ['vendor_id', 'name', 'slug', 'icon'];
+    protected $fillable = ['vendor_id', 'name', 'slug', 'description', 'icon'];
 
     public function vendor(): BelongsTo
     {

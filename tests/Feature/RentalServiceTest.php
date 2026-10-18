@@ -603,6 +603,174 @@ class RentalServiceTest extends TestCase
         );
     }
 
+    // ===== Tests for processReturn() =====
+
+    public function test_process_return_successfully_completes_rental_and_returns_ktp(): void
+    {
+        $unit1 = $this->createUnit($this->item1, 'TD-001');
+        $unit2 = $this->createUnit($this->item2, 'SB-001');
+        $pickupStaff = User::factory()->create(['role' => 'vendor_admin']);
+        $returnStaff = User::factory()->create(['role' => 'vendor_admin']);
+
+        // Buat booking dan pickup
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-12',
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+                ['master_item_id' => $this->item2->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $detail1 = $rental->details->where('master_item_id', $this->item1->id)->first();
+        $detail2 = $rental->details->where('master_item_id', $this->item2->id)->first();
+
+        $rental = $this->service->processPickup(
+            $rental,
+            [
+                $detail1->id => $unit1->id,
+                $detail2->id => $unit2->id,
+            ],
+            'https://storage.tendaku.com/ktp.jpg',
+            $pickupStaff->id,
+            'Loker A-04'
+        );
+
+        // Proses return (tepat waktu, tanpa denda)
+        Carbon::setTestNow('2026-10-12 15:00:00');
+
+        $returnedRental = $this->service->processReturn(
+            $rental,
+            [
+                $detail1->id => ['condition_after' => 'good'],
+                $detail2->id => ['condition_after' => 'excellent', 'checklist_notes' => 'Masih bagus'],
+            ],
+            $returnStaff->id,
+            'KTP dikembalikan langsung ke penyewa'
+        );
+
+        Carbon::setTestNow();
+
+        $this->assertSame('completed', $returnedRental->status);
+        $this->assertSame('returned', $returnedRental->ktp_collateral_status);
+        $this->assertNotNull($returnedRental->ktp_returned_at);
+        $this->assertSame($returnStaff->id, $returnedRental->returned_by);
+        $this->assertEquals(0, (float) $returnedRental->total_late_fee);
+        $this->assertEquals(0, (float) $returnedRental->total_damage_fee);
+        $this->assertStringContainsString('KTP dikembalikan langsung ke penyewa', $returnedRental->ktp_collateral_notes);
+
+        // Unit fisik kembali available
+        $this->assertSame('available', $unit1->fresh()->status);
+        $this->assertSame('available', $unit2->fresh()->status);
+
+        // Detail sudah di-flag is_returned
+        $this->assertTrue($detail1->fresh()->is_returned);
+        $this->assertTrue($detail2->fresh()->is_returned);
+    }
+
+    public function test_process_return_calculates_late_fee_when_returned_after_contract_date(): void
+    {
+        $unit1 = $this->createUnit($this->item1, 'TD-001');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-12',
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $detail1 = $rental->details->first();
+
+        $rental = $this->service->processPickup(
+            $rental,
+            [$detail1->id => $unit1->id],
+            'https://storage.tendaku.com/ktp.jpg'
+        );
+
+        // Return terlambat 2 hari (tanggal kontrak return 12 Okt, dikembalikan 14 Okt)
+        Carbon::setTestNow('2026-10-14 10:00:00');
+
+        $returnedRental = $this->service->processReturn(
+            $rental,
+            [$detail1->id => ['condition_after' => 'good']],
+        );
+
+        Carbon::setTestNow();
+
+        // late_fee_per_day item1 = 25.000, terlambat 2 hari = 50.000
+        $this->assertEquals(50000, (float) $returnedRental->total_late_fee);
+        $this->assertSame(2, $detail1->fresh()->late_days);
+        $this->assertEquals(50000, (float) $detail1->fresh()->late_fee);
+    }
+
+    public function test_process_return_records_damage_fee_and_updates_unit_status(): void
+    {
+        $unit1 = $this->createUnit($this->item1, 'TD-001');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-12',
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $detail1 = $rental->details->first();
+
+        $rental = $this->service->processPickup(
+            $rental,
+            [$detail1->id => $unit1->id],
+            'https://storage.tendaku.com/ktp.jpg'
+        );
+
+        Carbon::setTestNow('2026-10-12 15:00:00');
+
+        $returnedRental = $this->service->processReturn(
+            $rental,
+            [$detail1->id => ['condition_after' => 'damaged', 'damage_fee' => 150000]],
+        );
+
+        Carbon::setTestNow();
+
+        $this->assertEquals(150000, (float) $returnedRental->total_damage_fee);
+
+        // Grand total 150.000 (sewa) + 0 (late) + 150.000 (damage) = 300.000
+        $expectedFinal = (float) $returnedRental->grand_total + 150000;
+        $this->assertEquals($expectedFinal, (float) $returnedRental->final_total);
+
+        // Unit fisik harus masuk maintenance karena rusak
+        $this->assertSame('maintenance', $unit1->fresh()->status);
+        $this->assertSame('damaged', $unit1->fresh()->condition);
+    }
+
+    public function test_process_return_throws_exception_when_rental_status_is_not_picked_up(): void
+    {
+        $this->createUnit($this->item1, 'TD-001');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-12',
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        // Rental masih status 'pending', belum di-pickup
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage("Hanya rental dengan status 'picked_up' yang dapat dikembalikan");
+
+        $this->service->processReturn(
+            $rental,
+            [$rental->details->first()->id => ['condition_after' => 'good']],
+        );
+    }
+
     private function createUnit(MasterItem $item, string $code): ItemUnit
     {
         return ItemUnit::query()->create([

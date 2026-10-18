@@ -27,15 +27,31 @@
             <div class="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 sm:px-6 py-3"
                  style="background: #ffffff; border-bottom: 1px solid #e8e0cc;">
 
-                <!-- Left: Store Status -->
+                <!-- Left: Status Toko & Nama Toko -->
+
+                <!-- Left: Status Toko & Nama Toko -->
                 <div class="flex items-center gap-3">
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border"
-                          style="background: rgba(108,139,8,0.08); color: #4e6506; border-color: rgba(108,139,8,0.25);">
-                        <span class="w-2 h-2 rounded-full animate-pulse" style="background:#6c8b08;"></span>
-                        Toko Rental Buka
+                    <!-- Status Operasional Toko -->
+                    <div
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border"
+                        style="background: rgba(108,139,8,0.08); color: #4e6506; border-color: rgba(108,139,8,0.25);"
+                    >
+                        <span
+                            class="w-2 h-2 rounded-full animate-pulse"
+                            style="background: #6c8b08;"
+                        ></span>
+                        <span>Toko Rental Buka</span>
+                    </div>
+
+                    <!-- Nama Toko Vendor -->
+                    <span
+                        class="text-xs hidden sm:inline"
+                        style="color: #b8a882;"
+                    >
+                        • {{ auth()->user()?->vendor?->name ?? 'Tendaku Store' }}
                     </span>
-                    <span class="text-xs hidden sm:inline" style="color: #b8a882;">• Tendaku Central Camp</span>
                 </div>
+
 
                 <!-- Right: Actions -->
                 <div class="flex items-center gap-2">
@@ -68,16 +84,40 @@
                     <!-- Divider -->
                     <div class="w-px h-6 mx-1" style="background: #e8e0cc;"></div>
 
-                    <!-- User Pill -->
+                    <!-- User Pill & Logout -->
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-xl font-bold flex items-center justify-center text-xs text-white"
                              style="background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 2px 8px rgba(108,139,8,0.3);">
-                            TK
+                            {{ strtoupper(substr(auth()->user()->name ?? 'TK', 0, 2)) }}
                         </div>
                         <div class="hidden sm:block">
-                            <p class="text-xs font-bold leading-none" style="color: #2b2202;">Admin Vendor</p>
-                            <p class="text-[10px] mt-0.5" style="color: #9a8060;">Tendaku Portal</p>
+                            <p class="text-xs font-bold leading-none" style="color: #2b2202;">
+                                @if (auth()->user()?->isVendorOwner())
+                                    Owner ({{ auth()->user()->name }})
+                                @elseif (auth()->user()?->isVendorAdmin())
+                                    Admin ({{ auth()->user()->name }})
+                                @else
+                                    {{ auth()->user()?->name ?? 'Staf Vendor' }}
+                                @endif
+                            </p>
+                            <p class="text-[10px] mt-0.5 truncate max-w-[120px]" style="color: #9a8060;">
+                                {{ auth()->user()?->isVendorOwner()
+                                    ? 'Vendor Owner Portal'
+                                    : (auth()->user()?->isVendorAdmin()
+                                        ? 'Vendor Admin Portal'
+                                        : 'Kasir & Admin Portal') }}
+                            </p>
                         </div>
+
+                        <!-- Form Logout -->
+                        <form method="POST" action="{{ route('logout') }}" class="inline-block ml-1">
+                            @csrf
+                            <button type="submit" class="p-1.5 rounded-lg text-darkbrown-500 hover:text-red-600 hover:bg-wheat-100 transition" title="Keluar / Logout">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>

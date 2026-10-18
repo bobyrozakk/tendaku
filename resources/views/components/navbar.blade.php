@@ -2,8 +2,8 @@
 
 @if ($role === 'vendor')
     <!-- Vendor Sidebar — Collapse to Icons, Expand on Hover -->
-    <aside x-data="{ open: false }" 
-           @mouseenter="open = true" 
+    <aside x-data="{ open: false }"
+           @mouseenter="open = true"
            @mouseleave="open = false"
            :class="open ? 'w-64' : 'w-[72px]'"
            class="sticky top-0 h-screen shrink-0 z-40 flex flex-col transition-all duration-300 ease-in-out shadow-xl"
@@ -25,74 +25,160 @@
 
         <!-- Navigation Links -->
         <nav class="flex-1 pt-4 px-2.5 space-y-1 overflow-hidden">
-            <p class="px-2 text-[10px] font-bold uppercase tracking-widest mb-3 transition-all duration-200 whitespace-nowrap" 
+            <p class="px-2 text-[10px] font-bold uppercase tracking-widest mb-3 transition-all duration-200 whitespace-nowrap"
                :class="open ? 'opacity-60' : 'opacity-0 h-0 mb-0 overflow-hidden'" style="color: rgba(245,233,200,0.5);">Menu Utama</p>
 
-            <!-- Dashboard & POS -->
-            <a href="{{ route('vendor.dashboard') }}"
+            @php
+                $user = auth()->user();
+
+                $isOwner = $user && $user->isVendorOwner();
+
+                $dashboardUrl = $isOwner
+                    ? route('vendor.owner.dashboard')
+                    : route('kasir.dashboard');
+
+                $isDashboardActive = request()->routeIs(
+                    'vendor.dashboard',
+                    'vendor.owner.dashboard',
+                    'kasir.dashboard'
+                );
+            @endphp
+
+            {{-- Dashboard sesuai role --}}
+            <a href="{{ $dashboardUrl }}"
                class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
                :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-               style="{{ request()->routeIs('vendor.dashboard')
+               style="{{ $isDashboardActive
                    ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                   : 'color: rgba(245,233,200,0.65);' }}"
-               onmouseover="if (!{{ request()->routeIs('vendor.dashboard') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-               onmouseout="if (!{{ request()->routeIs('vendor.dashboard') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                   : 'color: rgba(245,233,200,0.65);' }}">
+                <svg class="w-5 h-5 shrink-0" fill="none"
+                     viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                 </svg>
-                <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Dashboard & POS</span>
+
+                <span class="whitespace-nowrap transition-all duration-200"
+                      :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">
+                    {{ $isOwner ? 'Dashboard Owner' : 'Dashboard Kasir' }}
+                </span>
             </a>
 
-            <!-- Kelola Alat & Stok -->
-            <a href="{{ route('vendor.units') }}"
-               class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
-               :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-               style="{{ request()->routeIs('vendor.units')
-                   ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                   : 'color: rgba(245,233,200,0.65);' }}"
-               onmouseover="if (!{{ request()->routeIs('vendor.units') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-               onmouseout="if (!{{ request()->routeIs('vendor.units') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                </svg>
-                <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Kelola Alat & Stok</span>
-            </a>
+            @if ($isOwner)
+                {{-- Menu khusus Vendor Owner --}}
+                {{-- Pertahankan menu Produk Owner, Kategori Owner, dan Unit Owner --}}
 
-            <!-- Pickup / Serah Terima -->
-            <a href="{{ route('vendor.pickup') }}"
-               class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
-               :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-               style="{{ request()->routeIs('vendor.pickup')
-                   ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                   : 'color: rgba(245,233,200,0.65);' }}"
-               onmouseover="if (!{{ request()->routeIs('vendor.pickup') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-               onmouseout="if (!{{ request()->routeIs('vendor.pickup') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                </svg>
-                <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Pickup / Serah Terima</span>
-            </a>
+                <!-- Produk Owner -->
+                <a href="{{ route('vendor.products.index') }}"
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.products.*')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.products.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.products.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Produk Owner</span>
+                </a>
 
-            <!-- Inspeksi & Retur -->
-            <a href="{{ route('vendor.return') }}"
-               class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
-               :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-               style="{{ request()->routeIs('vendor.return')
-                   ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                   : 'color: rgba(245,233,200,0.65);' }}"
-               onmouseover="if (!{{ request()->routeIs('vendor.return') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-               onmouseout="if (!{{ request()->routeIs('vendor.return') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                </svg>
-                <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Inspeksi & Retur</span>
-            </a>
+                <!-- Kategori Owner -->
+                <a href="{{ route('vendor.categories.index') }}"
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.categories.*')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.categories.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.categories.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Kategori Owner</span>
+                </a>
+
+                <!-- Unit Owner -->
+                <a href="{{ route('vendor.units') }}"
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.units')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.units') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.units') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                    </svg>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Unit Owner</span>
+                </a>
+            @else
+                <!-- Dashboard & POS -->
+                <a href="{{ route('kasir.dashboard') }}"
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('kasir.dashboard')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('kasir.dashboard') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('kasir.dashboard') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Dashboard & POS</span>
+                </a>
+
+                <!-- Status Unit Alat (Kasir View) -->
+                <a href="{{ route('kasir.units') }}"
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('kasir.units')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('kasir.units') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('kasir.units') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Status Unit Alat</span>
+                </a>
+
+                <!-- Pickup / Serah Terima -->
+                <a href="{{ route('kasir.pickup') }}"
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('kasir.pickup')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('kasir.pickup') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('kasir.pickup') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                    </svg>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Pickup / Serah Terima</span>
+                </a>
+
+                <!-- Inspeksi & Retur -->
+                <a href="{{ route('kasir.return') }}"
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('kasir.return')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('kasir.return') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('kasir.return') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                    </svg>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Inspeksi & Retur</span>
+                </a>
+            @endif
 
             <!-- Divider -->
             <div class="my-3 mx-1 border-t" style="border-color: rgba(255,255,255,0.07);"></div>
 
             <!-- Design System -->
-            <a href="{{ url('/design-system') }}"
+            <!-- <a href="{{ url('/design-system') }}"
                class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
                :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                style="background: rgba(213,160,7,0.10); border: 1px solid rgba(213,160,7,0.22); color: rgba(251,206,107,0.9);">
@@ -100,7 +186,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
                 </svg>
                 <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Design System</span>
-            </a>
+            </a> -->
         </nav>
     </aside>
 
@@ -175,9 +261,30 @@
 
                 <!-- Auth -->
                 @auth
-                    <a href="{{ route('dashboard') }}" class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
-                        Dashboard
-                    </a>
+                    @if (auth()->user()->isVendorStaff())
+                        @php
+                            $user = auth()->user();
+
+                            $vendorDashboard = $user->isVendorOwner()
+                                ? route('vendor.owner.dashboard')
+                                : route('kasir.dashboard');
+                        @endphp
+
+                        <a href="{{ $vendorDashboard }}"
+                           class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Dashboard Vendor
+                        </a>
+                    @elseif (auth()->user()->isSuperAdmin())
+                        <a href="{{ route('dashboard') }}"
+                           class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Dashboard Admin
+                        </a>
+                    @else
+                        <a href="{{ route('profile') }}"
+                           class="hidden sm:inline-flex btn-tendaku-secondary !py-2 !px-3.5 text-xs sm:text-sm">
+                            Akun Saya
+                        </a>
+                    @endif
                 @else
                     <a href="{{ route('login') }}" class="hidden sm:inline-flex btn-tendaku-secondary !py-2 !px-3.5 text-xs sm:text-sm">
                         Masuk

@@ -4,6 +4,10 @@ use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
+use App\Http\Controllers\Vendor\CategoryController;
+use App\Http\Controllers\Vendor\OwnerDashboardController;
+use App\Http\Controllers\Vendor\ProductController;
+use App\Http\Controllers\Vendor\UnitController;
 use App\Http\Controllers\Webhook\MidtransWebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,7 +30,9 @@ Route::get('riwayat-sewa', [BookingController::class, 'index'])
 
 // 3. Katalog
 Route::get('/katalog', [CatalogController::class, 'index'])->name('customer.catalog.index');
-Route::get('/katalog/{id}', [CatalogController::class, 'show'])->whereNumber('id')->name('customer.product.show');
+Route::get('/katalog/{id}', [CatalogController::class, 'show'])
+    ->whereNumber('id')
+    ->name('customer.product.show');
 
 // Alias Route URL langsung (untuk backward compatibility & kemudahan akses)
 Route::get('checkout', fn () => redirect()->route('checkout.index'));
@@ -34,9 +40,11 @@ Route::get('booking/status/{code}', fn ($code) => redirect()->route('booking.sta
 Route::get('booking/receipt/{code}', fn ($code) => redirect()->route('booking.receipt', ['code' => $code]));
 
 // Rute Pembayaran Midtrans SNAP
+// TODO: Add guest payment only after defining a secure way to prove rental ownership without login.
 Route::post('rentals/{rental}/pay', [MidtransPaymentController::class, 'store'])
     ->middleware('auth')
     ->name('rentals.pay');
+
 Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
     ->name('webhook.midtrans');
 
@@ -44,32 +52,68 @@ Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
 Route::view('design-system', 'design-system')->name('design-system');
 
 // Authenticated Routes (Dashboard & Profile)
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
+Route::get('dashboard', function () {
+    $user = auth()->user();
+
+    if ($user?->isVendorOwner()) {
+        return redirect()->route('vendor.owner.dashboard');
+    }
+
+    if ($user?->isVendorAdmin()) {
+        return redirect()->route('kasir.dashboard');
+    }
+
+    return view('dashboard');
+})
+    ->middleware(['auth', 'verified', 'role:super_admin,vendor_owner,vendor_admin'])
     ->name('dashboard');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
-// Rute untuk Vendor Dashboard
-Route::view('vendor/dashboard', 'vendor.dashboard.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.dashboard');
+// Rute Modul KASIR & POS Toko (Role: vendor_admin / Kasir)
+Route::middleware(['auth', 'verified', 'role:vendor_admin'])
+    ->prefix('kasir')
+    ->name('kasir.')
+    ->group(function () {
+        Route::view('dashboard', 'kasir.dashboard.index')->name('dashboard');
+        Route::view('units', 'kasir.units.index')->name('units');
+        Route::view('pickup', 'kasir.pickup.index')->name('pickup');
+        Route::view('return', 'kasir.return.index')->name('return');
+    });
 
-// Rute untuk Vendor Units Management
-Route::view('vendor/units', 'vendor.units.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.units');
+// Rute khusus Owner Vendor
+Route::middleware(['auth', 'verified', 'vendor.owner'])
+    ->prefix('vendor')
+    ->name('vendor.')
+    ->group(function () {
+        Route::get('owner/dashboard', [OwnerDashboardController::class, 'index'])
+            ->name('owner.dashboard');
 
-// Rute untuk Return & Inspeksi Barang
-Route::view('vendor/return', 'vendor.return.index')
-    ->middleware(['auth', 'verified'])
-    ->name('vendor.return');
+        Route::resource('products', ProductController::class);
+        Route::resource('categories', CategoryController::class)
+            ->except(['show']);
 
-// Rute untuk Pickup / Serah Terima Barang
-Route::view('vendor/pickup', 'vendor.pickup.index')
-    ->middleware(['auth', 'verified'])
+        Route::get('units', [UnitController::class, 'index'])
+            ->name('units');
+    });
+
+// Backward compatibility redirect untuk rute lama /vendor/*
+Route::get('vendor/dashboard', function () {
+    if (auth()->user()?->isVendorOwner()) {
+        return redirect()->route('vendor.owner.dashboard');
+    }
+
+    return redirect()->route('kasir.dashboard');
+})->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])->name('vendor.dashboard');
+
+Route::get('vendor/pickup', fn () => redirect()->route('kasir.pickup'))
+    ->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])
     ->name('vendor.pickup');
+
+Route::get('vendor/return', fn () => redirect()->route('kasir.return'))
+    ->middleware(['auth', 'verified', 'role:vendor_owner,vendor_admin'])
+    ->name('vendor.return');
 
 require __DIR__.'/auth.php';
