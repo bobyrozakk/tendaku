@@ -676,6 +676,7 @@ class RentalServiceTest extends TestCase
 
         $rental = $this->service->createBooking([
             'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
             'return_date' => '2026-10-12',
             'items' => [
@@ -713,6 +714,7 @@ class RentalServiceTest extends TestCase
 
         $rental = $this->service->createBooking([
             'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
             'return_date' => '2026-10-12',
             'items' => [
@@ -754,6 +756,7 @@ class RentalServiceTest extends TestCase
 
         $rental = $this->service->createBooking([
             'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
             'return_date' => '2026-10-12',
             'items' => [
