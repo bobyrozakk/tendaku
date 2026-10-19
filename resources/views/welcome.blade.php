@@ -287,7 +287,7 @@
         </div>
 
         <div class="shrink-0 flex items-center gap-3">
-            <a href="{{ route('dashboard') }}" class="btn-tendaku-dark !py-3 !px-5 text-sm font-bold shadow-tendaku">
+            <a href="{{ route('vendor.dashboard') }}" class="btn-tendaku-dark !py-3 !px-5 text-sm font-bold shadow-tendaku">
                 Masuk Portal Vendor & POS →
             </a>
         </div>

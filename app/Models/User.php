@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Traits\HasRoles;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,9 +12,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, HasRoles, MustVerifyEmailTrait, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'vendor_id',
@@ -62,6 +65,21 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->role === 'super_admin';
+    }
+
+    public function isVendorOwner(): bool
+    {
+        return $this->role === 'vendor_owner';
+    }
+
+    public function isVendorAdmin(): bool
+    {
+        return $this->role === 'vendor_admin';
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->role === 'customer';
     }
 
     public function isVendorStaff(): bool

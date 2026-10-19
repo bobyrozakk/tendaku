@@ -10,7 +10,7 @@ class VendorPaymentSetting extends Model
     protected $fillable = [
         'vendor_id', 'midtrans_merchant_id', 'midtrans_server_key', 'midtrans_client_key',
         'is_midtrans_active', 'bank_name', 'bank_account_number', 'bank_account_name',
-        'qris_image_url', 'wa_api_token',
+        'bank_account', 'qris_image_url', 'qris_static_url', 'wa_api_token',
     ];
 
     protected $hidden = [

@@ -4,6 +4,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -11,8 +12,17 @@ use Livewire\Volt\Component;
 new #[Layout('layouts.guest')] class extends Component
 {
     public string $name = '';
+
     public string $email = '';
+
+    public string $phone = '';
+
+    public string $nik = '';
+
+    public ?string $address = null;
+
     public string $password = '';
+
     public string $password_confirmation = '';
 
     /**
@@ -20,12 +30,29 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function register(): void
     {
+        $this->email = Str::lower(trim($this->email));
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => [
+                'required',
+                'string',
+                'lowercase',
+                'email',
+                'max:255',
+                'unique:'.User::class,
+                'ends_with:@gmail.com',
+            ],
+            'phone' => ['required', 'string', 'max:20'],
+            'nik' => ['required', 'string', 'digits:16'],
+            'address' => ['nullable', 'string', 'max:500'],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'email.ends_with' => 'Email harus menggunakan @gmail.com.',
+            'nik.digits' => 'NIK harus terdiri dari 16 digit angka.',
         ]);
 
+        $validated['address'] = filled($validated['address'] ?? null) ? trim($validated['address']) : null;
         $validated['password'] = Hash::make($validated['password']);
         $validated['role'] = 'customer';
 
@@ -33,57 +60,54 @@ new #[Layout('layouts.guest')] class extends Component
 
         Auth::login($user);
 
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
+        $this->redirect(route('verification.notice', absolute: false), navigate: true);
     }
 }; ?>
 
 <div>
-    <form wire:submit="register">
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input wire:model="name" id="name" class="block mt-1 w-full" type="text" name="name" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
-        </div>
+    <x-slot:heading>Buat akun Tendaku</x-slot:heading>
+    <x-slot:subheading>Daftar sekali, lalu sewa tenda dan perlengkapan lain kapan saja.</x-slot:subheading>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+    <form wire:submit="register" class="space-y-5">
+        @csrf
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+        <x-auth.field name="name" label="Nama lengkap"
+                      wire:model="name"
+                      placeholder="Nama Lengkap" autocomplete="name" required autofocus />
 
-            <x-text-input wire:model="password" id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
+        <x-auth.field name="email" label="Email" type="email"
+                      wire:model="email"
+                      placeholder="nama@gmail.com" autocomplete="username" required />
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+        <x-auth.field name="phone" label="Nomor telepon" type="tel"
+                      wire:model="phone"
+                      placeholder="08xxxxxxxxxx" autocomplete="tel" required />
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
+        <x-auth.field name="nik" label="NIK (Nomor Induk Kependudukan)"
+                      wire:model="nik"
+                      placeholder="16 digit NIK" inputmode="numeric" maxlength="16" required />
 
-            <x-text-input wire:model="password_confirmation" id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
+        <x-auth.field name="address" label="Alamat"
+                      wire:model="address"
+                      placeholder="Alamat lengkap (opsional)" />
 
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
+        <x-auth.field name="password" label="Password" type="password"
+                      wire:model="password" placeholder="Password"
+                      autocomplete="new-password" hint="Minimal 8 karakter." required />
 
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}" wire:navigate>
-                {{ __('Already registered?') }}
-            </a>
+        <x-auth.field name="password_confirmation" label="Ulangi password" type="password"
+                      wire:model="password_confirmation" placeholder="Password"
+                      autocomplete="new-password" required />
 
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
-        </div>
+        <x-auth.button class="w-full">Buat akun</x-auth.button>
     </form>
+
+    @include('livewire.pages.auth.partials.google-auth-button', [
+        'label' => 'Daftar dengan Google',
+    ])
+
+    <p class="mt-8 text-sm text-tendaku-brown/70">
+        Sudah punya akun?
+        <a href="{{ route('login') }}" wire:navigate class="font-semibold text-tendaku-moss underline-offset-4 hover:underline">Masuk</a>
+    </p>
 </div>

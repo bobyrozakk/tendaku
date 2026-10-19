@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Livewire\Forms\LoginForm;
@@ -20,52 +21,158 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $user = auth()->user();
+
+        // Jika email belum diverifikasi, arahkan ke halaman verifikasi email (resend email)
+        if (! $user->hasVerifiedEmail()) {
+            $this->redirect(route('verification.notice', absolute: false), navigate: true);
+
+            return;
+        }
+
+        // Tentukan halaman tujuan berdasarkan role pengguna.
+        $destination = match (true) {
+            $user->isVendorOwner() => route(
+                'vendor.owner.dashboard',
+                absolute: false
+            ),
+
+            $user->isVendorAdmin() => route(
+                'kasir.dashboard',
+                absolute: false
+            ),
+
+            $user->isVendorStaff() => route(
+                'dashboard',
+                absolute: false
+            ),
+
+            $user->isCustomer() => route(
+                'home',
+                absolute: false
+            ),
+
+            default => route(
+                'dashboard',
+                absolute: false
+            ),
+        };
+
+
+        // Pesan selamat datang.
+        $welcomeMessage = match (true) {
+            $user->isVendorOwner() =>
+                "Selamat datang Owner {$user->name}!",
+
+            $user->isVendorAdmin() =>
+                "Selamat datang Vendor {$user->name}!",
+
+            $user->isSuperAdmin() =>
+                "Halo Superadmin {$user->name}!",
+
+            default =>
+                "Selamat datang, {$user->name}!",
+        };
+
+        Session::flash('status', $welcomeMessage);
+        Session::flash('success', $welcomeMessage);
+
+        // Redirect cukup dilakukan satu kali.
+        $this->redirectIntended(
+            default: $destination,
+            navigate: false
+        );
     }
-}; ?>
+};
+?>
 
 <div>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    <x-slot:heading>Masuk ke Tendaku</x-slot:heading>
 
-    <form wire:submit="login">
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="form.email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus autocomplete="username" />
-            <x-input-error :messages="$errors->get('form.email')" class="mt-2" />
+    <x-slot:subheading>
+        Lanjutkan sewa perlengkapan campingmu.
+    </x-slot:subheading>
+
+    @if (session('status'))
+        <div
+            role="status"
+            class="mb-6 rounded-lg border border-tendaku-brown/15 bg-tendaku-avocado/10 px-4 py-3 text-sm text-tendaku-brown"
+        >
+            {{ session('status') }}
         </div>
+    @endif
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+    <form wire:submit="login" class="space-y-5">
+        @csrf
 
-            <x-text-input wire:model="form.password" id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
+        <x-auth.field
+            name="form.email"
+            label="Email"
+            type="email"
+            wire:model="form.email"
+            placeholder="nama@gmail.com"
+            autocomplete="username"
+            required
+            autofocus
+        />
 
-            <x-input-error :messages="$errors->get('form.password')" class="mt-2" />
-        </div>
-
-        <!-- Remember Me -->
-        <div class="block mt-4">
-            <label for="remember" class="inline-flex items-center">
-                <input wire:model="form.remember" id="remember" type="checkbox" class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500" name="remember">
-                <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-            </label>
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
+        <x-auth.field
+            name="form.password"
+            label="Password"
+            type="password"
+            wire:model="form.password"
+            autocomplete="current-password"
+            required
+        >
             @if (Route::has('password.request'))
-                <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}" wire:navigate>
-                    {{ __('Forgot your password?') }}
-                </a>
+                <x-slot:aside>
+                    <a
+                        href="{{ route('password.request') }}"
+                        wire:navigate
+                        class="rounded font-medium text-tendaku-moss underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-avocado"
+                    >
+                        Lupa password?
+                    </a>
+                </x-slot:aside>
             @endif
+        </x-auth.field>
 
-            <x-primary-button class="ms-3">
-                {{ __('Log in') }}
-            </x-primary-button>
-        </div>
+        <label
+            for="remember_me"
+            class="flex items-center gap-2.5 text-sm text-tendaku-brown"
+        >
+            <input
+                wire:model="form.remember"
+                id="remember_me"
+                name="remember"
+                type="checkbox"
+                class="h-4 w-4 rounded border-tendaku-brown/15 text-tendaku-moss focus:ring-2 focus:ring-tendaku-moss"
+            >
+
+            Tetap masuk di perangkat ini
+        </label>
+
+        <x-auth.button class="w-full">
+            Masuk
+        </x-auth.button>
     </form>
+
+    @include('livewire.pages.auth.partials.google-auth-button', [
+        'label' => 'Masuk dengan Google',
+        'showGoogleLogin' => $showGoogleLogin ?? true,
+    ])
+
+    @if (Route::has('register'))
+        <p class="mt-8 text-sm text-tendaku-brown/70">
+            Belum punya akun?
+
+            <a
+                href="{{ route('register') }}"
+                wire:navigate
+                class="font-semibold text-tendaku-moss underline-offset-4 hover:underline"
+            >
+                Daftar
+            </a>
+        </p>
+    @endif
 </div>

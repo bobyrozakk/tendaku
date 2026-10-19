@@ -2,8 +2,39 @@
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <div>
+                <div class="flex items-center gap-2 mb-1.5">
+                    @if (auth()->user()?->isSuperAdmin())
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-darkbrown-100 text-darkbrown-800 border border-darkbrown-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-darkbrown-700"></span>
+                            Role: Super Admin
+                        </span>
+                    @elseif (auth()->user()?->isVendorOwner())
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-avocado-600 animate-pulse"></span>
+                            Role: Owner (Pemilik Toko)
+                        </span>
+                    @elseif (auth()->user()?->isVendorAdmin())
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-goldenrod-100 text-goldenrod-800 border border-goldenrod-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-goldenrod-600 animate-pulse"></span>
+                            Role: Vendor (Kasir / Admin)
+                        </span>
+                    @endif
+
+                    @if (auth()->user()?->vendor)
+                        <span class="text-xs text-darkbrown-500 font-semibold">• {{ auth()->user()->vendor->name }}</span>
+                    @endif
+                </div>
+
                 <h2 class="font-extrabold text-2xl text-darkbrown-800 leading-tight">
-                    {{ __('Dashboard Tendaku') }}
+                    @if (auth()->user()?->isSuperAdmin())
+                        Hi Superadmin {{ auth()->user()?->name ? '(' . auth()->user()->name . ')' : '' }}
+                    @elseif (auth()->user()?->isVendorOwner())
+                        Selamat datang Owner {{ auth()->user()?->name ? '(' . auth()->user()->name . ')' : '' }}
+                    @elseif (auth()->user()?->isVendorAdmin())
+                        Selamat datang Vendor {{ auth()->user()?->name ? '(' . auth()->user()->name . ')' : '' }}
+                    @else
+                        {{ __('Dashboard Tendaku') }}
+                    @endif
                 </h2>
                 <p class="text-xs text-darkbrown-500 mt-0.5">Selamat datang di sistem manajemen rental perlengkapan camping</p>
             </div>
@@ -16,7 +47,7 @@
     <div class="space-y-6">
         <!-- Stat Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <x-stat-card 
+            <x-stat-card
                 title="Total Persewaan Aktif"
                 value="14 Unit"
                 trend="+2 hari ini"
@@ -24,19 +55,19 @@
                 description="Status disewa dan di lapangan"
                 color="avocado"
             />
-            <x-stat-card 
+            <x-stat-card
                 title="Booking Menunggu Diambil"
                 value="6 Pesanan"
                 description="Siap diserahterimakan"
                 color="goldenrod"
             />
-            <x-stat-card 
+            <x-stat-card
                 title="Stok Unit Siap Sewa"
                 value="78 Unit"
                 description="Kondisi bersih & kering"
                 color="sunglow"
             />
-            <x-stat-card 
+            <x-stat-card
                 title="Jatuh Tempo Pengembalian"
                 value="3 Transaksi"
                 trend="Perlu cek kondisi"
@@ -53,12 +84,12 @@
                     Catat persewaan offline baru, cetak invoice nota, dan periksa kondisi tenda saat dikembalikan oleh pelanggan.
                 </p>
                 <div class="flex items-center gap-2">
-                    <x-primary-button variant="avocado" size="sm">
+                    <a href="{{ route('vendor.dashboard') }}" class="btn-tendaku-primary !py-1.5 !px-3 text-xs">
                         Buka POS Kasir
-                    </x-primary-button>
-                    <x-secondary-button size="sm">
+                    </a>
+                    <a href="{{ route('vendor.products.index') }}" class="btn-tendaku-secondary !py-1.5 !px-3 text-xs">
                         Kelola Inventori Alat
-                    </x-secondary-button>
+                    </a>
                 </div>
             </x-card>
 

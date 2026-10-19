@@ -2,7 +2,9 @@
 
 namespace App\Traits;
 
+use App\Services\CurrentVendor;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
 /**
@@ -11,10 +13,10 @@ use Illuminate\Support\Facades\Auth;
  * Pasang trait ini di model yang punya kolom `vendor_id`
  * (ItemCategory, MasterItem, ItemUnit, Rental, Payment, NotificationLog).
  *
- * - super_admin (vendor_id null di users) TIDAK kena scope ini,
- *   jadi bisa lihat semua vendor.
+ * - super_admin (vendor_id null di users) TIDAK kena scope ini (bypass).
+ * - CurrentVendor::isBypassed() juga melewati scope ini.
  * - vendor_owner / vendor_admin hanya lihat data vendor_id miliknya sendiri.
- * - Saat create(), vendor_id otomatis diisi dari user yang login
+ * - Saat create(), vendor_id otomatis diisi dari CurrentVendor atau user yang login
  *   kalau belum di-set manual.
  */
 trait BelongsToVendor
@@ -22,21 +24,33 @@ trait BelongsToVendor
     protected static function bootBelongsToVendor(): void
     {
         static::addGlobalScope('vendor', function (Builder $builder) {
+            if (CurrentVendor::isBypassed()) {
+                return;
+            }
+
             $user = Auth::user();
 
-            if ($user && $user->vendor_id !== null) {
+            if ($user && $user->isSuperAdmin()) {
+                return;
+            }
+
+            $activeVendorId = CurrentVendor::id() ?? $user?->vendor_id;
+
+            if ($activeVendorId !== null) {
                 $builder->where(
                     $builder->getModel()->getTable().'.vendor_id',
-                    $user->vendor_id
+                    $activeVendorId
                 );
             }
         });
 
-        static::creating(function ($model) {
-            $user = Auth::user();
+        static::creating(function (Model $model) {
+            if (empty($model->vendor_id)) {
+                $activeVendorId = CurrentVendor::id() ?? Auth::user()?->vendor_id;
 
-            if (empty($model->vendor_id) && $user && $user->vendor_id !== null) {
-                $model->vendor_id = $user->vendor_id;
+                if ($activeVendorId !== null) {
+                    $model->vendor_id = $activeVendorId;
+                }
             }
         });
     }
