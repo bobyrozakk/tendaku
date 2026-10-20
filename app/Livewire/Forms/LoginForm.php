@@ -63,6 +63,16 @@ class LoginForm extends Form
             ]);
         }
 
+        // Cek status aktif untuk akun kasir
+        if ($user->isVendorAdmin() && ! $user->isActive()) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'form.email' => 'Akun kasir Anda sedang dinonaktifkan oleh Owner toko. Silakan hubungi pemilik toko.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 
