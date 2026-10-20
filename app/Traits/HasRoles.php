@@ -10,6 +10,8 @@ trait HasRoles
 
     public const ROLE_VENDOR_ADMIN = 'vendor_admin';
 
+    public const ROLE_CASHIER = self::ROLE_VENDOR_ADMIN;
+
     public const ROLE_CUSTOMER = 'customer';
 
     public function isSuperAdmin(): bool
@@ -25,6 +27,11 @@ trait HasRoles
     public function isVendorAdmin(): bool
     {
         return $this->role === self::ROLE_VENDOR_ADMIN;
+    }
+
+    public function isCashier(): bool
+    {
+        return $this->isVendorAdmin();
     }
 
     public function isCustomer(): bool
