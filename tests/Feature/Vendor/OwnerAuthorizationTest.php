@@ -67,6 +67,9 @@ class OwnerAuthorizationTest extends TestCase
 
         $response = $this->get(route('vendor.units'));
         $response->assertRedirect(route('login'));
+
+        $response = $this->get(route('vendor.cashiers.index'));
+        $response->assertRedirect(route('login'));
     }
 
     public function test_customer_cannot_access_owner_pages(): void
@@ -77,6 +80,7 @@ class OwnerAuthorizationTest extends TestCase
         $this->get(route('vendor.products.index'))->assertForbidden();
         $this->get(route('vendor.categories.index'))->assertForbidden();
         $this->get(route('vendor.units'))->assertForbidden();
+        $this->get(route('vendor.cashiers.index'))->assertForbidden();
     }
 
     public function test_vendor_admin_cannot_access_owner_pages(): void
@@ -87,6 +91,7 @@ class OwnerAuthorizationTest extends TestCase
         $this->get(route('vendor.products.index'))->assertForbidden();
         $this->get(route('vendor.categories.index'))->assertForbidden();
         $this->get(route('vendor.units'))->assertForbidden();
+        $this->get(route('vendor.cashiers.index'))->assertForbidden();
     }
 
     public function test_super_admin_cannot_access_owner_crud(): void
@@ -97,6 +102,7 @@ class OwnerAuthorizationTest extends TestCase
         $this->get(route('vendor.products.index'))->assertForbidden();
         $this->get(route('vendor.categories.index'))->assertForbidden();
         $this->get(route('vendor.units'))->assertForbidden();
+        $this->get(route('vendor.cashiers.index'))->assertForbidden();
     }
 
     public function test_vendor_owner_can_access_all_owner_pages(): void
@@ -107,6 +113,7 @@ class OwnerAuthorizationTest extends TestCase
         $this->get(route('vendor.products.index'))->assertOk();
         $this->get(route('vendor.categories.index'))->assertOk();
         $this->get(route('vendor.units'))->assertOk();
+        $this->get(route('vendor.cashiers.index'))->assertOk();
     }
 
     public function test_vendor_owner_without_vendor_id_is_forbidden(): void
