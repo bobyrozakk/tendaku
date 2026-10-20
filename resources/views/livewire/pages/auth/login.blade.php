@@ -65,7 +65,7 @@ new #[Layout('layouts.guest')] class extends Component
                 "Selamat datang Owner {$user->name}!",
 
             $user->isVendorAdmin() =>
-                "Selamat datang Vendor {$user->name}!",
+                "Selamat datang Kasir {$user->name}!",
 
             $user->isSuperAdmin() =>
                 "Halo Superadmin {$user->name}!",

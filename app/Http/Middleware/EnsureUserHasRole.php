@@ -25,6 +25,16 @@ class EnsureUserHasRole
             return redirect()->guest(route('login'));
         }
 
+        if ($user->isVendorAdmin() && ! $user->isActive()) {
+            if ($request->expectsJson()) {
+                abort(Response::HTTP_FORBIDDEN, 'Akun kasir Anda dinonaktifkan oleh Owner.');
+            }
+
+            auth()->logout();
+
+            return redirect()->route('login')->with('error', 'Akun kasir Anda sedang dinonaktifkan oleh Owner toko.');
+        }
+
         if (! empty($roles) && ! $user->hasRole($roles)) {
             if ($request->expectsJson()) {
                 abort(Response::HTTP_FORBIDDEN, 'Akses tidak diizinkan untuk peran ini.');
