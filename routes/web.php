@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
+use App\Http\Controllers\Vendor\CashierController;
 use App\Http\Controllers\Vendor\CategoryController;
 use App\Http\Controllers\Vendor\OwnerDashboardController;
 use App\Http\Controllers\Vendor\ProductController;
@@ -123,6 +124,9 @@ Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
 
         Route::get('units', [UnitController::class, 'index'])
             ->name('units');
+
+        Route::get('cashiers', [CashierController::class, 'index'])
+            ->name('cashiers.index');
     });
 
 // Backward compatibility redirect untuk rute lama /vendor/*
