@@ -26,6 +26,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | "hour"    : jam eksekusi pengingat (WIB) oleh scheduler harian.
+    |             ✅ Disetujui Boby (2026-10-21): 09:00 Asia/Jakarta.
     | "timezone": zona waktu acuan untuk menghitung "hari ini" dan "H-1".
     | "days"    : daftar offset hari sebelum tanggal kembali yang memicu
     |             pengingat. 1 = H-1, 0 = hari-H.

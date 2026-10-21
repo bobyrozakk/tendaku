@@ -196,8 +196,8 @@ Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bun
 | 3 | Integrasi Cuaca (Weather) | Backend service, caching, dan contract JSON ditangani oleh Boby (`WeatherService`), sedangkan tampilan frontend (`WeatherCalendar` + Banner) ditangani oleh Andini. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 4 | Notifikasi WhatsApp | Menggunakan provider Fonnte dengan **paket gratis (Rp 0, kuota per device ±900, text-only)** — hasil verifikasi langsung ke dokumentasi resmi Fonnte (lihat §4.D). Bila kuota habis, fallback ke kanal `in_app`/`email` **diaktifkan lewat config**, tanpa menghapus kode WA. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 5 | Kanal notifikasi | Pengingat pengembalian memakai kanal `whatsapp` sebagai default. Pergantian kanal dilakukan lewat `NOTIFICATION_CHANNEL` (`whatsapp` \| `in_app` \| `email`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
-| 6 | Jam pengingat | Pengingat H-1 & hari-H dijadwalkan harian **09:00 Asia/Jakarta** (`REMINDER_HOUR`, `REMINDER_TIMEZONE`). Nilai awal masih dapat disesuaikan bila tim memutuskan jam lain. | ⏳ Menunggu konfirmasi tim |
-| 7 | Ambang cuaca ekstrem | Nilai awal di `config/weather.php`: kode WMO petir `[95, 96, 97, 99]`, curah hujan **≥ 50 mm/hari**, angin **≥ 40 km/h**. Semua ambang dapat diubah lewat config tanpa menyentuh kode. | ⏳ Menunggu persetujuan Boby (lihat §7.D) |
+| 6 | Jam pengingat | Pengingat H-1 & hari-H dijadwalkan harian **09:00 Asia/Jakarta** (`REMINDER_HOUR`, `REMINDER_TIMEZONE`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
+| 7 | Ambang cuaca ekstrem | Kode WMO petir `[95, 96, 97, 99]`, curah hujan **≥ 50 mm/hari**, angin **≥ 40 km/h** — semuanya di `config/weather.php` sehingga dapat diubah tanpa menyentuh kode. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 
 ---
 
@@ -270,7 +270,7 @@ Kunci spot yang valid: **`bromo`**, **`ranu_kumbolo`**, **`batu`** (daftar lengk
 
 > Selisih ±5 km tidak signifikan untuk prakiraan cuaca (grid Open-Meteo ±11 km). API juga meng-*grid* koordinat ke titik terdekat — contohnya titik Bromo dipetakan ke (-7.9789, 112.9803, elev 2138 m).
 
-### D. Ambang Cuaca Ekstrem (⏳ menunggu persetujuan Boby)
+### D. Ambang Cuaca Ekstrem (✅ disetujui Boby, 2026-10-21)
 
 | Ambang | Nilai awal | Rujukan |
 |---|---|---|
@@ -278,7 +278,7 @@ Kunci spot yang valid: **`bromo`**, **`ranu_kumbolo`**, **`batu`** (daftar lengk
 | Curah hujan harian | **≥ 50 mm/hari** | Kategori BMKG "hujan lebat" (≥ 50 mm / 24 jam) |
 | Kecepatan angin maks | **≥ 40 km/h** | Kategori BMKG "angin kencang" (40–50 km/h) |
 
-Seluruh ambang berada di `config/weather.php` (`weather.extreme`) — **bukan** di dalam kode, sehingga dapat diubah tanpa menyentuh service. Angka final **belum disetujui Boby** (PRD §6 — keputusan manusia tidak boleh diambilsepihak).
+Seluruh ambang berada di `config/weather.php` (`weather.extreme`) — **bukan** di dalam kode, sehingga dapat diubah tanpa menyentuh service. Angka di atas **sudah disetujui Boby** pada 2026-10-21 (PRD §6 — keputusan manusia tidak boleh diambilsepihak; agent hanya menyiapkan opsi + nilai awal).
 
 ### E. Perubahan API dari Stub Awal
 

@@ -70,13 +70,13 @@ return [
     | Ambang Cuaca Ekstrem
     |--------------------------------------------------------------------------
     |
-    | ⚠️ NILAI AWAL — menunggu persetujuan Boby (PRD §6 "Keputusan Manusia").
-    | Semua ambang di sini (bukan di dalam kode) supaya bisa diubah tanpa
-    | menyentuh service.
-    |
+    | ✅ Disetujui Boby (2026-10-21) — nilai final:
     |   - thunderstorm_codes : kode WMO petir (95/96/97/99)
     |   - precipitation_mm   : curah hujan harian (mm) yang dianggap ekstrem
     |   - wind_kmh           : kecepatan angin maks (km/h) yang dianggap ekstrem
+    |
+    | Ambang tetap disimpan di config (bukan di dalam kode) supaya bisa diubah
+    | tanpa menyentuh service.
     |
     */
 
