@@ -2,7 +2,7 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **QA Lead:** Boby  
-**Versi:** 1.2.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService)  
+**Versi:** 1.3.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService + UI Weather Calendar)  
 **Terakhir Diperbarui:** 2026-10-21  
 
 ---
@@ -40,3 +40,10 @@
 | **TC-WEA-003** | Weather | Cache per Spot & Rentang Tanggal | 1. Panggil `forecast()` dua kali untuk rentang tanggal yang sama.<br>2. Panggil lagi untuk rentang berbeda. | Rentang sama → hanya **1** request HTTP; rentang berbeda → request baru. | Boby | ✅ Passed |
 | **TC-WEA-004** | Weather | Error API / Timeout Tetap Aman | 1. Simulasikan Open-Meteo merespons HTTP 400 / connection failure.<br>2. Panggil `forecast()` dengan spot tak dikenal. | Tidak ada exception; hasil `error = true`, `error_message` terisi, `days = []` — UI tetap jalan. | Boby | ✅ Passed |
 | **TC-WEA-005** | Weather | Label Cuaca Bahasa Indonesia | 1. Periksa `WeatherFormatter::label()` untuk kode WMO 0, 2, 63, 65, 95. | Label Bahasa Indonesia: `Cerah`, `Berawan sebagian`, `Hujan sedang`, `Hujan lebat`, `Badai petir`. | Boby | ✅ Passed |
+| **TC-WEA-006** | Weather UI | Halaman `/cuaca` Dapat Diakses Publik | 1. Buka `GET /cuaca` tanpa login.<br>2. Pastikan link "Cuaca" muncul di navbar customer. | Halaman merespons HTTP 200; judul "Prakiraan Cuaca Spot Camping" tampil; daftar spot (Gunung Bromo, Ranu Kumbolo, Kota Batu) tersedia. | Andini | ✅ Passed |
+| **TC-WEA-007** | Weather UI | Kartu Prakiraan Harian | 1. Muat halaman `/cuaca` dengan data cuaca ter-mock.<br>2. Periksa satu kartu harian. | Kartu menampilkan tanggal, nama hari, label cuaca, rentang suhu, curah hujan, peluang hujan, dan kecepatan angin. | Andini | ✅ Passed |
+| **TC-WEA-008** | Weather UI | Banner Peringatan Cuaca Ekstrem | 1. Mock respons cuaca ekstrem (curah hujan ≥ 50 mm/hari atau kode petir). | Banner "Peringatan Cuaca Ekstrem" tampil beserta daftar tanggal yang ekstrem; kartu harian ditandai warna merah. | Andini | ✅ Passed |
+| **TC-WEA-009** | Weather UI | Banner Error Saat Layanan Cuaca Gagal | 1. Mock Open-Meteo merespons HTTP 400 / connection failure.<br>2. Buka `/cuaca`. | Halaman tetap HTTP 200 (tanpa exception); banner "Prakiraan cuaca belum tersedia" tampil beserta pesan error. | Andini | ✅ Passed |
+| **TC-WEA-010** | Weather UI | Ganti Spot & Ubah Periode | 1. Pilih spot "Ranu Kumbolo" pada dropdown.<br>2. Ubah periode menjadi "3 Hari". | Label spot ikut berubah; hanya 3 kartu harian yang tampil; state tersimpan di URL (`?spot=`, `?periode=`). | Andini | ✅ Passed |
+| **TC-WEA-011** | Weather UI | Tombol Perbarui Mengabaikan Cache | 1. Muat halaman `/cuaca` (1 request HTTP).<br>2. Klik tombol "Perbarui". | Request HTTP ke Open-Meteo dikirim ulang (total 2), cache 30 menit diabaikan. | Andini | ✅ Passed |
+| **TC-WEA-012** | Weather UI | Parameter URL Tidak Valid Tetap Aman | 1. Buka `/cuaca?spot=entah&periode=abc`. | Halaman tetap HTTP 200; spot & periode dikembalikan ke nilai default (Gunung Bromo, 7 Hari). | Andini | ✅ Passed |

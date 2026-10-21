@@ -46,12 +46,7 @@ class WeatherService
             [$startDate, $endDate] = [$endDate, $startDate];
         }
 
-        $cacheKey = sprintf(
-            'weather:forecast:%s:%s:%s',
-            $spotKey,
-            $startDate->toDateString(),
-            $endDate->toDateString()
-        );
+        $cacheKey = $this->cacheKey($spotKey, $startDate, $endDate);
 
         $ttl = now()->addMinutes((int) config('weather.cache_ttl_minutes', 30));
 
@@ -60,6 +55,26 @@ class WeatherService
             $ttl,
             fn () => $this->request($spotKey, $spotConfig, $label, $startDate, $endDate)
         );
+    }
+
+    /**
+     * Buang cache forecast untuk spot + rentang tanggal tertentu.
+     *
+     * Dipakai tombol "Perbarui" pada UI customer agar data tidak menunggu
+     * berakhirnya masa cache.
+     */
+    public function forget(string $spot, Carbon $start, Carbon $end): void
+    {
+        $spotKey = $this->normalizeSpot($spot);
+
+        $startDate = $start->copy()->startOfDay();
+        $endDate = $end->copy()->startOfDay();
+
+        if ($endDate->lt($startDate)) {
+            [$startDate, $endDate] = [$endDate, $startDate];
+        }
+
+        Cache::forget($this->cacheKey($spotKey, $startDate, $endDate));
     }
 
     /**
@@ -126,6 +141,19 @@ class WeatherService
         }
 
         return $this->formatter->format($spotKey, $label, $daily);
+    }
+
+    /**
+     * Kunci cache forecast untuk spot + rentang tanggal tertentu.
+     */
+    protected function cacheKey(string $spotKey, Carbon $start, Carbon $end): string
+    {
+        return sprintf(
+            'weather:forecast:%s:%s:%s',
+            $spotKey,
+            $start->toDateString(),
+            $end->toDateString()
+        );
     }
 
     /**
