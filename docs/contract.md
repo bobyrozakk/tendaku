@@ -2,7 +2,7 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **Penjaga Dokumen:** Boby (PM · Super Admin · QA Lead)  
-**Versi:** 1.3.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService + UI Weather Calendar)  
+**Versi:** 1.4.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService + UI Weather Calendar + Checkout capture nomor WA)  
 **Terakhir Diperbarui:** 2026-10-21  
 
 > Dokumen ini adalah acuan resmi integrasi antar modul dan pembagian tanggung jawab teknis antar anggota tim PBL SIB-3E. Perubahan hanya diperbolehkan melalui koordinasi dan kesepakatan tim.
@@ -33,10 +33,11 @@ Sebagian besar "API" antar anggota berupa method di class Service PHP / Livewire
 | `WhatsAppService::send()` | **Boby** | Job Reminder (Boby) | `string $phone, string $message` | `bool` | Kirim notifikasi WA (Fonnte) secara aman, normalisasi nomor (+62/08), tidak melempar exception fatal. |
 | `PhoneNumberNormalizer::normalize()` | **Boby** | Fonnte (Boby), Tim | `?string $phone` | `?string` (`62xxx` / `null` bila tidak valid) | Ubah `08xxx` / `+62xxx` / `8xxx` → `62xxx`. Panjang valid 10–15 digit. |
 | `ReturnReminderService::pendingReminders()` | **Boby** | Command Reminder (Boby) | `?Carbon $now, bool $includeNotified` | `Collection` item `{rental_id, vendor_id, type, return_date}` | Daftar pengingat H-1 & hari-H untuk rental `picked_up`. Lintas vendor → wajib `withoutGlobalScope('vendor')`. |
-| `ReturnReminderService::sendReminderForRental()` | **Boby** | Job `SendReturnReminder` (Boby) | `int $rentalId, string $type, bool $force` | `bool` (terkirim) | Idempoten: satu rental + satu tipe pengingat = satu kiriman. Dicatat di tabel `notifications`. |
+| `ReturnReminderService::sendReminderForRental()` | **Boby** | Job `SendReturnReminder` (Boby) | `int $rentalId, string $type, bool $force` | `bool` (terkirim) | Idempoten: satu rental + satu tipe pengingat = satu kiriman. Dicatat di tabel `notifications`. Nomor tujuan: profil pelanggan bila login, `rentals.guest_phone` bila guest (lihat §4.F). |
 | Job `SendReturnReminder` | **Boby** | Scheduler harian (Boby) | `int $rentalId, int $vendorId, string $type, bool $force` | — | Job queue **wajib membawa `vendor_id`** dan dibungkus `CurrentVendor::runAs()` (jebakan queue di Fase 0). |
 | Command `rentals:send-return-reminders` | **Boby** | Scheduler harian (Boby) | `--force`, `--dry-run` | exit code 0 | Dipanggil scheduler harian pada `09:00 Asia/Jakarta` (`REMINDER_HOUR`). `--dry-run` tidak mengirim apa pun. |
 | Status & Kolom Pembayaran | Bunga | Semua | Schema `rentals`, `payments` | Matriks status & log transaksi | Konsistensi status pembayaran dan pelunasan. |
+| `CheckoutController::store()` | Andini *(diimplementasikan oleh Boby — label `cross-module`)* | Alur checkout customer | `guest_name`, `guest_phone`, `guest_id_number` (guest), `pickup_method`, `payment_channel` | `Rental` (dibuat lewat `RentalService::createBooking()`) | Checkout kini benar-benar membuat record `rental` dari keranjang session `booking_cart` dan mengarahkan ke halaman status booking. Nomor WA guest disimpan di `rentals.guest_phone` untuk pengingat (§4.F). |
 
 ---
 
@@ -213,6 +214,29 @@ Aturan main:
 - Token bisa di-regenerate di dashboard bila bocor; regenerate **mematikan** token lama.
 - Tanpa token, `FonnteWhatsAppService` mengembalikan `false` (tidak melempar exception) dan pengingat tetap tercatat di tabel `notifications` dengan status `failed` — lihat §4.B.
 
+### F. Sumber Nomor WhatsApp untuk Pengingat Pengembalian
+
+Nomor tujuan pengingat ditentukan **otomatis** oleh sistem, bukan dipilih manual oleh pemesan. Aturan ini berlaku untuk semua rental (login maupun guest):
+
+| Skenario | Sumber Nomor | Kolom Penyimpanan | Keterangan |
+|---|---|---|---|
+| Pelanggan **terdaftar** (login) | `users.phone` (profil pelanggan) | `rentals.user_id` → `users.phone` | Nomor diisi saat registrasi (`register.blade.php`, field `phone` **wajib**). Pengingat memakai **nilai profil terbaru**, jadi bila pelanggan memperbarui nomornya, pengingat berikutnya ikut memakai nomor baru. |
+| Pelanggan **tanpa akun** (guest) | Nomor WhatsApp yang **diinput saat checkout** | `rentals.guest_phone` | Field "No. WhatsApp Aktif" pada form checkout guest (bersama nama & NIK). Nomor disimpan **apa adanya** (format yang diketik pengguna, mis. `0812-9999-9999`) dan baru dinormalisasi ke `62xxx` saat pengiriman. |
+| Pelanggan login **tanpa** nomor di profil | — | — | Pengingat **dilewati** (dicatat di log sebagai warning, tidak ada baris di `notifications`). Halaman checkout menampilkan peringatan agar pelanggan melengkapinya di profil. |
+
+Kontrak teknis:
+
+```php
+// app/Services/ReturnReminderService.php
+$phone = $rental->customer?->phone ?? $rental->guest_phone;   // login → profil, guest → input checkout
+$recipient = PhoneNumberNormalizer::normalize($phone);          // 08xxx / +62xxx → 62xxx
+```
+
+- Pemilihannya **berurutan**: profil pelanggan (bila rental punya `user_id`) lebih dulu, baru `guest_phone`.
+- `RentalService::createBooking()` (Byan) **mewajibkan** `guest_name`, `guest_phone`, dan `guest_id_number` untuk booking tanpa akun — sehingga nomor pengingat selalu ada sejak menit pertama.
+- Verifikasi akses halaman status booking oleh guest (`BookingController::resolveAndAuthorizeRental`) membandingkan nomor dalam bentuk **ternormalisasi**, jadi tamu boleh mengetik `08xxx` maupun `62xxx`.
+- Tanpa perubahan skema: kolom `rentals.guest_phone` sudah ada sebelumnya.
+
 ---
 
 ## 5. LOG PERUBAHAN SKEMA (SCHEMA CHANGE LOG)
@@ -225,6 +249,7 @@ Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bun
 | 2026-10-21 | *(Fase 2 Notifikasi WA)* | **Tidak ada migrasi baru.** | Tabel `notifications` (dibuat migrasi `2026_10_01_000011_create_notification_logs_table.php`) sudah memuat kolom `vendor_id`, `user_id`, `rental_id`, `recipient_phone`, `channel`, `type`, `message`, `status`, `sent_at` — cukup untuk log & idempotensi pengingat. |
 | 2026-10-21 | *(Fase 3 WeatherService)* | **Tidak ada migrasi baru.** | Praktikiraan cuaca diambil dari API Open-Meteo (tanpa API key) dan di-cache di cache store aplikasi — tidak butuh tabel baru. |
 | 2026-10-21 | *(UI Weather Calendar — `cross-module`)* | **Tidak ada migrasi baru.** | Halaman `/cuaca` hanya membaca data dari API cuaca; seluruh state (spot, periode) disimpan di URL, bukan di database. |
+| 2026-10-21 | *(Checkout — capture nomor WA guest, `cross-module`)* | **Tidak ada migrasi baru.** | Kolom `rentals.guest_phone` (serta `guest_name`, `guest_id_number`) sudah ada di ERD. Checkout kini mengisi kolom tersebut; tidak ada kolom baru yang ditambahkan. |
 
 > **Catatan penamaan untuk Bunga:** nama **tabel** adalah `notifications`, sedangkan nama **model/class** adalah `App\Models\NotificationLog`. Keduanya menunjuk entitas yang sama (bukan tabel terpisah `notification_logs`).
 
@@ -242,6 +267,7 @@ Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bun
 | 6 | Jam pengingat | Pengingat H-1 & hari-H dijadwalkan harian **09:00 Asia/Jakarta** (`REMINDER_HOUR`, `REMINDER_TIMEZONE`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 7 | Ambang cuaca ekstrem | Kode WMO petir `[95, 96, 97, 99]`, curah hujan **≥ 50 mm/hari**, angin **≥ 40 km/h** — semuanya di `config/weather.php` sehingga dapat diubah tanpa menyentuh kode. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 8 | Serah terima (handover) ke Andini | Bagian backend `WeatherService` + kontrak JSON (§7.B) merupakan **kontrak resmi** yang dipakai Andini. Rincian serah terima, daftar file yang boleh diubah, dan batasan UI ada di §7.F. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
+| 9 | Sumber nomor WhatsApp pengingat | Nomor pengingat **tidak** dipilih manual: (1) pelanggan login → `users.phone` dari profil; (2) guest → nomor WA yang diinput saat checkout, disimpan di `rentals.guest_phone`. Tanpa perubahan skema. Detail di §4.F. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 
 ---
 

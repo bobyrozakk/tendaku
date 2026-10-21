@@ -2,7 +2,7 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **QA Lead:** Boby  
-**Versi:** 1.3.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService + UI Weather Calendar)  
+**Versi:** 1.4.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService + UI Weather Calendar + Checkout capture nomor WA)  
 **Terakhir Diperbarui:** 2026-10-21  
 
 ---
@@ -47,3 +47,10 @@
 | **TC-WEA-010** | Weather UI | Ganti Spot & Ubah Periode | 1. Pilih spot "Ranu Kumbolo" pada dropdown.<br>2. Ubah periode menjadi "3 Hari". | Label spot ikut berubah; hanya 3 kartu harian yang tampil; state tersimpan di URL (`?spot=`, `?periode=`). | Andini | ✅ Passed |
 | **TC-WEA-011** | Weather UI | Tombol Perbarui Mengabaikan Cache | 1. Muat halaman `/cuaca` (1 request HTTP).<br>2. Klik tombol "Perbarui". | Request HTTP ke Open-Meteo dikirim ulang (total 2), cache 30 menit diabaikan. | Andini | ✅ Passed |
 | **TC-WEA-012** | Weather UI | Parameter URL Tidak Valid Tetap Aman | 1. Buka `/cuaca?spot=entah&periode=abc`. | Halaman tetap HTTP 200; spot & periode dikembalikan ke nilai default (Gunung Bromo, 7 Hari). | Andini | ✅ Passed |
+| **TC-CUS-001** | Checkout | Checkout Guest Menyimpan Nomor WhatsApp | 1. Tanpa login, pilih produk di katalog → lanjut ke checkout.<br>2. Isi "No. WhatsApp Aktif" `081299999999`, nama, dan NIK.<br>3. Selesaikan checkout. | Record `rentals` terbentuk dengan `user_id = null`, `guest_phone = 081299999999`, `guest_name` & `guest_id_number` terisi, status `pending`, `booking_code` valid; pengguna diarahkan ke halaman status booking (HTTP 200). | Andini *(cross-module)* | ✅ Passed |
+| **TC-CUS-002** | Checkout | Nomor WhatsApp Guest Wajib Diisi | 1. Guest melakukan checkout tanpa mengisi nomor WhatsApp. | Validasi gagal (error pada field `guest_phone`), tidak ada record `rental` yang dibuat. | Andini *(cross-module)* | ✅ Passed |
+| **TC-CUS-003** | Checkout | Nomor WhatsApp Guest Divalidasi Formatnya | 1. Guest mengisi nomor WhatsApp tidak valid (mis. `12345`). | Validasi gagal; tidak ada record `rental` yang dibuat. | Andini *(cross-module)* | ✅ Passed |
+| **TC-CUS-004** | Checkout | Checkout Pelanggan Login Memakai Nomor Profil | 1. Login sebagai pelanggan, lakukan checkout tanpa input nomor tambahan. | Record `rental` terbentuk dengan `user_id` = ID pelanggan, `guest_phone` kosong; halaman checkout menampilkan nomor WhatsApp dari profil. | Andini *(cross-module)* | ✅ Passed |
+| **TC-CUS-005** | Checkout | Checkout Tanpa Keranjang Ditolak | 1. Kirim `POST /katalog/booking` tanpa session `booking_cart`. | Pengguna diarahkan ke halaman katalog; tidak ada record `rental` yang dibuat. | Andini *(cross-module)* | ✅ Passed |
+| **TC-CUS-006** | Checkout | Guest Tidak Boleh Memilih Delivery | 1. Guest mengirim checkout dengan `pickup_method = delivery`. | Pengguna diarahkan ke halaman login; tidak ada record `rental` yang dibuat. | Andini *(cross-module)* | ✅ Passed |
+| **TC-CUS-007** | Notifikasi | Pengingat Pakai Nomor yang Diinput Saat Checkout | 1. Guest menyelesaikan checkout (nomor `081299999999`).<br>2. Rental diubah ke status `picked_up` dengan `return_date` besok.<br>3. Jalankan `rentals:send-return-reminders`. | Pesan dikirim ke `6281299999999` (nomor hasil normalisasi), isi pesan memuat nama tamu & keterangan "BESOK", dan baris `notifications` berstatus `sent` dengan `recipient_phone = 6281299999999`. | Boby | ✅ Passed |

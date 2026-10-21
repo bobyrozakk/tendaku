@@ -120,7 +120,37 @@
                         Delivery Aktif
                     </span>
                 </div>
+
+                <!-- Nomor WhatsApp tujuan pengingat pengembalian (diambil dari profil) -->
+                <div class="p-4 rounded-2xl bg-white border border-wheat-200/90 shadow-tendaku-sm text-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <span class="font-bold text-darkbrown-900 block">Pengingat Pengembalian via WhatsApp</span>
+                            @if (filled(auth()->user()->phone))
+                                <span class="text-darkbrown-500">Pengingat H-1 & hari pengembalian dikirim ke nomor profil Anda:</span>
+                                <span class="font-mono font-bold text-avocado-700">{{ auth()->user()->phone }}</span>
+                            @else
+                                <span class="text-red-600 font-semibold">Nomor WhatsApp belum terisi di profil. Pengingat pengembalian otomatis tidak dapat dikirim — lengkapi nomor pada halaman profil.</span>
+                            @endif
+                        </div>
+                        <a href="{{ route('profile') }}" class="shrink-0 self-start sm:self-center px-3 py-1.5 rounded-lg text-[11px] font-bold text-darkbrown-800 bg-white border border-wheat-300 hover:bg-wheat-100 transition">
+                            Ubah di Profil
+                        </a>
+                    </div>
+                </div>
                 @endguest
+
+                <!-- Ringkasan error validasi -->
+                @if ($errors->any())
+                    <div class="p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 shadow-tendaku-sm">
+                        <span class="font-bold block mb-1">Checkout belum dapat diproses:</span>
+                        <ul class="list-disc pl-4 space-y-0.5">
+                            @foreach ($errors->all() as $message)
+                                <li>{{ $message }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 <!-- 2. Booking Header Identifier -->
                 <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 sm:p-6 shadow-tendaku-sm">
@@ -279,16 +309,41 @@
                             <span class="font-bold text-darkbrown-900 block">Data Identitas Tamu untuk Serah Terima:</span>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-[11px] font-semibold text-darkbrown-600 mb-1">Nama Lengkap Tamu</label>
-                                    <input type="text" value="Budi Santoso" class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500" placeholder="Nama sesuai KTP">
+                                    <label for="guest_name" class="block text-[11px] font-semibold text-darkbrown-600 mb-1">Nama Lengkap Tamu</label>
+                                    <input type="text" id="guest_name" name="guest_name" form="checkout-payment-form"
+                                        value="{{ old('guest_name') }}"
+                                        class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500 @error('guest_name') border-red-400 @enderror"
+                                        placeholder="Nama sesuai KTP" required>
+                                    @error('guest_name')
+                                        <p class="text-[11px] text-red-600 mt-1">{{ $message }}</p>
+                                    @enderror
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-semibold text-darkbrown-600 mb-1">No. WhatsApp Aktif</label>
-                                    <input type="text" value="0857-8901-2345" class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500" placeholder="08xxxxxxxxxx">
+                                    <label for="guest_phone" class="block text-[11px] font-semibold text-darkbrown-600 mb-1">No. WhatsApp Aktif</label>
+                                    <input type="tel" id="guest_phone" name="guest_phone" form="checkout-payment-form"
+                                        value="{{ old('guest_phone') }}"
+                                        class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500 @error('guest_phone') border-red-400 @enderror"
+                                        placeholder="08xxxxxxxxxx" inputmode="numeric" maxlength="20" required>
+                                    @error('guest_phone')
+                                        <p class="text-[11px] text-red-600 mt-1">{{ $message }}</p>
+                                    @enderror
                                 </div>
+                            </div>
+                            <div>
+                                <label for="guest_id_number" class="block text-[11px] font-semibold text-darkbrown-600 mb-1">NIK (Nomor Induk Kependudukan)</label>
+                                <input type="text" id="guest_id_number" name="guest_id_number" form="checkout-payment-form"
+                                    value="{{ old('guest_id_number') }}"
+                                    class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500 @error('guest_id_number') border-red-400 @enderror"
+                                    placeholder="16 digit sesuai KTP" inputmode="numeric" maxlength="16" required>
+                                @error('guest_id_number')
+                                    <p class="text-[11px] text-red-600 mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                             <p class="text-[11px] text-darkbrown-500">
                                 *Wajib menunjukkan KTP asli dan bukti nomor booking saat pengambilan unit di outlet.
+                            </p>
+                            <p class="text-[11px] text-avocado-700">
+                                Nomor WhatsApp ini dipakai untuk mengirim pengingat pengembalian barang (H-1 & hari pengembalian).
                             </p>
                         </div>
                         @endguest

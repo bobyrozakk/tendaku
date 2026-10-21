@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rental;
+use App\Services\PhoneNumberNormalizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -135,10 +136,11 @@ class BookingController extends Controller
         $providedPhone = $request->query('phone') ?? session("guest_rental_auth_{$rental->booking_code}");
 
         if (! empty($providedPhone)) {
-            $normalizedProvided = preg_replace('/[^0-9]/', '', (string) $providedPhone);
-            $normalizedGuest = preg_replace('/[^0-9]/', '', (string) $rental->guest_phone);
+            // Nomor dinormalisasi (62xxx) supaya tamu boleh mengetik format 08xxx maupun 62xxx.
+            $normalizedProvided = PhoneNumberNormalizer::normalize((string) $providedPhone);
+            $normalizedGuest = PhoneNumberNormalizer::normalize((string) $rental->guest_phone);
 
-            if ($normalizedProvided === $normalizedGuest && $normalizedProvided !== '') {
+            if ($normalizedProvided !== null && $normalizedProvided === $normalizedGuest) {
                 session(["guest_rental_auth_{$rental->booking_code}" => $providedPhone]);
 
                 return $rental;
