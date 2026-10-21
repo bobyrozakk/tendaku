@@ -41,13 +41,24 @@ class SendReturnReminders extends Command
 
         foreach ($pending as $reminder) {
             if ($dryRun) {
+                $preview = $reminders->previewReminder($reminder['rental_id'], $reminder['type']);
+
                 $this->line(sprintf(
-                    '- rental #%d | vendor #%d | %s | batas kembali %s',
+                    '- rental #%d | vendor #%d | %s | batas kembali %s | tujuan: %s',
                     $reminder['rental_id'],
                     $reminder['vendor_id'],
                     $reminder['type'],
-                    $reminder['return_date']
+                    $reminder['return_date'],
+                    $preview['recipient'] ?? 'TIDAK ADA NOMOR — pengingat dilewati'
                 ));
+
+                if ($preview['message'] !== null) {
+                    foreach (explode("\n", $preview['message']) as $messageLine) {
+                        $this->line('    | '.$messageLine);
+                    }
+                }
+
+                $this->newLine();
 
                 continue;
             }
