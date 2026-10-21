@@ -2,7 +2,7 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **Penjaga Dokumen:** Boby (PM · Super Admin · QA Lead)  
-**Versi:** 1.1.0 (Fase 2 Notifikasi WhatsApp)  
+**Versi:** 1.2.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService)  
 **Terakhir Diperbarui:** 2026-10-21  
 
 > Dokumen ini adalah acuan resmi integrasi antar modul dan pembagian tanggung jawab teknis antar anggota tim PBL SIB-3E. Perubahan hanya diperbolehkan melalui koordinasi dan kesepakatan tim.
@@ -25,7 +25,9 @@ Sebagian besar "API" antar anggota berupa method di class Service PHP / Livewire
 | Role & Guard (`HasRoles`, `EnsureUserHasRole`) | Andini | Semua | Role user: `super_admin`, `vendor_owner`, `vendor_admin`, `customer` | Boolean / Middleware check | RBAC & otorisasi hak akses route. |
 | Trait `BelongsToVendor` | **Boby** | Semua | Kolom `vendor_id` pada model | Query scope otomatis + auto vendor_id creation | Scoping multi-tenant isolasi data antar vendor, bypass otomatis untuk Super Admin & `CurrentVendor::withoutScoping()`. |
 | `CurrentVendor` Service & Middleware | **Boby** | Boby, Queue Job, Test | `int $vendorId`, callable callback | Active vendor context / bypass | Singleton context management vendor aktif untuk web request, background job, dan PHPUnit tests. |
-| `WeatherService::forecast()` | **Boby** | Andini (UI WeatherCalendar) | `string $spot, Carbon $start, Carbon $end` | JSON terstruktur | Forecast cuaca spot camping Open-Meteo & deteksi cuaca ekstrem. |
+| `WeatherService::forecast()` | **Boby** | Andini (UI WeatherCalendar) | `string $spot, Carbon $start, Carbon $end` | `array` (JSON terstruktur, lihat §7.B) | Forecast cuaca spot camping Open-Meteo & deteksi cuaca ekstrem. Tidak pernah melempar exception — gagal → `error = true` + `days = []`. |
+| `WeatherService::availableSpots()` | **Boby** | Andini (UI WeatherCalendar) | — | `array<string, array{label, latitude, longitude}>` | Daftar spot yang tersedia beserta koordinatnya (dari `config/weather.php`). |
+| `WeatherFormatter::label()` | **Boby** | Andini (badge cuaca) | `int $weatherCode` (WMO) | `string` (Bahasa Indonesia) | Contoh: `63` → `"Hujan sedang"`, `95` → `"Badai petir"`. |
 | `WhatsAppService::send()` | **Boby** | Job Reminder (Boby) | `string $phone, string $message` | `bool` | Kirim notifikasi WA (Fonnte) secara aman, normalisasi nomor (+62/08), tidak melempar exception fatal. |
 | `PhoneNumberNormalizer::normalize()` | **Boby** | Fonnte (Boby), Tim | `?string $phone` | `?string` (`62xxx` / `null` bila tidak valid) | Ubah `08xxx` / `+62xxx` / `8xxx` → `62xxx`. Panjang valid 10–15 digit. |
 | `ReturnReminderService::pendingReminders()` | **Boby** | Command Reminder (Boby) | `?Carbon $now, bool $includeNotified` | `Collection` item `{rental_id, vendor_id, type, return_date}` | Daftar pengingat H-1 & hari-H untuk rental `picked_up`. Lintas vendor → wajib `withoutGlobalScope('vendor')`. |
@@ -179,6 +181,7 @@ Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bun
 |---|---|---|---|
 | 2026-10-18 | *(Fase 0 Dasar)* | Tidak ada migrasi baru; kolom `vendor_id` pada tabel inti sudah selaras. | Fondasi middleware `vendor.active` dan service `CurrentVendor`. |
 | 2026-10-21 | *(Fase 2 Notifikasi WA)* | **Tidak ada migrasi baru.** | Tabel `notifications` (dibuat migrasi `2026_10_01_000011_create_notification_logs_table.php`) sudah memuat kolom `vendor_id`, `user_id`, `rental_id`, `recipient_phone`, `channel`, `type`, `message`, `status`, `sent_at` — cukup untuk log & idempotensi pengingat. |
+| 2026-10-21 | *(Fase 3 WeatherService)* | **Tidak ada migrasi baru.** | Praktikiraan cuaca diambil dari API Open-Meteo (tanpa API key) dan di-cache di cache store aplikasi — tidak butuh tabel baru. |
 
 > **Catatan penamaan untuk Bunga:** nama **tabel** adalah `notifications`, sedangkan nama **model/class** adalah `App\Models\NotificationLog`. Keduanya menunjuk entitas yang sama (bukan tabel terpisah `notification_logs`).
 
@@ -190,7 +193,93 @@ Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bun
 |---|---|---|---|
 | 1 | Middleware & Scope Multi-Tenant | Menggunakan service `CurrentVendor` + trait `BelongsToVendor` + middleware alias `vendor.active`. Akses data vendor lain wajib mengembalikan HTTP 404. | ✅ Disetujui & Diimplementasikan |
 | 2 | Status GMV | GMV hanya menghitung transaksi `confirmed` hingga `completed`. Transaksi `pending`, `cancelled`, dan `expired` tidak dihitung. | ✅ Disetujui |
-| 3 | Integrasi Cuaca (Weather) | Backend service, caching, dan contract JSON ditangani oleh Boby (`WeatherService`), sedangkan tampilan frontend (`WeatherCalendar` + Banner) ditangani oleh Andini. | ✅ Disetujui |
+| 3 | Integrasi Cuaca (Weather) | Backend service, caching, dan contract JSON ditangani oleh Boby (`WeatherService`), sedangkan tampilan frontend (`WeatherCalendar` + Banner) ditangani oleh Andini. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 4 | Notifikasi WhatsApp | Menggunakan provider Fonnte dengan **paket gratis (Rp 0, kuota per device ±900, text-only)** — hasil verifikasi langsung ke dokumentasi resmi Fonnte (lihat §4.D). Bila kuota habis, fallback ke kanal `in_app`/`email` **diaktifkan lewat config**, tanpa menghapus kode WA. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 5 | Kanal notifikasi | Pengingat pengembalian memakai kanal `whatsapp` sebagai default. Pergantian kanal dilakukan lewat `NOTIFICATION_CHANNEL` (`whatsapp` \| `in_app` \| `email`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 6 | Jam pengingat | Pengingat H-1 & hari-H dijadwalkan harian **09:00 Asia/Jakarta** (`REMINDER_HOUR`, `REMINDER_TIMEZONE`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
+| 7 | Ambang cuaca ekstrem | Kode WMO petir `[95, 96, 97, 99]`, curah hujan **≥ 50 mm/hari**, angin **≥ 40 km/h** — semuanya di `config/weather.php` sehingga dapat diubah tanpa menyentuh kode. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
+
+---
+
+## 7. KONTRAK WEATHER (FASE 3)
+
+### A. Service & Endpoint
+
+| Aspek | Nilai |
+|---|---|
+| Service | `App\Services\WeatherService` (formatter: `App\Services\WeatherFormatter`) |
+| Endpoint | `GET https://api.open-meteo.com/v1/forecast` — Open-Meteo **gratis, tanpa API key** |
+| Parameter harian | `weather_code`, `temperature_2m_max`, `temperature_2m_min`, `precipitation_sum`, `precipitation_probability_max`, `wind_speed_10m_max` |
+| Parameter lain | `latitude`, `longitude`, `timezone=Asia/Jakarta`, `start_date`, `end_date` |
+| Cache | **30 menit** per spot + rentang tanggal (`weather.cache_ttl_minutes`) |
+| Retry & timeout | `WEATHER_RETRY_TIMES` (default 2), `WEATHER_TIMEOUT` (default 10 detik) |
+| Kontrak | `forecast(string $spot, Carbon $start, Carbon $end): array` — **tidak pernah melempar exception** |
+| Kegagalan | `error = true`, `error_message` terisi, `days = []` → UI tetap jalan |
+
+### B. Kontrak JSON (diteruskan ke Andini)
+
+Keluaran `WeatherService::forecast()`:
+
+```json
+{
+  "spot": "bromo",
+  "label": "Gunung Bromo",
+  "generated_at": "2026-10-21T09:00:00+07:00",
+  "error": false,
+  "error_message": null,
+  "days": [
+    {
+      "date": "2026-10-22",
+      "temp_min": 11.8,
+      "temp_max": 20.2,
+      "precipitation_mm": 0.0,
+      "precipitation_probability": 2,
+      "wind_kmh": 12.1,
+      "weather_code": 2,
+      "label": "Berawan sebagian",
+      "is_extreme": false
+    }
+  ]
+}
+```
+
+Bila layanan cuaca gagal (HTTP error / timeout / spot tidak dikenal):
+
+```json
+{
+  "spot": "bromo",
+  "label": "Gunung Bromo",
+  "generated_at": "2026-10-21T09:00:00+07:00",
+  "error": true,
+  "error_message": "Layanan cuaca merespons error.",
+  "days": []
+}
+```
+
+> **Catatan untuk Andini:** contoh JSON pada PRD belum memuat flag error, padahal PRD juga meminta "struktur kosong yang aman + flag error". Karena itu `error` (bool) dan `error_message` (string|null) **ditambahkan**. Field `label` (nama spot) juga ditambahkan untuk kebutuhan banner. Field lainnya (`date`, `temp_min`, `temp_max`, `precipitation_mm`, `precipitation_probability`, `wind_kmh`, `weather_code`, `label`, `is_extreme`) mengikuti contoh PRD apa adanya. Tipe `precipitation_probability` & `weather_code` adalah integer, sisanya float.
+
+Kunci spot yang valid: **`bromo`**, **`ranu_kumbolo`**, **`batu`** (daftar lengkap: `WeatherService::availableSpots()`). Nama spot dinormalisasi otomatis (lowercase, spasi → `_`).
+
+### C. Verifikasi Koordinat Spot (wajib — PRD "verifikasi koordinat sebelum dipakai")
+
+| Spot | Latitude | Longitude | Elevasi | Sumber Verifikasi | Catatan |
+|---|---|---|---|---|---|
+| `bromo` (Gunung Bromo) | -7.9431 | 112.9538 | 2329 m | Open-Meteo Geocoding API (`name=Gunung Bromo`, `feature_code=MT`) | Cocok dengan perkiraan PRD (-7.94 / 112.95) |
+| `ranu_kumbolo` (Ranu Kumbolo) | -8.05 | 112.917 | ~2400 m | Wikipedia/Wikidata (8°03′S 112°55′E) | ⚠️ **Tidak ada** di database Open-Meteo Geocoding → koordinat diambil dari Wikipedia. Perkiraan PRD (-8.01 / 112.92) bergeser ~4,5 km ke utara. |
+| `batu` (Kota Batu) | -7.87 | 112.5283 | 881 m | Open-Meteo Geocoding API (`name=Batu`, `countryCode=ID`) | Cocok dengan perkiraan PRD (-7.87 / 112.52) |
+
+> Selisih ±5 km tidak signifikan untuk prakiraan cuaca (grid Open-Meteo ±11 km). API juga meng-*grid* koordinat ke titik terdekat — contohnya titik Bromo dipetakan ke (-7.9789, 112.9803, elev 2138 m).
+
+### D. Ambang Cuaca Ekstrem (✅ disetujui Boby, 2026-10-21)
+
+| Ambang | Nilai awal | Rujukan |
+|---|---|---|
+| Kode WMO petir | `95`, `96`, `97`, `99` | Kode WMO badai petir |
+| Curah hujan harian | **≥ 50 mm/hari** | Kategori BMKG "hujan lebat" (≥ 50 mm / 24 jam) |
+| Kecepatan angin maks | **≥ 40 km/h** | Kategori BMKG "angin kencang" (40–50 km/h) |
+
+Seluruh ambang berada di `config/weather.php` (`weather.extreme`) — **bukan** di dalam kode, sehingga dapat diubah tanpa menyentuh service. Angka di atas **sudah disetujui Boby** pada 2026-10-21 (PRD §6 — keputusan manusia tidak boleh diambilsepihak; agent hanya menyiapkan opsi + nilai awal).
+
+### E. Perubahan API dari Stub Awal
+
+Method stub `WeatherService::getForecast(string $location, string $date)` **dihapus** dan digantikan `WeatherService::forecast(string $spot, Carbon $start, Carbon $end)` sesuai tabel kontrak §1. Stub tersebut belum dipakai siapa pun (sudah diverifikasi pada 2026-10-21).
