@@ -2,8 +2,8 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **Penjaga Dokumen:** Boby (PM · Super Admin · QA Lead)  
-**Versi:** 1.4.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService + UI Weather Calendar + Checkout capture nomor WA)  
-**Terakhir Diperbarui:** 2026-10-21  
+**Versi:** 1.5.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService + UI Weather Calendar + Checkout capture nomor WA + Otomatisasi scheduler)  
+**Terakhir Diperbarui:** 2026-10-22  
 
 > Dokumen ini adalah acuan resmi integrasi antar modul dan pembagian tanggung jawab teknis antar anggota tim PBL SIB-3E. Perubahan hanya diperbolehkan melalui koordinasi dan kesepakatan tim.
 
@@ -237,6 +237,42 @@ $recipient = PhoneNumberNormalizer::normalize($phone);          // 08xxx / +62xx
 - Verifikasi akses halaman status booking oleh guest (`BookingController::resolveAndAuthorizeRental`) membandingkan nomor dalam bentuk **ternormalisasi**, jadi tamu boleh mengetik `08xxx` maupun `62xxx`.
 - Tanpa perubahan skema: kolom `rentals.guest_phone` sudah ada sebelumnya.
 
+### G. Otomatisasi & Proses Latar Belakang (Penting untuk UAT)
+
+Pengingat pengembalian **tidak dikirim saat halaman dibuka**. Pengiriman bergantung pada dua proses latar belakang:
+
+| Proses | Fungsi | Perintah |
+|---|---|---|
+| **Scheduler** | Menjalankan `rentals:send-return-reminders` setiap hari 09:00 WIB dan `ExpirePendingRentals` setiap menit. | `php artisan schedule:work` |
+| **Queue worker** | Memproses job `SendReturnReminder` & `ExpirePendingRentals` (`ShouldQueue`, `QUEUE_CONNECTION=database`). Tanpa worker, job menumpuk di tabel `jobs` dan **tidak ada pesan terkirim**. | `php artisan queue:work` |
+
+**Lokal (Windows/dev):** `App\Providers\AppServiceProvider::registerDevCommands()` mendaftarkan `schedule:work` sebagai proses `scheduler` pada `php artisan dev`. Jadi:
+
+```bash
+composer run dev
+```
+
+sudah menjalankan **server + queue worker + scheduler + vite** sekaligus — pengingat berjalan otomatis tanpa terminal tambahan. Bila hanya menjalankan `php artisan serve`, pengingat **tidak akan** terkirim.
+
+**Produksi (Linux):** tambahkan cron dan process manager:
+
+```cron
+* * * * * cd /path/tendaku && php artisan schedule:run >> /dev/null 2>&1
+```
+
+```bash
+php artisan queue:work --tries=3   # dijalankan via supervisor/systemd
+```
+
+**Laravel Cloud:** scheduler dan queue worker dikelola otomatis (tidak perlu cron manual).
+
+**Uji manual (tanpa menunggu 09:00):**
+
+```bash
+php artisan rentals:send-return-reminders --dry-run   # pratinjau, tidak mengirim
+php artisan rentals:send-return-reminders             # kirim sekarang
+```
+
 ---
 
 ## 5. LOG PERUBAHAN SKEMA (SCHEMA CHANGE LOG)
@@ -268,6 +304,7 @@ Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bun
 | 7 | Ambang cuaca ekstrem | Kode WMO petir `[95, 96, 97, 99]`, curah hujan **≥ 50 mm/hari**, angin **≥ 40 km/h** — semuanya di `config/weather.php` sehingga dapat diubah tanpa menyentuh kode. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 8 | Serah terima (handover) ke Andini | Bagian backend `WeatherService` + kontrak JSON (§7.B) merupakan **kontrak resmi** yang dipakai Andini. Rincian serah terima, daftar file yang boleh diubah, dan batasan UI ada di §7.F. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 9 | Sumber nomor WhatsApp pengingat | Nomor pengingat **tidak** dipilih manual: (1) pelanggan login → `users.phone` dari profil; (2) guest → nomor WA yang diinput saat checkout, disimpan di `rentals.guest_phone`. Tanpa perubahan skema. Detail di §4.F. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
+| 10 | Otomatisasi pengingat | Pengingat berjalan otomatis lewat **scheduler** (09:00 WIB) + **queue worker**. Di dev, `composer run dev` sudah menjalankan keduanya (`schedule:work` didaftarkan via `DevCommands` di `AppServiceProvider`). Di produksi wajib cron `schedule:run` + `queue:work`. Detail di §4.G. | ✅ Diimplementasikan (2026-10-22) |
 
 ---
 
