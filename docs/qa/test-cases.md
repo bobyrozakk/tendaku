@@ -2,7 +2,8 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **QA Lead:** Boby  
-**Versi:** 1.0.0  
+**Versi:** 1.1.0 (Fase 2 Notifikasi WhatsApp)  
+**Terakhir Diperbarui:** 2026-10-21  
 
 ---
 
@@ -27,5 +28,11 @@
 | **TC-KAS-004** | Kasir Return | Pelunasan Denda Tunai / QRIS | 1. Lakukan pelunasan denda via tunai/QRIS kasir.<br>2. Konfirmasi pembayaran. | Pembayaran tercatat di tabel `payments`; status rental menjadi `completed`. | Bunga | ⏳ Ready for UAT |
 | **TC-ADM-001** | Super Admin | Approval Vendor Baru | 1. Vendor baru mendaftar (status `pending`).<br>2. Super Admin klik Approve di panel `/admin/vendors`. | Status vendor berubah `approved`; vendor dapat login dan memulai operasional toko. | Boby | ⏳ Fase 1 |
 | **TC-ADM-002** | Super Admin | Akurasi Perhitungan GMV | 1. Cek total transaksi di GMV dashboard.<br>2. Verifikasi rental `confirmed` s.d. `completed` terjumlah.<br>3. Verifikasi `pending`/`cancelled` tidak ikut dihitung. | Angka GMV harian/bulanan cocok dengan database. | Boby | ⏳ Fase 1 |
-| **TC-NOT-001** | Notifikasi | Pengingat Pengembalian via WhatsApp | 1. Jalankan command scheduler reminder H-1 dan Hari-H.<br>2. Verifikasi pesan terkirim via mock HTTP. | Pesan terkirim dengan nomor terformat 628xxx; tercatat di `notification_logs`; tidak terkirim ganda. | Boby | ⏳ Fase 2 |
+| **TC-NOT-001** | Notifikasi | Pengingat Pengembalian via WhatsApp | 1. Jalankan command scheduler reminder H-1 dan Hari-H.<br>2. Verifikasi pesan terkirim via mock HTTP. | Pesan terkirim dengan nomor terformat 628xxx; tercatat di `notifications`; tidak terkirim ganda. | Boby | ✅ Passed |
+| **TC-NOT-002** | Notifikasi | Normalisasi Nomor Telepon | 1. Kirim nomor `08xxx`, `+62xxx`, dan `8xxx` ke `PhoneNumberNormalizer::normalize()`. | Semua menghasilkan format `62xxx`; nomor tidak valid menghasilkan `null`. | Boby | ✅ Passed |
+| **TC-NOT-003** | Notifikasi | Kegagalan API Fonnte Tidak Menggagalkan Flow | 1. Simulasikan Fonnte merespons `{"status": false}` / HTTP 5xx / connection failure. | `WhatsAppService::send()` mengembalikan `false` tanpa exception; notifikasi berstatus `failed`. | Boby | ✅ Passed |
+| **TC-NOT-004** | Notifikasi | Isolasi Vendor pada Job Reminder | 1. Dispatch job `SendReturnReminder` dengan `vendor_id` milik vendor lain. | Pesan **tidak** terkirim; rental milik vendor lain tidak dapat di-notifikasi. | Boby | ✅ Passed |
+| **TC-NOT-005** | Notifikasi | Rental Sudah Dikembalikan Tidak Dikirimi | 1. Rental berstatus `completed` / `returned` dengan `return_date` hari ini. | Tidak ada pengingat yang dikirim dan tidak ada baris notifikasi baru. | Boby | ✅ Passed |
+| **TC-NOT-006** | Notifikasi | Pengiriman Ulang Eksplisit (`--force`) | 1. Jalankan command reminder dua kali berturut-turut.<br>2. Jalankan dengan `--force`. | Run pertama mengirim, run kedua tidak mengirim, run `--force` mengirim ulang. | Boby | ✅ Passed |
+| **TC-NOT-007** | Notifikasi | Mode Dry-Run Command | 1. Jalankan `rentals:send-return-reminders --dry-run`. | Daftar pengingat ditampilkan, tidak ada pesan terkirim, tidak ada baris notifikasi. | Boby | ✅ Passed |
 | **TC-WEA-001** | Weather | Prakiraan Cuaca & Deteksi Ekstrem | 1. Panggil `WeatherService::forecast('bromo', ...)`.<br>2. Uji respon kondisi badai/petir (kode WMO 95). | Format JSON valid; flag `is_extreme = true`; data dicache 30 menit. | Boby | ⏳ Fase 3 |

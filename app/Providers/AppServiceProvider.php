@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\FonnteWhatsAppService;
+use App\Services\WhatsAppService;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
@@ -15,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(WhatsAppService::class, FonnteWhatsAppService::class);
     }
 
     /**
