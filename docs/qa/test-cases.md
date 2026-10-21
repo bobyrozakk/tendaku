@@ -2,7 +2,7 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **QA Lead:** Boby  
-**Versi:** 1.1.0 (Fase 2 Notifikasi WhatsApp)  
+**Versi:** 1.2.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService)  
 **Terakhir Diperbarui:** 2026-10-21  
 
 ---
@@ -35,4 +35,8 @@
 | **TC-NOT-005** | Notifikasi | Rental Sudah Dikembalikan Tidak Dikirimi | 1. Rental berstatus `completed` / `returned` dengan `return_date` hari ini. | Tidak ada pengingat yang dikirim dan tidak ada baris notifikasi baru. | Boby | ✅ Passed |
 | **TC-NOT-006** | Notifikasi | Pengiriman Ulang Eksplisit (`--force`) | 1. Jalankan command reminder dua kali berturut-turut.<br>2. Jalankan dengan `--force`. | Run pertama mengirim, run kedua tidak mengirim, run `--force` mengirim ulang. | Boby | ✅ Passed |
 | **TC-NOT-007** | Notifikasi | Mode Dry-Run Command | 1. Jalankan `rentals:send-return-reminders --dry-run`. | Daftar pengingat ditampilkan, tidak ada pesan terkirim, tidak ada baris notifikasi. | Boby | ✅ Passed |
-| **TC-WEA-001** | Weather | Prakiraan Cuaca & Deteksi Ekstrem | 1. Panggil `WeatherService::forecast('bromo', ...)`.<br>2. Uji respon kondisi badai/petir (kode WMO 95). | Format JSON valid; flag `is_extreme = true`; data dicache 30 menit. | Boby | ⏳ Fase 3 |
+| **TC-WEA-001** | Weather | Prakiraan Cuaca & Deteksi Ekstrem | 1. Panggil `WeatherService::forecast('bromo', ...)`.<br>2. Uji respon kondisi badai/petir (kode WMO 95). | Format JSON valid sesuai kontrak `docs/contract.md` §7.B; flag `is_extreme = true`; data dicache 30 menit. | Boby | ✅ Passed |
+| **TC-WEA-002** | Weather | Parameter Request Open-Meteo | 1. Panggil `forecast()` lalu periksa request yang direkam (`Http::fake`). | Request ke `api.open-meteo.com/v1/forecast` memuat `latitude`, `longitude`, `timezone=Asia/Jakarta`, `start_date`, `end_date`, dan 6 parameter harian sesuai kontrak. | Boby | ✅ Passed |
+| **TC-WEA-003** | Weather | Cache per Spot & Rentang Tanggal | 1. Panggil `forecast()` dua kali untuk rentang tanggal yang sama.<br>2. Panggil lagi untuk rentang berbeda. | Rentang sama → hanya **1** request HTTP; rentang berbeda → request baru. | Boby | ✅ Passed |
+| **TC-WEA-004** | Weather | Error API / Timeout Tetap Aman | 1. Simulasikan Open-Meteo merespons HTTP 400 / connection failure.<br>2. Panggil `forecast()` dengan spot tak dikenal. | Tidak ada exception; hasil `error = true`, `error_message` terisi, `days = []` — UI tetap jalan. | Boby | ✅ Passed |
+| **TC-WEA-005** | Weather | Label Cuaca Bahasa Indonesia | 1. Periksa `WeatherFormatter::label()` untuk kode WMO 0, 2, 63, 65, 95. | Label Bahasa Indonesia: `Cerah`, `Berawan sebagian`, `Hujan sedang`, `Hujan lebat`, `Badai petir`. | Boby | ✅ Passed |
