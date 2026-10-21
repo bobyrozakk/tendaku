@@ -173,6 +173,24 @@ Checked langsung ke situs & dokumentasi resmi Fonnte pada **2026-10-21**:
 
 **Kesimpulan:** syarat "100% gratis" pada PRD **terpenuhi** untuk tahap development. Kanal `in_app` & `email` tetap diimplementasikan sebagai fallback dan cukup diaktifkan lewat config.
 
+### D.1 Hasil Verifikasi Langsung ke API Fonnte (2026-10-21)
+
+Pengujian sungguhan (di luar test suite, dengan izin PM) memakai token Fonnte asli dari `.env` lokal:
+
+| Skenario | Respons Fonnte | Kesimpulan |
+|---|---|---|
+| Token palsu (kontrol) | `{"status": false, "reason": "invalid token"}` | Autentikasi ditolak di tahap token |
+| **Token Fonnte TENDAKU** | `{"status": false, "reason": "request invalid on disconnected device"}` | ✅ **Token valid** — permintaan lolos autentikasi, ditolak di tahap device |
+| Token TENDAKU, device sudah di-*connect* | `{"status": true}` | ✅ **Pesan uji berhasil terkirim** ke `6289602168049` |
+
+Temuan penting untuk tim:
+
+1. **Device WA harus berstatus *connected*.** Token yang valid tetap ditolak dengan `request invalid on disconnected device` bila device belum di-pairing / sesinya sudah putus di dashboard Fonnte.
+2. **Pesan yang gagal tidak membakar kuota** — request ditolak sebelum masuk ke device.
+3. Token yang sudah dibuat tidak perlu di-regenerate selama device masih terhubung; token baru hanya perlu dibuat bila device di-*unlink* atau token bocor.
+
+> ⚠️ Token Fonnte **tidak boleh** disimpan di `.env.example` (file yang di-commit ke repo publik) — hanya di `.env` lokal yang di-gitignore. Panduan lengkap di §4.E.
+
 ### E. Cara Mendapatkan Fonnte Token (panduan untuk admin/operator)
 
 **Fonnte token** = string rahasia (panjang ±40 karakter) yang dibuat otomatis oleh dashboard Fonnte untuk device Anda. Token inilah yang **mengotorisasi** aplikasi Tendaku agar boleh mengirim WhatsApp lewat device Fonnte Anda — jadi sifatnya seperti password, bukan API key gratis dari layanan lain.
