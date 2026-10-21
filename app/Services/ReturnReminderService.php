@@ -172,6 +172,30 @@ class ReturnReminderService
     }
 
     /**
+     * Pratinjau pengingat tanpa mengirim: nomor tujuan + isi pesan.
+     *
+     * Dipakai `rentals:send-return-reminders --dry-run` agar operator bisa
+     * memverifikasi nomor tujuan & isi pesan sebelum pengiriman sungguhan.
+     *
+     * @return array{recipient: string|null, message: string|null}
+     */
+    public function previewReminder(int $rentalId, string $type): array
+    {
+        $rental = Rental::withoutGlobalScope('vendor')->find($rentalId);
+
+        if (! $rental instanceof Rental) {
+            return ['recipient' => null, 'message' => null];
+        }
+
+        $recipient = $this->resolveRecipient($rental);
+
+        return [
+            'recipient' => $recipient,
+            'message' => $recipient === null ? null : $this->buildMessage($rental, $type),
+        ];
+    }
+
+    /**
      * Susun pesan pengingat dalam Bahasa Indonesia.
      */
     public function buildMessage(Rental $rental, string $type): string

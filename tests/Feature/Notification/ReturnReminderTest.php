@@ -256,6 +256,39 @@ class ReturnReminderTest extends TestCase
         $this->assertSame(0, NotificationLog::withoutGlobalScope('vendor')->count());
     }
 
+    public function test_command_dry_run_shows_target_number_and_message_preview(): void
+    {
+        Http::fake(['api.fonnte.com/*' => Http::response(['status' => true], 200)]);
+
+        $this->createPickedUpRental(Carbon::now('Asia/Jakarta')->addDay(), [
+            'booking_code' => 'TND-DRY-001',
+        ]);
+
+        $this->artisan('rentals:send-return-reminders', ['--dry-run' => true])
+            ->expectsOutputToContain('6281234567890')
+            ->expectsOutputToContain('TND-DRY-001')
+            ->expectsOutputToContain('Pengingat')
+            ->assertSuccessful();
+
+        Http::assertNothingSent();
+    }
+
+    public function test_command_dry_run_marks_rental_without_reachable_number(): void
+    {
+        Http::fake(['api.fonnte.com/*' => Http::response(['status' => true], 200)]);
+
+        $this->customer->update(['phone' => null]);
+
+        $rental = $this->createPickedUpRental(Carbon::now('Asia/Jakarta')->addDay());
+        $rental->update(['user_id' => null, 'guest_phone' => null]);
+
+        $this->artisan('rentals:send-return-reminders', ['--dry-run' => true])
+            ->expectsOutputToContain('TIDAK ADA NOMOR')
+            ->assertSuccessful();
+
+        Http::assertNothingSent();
+    }
+
     public function test_command_does_not_resend_reminder_that_was_already_sent(): void
     {
         Http::fake(['api.fonnte.com/*' => Http::response(['status' => true], 200)]);
