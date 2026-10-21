@@ -2,7 +2,7 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **Penjaga Dokumen:** Boby (PM · Super Admin · QA Lead)  
-**Versi:** 1.2.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService)  
+**Versi:** 1.3.0 (Fase 2 Notifikasi WhatsApp + Fase 3 WeatherService + UI Weather Calendar)  
 **Terakhir Diperbarui:** 2026-10-21  
 
 > Dokumen ini adalah acuan resmi integrasi antar modul dan pembagian tanggung jawab teknis antar anggota tim PBL SIB-3E. Perubahan hanya diperbolehkan melalui koordinasi dan kesepakatan tim.
@@ -27,6 +27,8 @@ Sebagian besar "API" antar anggota berupa method di class Service PHP / Livewire
 | `CurrentVendor` Service & Middleware | **Boby** | Boby, Queue Job, Test | `int $vendorId`, callable callback | Active vendor context / bypass | Singleton context management vendor aktif untuk web request, background job, dan PHPUnit tests. |
 | `WeatherService::forecast()` | **Boby** | Andini (UI WeatherCalendar) | `string $spot, Carbon $start, Carbon $end` | `array` (JSON terstruktur, lihat §7.B) | Forecast cuaca spot camping Open-Meteo & deteksi cuaca ekstrem. Tidak pernah melempar exception — gagal → `error = true` + `days = []`. |
 | `WeatherService::availableSpots()` | **Boby** | Andini (UI WeatherCalendar) | — | `array<string, array{label, latitude, longitude}>` | Daftar spot yang tersedia beserta koordinatnya (dari `config/weather.php`). |
+| `WeatherService::forget()` | **Boby** | Andini (tombol "Perbarui" pada UI) | `string $spot, Carbon $start, Carbon $end` | `void` | Membuang cache forecast untuk spot + rentang tanggal tertentu (dipakai tombol refresh agar tidak menunggu TTL 30 menit). |
+| Livewire `Customer\WeatherCalendar` | **Andini** *(diimplementasikan oleh Boby — label `cross-module`)* | Halaman `/cuaca` | `string $spot`, `string $days` (URL: `?spot=`, `?periode=`) | UI kalender cuaca + banner ekstrem | Menggunakan `WeatherService::forecast()`; gagal → banner error, halaman tetap jalan. |
 | `WeatherFormatter::label()` | **Boby** | Andini (badge cuaca) | `int $weatherCode` (WMO) | `string` (Bahasa Indonesia) | Contoh: `63` → `"Hujan sedang"`, `95` → `"Badai petir"`. |
 | `WhatsAppService::send()` | **Boby** | Job Reminder (Boby) | `string $phone, string $message` | `bool` | Kirim notifikasi WA (Fonnte) secara aman, normalisasi nomor (+62/08), tidak melempar exception fatal. |
 | `PhoneNumberNormalizer::normalize()` | **Boby** | Fonnte (Boby), Tim | `?string $phone` | `?string` (`62xxx` / `null` bila tidak valid) | Ubah `08xxx` / `+62xxx` / `8xxx` → `62xxx`. Panjang valid 10–15 digit. |
@@ -171,6 +173,28 @@ Checked langsung ke situs & dokumentasi resmi Fonnte pada **2026-10-21**:
 
 **Kesimpulan:** syarat "100% gratis" pada PRD **terpenuhi** untuk tahap development. Kanal `in_app` & `email` tetap diimplementasikan sebagai fallback dan cukup diaktifkan lewat config.
 
+### E. Cara Mendapatkan Fonnte Token (panduan untuk admin/operator)
+
+**Fonnte token** = string rahasia (panjang ±40 karakter) yang dibuat otomatis oleh dashboard Fonnte untuk device Anda. Token inilah yang **mengotorisasi** aplikasi Tendaku agar boleh mengirim WhatsApp lewat device Fonnte Anda — jadi sifatnya seperti password, bukan API key gratis dari layanan lain.
+
+Langkah memperolehnya:
+
+1. Buka **https://fonnte.com** → **Login / Daftar** (akun Fonnte, terpisah dari akun Tendaku).
+2. Masuk ke menu **Device** → **Add Device** → hubungkan nomor WhatsApp yang dipakai untuk notifikasi (format internasional, mis. `6281234567890`).
+3. Setelah device terverifikasi (scan QR / pairing), buka tab **Token** pada device tersebut → klik **Generate / Regenerate Token**.
+4. Salin token itu ke file `.env` lokal proyek:
+
+   ```dotenv
+   FONNTE_TOKEN=token-dari-dashboard-fonnte
+   ```
+
+Aturan main:
+
+- Token **tidak boleh** di-commit ke repository. Yang dikomit hanya `.env.example` (tanpa nilai) — konfigurasi lengkapnya ada di `config/notifications.php` (`FONNTE_TOKEN`).
+- Header yang dipakai API adalah `Authorization: <token>` **tanpa** prefiks `Bearer` (lihat §4.D).
+- Token bisa di-regenerate di dashboard bila bocor; regenerate **mematikan** token lama.
+- Tanpa token, `FonnteWhatsAppService` mengembalikan `false` (tidak melempar exception) dan pengingat tetap tercatat di tabel `notifications` dengan status `failed` — lihat §4.B.
+
 ---
 
 ## 5. LOG PERUBAHAN SKEMA (SCHEMA CHANGE LOG)
@@ -182,6 +206,7 @@ Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bun
 | 2026-10-18 | *(Fase 0 Dasar)* | Tidak ada migrasi baru; kolom `vendor_id` pada tabel inti sudah selaras. | Fondasi middleware `vendor.active` dan service `CurrentVendor`. |
 | 2026-10-21 | *(Fase 2 Notifikasi WA)* | **Tidak ada migrasi baru.** | Tabel `notifications` (dibuat migrasi `2026_10_01_000011_create_notification_logs_table.php`) sudah memuat kolom `vendor_id`, `user_id`, `rental_id`, `recipient_phone`, `channel`, `type`, `message`, `status`, `sent_at` — cukup untuk log & idempotensi pengingat. |
 | 2026-10-21 | *(Fase 3 WeatherService)* | **Tidak ada migrasi baru.** | Praktikiraan cuaca diambil dari API Open-Meteo (tanpa API key) dan di-cache di cache store aplikasi — tidak butuh tabel baru. |
+| 2026-10-21 | *(UI Weather Calendar — `cross-module`)* | **Tidak ada migrasi baru.** | Halaman `/cuaca` hanya membaca data dari API cuaca; seluruh state (spot, periode) disimpan di URL, bukan di database. |
 
 > **Catatan penamaan untuk Bunga:** nama **tabel** adalah `notifications`, sedangkan nama **model/class** adalah `App\Models\NotificationLog`. Keduanya menunjuk entitas yang sama (bukan tabel terpisah `notification_logs`).
 
@@ -198,6 +223,7 @@ Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bun
 | 5 | Kanal notifikasi | Pengingat pengembalian memakai kanal `whatsapp` sebagai default. Pergantian kanal dilakukan lewat `NOTIFICATION_CHANNEL` (`whatsapp` \| `in_app` \| `email`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 6 | Jam pengingat | Pengingat H-1 & hari-H dijadwalkan harian **09:00 Asia/Jakarta** (`REMINDER_HOUR`, `REMINDER_TIMEZONE`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 | 7 | Ambang cuaca ekstrem | Kode WMO petir `[95, 96, 97, 99]`, curah hujan **≥ 50 mm/hari**, angin **≥ 40 km/h** — semuanya di `config/weather.php` sehingga dapat diubah tanpa menyentuh kode. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
+| 8 | Serah terima (handover) ke Andini | Bagian backend `WeatherService` + kontrak JSON (§7.B) merupakan **kontrak resmi** yang dipakai Andini. Rincian serah terima, daftar file yang boleh diubah, dan batasan UI ada di §7.F. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
 
 ---
 
@@ -283,3 +309,30 @@ Seluruh ambang berada di `config/weather.php` (`weather.extreme`) — **bukan** 
 ### E. Perubahan API dari Stub Awal
 
 Method stub `WeatherService::getForecast(string $location, string $date)` **dihapus** dan digantikan `WeatherService::forecast(string $spot, Carbon $start, Carbon $end)` sesuai tabel kontrak §1. Stub tersebut belum dipakai siapa pun (sudah diverifikasi pada 2026-10-21).
+
+### F. Serah Terima ke Andini — UI WeatherCalendar & Banner (✅ 2026-10-21)
+
+Maksud "dilempar ke Andini" = Boby menyiapkan **bagian backend + kontrak JSON**, lalu handing over **bagian tampilan** kepada Andini supaya dia cukup mengerjakan UI tanpa perlu tahu detail HTTP Open-Meteo.
+
+**Paket serah terima (yang diterima Andini):**
+
+| Aspek | Isi |
+|---|---|
+| Service | `WeatherService::forecast()` + `WeatherService::availableSpots()` (backend Boby) |
+| Kontrak JSON | Persis seperti pada §7.B — **tidak boleh diubah** oleh sisi UI |
+| Ambang ekstrem | `config/weather.php` → `weather.extreme` (§7.D) |
+| Error handling | `error = true` + `error_message` → UI wajib menampilkan banner, **tidak boleh** melempar exception ke user |
+| File milik Andini | `app/Livewire/Customer/WeatherCalendar.php`, `resources/views/livewire/customer/weather-calendar.blade.php`, `resources/views/components/weather-badge.blade.php` |
+
+**Status implementasi (2026-10-21):** UI tersebut **sudah diimplementasikan atas nama Andini** pada branch `feat/weather-calendar-ui` dengan label **`cross-module`** (PRD §0 — tidak boleh mengubah modul anggota lain tanpa label). Rinciannya:
+
+| File | Perubahan | Label |
+|---|---|---|
+| `app/Livewire/Customer/WeatherCalendar.php` | Komponen Livewire: pilih spot + periode (state di URL `?spot=` & `?periode=`), tombol "Perbarui" (memakai `WeatherService::forget()`), enrichment presentasi (ikon, nama hari, penanda "Hari Ini"). | `cross-module` |
+| `resources/views/livewire/customer/weather-calendar.blade.php` | Panel kontrol, banner error (graceful), banner peringatan cuaca ekstrem, grid kartu harian. | `cross-module` |
+| `resources/views/components/weather-badge.blade.php` | Badge cuaca: props `condition`, `icon`, `temp`, `extreme` (varian merah untuk cuaca ekstrem). | `cross-module` |
+| `resources/views/customer/weather/index.blade.php` + `routes/web.php` | Halaman publik `GET /cuaca` (route `customer.weather.index`) + link navbar customer. | `cross-module` |
+| `app/Services/WeatherService.php` | Tambahan method `forget()` untuk membuang cache (dipakai tombol refresh). Kontrak `forecast()` **tidak berubah**. | `cross-module` |
+| `tests/Feature/Customer/WeatherCalendarTest.php` | 8 test feature: render kartu harian, banner ekstrem, banner error, ganti spot, ubah periode, refresh cache, parameter URL tidak valid. | `cross-module` |
+
+> Kontrak JSON pada §7.B **tidak berubah** — atribut tambahan (ikon, nama hari, penanda hari ini) hanya dihitung di layer tampilan dan tidak dikirim keluar dari service.

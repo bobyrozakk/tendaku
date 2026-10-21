@@ -236,6 +236,11 @@
                     <a href="#" class="px-3.5 py-2 rounded-xl text-sm font-medium text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 transition-all duration-150">
                         Paket Camping
                     </a>
+                    <a href="{{ route('customer.weather.index') }}"
+                       class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
+                              {{ request()->routeIs('customer.weather.index') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
+                        Cuaca
+                    </a>
                     @auth
                         <a href="{{ route('customer.booking.index') }}"
                            class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150

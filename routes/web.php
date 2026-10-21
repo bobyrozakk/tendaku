@@ -37,6 +37,9 @@ Route::get('/katalog/{id}', [CatalogController::class, 'show'])
     ->whereNumber('id')
     ->name('customer.product.show');
 
+// Prakiraan Cuaca Spot Camping (publik)
+Route::view('/cuaca', 'customer.weather.index')->name('customer.weather.index');
+
 // Alias Route URL langsung (untuk backward compatibility & kemudahan akses)
 Route::get('checkout', fn () => redirect()->route('checkout.index'));
 Route::get('booking/status/{code}', fn ($code) => redirect()->route('booking.status', ['code' => $code]));
