@@ -15,6 +15,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, HasRoles, MustVerifyEmailTrait, Notifiable, SoftDeletes;
+    // pengecekan role ada di trait HasRoles
 
     protected $fillable = [
         'vendor_id',
@@ -25,6 +26,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'address',
         'nik',
         'role',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -39,7 +41,13 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'nik' => 'encrypted',
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function isActive(): bool
+    {
+        return (bool) ($this->is_active ?? true);
     }
 
     public function vendor(): BelongsTo
@@ -60,30 +68,5 @@ class User extends Authenticatable implements MustVerifyEmail
     public function paymentsReceived(): HasMany
     {
         return $this->hasMany(Payment::class, 'received_by');
-    }
-
-    public function isSuperAdmin(): bool
-    {
-        return $this->role === 'super_admin';
-    }
-
-    public function isVendorOwner(): bool
-    {
-        return $this->role === 'vendor_owner';
-    }
-
-    public function isVendorAdmin(): bool
-    {
-        return $this->role === 'vendor_admin';
-    }
-
-    public function isCustomer(): bool
-    {
-        return $this->role === 'customer';
-    }
-
-    public function isVendorStaff(): bool
-    {
-        return in_array($this->role, ['vendor_owner', 'vendor_admin']);
     }
 }

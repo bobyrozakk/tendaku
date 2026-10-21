@@ -27,7 +27,7 @@
                    @if ($hasError) aria-invalid="true" @endif
                    @if ($describedBy) aria-describedby="{{ $describedBy }}" @endif>
 
-            <button type="button" x-on:click="show = !show" x-bind:aria-pressed="show" x-bind:aria-label="show ? 'Sembunyikan password' : 'Tampilkan password'"class="absolute inset-y-0 right-3 flex items-center pr-2 text-tendaku-brown/50 transition-colors hover:text-tendaku-brown focus:outline-none">
+            <button type="button" x-on:click="show = !show" x-bind:aria-pressed="show" x-bind:aria-label="show ? 'Sembunyikan password' : 'Tampilkan password'" class="absolute inset-y-0 right-3 flex items-center pr-2 text-tendaku-brown/50 transition-colors hover:text-tendaku-brown focus:outline-none">
                 {{-- password disembunyikan --}}
                 <svg x-show="!show" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="m15 18-.722-3.25"/>

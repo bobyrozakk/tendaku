@@ -43,12 +43,13 @@ new #[Layout('layouts.guest')] class extends Component
                 'unique:'.User::class,
                 'ends_with:@gmail.com',
             ],
-            'phone' => ['required', 'string', 'max:20'],
-            'nik' => ['required', 'string', 'digits:16'],
+            'phone' => ['required', 'regex:/^08[0-9]{8,11}$/'],
+            'nik' => ['required', 'digits:16'],
             'address' => ['nullable', 'string', 'max:500'],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ], [
             'email.ends_with' => 'Email harus menggunakan @gmail.com.',
+            'phone.regex' => 'Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka.',
             'nik.digits' => 'NIK harus terdiri dari 16 digit angka.',
         ]);
 
@@ -81,11 +82,17 @@ new #[Layout('layouts.guest')] class extends Component
 
         <x-auth.field name="phone" label="Nomor telepon" type="tel"
                       wire:model="phone"
-                      placeholder="08xxxxxxxxxx" autocomplete="tel" required />
+                      placeholder="08"
+                      pattern="08[0-9]{8,11}"
+                      maxlength="13"
+                      autocomplete="tel" required />
 
         <x-auth.field name="nik" label="NIK (Nomor Induk Kependudukan)"
                       wire:model="nik"
-                      placeholder="16 digit NIK" inputmode="numeric" maxlength="16" required />
+                      placeholder="Masukkan NIK"
+                      inputmode="numeric"
+                      maxlength="16"
+                      pattern="[0-9]{16}" required />
 
         <x-auth.field name="address" label="Alamat"
                       wire:model="address"
@@ -93,7 +100,7 @@ new #[Layout('layouts.guest')] class extends Component
 
         <x-auth.field name="password" label="Password" type="password"
                       wire:model="password" placeholder="Password"
-                      autocomplete="new-password" hint="Minimal 8 karakter." required />
+                      autocomplete="new-password" required />
 
         <x-auth.field name="password_confirmation" label="Ulangi password" type="password"
                       wire:model="password_confirmation" placeholder="Password"

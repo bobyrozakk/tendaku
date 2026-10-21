@@ -112,6 +112,21 @@
                     </svg>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Unit Owner</span>
                 </a>
+
+                <!-- Manajemen Kasir -->
+                <a href="{{ route('vendor.cashiers.index') }}"
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.cashiers.*')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.cashiers.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.cashiers.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Manajemen Kasir</span>
+                </a>
             @else
                 <!-- Dashboard & POS -->
                 <a href="{{ route('kasir.dashboard') }}"
