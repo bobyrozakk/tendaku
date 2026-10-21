@@ -16,3 +16,11 @@ Artisan::command('rentals:expire-pending', function () {
 })->purpose('Ubah rental pending yang kedaluwarsa menjadi expired');
 
 Schedule::job(new ExpirePendingRentals)->everyMinute();
+
+/*
+ * Pengingat pengembalian barang (H-1 dan hari-H) dikirim harian pada jam
+ * yang ditentukan di config/notifications.php (default 09:00 WIB).
+ */
+Schedule::command('rentals:send-return-reminders')
+    ->dailyAt(sprintf('%02d:00', (int) config('notifications.reminder.hour', 9)))
+    ->timezone((string) config('notifications.reminder.timezone', 'Asia/Jakarta'));

@@ -2,8 +2,8 @@
 
 **Proyek:** TENDAKU — Sistem Informasi Persewaan Tenda & Perlengkapan Acara (Multi-Tenant)  
 **Penjaga Dokumen:** Boby (PM · Super Admin · QA Lead)  
-**Versi:** 1.0.0 (Fase 0 Fondasi)  
-**Terakhir Diperbarui:** 2026-10-18  
+**Versi:** 1.1.0 (Fase 2 Notifikasi WhatsApp)  
+**Terakhir Diperbarui:** 2026-10-21  
 
 > Dokumen ini adalah acuan resmi integrasi antar modul dan pembagian tanggung jawab teknis antar anggota tim PBL SIB-3E. Perubahan hanya diperbolehkan melalui koordinasi dan kesepakatan tim.
 
@@ -27,6 +27,11 @@ Sebagian besar "API" antar anggota berupa method di class Service PHP / Livewire
 | `CurrentVendor` Service & Middleware | **Boby** | Boby, Queue Job, Test | `int $vendorId`, callable callback | Active vendor context / bypass | Singleton context management vendor aktif untuk web request, background job, dan PHPUnit tests. |
 | `WeatherService::forecast()` | **Boby** | Andini (UI WeatherCalendar) | `string $spot, Carbon $start, Carbon $end` | JSON terstruktur | Forecast cuaca spot camping Open-Meteo & deteksi cuaca ekstrem. |
 | `WhatsAppService::send()` | **Boby** | Job Reminder (Boby) | `string $phone, string $message` | `bool` | Kirim notifikasi WA (Fonnte) secara aman, normalisasi nomor (+62/08), tidak melempar exception fatal. |
+| `PhoneNumberNormalizer::normalize()` | **Boby** | Fonnte (Boby), Tim | `?string $phone` | `?string` (`62xxx` / `null` bila tidak valid) | Ubah `08xxx` / `+62xxx` / `8xxx` → `62xxx`. Panjang valid 10–15 digit. |
+| `ReturnReminderService::pendingReminders()` | **Boby** | Command Reminder (Boby) | `?Carbon $now, bool $includeNotified` | `Collection` item `{rental_id, vendor_id, type, return_date}` | Daftar pengingat H-1 & hari-H untuk rental `picked_up`. Lintas vendor → wajib `withoutGlobalScope('vendor')`. |
+| `ReturnReminderService::sendReminderForRental()` | **Boby** | Job `SendReturnReminder` (Boby) | `int $rentalId, string $type, bool $force` | `bool` (terkirim) | Idempoten: satu rental + satu tipe pengingat = satu kiriman. Dicatat di tabel `notifications`. |
+| Job `SendReturnReminder` | **Boby** | Scheduler harian (Boby) | `int $rentalId, int $vendorId, string $type, bool $force` | — | Job queue **wajib membawa `vendor_id`** dan dibungkus `CurrentVendor::runAs()` (jebakan queue di Fase 0). |
+| Command `rentals:send-return-reminders` | **Boby** | Scheduler harian (Boby) | `--force`, `--dry-run` | exit code 0 | Dipanggil scheduler harian pada `09:00 Asia/Jakarta` (`REMINDER_HOUR`). `--dry-run` tidak mengirim apa pun. |
 | Status & Kolom Pembayaran | Bunga | Semua | Schema `rentals`, `payments` | Matriks status & log transaksi | Konsistensi status pembayaran dan pelunasan. |
 
 ---
@@ -127,21 +132,65 @@ Daftar status transaksi yang dihitung ke dalam GMV Super Admin dan Vendor didefi
 
 ---
 
-## 4. LOG PERUBAHAN SKEMA (SCHEMA CHANGE LOG)
+## 4. KONTRAK NOTIFIKASI WHATSAPP (FASE 2)
+
+### A. Kanal Notifikasi
+Kanal aktif diatur lewat **config** (`config/notifications.php` → `NOTIFICATION_CHANNEL`), **bukan** dengan menghapus kode WhatsApp.
+
+| Kanal | Perilaku | Keterangan |
+|---|---|---|
+| `whatsapp` (default) | Pesan dikirim ke Fonnte API (`POST https://api.fonnte.com/send`). | Butuh `FONNTE_TOKEN` pada `.env`. |
+| `in_app` | Pesan hanya dicatat di tabel `notifications` (`channel = in_app`, `status = sent`) untuk ditampilkan di aplikasi. | Tanpa panggilan API eksternal. |
+| `email` | Pesan dikirim via mailer Laravel (`Mail::raw()`), lalu dicatat di tabel `notifications` (`channel = email`). | Butuh `MAIL_MAILER` yang benar (bagian Andini). |
+
+> kolom `channel` pada tabel `notifications` bertipe enum `('whatsapp', 'in_app', 'email')`. Nilai di luar itu **tidak boleh** dipakai.
+
+### B. Tipe Notifikasi & Idempotensi
+| Tipe | Kapan dikirim | Makna |
+|---|---|---|
+| `return_reminder_h1` | 1 hari sebelum `rentals.return_date` | Pengingat H-1 ("harus dikembalikan BESOK"). |
+| `return_reminder_due` | Pada `rentals.return_date` | Pengingat hari-H ("harus dikembalikan HARI INI"). |
+
+Idempotensi: satu kombinasi **rental + tipe** hanya boleh menghasilkan **satu** kiriman. Tomcat created `notifications` berstatus `pending` **sebelum** pesan dikirim, sehingga dua proses paralel tidak bisa mengirim dua kali. Pengiriman ulang hanya bisa dilakukan eksplisit lewat `rentals:send-return-reminders --force`.
+
+### C. Format Pesan (Bahasa Indonesia)
+Pesan memuat: nama pelanggan, kode booking, batas waktu kembali, daftar barang yang disewa, total biaya, dan informasi denda keterlambatan per barang (`rental_details.late_fee_per_day_snapshot`).
+
+### D. Hasil Cek Paket Gratis Fonnte (wajib dicatat — PRD §Fase 2)
+Checked langsung ke situs & dokumentasi resmi Fonnte pada **2026-10-21**:
+
+| Aspek | Hasil |
+|---|---|
+| Harga paket gratis | **Rp 0** — Fonnte menyediakan versi gratis "untuk proses development tanpa batas waktu". |
+| Kuota | **Per device** (bukan per akun). Dokumentasi resmi menyebut paket gratis dengan sisa kuota **900**. |
+| Batasan | **Text-only** (tanpa lampiran/attachment). |
+| Device | Satu paket berlaku untuk satu device; paket tidak bisa dipakai bersama device lain. |
+| API | `POST https://api.fonnte.com/send`, header `Authorization: <token>` (**tanpa** prefiks `Bearer`), body `target` / `message` / `countryCode` (`62`). Respons sukses `{"status": true}`, gagal `{"status": false, "reason": "..."}`. |
+
+**Kesimpulan:** syarat "100% gratis" pada PRD **terpenuhi** untuk tahap development. Kanal `in_app` & `email` tetap diimplementasikan sebagai fallback dan cukup diaktifkan lewat config.
+
+---
+
+## 5. LOG PERUBAHAN SKEMA (SCHEMA CHANGE LOG)
 
 Setiap migrasi baru atau perubahan struktur tabel wajib dicatat di sini agar Bunga dapat menyelaraskan diagram ERD:
 
 | Tanggal | File Migrasi | Perubahan Kolom / Tabel | Alasan / Keterangan |
 |---|---|---|---|
 | 2026-10-18 | *(Fase 0 Dasar)* | Tidak ada migrasi baru; kolom `vendor_id` pada tabel inti sudah selaras. | Fondasi middleware `vendor.active` dan service `CurrentVendor`. |
+| 2026-10-21 | *(Fase 2 Notifikasi WA)* | **Tidak ada migrasi baru.** | Tabel `notifications` (dibuat migrasi `2026_10_01_000011_create_notification_logs_table.php`) sudah memuat kolom `vendor_id`, `user_id`, `rental_id`, `recipient_phone`, `channel`, `type`, `message`, `status`, `sent_at` — cukup untuk log & idempotensi pengingat. |
+
+> **Catatan penamaan untuk Bunga:** nama **tabel** adalah `notifications`, sedangkan nama **model/class** adalah `App\Models\NotificationLog`. Keduanya menunjuk entitas yang sama (bukan tabel terpisah `notification_logs`).
 
 ---
 
-## 5. LOG KEPUTUSAN TIM (DECISIONS LOG)
+## 6. LOG KEPUTUSAN TIM (DECISIONS LOG)
 
 | # | Topik | Keputusan / Konsensus | Status |
 |---|---|---|---|
 | 1 | Middleware & Scope Multi-Tenant | Menggunakan service `CurrentVendor` + trait `BelongsToVendor` + middleware alias `vendor.active`. Akses data vendor lain wajib mengembalikan HTTP 404. | ✅ Disetujui & Diimplementasikan |
 | 2 | Status GMV | GMV hanya menghitung transaksi `confirmed` hingga `completed`. Transaksi `pending`, `cancelled`, dan `expired` tidak dihitung. | ✅ Disetujui |
 | 3 | Integrasi Cuaca (Weather) | Backend service, caching, dan contract JSON ditangani oleh Boby (`WeatherService`), sedangkan tampilan frontend (`WeatherCalendar` + Banner) ditangani oleh Andini. | ✅ Disetujui |
-| 4 | Notifikasi WhatsApp | Menggunakan provider Fonnte (paket gratis). Jika kuota habis, fallback otomatis mencatat log pada tabel `notification_logs` tanpa menggagalkan flow utama. | ⏳ Menunggu verifikasi kuota |
+| 4 | Notifikasi WhatsApp | Menggunakan provider Fonnte dengan **paket gratis (Rp 0, kuota per device ±900, text-only)** — hasil verifikasi langsung ke dokumentasi resmi Fonnte (lihat §4.D). Bila kuota habis, fallback ke kanal `in_app`/`email` **diaktifkan lewat config**, tanpa menghapus kode WA. | ✅ Disetujui & Diimplementasikan (2026-10-21) |
+| 5 | Kanal notifikasi | Pengingat pengembalian memakai kanal `whatsapp` sebagai default. Pergantian kanal dilakukan lewat `NOTIFICATION_CHANNEL` (`whatsapp` \| `in_app` \| `email`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
+| 6 | Jam pengingat | Pengingat H-1 & hari-H dijadwalkan harian **09:00 Asia/Jakarta** (`REMINDER_HOUR`, `REMINDER_TIMEZONE`). | ✅ Disetujui & Diimplementasikan (2026-10-21) |
