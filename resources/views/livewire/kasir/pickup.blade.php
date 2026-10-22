@@ -4,15 +4,15 @@
         <div class="p-4 rounded-2xl bg-avocado-50 border border-avocado-300 text-avocado-900 flex items-center justify-between shadow-tendaku-sm animate-fade-in">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-avocado-600 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
-                    ✓
+                    <i data-lucide="check" class="w-5 h-5 text-white"></i>
                 </div>
                 <div>
                     <h4 class="font-extrabold text-sm">Serah Terima Berhasil!</h4>
                     <p class="text-xs text-avocado-800 mt-0.5">{{ $pickupSuccessMessage }}</p>
                 </div>
             </div>
-            <button wire:click="$set('pickupSuccessMessage', null)" class="text-avocado-700 hover:text-avocado-900 font-bold text-sm px-2.5 py-1 rounded-lg hover:bg-avocado-100 transition">
-                ✕
+            <button wire:click="$set('pickupSuccessMessage', null)" class="text-avocado-700 hover:text-avocado-900 font-bold text-sm px-2.5 py-1 rounded-lg hover:bg-avocado-100 transition cursor-pointer">
+                <i data-lucide="x" class="w-4 h-4"></i>
             </button>
         </div>
     @endif
@@ -23,9 +23,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 pt-5 pb-4 border-b border-wheat-200">
             <div class="flex items-center gap-3">
                 <span class="p-2.5 rounded-xl bg-sunglow-100 text-darkbrown-800 border border-sunglow-200">
-                    <svg class="w-5 h-5 text-darkbrown-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                    </svg>
+                    <i data-lucide="package-check" class="w-5 h-5 text-darkbrown-800"></i>
                 </span>
                 <div>
                     <div class="flex items-center gap-2">
@@ -41,10 +39,8 @@
 
             <!-- Search Bar -->
             <div class="w-full sm:w-80 relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="w-4 h-4 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-darkbrown-400">
+                    <i data-lucide="search" class="w-4 h-4"></i>
                 </div>
                 <x-text-input 
                     wire:model.live.debounce.250ms="searchPickup" 
@@ -65,9 +61,7 @@
                     <!-- Left: Customer info & Booking ID -->
                     <div class="flex items-center gap-4">
                         <div class="p-2.5 rounded-xl bg-wheat-100 border border-wheat-200 text-darkbrown-700 group-hover:bg-avocado-50 group-hover:border-avocado-200 group-hover:text-avocado-700 transition-colors shrink-0">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
+                            <i data-lucide="user" class="w-5 h-5"></i>
                         </div>
                         <div>
                             <div class="flex items-center gap-2 mb-0.5">
@@ -78,9 +72,7 @@
                             </div>
                             <div class="flex items-center gap-3 text-[11px] text-darkbrown-500">
                                 <span class="flex items-center gap-1">
-                                    <svg class="w-3.5 h-3.5 text-darkbrown-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-darkbrown-400 shrink-0"></i>
                                     {{ $order['rental_period'] }}
                                 </span>
                                 <span class="hidden sm:inline text-darkbrown-300">•</span>
@@ -99,17 +91,13 @@
                             {{ $order['status'] }}
                         </x-badge>
                         <div class="text-wheat-400 group-hover:text-avocado-500 transition-colors">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-                            </svg>
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
                         </div>
                     </div>
                 </div>
             @empty
                 <div class="p-16 text-center text-xs text-darkbrown-500 space-y-2">
-                    <svg class="w-12 h-12 mx-auto text-wheat-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                    <i data-lucide="file-question" class="w-12 h-12 mx-auto text-wheat-400"></i>
                     <p class="font-bold text-darkbrown-700">Tidak ada transaksi ditemukan</p>
                     <p class="text-[11px]">Gunakan kata kunci pencarian lain atau pastikan ada transaksi berstatus 'Siap Pickup'.</p>
                 </div>
@@ -145,7 +133,7 @@
                     class="bg-white rounded-2xl border border-wheat-200 shadow-tendaku-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto"
                 >
                     <!-- Modal Header -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 pt-5 pb-4 border-b border-wheat-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 pt-5 pb-4 border-b border-wheat-200 sticky top-0 bg-white/95 backdrop-blur-md z-20 rounded-t-2xl">
                         <div>
                             <div class="flex items-center gap-2 mb-1">
                                 <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-wheat-100 text-darkbrown-900 border border-wheat-200">
@@ -154,8 +142,8 @@
                                 <x-badge variant="sunglow" :dot="true">
                                     {{ $this->selectedOrder['status'] }}
                                 </x-badge>
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-avocado-600"></span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
                                     {{ $this->selectedOrder['payment_status'] }}
                                 </span>
                             </div>
@@ -168,16 +156,15 @@
                         <div class="flex items-center gap-2">
                             <button 
                                 x-on:click="showPickupModal = false" 
-                                class="p-2 rounded-xl text-darkbrown-400 hover:text-darkbrown-700 hover:bg-wheat-100 transition border border-transparent hover:border-wheat-200"
+                                class="p-2 rounded-xl text-darkbrown-400 hover:text-darkbrown-700 hover:bg-wheat-100 transition border border-transparent hover:border-wheat-200 cursor-pointer"
+                                title="Tutup"
                             >
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
+                                <i data-lucide="x" class="w-5 h-5"></i>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Modal Body -->
+                    <!-- Modal Body (Scrollable) -->
                     <div class="p-6 space-y-6">
 
                         <!-- Info Grid Customer & Kontak -->
@@ -186,13 +173,15 @@
                                 <span class="text-darkbrown-500 font-semibold block text-[11px]">Nomor Telepon / WhatsApp:</span>
                                 <div class="flex items-center justify-between">
                                     <span class="font-extrabold text-darkbrown-900 text-sm flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-avocado-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1.01 1.01 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                        </svg>
+                                        <i data-lucide="phone" class="w-4 h-4 text-emerald-700"></i>
                                         {{ $this->selectedOrder['phone'] }}
                                     </span>
-                                    <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $this->selectedOrder['phone']) }}" target="_blank" class="text-[11px] font-bold text-avocado-700 hover:text-avocado-900 bg-avocado-100 hover:bg-avocado-200 px-2.5 py-1 rounded-lg transition">
-                                        Chat WA ↗
+                                    {{-- Tombol Chat WA dengan Icon Resmi WhatsApp --}}
+                                    <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $this->selectedOrder['phone']) }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#25D366] hover:bg-[#20ba5a] px-3 py-1.5 rounded-xl shadow-sm hover:shadow transition-all active:scale-95">
+                                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                                        </svg>
+                                        <span>Chat WA</span>
                                     </a>
                                 </div>
                             </div>
@@ -200,9 +189,7 @@
                             <div class="p-3.5 rounded-2xl bg-wheat-50/70 border border-wheat-200/80 space-y-1">
                                 <span class="text-darkbrown-500 font-semibold block text-[11px]">Periode Sewa:</span>
                                 <span class="font-extrabold text-darkbrown-900 text-sm flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-avocado-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
+                                    <i data-lucide="calendar" class="w-4 h-4 text-emerald-700"></i>
                                     {{ $this->selectedOrder['rental_period'] }}
                                 </span>
                             </div>
@@ -213,9 +200,7 @@
                             <div class="flex justify-between items-center">
                                 <div>
                                     <h3 class="font-bold text-sm text-darkbrown-900 flex items-center gap-2">
-                                        <svg class="w-4 h-4 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                        </svg>
+                                        <i data-lucide="box" class="w-4 h-4 text-avocado-600"></i>
                                         Unit yang Akan Diserahkan
                                     </h3>
                                 </div>
@@ -242,9 +227,7 @@
                                                 </td>
                                                 <td class="py-3.5 px-4 font-mono font-bold text-darkbrown-800">
                                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-wheat-100 border border-wheat-200 text-xs">
-                                                        <svg class="w-3.5 h-3.5 text-darkbrown-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                                        </svg>
+                                                        <i data-lucide="scan-barcode" class="w-3.5 h-3.5 text-darkbrown-500"></i>
                                                         {{ $unit['barcode'] }}
                                                     </span>
                                                 </td>
@@ -263,140 +246,206 @@
                         <!-- 2. Verifikasi Identitas & Foto Penyewa -->
                         <div class="space-y-3">
                             <h3 class="font-bold text-sm text-darkbrown-900 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 012-2h2a2 2 0 012 2v1m-4 0h4" />
-                                </svg>
+                                <i data-lucide="id-card" class="w-4 h-4 text-avocado-600"></i>
                                 Verifikasi Foto Penyewa & KTP
                             </h3>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <!-- Foto Penyewa di Tempat -->
-                                <div class="p-4 rounded-2xl bg-wheat-50/70 border border-wheat-200 flex flex-col justify-between space-y-3">
-                                <div>
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="font-bold text-xs text-darkbrown-900">Foto Penyewa di Tempat</span>
-                                        @if($this->isPhotoVerified)
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">✓ Foto Tersedia</span>
-                                        @else
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-wheat-200 text-darkbrown-700">Wajib Diunggah</span>
-                                        @endif
+                                <div class="p-4 rounded-2xl transition-all duration-200 border flex flex-col justify-between space-y-3 {{ $this->isPhotoVerified ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' : 'bg-wheat-50/70 border-wheat-200' }}">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="font-bold text-xs text-darkbrown-900">Foto Penyewa di Tempat</span>
+                                            @if($this->isPhotoVerified)
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                    Terverifikasi
+                                                </span>
+                                            @else
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">Wajib Diunggah</span>
+                                            @endif
+                                        </div>
+                                        <p class="text-[11px] text-darkbrown-600">Ambil/unggah foto penyewa fisik saat serah terima barang.</p>
                                     </div>
-                                    <p class="text-[11px] text-darkbrown-600">Ambil/unggah foto penyewa fisik saat serah terima barang.</p>
+
+                                    <!-- Photo Upload Input & Thumbnail Preview -->
+                                    <div class="space-y-2">
+                                        @if($tenantPhoto)
+                                            <div class="p-2 rounded-xl bg-white border border-emerald-300 text-center space-y-1.5 shadow-sm">
+                                                <img src="{{ $tenantPhoto->temporaryUrl() }}" alt="Preview Foto Penyewa" class="h-24 mx-auto object-cover rounded-lg border border-wheat-200 shadow-inner" />
+                                                <span class="text-[10px] font-bold text-emerald-800 flex items-center justify-center gap-1">
+                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                    Foto Penyewa Siap
+                                                </span>
+                                            </div>
+                                        @elseif($this->isPhotoVerified)
+                                            <div class="p-2 rounded-xl bg-white border border-emerald-300 flex items-center gap-2 shadow-sm">
+                                                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                                </div>
+                                                <span class="text-xs font-bold text-emerald-800">Foto penyewa telah tersimpan</span>
+                                            </div>
+                                        @endif
+
+                                        <label class="w-full cursor-pointer flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition duration-200 shadow-sm {{ $this->isPhotoVerified ? 'bg-white text-emerald-800 border-2 border-emerald-300 hover:bg-emerald-50' : 'bg-avocado-600 hover:bg-avocado-700 text-white' }}">
+                                            <i data-lucide="camera" class="w-4 h-4"></i>
+                                            <span>{{ $this->isPhotoVerified ? 'Ganti Foto Penyewa' : 'Upload / Ambil Foto' }}</span>
+                                            <input type="file" wire:model="tenantPhoto" accept="image/*" class="hidden" />
+                                        </label>
+                                        @error('tenantPhoto')
+                                            <p class="text-[10px] text-red-600 font-semibold">{{ $message }}</p>
+                                        @enderror
+                                    </div>
                                 </div>
 
-                                <!-- Photo Upload Input & Preview -->
-                                <div class="space-y-2">
-                                    @if($tenantPhoto)
-                                        <div class="p-2 rounded-xl bg-white border border-wheat-300 text-center space-y-1 shadow-sm">
-                                            <img src="{{ $tenantPhoto->temporaryUrl() }}" alt="Preview Foto Penyewa" class="h-24 mx-auto object-cover rounded-lg border border-wheat-200" />
-                                            <span class="text-[10px] font-bold text-avocado-700 block">✓ Foto Penyewa Siap</span>
+                                <!-- Verifikasi KTP -->
+                                <div class="p-4 rounded-2xl transition-all duration-200 border flex flex-col justify-between space-y-3 {{ $tenantKtpUploaded ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' : 'bg-wheat-50/70 border-wheat-200' }}">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="font-bold text-xs text-darkbrown-900">Kartu Tanda Penduduk (KTP)</span>
+                                            @if($tenantKtpUploaded)
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                    Terverifikasi
+                                                </span>
+                                            @else
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">Belum Verified</span>
+                                            @endif
                                         </div>
-                                    @endif
+                                        <p class="text-[11px] text-darkbrown-600">Verifikasi NIK dan foto KTP fisik penyewa sebagai jaminan sewa.</p>
+                                    </div>
 
-                                    <label class="w-full cursor-pointer flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition duration-200 shadow-sm {{ $this->isPhotoVerified ? 'bg-avocado-100 text-avocado-800 border border-avocado-300' : 'bg-avocado-600 hover:bg-avocado-700 text-white' }}">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <span>{{ $tenantPhoto ? 'Ganti Foto' : 'Upload / Ambil Foto' }}</span>
-                                        <input type="file" wire:model="tenantPhoto" accept="image/*" class="hidden" />
-                                    </label>
-                                    @error('tenantPhoto')
-                                        <p class="text-[10px] text-red-600 font-semibold">{{ $message }}</p>
-                                    @enderror
+                                    <div>
+                                        @if($tenantKtpUploaded)
+                                            <div class="p-3 rounded-xl bg-white border border-emerald-300 flex items-center justify-between shadow-sm mb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <i data-lucide="id-card" class="w-4 h-4 text-emerald-700"></i>
+                                                    <span class="text-xs font-bold text-emerald-900">KTP Fisik Sudah Dicocokkan</span>
+                                                </div>
+                                                <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                                </span>
+                                            </div>
+                                        @endif
+
+                                        <button 
+                                            wire:click="markTenantKtpUploaded" 
+                                            type="button"
+                                            class="w-full py-2 px-3 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 {{ $tenantKtpUploaded ? 'bg-white text-emerald-800 border-2 border-emerald-300 cursor-default' : 'bg-avocado-600 hover:bg-avocado-700 text-white cursor-pointer active:scale-95' }}"
+                                            {{ $tenantKtpUploaded ? 'disabled' : '' }}
+                                        >
+                                            @if($tenantKtpUploaded)
+                                                <i data-lucide="check-check" class="w-4 h-4 text-emerald-600"></i>
+                                                <span>KTP Terverifikasi (Selesai)</span>
+                                            @else
+                                                <i data-lucide="id-card" class="w-4 h-4"></i>
+                                                <span>Verifikasi KTP Penyewa</span>
+                                            @endif
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Verifikasi KTP -->
-                            <div class="p-4 rounded-2xl bg-wheat-50/70 border border-wheat-200 flex flex-col justify-between space-y-3">
-                                <div>
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="font-bold text-xs text-darkbrown-900">Kartu Tanda Penduduk (KTP)</span>
-                                        @if($tenantKtpUploaded)
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">✓ KTP Verified</span>
-                                        @else
-                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-wheat-200 text-darkbrown-700">Belum Verified</span>
-                                        @endif
+                        <!-- 3. Checklist Serah Terima Fisik (Interaktif Hijau Terang Saat Dicentang) -->
+                        <div class="p-5 rounded-2xl bg-wheat-50/70 border border-wheat-200 space-y-3">
+                            <h3 class="font-bold text-xs text-darkbrown-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="list-checks" class="w-4 h-4 text-avocado-600"></i>
+                                Checklist Serah Terima Fisik
+                            </h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                                {{-- Checklist 1: Identitas sesuai --}}
+                                <label class="p-3.5 rounded-2xl border transition-all duration-200 flex items-center gap-3 cursor-pointer select-none font-extrabold text-xs shadow-sm {{ $checkIdentity ? 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-300/60 shadow-emerald-950/10' : 'bg-white border-wheat-200 text-darkbrown-900 hover:border-avocado-300 hover:bg-wheat-50/50' }}">
+                                    <input 
+                                        type="checkbox" 
+                                        wire:model.live="checkIdentity" 
+                                        class="rounded-lg border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-5 h-5 transition cursor-pointer" 
+                                    />
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Identitas Sesuai</p>
+                                        <p class="text-[10px] font-normal {{ $checkIdentity ? 'text-emerald-700 font-semibold' : 'text-darkbrown-400' }}">KTP & identitas cocok</p>
                                     </div>
-                                    <p class="text-[11px] text-darkbrown-600">Verifikasi NIK dan foto KTP fisik penyewa sebagai jaminan sewa.</p>
-                                </div>
-
-                                <button 
-                                    wire:click="markTenantKtpUploaded" 
-                                    class="w-full py-2 px-3 rounded-xl text-xs font-bold transition duration-200 shadow-sm flex items-center justify-center gap-1.5 {{ $tenantKtpUploaded ? 'bg-avocado-100 text-avocado-800 border border-avocado-300 cursor-default' : 'bg-avocado-600 hover:bg-avocado-700 text-white cursor-pointer' }}"
-                                    {{ $tenantKtpUploaded ? 'disabled' : '' }}
-                                >
-                                    @if($tenantKtpUploaded)
-                                        <svg class="w-4 h-4 text-avocado-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        <span>KTP Terverifikasi</span>
-                                    @else
-                                        <span>🪪 Verifikasi KTP Penyewa</span>
+                                    @if($checkIdentity)
+                                        <span class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-black text-xs shrink-0 animate-fade-in">
+                                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                        </span>
                                     @endif
-                                </button>
+                                </label>
+
+                                {{-- Checklist 2: Semua unit sesuai --}}
+                                <label class="p-3.5 rounded-2xl border transition-all duration-200 flex items-center gap-3 cursor-pointer select-none font-extrabold text-xs shadow-sm {{ $checkUnits ? 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-300/60 shadow-emerald-950/10' : 'bg-white border-wheat-200 text-darkbrown-900 hover:border-avocado-300 hover:bg-wheat-50/50' }}">
+                                    <input 
+                                        type="checkbox" 
+                                        wire:model.live="checkUnits" 
+                                        class="rounded-lg border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-5 h-5 transition cursor-pointer" 
+                                    />
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Semua Unit Sesuai</p>
+                                        <p class="text-[10px] font-normal {{ $checkUnits ? 'text-emerald-700 font-semibold' : 'text-darkbrown-400' }}">Barang fisik dicek kasir</p>
+                                    </div>
+                                    @if($checkUnits)
+                                        <span class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-black text-xs shrink-0 animate-fade-in">
+                                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                        </span>
+                                    @endif
+                                </label>
+
+                                {{-- Checklist 3: Barang diserahkan --}}
+                                <label class="p-3.5 rounded-2xl border transition-all duration-200 flex items-center gap-3 cursor-pointer select-none font-extrabold text-xs shadow-sm {{ $checkHandover ? 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-300/60 shadow-emerald-950/10' : 'bg-white border-wheat-200 text-darkbrown-900 hover:border-avocado-300 hover:bg-wheat-50/50' }}">
+                                    <input 
+                                        type="checkbox" 
+                                        wire:model.live="checkHandover" 
+                                        class="rounded-lg border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-5 h-5 transition cursor-pointer" 
+                                    />
+                                    <div class="flex-1 min-w-0">
+                                        <p class="leading-tight">Barang Diserahkan</p>
+                                        <p class="text-[10px] font-normal {{ $checkHandover ? 'text-emerald-700 font-semibold' : 'text-darkbrown-400' }}">Diterima oleh penyewa</p>
+                                    </div>
+                                    @if($checkHandover)
+                                        <span class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-black text-xs shrink-0 animate-fade-in">
+                                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                        </span>
+                                    @endif
+                                </label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. Checklist Serah Terima & Konfirmasi Button -->
-                    <div class="p-4 rounded-2xl bg-wheat-50/70 border border-wheat-200 space-y-3">
-                        <h3 class="font-bold text-xs text-darkbrown-900 uppercase tracking-wider flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Checklist Serah Terima Fisik
-                        </h3>
-
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                            <label class="p-3 rounded-xl border border-wheat-200 bg-white hover:border-avocado-300 transition-all flex items-center gap-2.5 cursor-pointer select-none font-bold text-xs text-darkbrown-900 shadow-sm">
-                                <input 
-                                    type="checkbox" 
-                                    wire:model.live="checkIdentity" 
-                                    class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500/30 w-4 h-4" 
-                                />
-                                <span>Identitas sesuai</span>
-                            </label>
-
-                            <label class="p-3 rounded-xl border border-wheat-200 bg-white hover:border-avocado-300 transition-all flex items-center gap-2.5 cursor-pointer select-none font-bold text-xs text-darkbrown-900 shadow-sm">
-                                <input 
-                                    type="checkbox" 
-                                    wire:model.live="checkUnits" 
-                                    class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500/30 w-4 h-4" 
-                                />
-                                <span>Semua unit sesuai</span>
-                            </label>
-
-                            <label class="p-3 rounded-xl border border-wheat-200 bg-white hover:border-avocado-300 transition-all flex items-center gap-2.5 cursor-pointer select-none font-bold text-xs text-darkbrown-900 shadow-sm">
-                                <input 
-                                    type="checkbox" 
-                                    wire:model.live="checkHandover" 
-                                    class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500/30 w-4 h-4" 
-                                />
-                                <span>Barang diserahkan</span>
-                            </label>
+                    <!-- Sticky Modal Footer (Melayang di Bawah Modal) -->
+                    <div class="sticky bottom-0 bg-white/95 backdrop-blur-md px-6 py-4 border-t border-wheat-200 rounded-b-2xl shadow-lg z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div class="w-full sm:w-auto">
+                            @if(!$this->isPickupReady)
+                                <div class="text-[11px] font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
+                                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                    <span>Lengkapi foto, KTP, dan 3 checklist untuk konfirmasi.</span>
+                                </div>
+                            @else
+                                <div class="text-[11px] font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-300 flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span>Semua syarat lengkap! Siap konfirmasi serah terima.</span>
+                                </div>
+                            @endif
                         </div>
 
-                        @if(!$this->isPickupReady)
-                            <div class="p-3 rounded-xl bg-sunglow-100/70 border border-sunglow-300 text-darkbrown-900 text-xs flex items-center gap-2">
-                                <svg class="w-4 h-4 text-sunglow-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span class="font-medium text-[11px]">Lengkapi upload foto, verifikasi KTP, dan centang 3 checklist di atas untuk konfirmasi.</span>
-                            </div>
-                        @endif
-
-                        <div class="flex justify-end pt-2">
+                        <!-- Tombol Konfirmasi Dinamis (Abu-abu saat disabled, Hijau Gradasi Aktif saat ready) -->
+                        <div class="w-full sm:w-auto">
                             <button 
+                                type="button"
                                 wire:click="confirmPickup"
                                 x-on:click="if ({{ $this->isPickupReady ? 'true' : 'false' }}) { showPickupModal = false }"
-                                class="w-full sm:w-auto py-2.5 px-6 rounded-xl font-bold text-xs tracking-wider uppercase transition-all duration-200 shadow-sm flex items-center justify-center gap-2 {{ $this->isPickupReady ? 'bg-avocado-600 hover:bg-avocado-700 active:bg-avocado-800 text-white cursor-pointer shadow-tendaku-avocado-glow' : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300' }}"
+                                class="w-full sm:w-auto py-2.5 px-6 rounded-xl font-extrabold text-xs tracking-wider uppercase transition-all duration-200 shadow-sm flex items-center justify-center gap-2 {{ $this->isPickupReady ? 'bg-gradient-to-r from-emerald-600 to-avocado-600 hover:from-emerald-500 hover:to-avocado-500 text-white cursor-pointer shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/50 hover:scale-[1.02] active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300 opacity-80' }}"
                                 {{ !$this->isPickupReady ? 'disabled' : '' }}
                             >
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                </svg>
-                                <span>Konfirmasi Serah Terima Barang</span>
+                                @if(!$this->isPickupReady)
+                                    <i data-lucide="lock" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                    <span>Konfirmasi Serah Terima Barang</span>
+                                @else
+                                    <span class="p-0.5 rounded-md bg-white/20">
+                                        <i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>
+                                    </span>
+                                    <span>Konfirmasi Serah Terima Barang</span>
+                                @endif
                             </button>
                         </div>
                     </div>

@@ -16,9 +16,7 @@
                     <p class="text-4xl font-black tracking-tight leading-none" style="color: #f5e9c8;">{{ $totalAll }}</p>
                 </div>
                 <div class="p-2 rounded-xl" style="background: rgba(245,233,200,0.1);">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: rgba(245,233,200,0.6);">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
+                    <i data-lucide="package" class="w-5 h-5" style="color: rgba(245,233,200,0.6);"></i>
                 </div>
             </div>
             <p class="text-[10px] mt-3" style="color: rgba(245,233,200,0.45);">Semua inventaris terdaftar</p>
@@ -27,8 +25,9 @@
         </div>
 
         {{-- Tersedia --}}
+        {{-- Tersedia --}}
         <button wire:click="setTab('available')"
-                class="relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between min-h-[110px] text-left transition-all duration-200 {{ $filterStatus === 'available' ? 'ring-2 ring-avocado-500 ring-offset-1' : '' }}"
+                class="group relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between min-h-[110px] text-left transition-all duration-200 cursor-pointer border border-avocado-500/40 hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-950/20 hover:brightness-105 active:scale-[0.98] {{ $filterStatus === 'available' ? 'ring-2 ring-emerald-300 ring-offset-2 ring-offset-white' : '' }}"
                 style="background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 20px rgba(78,101,6,0.3);">
             <div class="flex items-start justify-between">
                 <div>
@@ -38,19 +37,20 @@
                     </div>
                     <p class="text-4xl font-black tracking-tight leading-none text-white">{{ $totalAvailable }}</p>
                 </div>
-                <div class="p-2 rounded-xl bg-white/10">
-                    <svg class="w-5 h-5 text-emerald-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                <div class="p-2 rounded-xl bg-white/10 group-hover:bg-white/20 transition-colors">
+                    <i data-lucide="circle-check" class="w-5 h-5 text-emerald-200"></i>
                 </div>
             </div>
-            <p class="text-[10px] mt-3 text-emerald-300">Siap disewakan sekarang</p>
+            <p class="text-[10px] mt-3 text-emerald-300 flex items-center justify-between">
+                <span>Siap disewakan sekarang</span>
+                
+            </p>
             <div class="absolute -right-4 -bottom-4 w-20 h-20 rounded-full opacity-10 bg-white"></div>
         </button>
 
         {{-- Sedang Disewa --}}
         <button wire:click="setTab('rented')"
-                class="relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between min-h-[110px] text-left transition-all duration-200 {{ $filterStatus === 'rented' ? 'ring-2 ring-amber-400 ring-offset-1' : '' }}"
+                class="group relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between min-h-[110px] text-left transition-all duration-200 cursor-pointer border border-amber-300/60 hover:border-amber-300 hover:shadow-xl hover:shadow-amber-950/20 hover:brightness-105 active:scale-[0.98] {{ $filterStatus === 'rented' ? 'ring-2 ring-amber-300 ring-offset-2 ring-offset-white' : '' }}"
                 style="background: linear-gradient(135deg, #92610a 0%, #a87012 60%, #bf8018 100%); box-shadow: 0 4px 20px rgba(146,97,10,0.3);">
             <div class="flex items-start justify-between">
                 <div>
@@ -60,19 +60,20 @@
                     </div>
                     <p class="text-4xl font-black tracking-tight leading-none text-white">{{ $totalRented }}</p>
                 </div>
-                <div class="p-2 rounded-xl bg-white/10">
-                    <svg class="w-5 h-5 text-amber-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+                <div class="p-2 rounded-xl bg-white/10 group-hover:bg-white/20 transition-colors">
+                    <i data-lucide="clock" class="w-5 h-5 text-amber-200"></i>
                 </div>
             </div>
-            <p class="text-[10px] mt-3 text-amber-300">Unit dibawa pelanggan</p>
+            <p class="text-[10px] mt-3 text-amber-300 flex items-center justify-between">
+                <span>Unit dibawa pelanggan</span>
+                
+            </p>
             <div class="absolute -right-4 -bottom-4 w-20 h-20 rounded-full opacity-10 bg-white"></div>
         </button>
 
         {{-- Perbaikan --}}
         <button wire:click="setTab('maintenance')"
-                class="relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between min-h-[110px] text-left transition-all duration-200 {{ $filterStatus === 'maintenance' ? 'ring-2 ring-red-400 ring-offset-1' : '' }}"
+                class="group relative overflow-hidden rounded-2xl p-5 flex flex-col justify-between min-h-[110px] text-left transition-all duration-200 cursor-pointer border border-red-500/40 hover:border-red-400 hover:shadow-xl hover:shadow-red-950/20 hover:brightness-105 active:scale-[0.98] {{ $filterStatus === 'maintenance' ? 'ring-2 ring-red-300 ring-offset-2 ring-offset-white' : '' }}"
                 style="background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 60%, #b91c1c 100%); box-shadow: 0 4px 20px rgba(127,29,29,0.3);">
             <div class="flex items-start justify-between">
                 <div>
@@ -82,13 +83,14 @@
                     </div>
                     <p class="text-4xl font-black tracking-tight leading-none text-white">{{ $totalMaintenance }}</p>
                 </div>
-                <div class="p-2 rounded-xl bg-white/10">
-                    <svg class="w-5 h-5 text-red-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
+                <div class="p-2 rounded-xl bg-white/10 group-hover:bg-white/20 transition-colors">
+                    <i data-lucide="settings-2" class="w-5 h-5 text-red-200"></i>
                 </div>
             </div>
-            <p class="text-[10px] mt-3 text-red-300">Tidak dapat disewakan</p>
+            <p class="text-[10px] mt-3 text-red-300 flex items-center justify-between">
+                <span>Tidak dapat disewakan</span>
+                
+            </p>
             <div class="absolute -right-4 -bottom-4 w-20 h-20 rounded-full opacity-10 bg-white"></div>
         </button>
     </div>
@@ -99,9 +101,7 @@
     @if (session()->has('success'))
         <div class="flex items-center gap-3 p-4 rounded-2xl bg-avocado-50 border border-avocado-200 shadow-sm">
             <div class="w-8 h-8 rounded-xl bg-avocado-600 flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                </svg>
+                <i data-lucide="check" class="w-4 h-4 text-white"></i>
             </div>
             <p class="text-xs font-semibold text-avocado-800">{{ session('success') }}</p>
         </div>
@@ -109,9 +109,7 @@
     @if (session()->has('error'))
         <div class="flex items-center gap-3 p-4 rounded-2xl bg-red-50 border border-red-200 shadow-sm">
             <div class="w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
+                <i data-lucide="x" class="w-4 h-4 text-white"></i>
             </div>
             <p class="text-xs font-semibold text-red-800">{{ session('error') }}</p>
         </div>
@@ -146,14 +144,30 @@
             </div>
 
             {{-- Search --}}
-            <div class="relative w-full sm:w-64">
-                <svg class="w-3.5 h-3.5 text-darkbrown-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-                <input wire:model.live.debounce.300ms="search"
+            <div class="relative w-full sm:w-72">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-darkbrown-400">
+                    {{-- Default Search Icon --}}
+                    <i data-lucide="search" wire:loading.remove wire:target="search" class="w-4 h-4"></i>
+                    {{-- Spinner Loading saat mengetik/mencari --}}
+                    <svg wire:loading wire:target="search" class="w-4 h-4 animate-spin text-avocado-600" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                </div>
+                <input wire:model.live.debounce.250ms="search"
                        type="text"
-                       placeholder="Cari kode, barcode, nama barang..."
-                       class="w-full pl-8 pr-4 py-2 text-xs rounded-xl border border-wheat-300 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500 bg-wheat-50/50 text-darkbrown-900 placeholder-darkbrown-400 transition">
+                       placeholder="Cari kode unit, barcode, nama..."
+                       class="w-full pl-9 pr-9 py-2 text-xs rounded-xl border border-wheat-300 focus:border-avocado-500 focus:ring-2 focus:ring-avocado-500/20 bg-wheat-50/50 text-darkbrown-900 placeholder-darkbrown-400 transition">
+                
+                {{-- Clear Search Button (Ikon X di kanan kolom) --}}
+                @if(!empty($search))
+                    <button type="button"
+                            wire:click="$set('search', '')"
+                            title="Hapus pencarian"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-darkbrown-400 hover:text-darkbrown-800 hover:bg-wheat-200/80 transition-all duration-150 cursor-pointer">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                @endif
             </div>
         </div>
 
@@ -226,21 +240,17 @@
                             <button wire:click="moveToAvailable({{ $unit->id }})"
                                     wire:loading.attr="disabled"
                                     class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white transition-all duration-150 shadow-sm
-                                           bg-avocado-600 hover:bg-avocado-700 active:scale-95">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                </svg>
+                                           bg-emerald-600 hover:bg-emerald-700 hover:shadow-md active:scale-95 cursor-pointer">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
                                 Selesai Perbaikan
                             </button>
                         </div>
                     @elseif($filterStatus === 'available')
                         <div class="shrink-0 flex justify-end">
                             <button @click="$dispatch('open-confirm-maintenance', { id: {{ $unit->id }}, code: '{{ $unit->unit_code }}' })"
-                                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 shadow-sm
-                                           text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 active:scale-95">
-                                <svg class="w-3.5 h-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                </svg>
+                                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 shadow-sm cursor-pointer
+                                           text-amber-900 bg-amber-50 border border-amber-300 hover:border-amber-400 hover:bg-amber-100/90 hover:shadow-md hover:shadow-amber-900/10 active:scale-95">
+                                <i data-lucide="settings-2" class="w-3.5 h-3.5 text-amber-700"></i>
                                 Kirim Perbaikan
                             </button>
                         </div>
@@ -251,9 +261,7 @@
                 <div class="py-16 text-center">
                     <div class="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
                          style="background: linear-gradient(135deg, #f0e8d4 0%, #e6dcc5 100%);">
-                        <svg class="w-8 h-8 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                        </svg>
+                        <i data-lucide="package" class="w-8 h-8 text-darkbrown-400"></i>
                     </div>
                     <p class="font-bold text-sm text-darkbrown-800">Tidak ada unit ditemukan</p>
                     <p class="text-xs text-darkbrown-400 mt-1">Coba ubah kata kunci pencarian atau pilih tab lain.</p>
@@ -261,12 +269,24 @@
             @endforelse
         </div>
 
-        {{-- Pagination --}}
-        @if($units->hasPages())
-            <div class="px-5 py-4 border-t border-wheat-100">
-                {{ $units->links() }}
+        {{-- Pagination & Footer Summary --}}
+        <div class="px-5 py-4 border-t border-wheat-200/80 bg-wheat-50/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+            {{-- Informasi Counter Data (Contoh: Menampilkan 1-12 dari 41 unit) --}}
+            <div class="text-xs text-darkbrown-600 font-medium">
+                @if($units->total() > 0)
+                    Menampilkan <span class="font-extrabold text-darkbrown-900">{{ $units->firstItem() }}</span> – <span class="font-extrabold text-darkbrown-900">{{ $units->lastItem() }}</span> dari <span class="font-extrabold text-avocado-800">{{ $units->total() }}</span> unit fisik
+                @else
+                    Menampilkan <span class="font-bold text-darkbrown-900">0</span> unit fisik
+                @endif
             </div>
-        @endif
+
+            {{-- Navigation Links Pagination --}}
+            @if($units->hasPages())
+                <div class="w-full sm:w-auto flex justify-center sm:justify-end">
+                    {{ $units->links() }}
+                </div>
+            @endif
+        </div>
     </div>
 
     {{-- ═══════════════════════════════════════════════════ --}}
@@ -305,10 +325,7 @@
                 {{-- Icon --}}
                 <div class="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
                      style="background: linear-gradient(135deg, #fef3c7, #fde68a);">
-                    <svg class="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
+                    <i data-lucide="settings-2" class="w-6 h-6 text-amber-600"></i>
                 </div>
 
                 <h3 class="text-base font-extrabold text-darkbrown-900 mb-1">Kirim ke Perbaikan?</h3>
