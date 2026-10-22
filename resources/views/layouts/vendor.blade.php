@@ -70,7 +70,7 @@
                     </button>
 
                     <!-- View Website Link -->
-                    <a href="{{ url('/') }}"
+                    <!-- <a href="{{ url('/') }}"
                        class="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150"
                        style="background: #f0e8d4; color: #4a3520; border: 1px solid #ddd0b0;"
                        onmouseover="this.style.background='#e6dcc5';"
@@ -79,35 +79,45 @@
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                         </svg>
-                    </a>
+                    </a> -->
 
                     <!-- Divider -->
                     <div class="w-px h-6 mx-1" style="background: #e8e0cc;"></div>
 
-                    <!-- User Pill & Logout -->
+                    <!-- User Pill (Clickable Profile) & Logout -->
                     <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-xl font-bold flex items-center justify-center text-xs text-white"
-                             style="background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 2px 8px rgba(108,139,8,0.3);">
-                            {{ strtoupper(substr(auth()->user()->name ?? 'TK', 0, 2)) }}
-                        </div>
-                        <div class="hidden sm:block">
-                            <p class="text-xs font-bold leading-none" style="color: #2b2202;">
-                                @if (auth()->user()?->isVendorOwner())
-                                    Owner ({{ auth()->user()->name }})
-                                @elseif (auth()->user()?->isVendorAdmin())
-                                    Admin ({{ auth()->user()->name }})
-                                @else
-                                    {{ auth()->user()?->name ?? 'Staf Vendor' }}
-                                @endif
-                            </p>
-                            <p class="text-[10px] mt-0.5 truncate max-w-[120px]" style="color: #9a8060;">
-                                {{ auth()->user()?->isVendorOwner()
-                                    ? 'Vendor Owner Portal'
-                                    : (auth()->user()?->isVendorAdmin()
-                                        ? 'Vendor Admin Portal'
-                                        : 'Kasir & Admin Portal') }}
-                            </p>
-                        </div>
+                        @php
+                            $profileRoute = auth()->user()?->isVendorAdmin()
+                                ? route('kasir.profile')
+                                : route('profile');
+                        @endphp
+                        <a href="{{ $profileRoute }}"
+                           wire:navigate
+                           class="flex items-center gap-2.5 p-1 -m-1 rounded-2xl hover:bg-wheat-100/80 transition-all duration-150 group cursor-pointer"
+                           title="Lihat Profil Kasir">
+                            <div class="w-8 h-8 rounded-xl font-bold flex items-center justify-center text-xs text-white transition-transform group-hover:scale-105 duration-150 shadow-sm"
+                                 style="background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 2px 8px rgba(108,139,8,0.3);">
+                                {{ strtoupper(substr(auth()->user()->name ?? 'TK', 0, 2)) }}
+                            </div>
+                            <div class="hidden sm:block text-left">
+                                <p class="text-xs font-bold leading-none text-darkbrown-900 group-hover:text-avocado-800 transition-colors">
+                                    @if (auth()->user()?->isVendorOwner())
+                                        Owner ({{ auth()->user()->name }})
+                                    @elseif (auth()->user()?->isVendorAdmin())
+                                        Admin ({{ auth()->user()->name }})
+                                    @else
+                                        {{ auth()->user()?->name ?? 'Staf Vendor' }}
+                                    @endif
+                                </p>
+                                <p class="text-[10px] mt-0.5 truncate max-w-[120px] text-darkbrown-500 group-hover:text-darkbrown-700 transition-colors">
+                                    {{ auth()->user()?->isVendorOwner()
+                                        ? 'Vendor Owner Portal'
+                                        : (auth()->user()?->isVendorAdmin()
+                                            ? 'Vendor Admin Portal'
+                                            : 'Kasir & Admin Portal') }}
+                                </p>
+                            </div>
+                        </a>
 
                         <!-- Form Logout -->
                         <form method="POST" action="{{ route('logout') }}" class="inline-block ml-1">

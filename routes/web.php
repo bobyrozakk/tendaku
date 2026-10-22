@@ -12,6 +12,7 @@ use App\Http\Controllers\Vendor\OwnerDashboardController;
 use App\Http\Controllers\Vendor\ProductController;
 use App\Http\Controllers\Vendor\UnitController;
 use App\Http\Controllers\Webhook\MidtransWebhookController;
+use App\Livewire\Kasir\ProfileKasir;
 use Illuminate\Support\Facades\Route;
 
 // 1. Beranda (Home)
@@ -111,6 +112,7 @@ Route::middleware(['auth', 'verified', 'role:vendor_admin', 'vendor.active'])
         Route::view('units', 'kasir.units.index')->name('units');
         Route::view('pickup', 'kasir.pickup.index')->name('pickup');
         Route::view('return', 'kasir.return.index')->name('return');
+        Route::get('profile', ProfileKasir::class)->name('profile');
     });
 
 // Rute khusus Owner Vendor
