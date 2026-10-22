@@ -1,111 +1,31 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <div class="flex items-center gap-2 mb-1.5">
-                    @if (auth()->user()?->isSuperAdmin())
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-darkbrown-100 text-darkbrown-800 border border-darkbrown-300">
-                            <span class="w-1.5 h-1.5 rounded-full bg-darkbrown-700"></span>
-                            Role: Super Admin
-                        </span>
-                    @elseif (auth()->user()?->isVendorOwner())
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-300">
-                            <span class="w-1.5 h-1.5 rounded-full bg-avocado-600 animate-pulse"></span>
-                            Role: Owner (Pemilik Toko)
-                        </span>
-                    @elseif (auth()->user()?->isVendorAdmin())
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-goldenrod-100 text-goldenrod-800 border border-goldenrod-300">
-                            <span class="w-1.5 h-1.5 rounded-full bg-goldenrod-600 animate-pulse"></span>
-                            Role: Vendor (Kasir / Admin)
-                        </span>
-                    @endif
-
-                    @if (auth()->user()?->vendor)
-                        <span class="text-xs text-darkbrown-500 font-semibold">• {{ auth()->user()->vendor->name }}</span>
-                    @endif
-                </div>
-
-                <h2 class="font-extrabold text-2xl text-darkbrown-800 leading-tight">
-                    @if (auth()->user()?->isSuperAdmin())
-                        Hi Superadmin {{ auth()->user()?->name ? '(' . auth()->user()->name . ')' : '' }}
-                    @elseif (auth()->user()?->isVendorOwner())
-                        Selamat datang Owner {{ auth()->user()?->name ? '(' . auth()->user()->name . ')' : '' }}
-                    @elseif (auth()->user()?->isVendorAdmin())
-                        Selamat datang Vendor {{ auth()->user()?->name ? '(' . auth()->user()->name . ')' : '' }}
-                    @else
-                        {{ __('Dashboard Tendaku') }}
-                    @endif
-                </h2>
-                <p class="text-xs text-darkbrown-500 mt-0.5">Selamat datang di sistem manajemen rental perlengkapan camping</p>
-            </div>
-            <a href="{{ url('/design-system') }}" class="btn-tendaku-accent !py-2 !px-3.5 text-xs font-bold">
-                🎨 Lihat Template Desain
-            </a>
-        </div>
-    </x-slot>
-
+<x-layouts.admin :title="'Dashboard Super Admin - Tendaku'">
     <div class="space-y-6">
-        <!-- Stat Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <x-stat-card
-                title="Total Persewaan Aktif"
-                value="14 Unit"
-                trend="+2 hari ini"
-                :trendUp="true"
-                description="Status disewa dan di lapangan"
-                color="avocado"
-            />
-            <x-stat-card
-                title="Booking Menunggu Diambil"
-                value="6 Pesanan"
-                description="Siap diserahterimakan"
-                color="goldenrod"
-            />
-            <x-stat-card
-                title="Stok Unit Siap Sewa"
-                value="78 Unit"
-                description="Kondisi bersih & kering"
-                color="sunglow"
-            />
-            <x-stat-card
-                title="Jatuh Tempo Pengembalian"
-                value="3 Transaksi"
-                trend="Perlu cek kondisi"
-                :trendUp="false"
-                description="Hari ini sebelum 18:00 WIB"
-                color="dark"
-            />
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="mb-2 flex flex-wrap items-center gap-2">
+                    <x-badge variant="dark" :dot="true">Super Administrator</x-badge>
+                    <span class="text-xs font-medium text-darkbrown-400">Akses penuh seluruh tenant Tendaku</span>
+                </div>
+
+                <h1 class="text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
+                    Dashboard Super Admin
+                </h1>
+                <p class="mt-1 max-w-2xl text-sm text-darkbrown-500">
+                    Pantau performa GMV, tren transaksi, dan kelola persetujuan vendor dari satu halaman.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="#kelola-vendor" class="btn-tendaku-primary !px-3.5 !py-2 text-xs">
+                    Kelola Vendor
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                </a>
+            </div>
         </div>
 
-        <!-- Action Quick Links -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <x-card title="Portal Vendor & POS Kasir" subtitle="Kelola transaksi langsung di toko dan serah terima unit">
-                <p class="text-xs text-darkbrown-600 mb-4">
-                    Catat persewaan offline baru, cetak invoice nota, dan periksa kondisi tenda saat dikembalikan oleh pelanggan.
-                </p>
-                <div class="flex items-center gap-2">
-                    <a href="{{ route('vendor.dashboard') }}" class="btn-tendaku-primary !py-1.5 !px-3 text-xs">
-                        Buka POS Kasir
-                    </a>
-                    <a href="{{ route('vendor.products.index') }}" class="btn-tendaku-secondary !py-1.5 !px-3 text-xs">
-                        Kelola Inventori Alat
-                    </a>
-                </div>
-            </x-card>
-
-            <x-card title="Katalog & Pemesanan Pelanggan" subtitle="Tampilan publik untuk calon penyewa alat camping">
-                <p class="text-xs text-darkbrown-600 mb-4">
-                    Pratinjau tampilan katalog alat camping, pemilihan tanggal sewa, serta alur checkout dan pembayaran online.
-                </p>
-                <div class="flex items-center gap-2">
-                    <a href="{{ url('/') }}" class="btn-tendaku-primary !py-1.5 !px-3 text-xs">
-                        Lihat Beranda Pelanggan
-                    </a>
-                    <a href="{{ url('/design-system') }}" class="btn-tendaku-secondary !py-1.5 !px-3 text-xs font-bold">
-                        Panduan Template Desain
-                    </a>
-                </div>
-            </x-card>
-        </div>
+        <livewire:admin.gmv-dashboard />
+        <livewire:admin.vendor-manager />
     </div>
-</x-app-layout>
+</x-layouts.admin>

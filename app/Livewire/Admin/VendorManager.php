@@ -25,6 +25,11 @@ class VendorManager extends Component
 
     protected $paginationTheme = 'tailwind';
 
+    public function mount(): void
+    {
+        $this->ensureSuperAdmin();
+    }
+
     public function updatingSearch(): void
     {
         $this->resetPage();
@@ -37,6 +42,8 @@ class VendorManager extends Component
 
     public function confirmAction(int $vendorId, string $action): void
     {
+        $this->ensureSuperAdmin();
+
         $this->vendorToConfirm = $vendorId;
         $this->actionType = $action;
     }
@@ -49,6 +56,8 @@ class VendorManager extends Component
 
     public function executeAction(): void
     {
+        $this->ensureSuperAdmin();
+
         if (! $this->vendorToConfirm) {
             return;
         }
@@ -56,7 +65,7 @@ class VendorManager extends Component
         $vendor = Vendor::find($this->vendorToConfirm);
         if (! $vendor) {
             $this->feedbackMessage = 'Vendor tidak ditemukan.';
-            $this->feedbackType = 'error';
+            $this->feedbackType = 'danger';
             $this->cancelAction();
 
             return;
@@ -69,10 +78,11 @@ class VendorManager extends Component
             default => null,
         };
 
+        $this->dispatch('vendor-updated');
         $this->cancelAction();
     }
 
-    public function approveVendor(Vendor $vendor): void
+    protected function approveVendor(Vendor $vendor): void
     {
         $vendor->update([
             'status' => 'active',
@@ -84,7 +94,7 @@ class VendorManager extends Component
         $this->feedbackType = 'success';
     }
 
-    public function suspendVendor(Vendor $vendor): void
+    protected function suspendVendor(Vendor $vendor): void
     {
         $vendor->update([
             'status' => 'suspended',
@@ -95,7 +105,7 @@ class VendorManager extends Component
         $this->feedbackType = 'warning';
     }
 
-    public function deleteVendor(Vendor $vendor): void
+    protected function deleteVendor(Vendor $vendor): void
     {
         $vendorName = $vendor->name;
         $vendor->delete();
@@ -106,10 +116,9 @@ class VendorManager extends Component
 
     public function render(): View
     {
-        $query = Vendor::with(['approvedBy', 'staff' => function ($q) {
-            $q->where('role', 'vendor_owner');
-        }])
-            ->withCount(['items', 'rentals']);
+        $this->ensureSuperAdmin();
+
+        $query = Vendor::withCount(['items', 'rentals']);
 
         if ($this->filterStatus !== 'all') {
             $query->where('status', $this->filterStatus);
@@ -130,12 +139,19 @@ class VendorManager extends Component
         $pendingCount = Vendor::where('status', 'pending')->count();
         $activeCount = Vendor::where('status', 'active')->count();
         $suspendedCount = Vendor::where('status', 'suspended')->count();
+        $totalCount = Vendor::count();
 
         return view('livewire.admin.vendor-manager', [
             'vendors' => $vendors,
             'pendingCount' => $pendingCount,
             'activeCount' => $activeCount,
             'suspendedCount' => $suspendedCount,
+            'totalCount' => $totalCount,
         ]);
+    }
+
+    protected function ensureSuperAdmin(): void
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
     }
 }

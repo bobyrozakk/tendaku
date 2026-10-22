@@ -1,7 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\CatalogController;
@@ -78,30 +76,6 @@ Route::get('dashboard', function () {
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
-
-// Rute Panel Khusus Super Admin
-Route::middleware(['super_admin', 'verified'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-        Route::get('dashboard', [AdminDashboardController::class, 'index'])
-            ->name('dashboard');
-
-        Route::get('vendors', [AdminVendorController::class, 'index'])
-            ->name('vendors.index');
-
-        Route::patch('vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])
-            ->name('vendors.approve');
-
-        Route::patch('vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])
-            ->name('vendors.reject');
-
-        Route::patch('vendors/{vendor}/suspend', [AdminVendorController::class, 'suspend'])
-            ->name('vendors.suspend');
-
-        Route::delete('vendors/{vendor}', [AdminVendorController::class, 'destroy'])
-            ->name('vendors.destroy');
-    });
 
 // Rute Modul KASIR & POS Toko (Role: vendor_admin / Kasir)
 Route::middleware(['auth', 'verified', 'role:vendor_admin', 'vendor.active'])
