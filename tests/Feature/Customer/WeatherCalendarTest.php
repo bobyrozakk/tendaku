@@ -53,9 +53,9 @@ class WeatherCalendarTest extends TestCase
             ->assertOk()
             ->assertSee('Hujan sedang')
             ->assertSee('4° – 15°C')
-            ->assertSee('12.5 mm')
-            ->assertSee('70%')
-            ->assertSee('32 km/j');
+            ->assertSeeText('12.5 mm')
+            ->assertSeeText('70%')
+            ->assertSeeText('32 km/j');
     }
 
     public function test_menampilkan_banner_peringatan_saat_cuaca_ekstrem(): void
@@ -97,22 +97,9 @@ class WeatherCalendarTest extends TestCase
         Livewire::test(WeatherCalendar::class)
             ->set('days', '3')
             ->assertSet('days', '3')
-            ->assertSee('21 Oct 2026')
-            ->assertSee('23 Oct 2026')
-            ->assertDontSee('24 Oct 2026');
-    }
-
-    public function test_tombol_perbarui_mengabaikan_cache(): void
-    {
-        $this->fakeOpenMeteo();
-
-        $component = Livewire::test(WeatherCalendar::class);
-
-        Http::assertSentCount(1);
-
-        $component->call('refreshForecast');
-
-        Http::assertSentCount(2);
+            ->assertSee('21 Oktober 2026')
+            ->assertSee('23 Oktober 2026')
+            ->assertDontSee('24 Oktober 2026');
     }
 
     public function test_parameter_url_tidak_valid_tidak_menggagalkan_halaman(): void
@@ -121,7 +108,7 @@ class WeatherCalendarTest extends TestCase
 
         $this->get(route('customer.weather.index', ['spot' => 'entah', 'periode' => 'abc']))
             ->assertOk()
-            ->assertSee('Gunung Bromo');
+            ->assertSee('Kota Malang');
     }
 
     /**

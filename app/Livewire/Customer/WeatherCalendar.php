@@ -48,10 +48,20 @@ class WeatherCalendar extends Component
     ];
 
     /**
+     * Nama bulan dalam Bahasa Indonesia.
+     *
+     * @var array<int, string>
+     */
+    public const MONTH_NAMES = [
+        1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+    ];
+
+    /**
      * Kunci spot cuaca aktif (lihat config/weather.php).
      */
     #[Url(as: 'spot', history: true, keep: false)]
-    public string $spot = 'bromo';
+    public string $spot = 'gunung_bromo';
 
     /**
      * Panjang periode prakiraan dalam hitungan hari.
@@ -68,6 +78,10 @@ class WeatherCalendar extends Component
         $this->days = $this->resolveDays($this->days);
     }
 
+    /**
+     * Prakiraan sudah dimuat ulang otomatis oleh `wire:model.live`, sehingga
+     * perubahan spot/periode tidak memerlukan aksi pengguna tambahan.
+     */
     public function updatedSpot(): void
     {
         $this->spot = $this->resolveSpot($this->spot);
@@ -78,16 +92,6 @@ class WeatherCalendar extends Component
         $this->days = $this->resolveDays($this->days);
     }
 
-    /**
-     * Muat ulang prakiraan dengan mengabaikan cache yang tersimpan.
-     */
-    public function refreshForecast(WeatherService $weatherService): void
-    {
-        [$start, $end] = $this->period();
-
-        $weatherService->forget($this->spot, $start, $end);
-    }
-
     public function render(WeatherService $weatherService): View
     {
         [$start, $end] = $this->period();
@@ -96,9 +100,26 @@ class WeatherCalendar extends Component
 
         return view('livewire.customer.weather-calendar', [
             'forecast' => $this->enrich($forecast),
-            'spots' => $weatherService->availableSpots(),
+            'spotGroups' => $this->spotGroups(),
             'periodOptions' => self::PERIOD_OPTIONS,
         ]);
+    }
+
+    /**
+     * Daftar spot dikelompokkan per wilayah untuk dropdown bertingkat.
+     *
+     * @return array<string, array<string, string>> nama wilayah => (kunci => label)
+     */
+    protected function spotGroups(): array
+    {
+        $groups = [];
+
+        foreach ((array) config('weather.spots', []) as $key => $spot) {
+            $region = (string) ($spot['region'] ?? 'Lainnya');
+            $groups[$region][$key] = (string) ($spot['label'] ?? $key);
+        }
+
+        return $groups;
     }
 
     /**
@@ -138,34 +159,43 @@ class WeatherCalendar extends Component
 
             $day['icon'] = $this->iconFor((int) ($day['weather_code'] ?? 0));
             $day['day_name'] = self::DAY_NAMES[$date->format('l')] ?? $date->format('l');
+            $day['date_short'] = $date->format('d M');
+            $day['date_full'] = $date->day.' '.self::MONTH_NAMES[$date->month].' '.$date->year;
             $day['is_today'] = $date->isSameDay($today);
+            $day['temp_range'] = number_format((float) ($day['temp_min'] ?? 0), 0)
+                .'° – '
+                .number_format((float) ($day['temp_max'] ?? 0), 0).'°C';
 
             $days[] = $day;
         }
 
         $forecast['days'] = $days;
+        $forecast['extreme_days'] = array_values(array_filter(
+            $days,
+            fn (array $day): bool => (bool) ($day['is_extreme'] ?? false)
+        ));
 
         return $forecast;
     }
 
     /**
-     * Ikon emoji untuk kode cuaca WMO.
+     * Ikon Lucide untuk kode cuaca WMO (lihat https://lucide.dev/icons/).
      */
     protected function iconFor(int $weatherCode): string
     {
         return match (true) {
-            $weatherCode === 0 => '☀️',
-            $weatherCode === 1 => '🌤️',
-            $weatherCode === 2 => '⛅',
-            $weatherCode === 3 => '☁️',
-            in_array($weatherCode, [45, 48], true) => '🌫️',
-            in_array($weatherCode, [51, 53, 55, 56, 57], true) => '🌦️',
-            in_array($weatherCode, [61, 63, 65, 66, 67], true) => '🌧️',
-            in_array($weatherCode, [71, 73, 75, 77], true) => '🌨️',
-            in_array($weatherCode, [80, 81, 82], true) => '🌧️',
-            in_array($weatherCode, [85, 86], true) => '🌨️',
-            in_array($weatherCode, [95, 96, 99], true) => '⛈️',
-            default => '🌡️',
+            $weatherCode === 0 => 'sun',
+            $weatherCode === 1 => 'cloud-sun',
+            $weatherCode === 2 => 'cloud-sun',
+            $weatherCode === 3 => 'cloud',
+            in_array($weatherCode, [45, 48], true) => 'cloud-fog',
+            in_array($weatherCode, [51, 53, 55, 56, 57], true) => 'cloud-drizzle',
+            in_array($weatherCode, [61, 63, 65, 66, 67], true) => 'cloud-rain',
+            in_array($weatherCode, [71, 73, 75, 77], true) => 'cloud-snow',
+            in_array($weatherCode, [80, 81, 82], true) => 'cloud-rain-wind',
+            in_array($weatherCode, [85, 86], true) => 'cloud-snow',
+            in_array($weatherCode, [95, 96, 99], true) => 'cloud-lightning',
+            default => 'thermometer',
         };
     }
 

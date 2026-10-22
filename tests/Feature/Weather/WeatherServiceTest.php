@@ -33,14 +33,14 @@ class WeatherServiceTest extends TestCase
         ]);
 
         $result = app(WeatherService::class)->forecast(
-            'bromo',
+            'gunung_bromo',
             Carbon::parse('2026-10-20'),
             Carbon::parse('2026-10-21')
         );
 
         $this->assertFalse($result['error']);
         $this->assertNull($result['error_message']);
-        $this->assertSame('bromo', $result['spot']);
+        $this->assertSame('gunung_bromo', $result['spot']);
         $this->assertSame('Gunung Bromo', $result['label']);
         $this->assertCount(2, $result['days']);
 
@@ -66,7 +66,7 @@ class WeatherServiceTest extends TestCase
         ]);
 
         app(WeatherService::class)->forecast(
-            'bromo',
+            'gunung_bromo',
             Carbon::parse('2026-10-20'),
             Carbon::parse('2026-10-21')
         );
@@ -92,7 +92,7 @@ class WeatherServiceTest extends TestCase
         ]);
 
         $result = app(WeatherService::class)->forecast(
-            'bromo',
+            'gunung_bromo',
             Carbon::parse('2026-10-20'),
             Carbon::parse('2026-10-20')
         );
@@ -113,7 +113,7 @@ class WeatherServiceTest extends TestCase
         ]);
 
         $result = app(WeatherService::class)->forecast(
-            'bromo',
+            'gunung_bromo',
             Carbon::parse('2026-10-20'),
             Carbon::parse('2026-10-20')
         );
@@ -133,7 +133,7 @@ class WeatherServiceTest extends TestCase
         ]);
 
         $result = app(WeatherService::class)->forecast(
-            'bromo',
+            'gunung_bromo',
             Carbon::parse('2026-10-20'),
             Carbon::parse('2026-10-20')
         );
@@ -149,12 +149,12 @@ class WeatherServiceTest extends TestCase
 
         $service = app(WeatherService::class);
 
-        $service->forecast('bromo', Carbon::parse('2026-10-20'), Carbon::parse('2026-10-21'));
-        $service->forecast('bromo', Carbon::parse('2026-10-20'), Carbon::parse('2026-10-21'));
+        $service->forecast('gunung_bromo', Carbon::parse('2026-10-20'), Carbon::parse('2026-10-21'));
+        $service->forecast('gunung_bromo', Carbon::parse('2026-10-20'), Carbon::parse('2026-10-21'));
 
         Http::assertSentCount(1);
 
-        $service->forecast('bromo', Carbon::parse('2026-10-22'), Carbon::parse('2026-10-23'));
+        $service->forecast('gunung_bromo', Carbon::parse('2026-10-22'), Carbon::parse('2026-10-23'));
 
         Http::assertSentCount(2);
     }
@@ -166,7 +166,7 @@ class WeatherServiceTest extends TestCase
         ]);
 
         $result = app(WeatherService::class)->forecast(
-            'bromo',
+            'gunung_bromo',
             Carbon::parse('2027-06-01'),
             Carbon::parse('2027-06-05')
         );
@@ -174,7 +174,7 @@ class WeatherServiceTest extends TestCase
         $this->assertTrue($result['error']);
         $this->assertNotNull($result['error_message']);
         $this->assertSame([], $result['days']);
-        $this->assertSame('bromo', $result['spot']);
+        $this->assertSame('gunung_bromo', $result['spot']);
     }
 
     public function test_it_returns_safe_empty_structure_on_connection_failure(): void
@@ -184,7 +184,7 @@ class WeatherServiceTest extends TestCase
         ]);
 
         $result = app(WeatherService::class)->forecast(
-            'bromo',
+            'gunung_bromo',
             Carbon::parse('2026-10-20'),
             Carbon::parse('2026-10-21')
         );
@@ -224,9 +224,9 @@ class WeatherServiceTest extends TestCase
     {
         $spots = app(WeatherService::class)->availableSpots();
 
-        $this->assertArrayHasKey('bromo', $spots);
+        $this->assertArrayHasKey('gunung_bromo', $spots);
         $this->assertArrayHasKey('ranu_kumbolo', $spots);
-        $this->assertArrayHasKey('batu', $spots);
+        $this->assertArrayHasKey('kota_batu', $spots);
     }
 
     /**
