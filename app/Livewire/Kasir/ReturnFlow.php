@@ -45,6 +45,12 @@ class ReturnFlow extends Component
 
     public $finePaidSuccess = false;
 
+    /** Midtrans Snap token untuk pembayaran denda QRIS */
+    public $fineSnapToken = null;
+
+    /** Pesan error jika gagal memperoleh Snap token */
+    public $fineSnapError = null;
+
     // Struk Print Modal
     public $showReceiptModal = false;
 
@@ -89,6 +95,8 @@ class ReturnFlow extends Component
         $this->returnedItems = [];
         $this->showFineModal = false;
         $this->finePaidSuccess = false;
+        $this->fineSnapToken = null;
+        $this->fineSnapError = null;
 
         $order = $this->getActiveOrderProperty();
         if ($order) {

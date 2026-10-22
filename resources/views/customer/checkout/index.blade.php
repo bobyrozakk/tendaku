@@ -40,34 +40,82 @@
         isLoggedIn: {{ $isLoggedIn ? 'true' : 'false' }},
         pickupMethod: '{{ $booking['pickup_method'] }}',
         selectedChannel: 'qris',
+        paymentOption: 'full',
         subtotal: {{ $booking['subtotal'] }},
         deposit: {{ $booking['deposit'] }},
         deliveryFeeAmount: 25000,
+        dpAmount: {{ $booking['dp_amount'] ?? 0 }},
+        dpPercentage: {{ $booking['dp_percentage'] ?? 30 }},
+        isProcessing: false,
         get deliveryFee() {
             return (this.isLoggedIn && this.pickupMethod === 'delivery') ? this.deliveryFeeAmount : 0;
         },
         get grandTotal() {
             return this.subtotal + this.deposit + this.deliveryFee;
         },
+        get payableAmount() {
+            return (this.paymentOption === 'dp' && this.isLoggedIn) ? this.dpAmount : this.grandTotal;
+        },
         formatRupiah(num) {
             return 'Rp ' + (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         },
-        payWithMidtrans() {
-            // Validasi aturan: Opsi delivery hanya diizinkan untuk user login
+        async payWithMidtrans() {
             if (this.pickupMethod === 'delivery' && !this.isLoggedIn) {
                 window.location.href = '{{ route('login') }}';
                 return;
             }
 
-            // Panggil API Gateway Midtrans (Snap Ready)
-            window.tendakuMidtrans.pay({
-                bookingCode: '{{ $booking['booking_code'] }}',
-                grossAmount: this.grandTotal,
-                pickupMethod: this.pickupMethod,
-                selectedChannel: this.selectedChannel,
-                redirectUrl: '{{ route('booking.status', $booking['booking_code']) }}',
-                formAction: '{{ route('checkout.store') }}'
-            });
+            if (this.isProcessing) return;
+            this.isProcessing = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('_token', '{{ csrf_token() }}');
+                formData.append('pickup_method', this.pickupMethod);
+                formData.append('payment_option', this.paymentOption);
+                formData.append('payment_channel', this.selectedChannel);
+
+                const guestName = document.getElementById('guest_name');
+                const guestPhone = document.getElementById('guest_phone');
+                if (guestName) { formData.append('guest_name', guestName.value); }
+                if (guestPhone) { formData.append('guest_phone', guestPhone.value); }
+
+                const response = await fetch('{{ route('checkout.store') }}', {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert(data.message || 'Terjadi kesalahan. Silakan coba lagi.');
+                    this.isProcessing = false;
+                    return;
+                }
+
+                if (data.snap_token && typeof window.snap !== 'undefined') {
+                    window.snap.pay(data.snap_token, {
+                        onSuccess: () => { window.location.href = data.redirect_url; },
+                        onPending: () => { window.location.href = data.redirect_url; },
+                        onError: (result) => {
+                            alert('Pembayaran gagal: ' + (result.status_message || 'Terjadi kesalahan'));
+                            this.isProcessing = false;
+                        },
+                        onClose: () => { window.location.href = data.redirect_url; },
+                    });
+                } else if (data.snap_token) {
+                    // Snap.js belum tersedia — fallback ke simulasi
+                    window.dispatchEvent(new CustomEvent('open-midtrans-simulation', { detail: data }));
+                    this.isProcessing = false;
+                } else {
+                    alert('Gagal mendapatkan token pembayaran. Silakan coba lagi.');
+                    this.isProcessing = false;
+                }
+            } catch (err) {
+                alert('Koneksi bermasalah. Silakan periksa internet dan coba lagi.');
+                this.isProcessing = false;
+            }
         }
     }" class="py-2 sm:py-4">
 
@@ -280,11 +328,11 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-[11px] font-semibold text-darkbrown-600 mb-1">Nama Lengkap Tamu</label>
-                                    <input type="text" value="Budi Santoso" class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500" placeholder="Nama sesuai KTP">
+                                    <input type="text" name="guest_name" id="guest_name" class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500" placeholder="Nama sesuai KTP">
                                 </div>
                                 <div>
                                     <label class="block text-[11px] font-semibold text-darkbrown-600 mb-1">No. WhatsApp Aktif</label>
-                                    <input type="text" value="0857-8901-2345" class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500" placeholder="08xxxxxxxxxx">
+                                    <input type="text" name="guest_phone" id="guest_phone" class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500" placeholder="08xxxxxxxxxx">
                                 </div>
                             </div>
                             <p class="text-[11px] text-darkbrown-500">
@@ -423,7 +471,7 @@
                     <div class="mt-4 p-3 rounded-xl bg-wheat-100/70 border border-wheat-200 flex items-center justify-between text-xs">
                         <span class="text-darkbrown-600 font-medium">Total Durasi Pemakaian:</span>
                         <span class="font-extrabold text-darkbrown-900 bg-white px-2.5 py-1 rounded-lg border border-wheat-300">
-                            {{ $booking['rental_days'] }} Hari (2 Malam Camping)
+                            {{ $booking['rental_days'] }} Hari ({{ max(1, $booking['rental_days'] - 1) }} Malam)
                         </span>
                     </div>
                 </div>
@@ -620,6 +668,39 @@
                         </div>
                     </div>
 
+                    <!-- Opsi DP / Cicilan Awal (hanya untuk user login) -->
+                    @auth
+                    <div class="mt-5 pt-5 border-t border-wheat-200">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-3">
+                            Opsi Pembayaran
+                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Bayar Lunas -->
+                            <div @click="paymentOption = 'full'"
+                                 :class="paymentOption === 'full' ? 'border-avocado-500 bg-avocado-50 ring-2 ring-avocado-400/30' : 'border-wheat-200 bg-white hover:border-wheat-400'"
+                                 class="p-3.5 rounded-2xl border cursor-pointer transition">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <input type="radio" name="ui_payment_option" value="full" :checked="paymentOption === 'full'" @change="paymentOption = 'full'" class="text-avocado-600">
+                                    <span class="font-extrabold text-xs text-darkbrown-900">Bayar Lunas</span>
+                                </div>
+                                <p class="text-[10px] text-darkbrown-500 leading-relaxed pl-5">Bayar penuh langsung. Booking langsung terkonfirmasi.</p>
+                                <span x-text="formatRupiah(grandTotal)" class="block mt-1.5 pl-5 text-xs font-black text-avocado-800"></span>
+                            </div>
+                            <!-- Uang Muka (DP) -->
+                            <div @click="paymentOption = 'dp'"
+                                 :class="paymentOption === 'dp' ? 'border-goldenrod-500 bg-goldenrod-50 ring-2 ring-goldenrod-400/30' : 'border-wheat-200 bg-white hover:border-wheat-400'"
+                                 class="p-3.5 rounded-2xl border cursor-pointer transition">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <input type="radio" name="ui_payment_option" value="dp" :checked="paymentOption === 'dp'" @change="paymentOption = 'dp'" class="text-goldenrod-600">
+                                    <span class="font-extrabold text-xs text-darkbrown-900">Uang Muka (DP)</span>
+                                </div>
+                                <p class="text-[10px] text-darkbrown-500 leading-relaxed pl-5">Bayar <span x-text="dpPercentage + '%'"></span> sekarang, sisanya saat pengambilan barang.</p>
+                                <span x-text="formatRupiah(dpAmount)" class="block mt-1.5 pl-5 text-xs font-black text-goldenrod-800"></span>
+                            </div>
+                        </div>
+                    </div>
+                    @endauth
+
                     <!-- Payment Method Selector -->
                     <div class="mt-6 pt-5 border-t border-wheat-200">
                         <div class="flex items-center justify-between mb-3">
@@ -649,29 +730,34 @@
                         </div>
                     </div>
 
-                    <!-- FORM & TOMBOL BAYAR SEKARANG -->
+                    <!-- TOMBOL BAYAR SEKARANG -->
                     <div class="mt-6 pt-2">
-                        <form id="checkout-payment-form" action="{{ route('checkout.store') }}" method="POST">
-                            @csrf
-                            <input type="hidden" name="booking_code" value="{{ $booking['booking_code'] }}">
-                            <input type="hidden" name="pickup_method" :value="pickupMethod">
-                            <input type="hidden" name="amount" :value="grandTotal">
-                            <input type="hidden" name="payment_channel" :value="selectedChannel">
-
-                            <button
-                                type="button"
-                                x-on:click="payWithMidtrans()"
-                                class="w-full py-4 px-6 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 shadow-tendaku hover:shadow-tendaku-lg transition duration-200 flex items-center justify-center gap-2 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2"
-                            >
+                        <button
+                            type="button"
+                            x-on:click="payWithMidtrans()"
+                            :disabled="isProcessing"
+                            :class="isProcessing ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
+                            class="w-full py-4 px-6 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 group focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2"
+                        >
+                            <template x-if="!isProcessing">
                                 <svg class="w-5 h-5 text-darkbrown-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
-                                <span>Bayar Sekarang</span>
-                                <span x-text="formatRupiah(grandTotal)" class="font-mono text-sm font-black px-2 py-0.5 rounded-lg bg-darkbrown-800 text-sunglow-300 ml-1">
-                                    Rp {{ number_format($booking['grand_total'], 0, ',', '.') }}
-                                </span>
-                            </button>
-                        </form>
+                            </template>
+                            <template x-if="isProcessing">
+                                <svg class="w-5 h-5 animate-spin text-darkbrown-700" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
+                                </svg>
+                            </template>
+                            <span x-text="isProcessing ? 'Memproses...' : 'Bayar Sekarang'"></span>
+                            <span x-text="formatRupiah(payableAmount)" class="font-mono text-sm font-black px-2 py-0.5 rounded-lg bg-darkbrown-800 text-sunglow-300 ml-1">
+                                Rp {{ number_format($booking['grand_total'], 0, ',', '.') }}
+                            </span>
+                        </button>
+                        <p class="text-[10px] text-center text-darkbrown-500 mt-2">
+                            Pembayaran diproses aman melalui <strong>Midtrans</strong> — tidak menyimpan data kartu Anda.
+                        </p>
                     </div>
                 </div>
 
@@ -700,54 +786,12 @@
 
         </div>
     </div>
-    <!-- MODAL SIMULASI MIDTRANS SNAP -->
+    <!-- MODAL SIMULASI MIDTRANS SNAP (fallback jika Snap.js belum tersedia) -->
     <x-midtrans-simulation-modal :booking="$booking" />
 
-    <!--
-    ====================================================================================
-    ARSITEKTUR JAVASCRIPT MIDTRANS SNAP GATEWAY
-    ====================================================================================
-    Ketika Server Key dan Client Key Midtrans asli sudah tersedia di project:
-    1. Masukkan SDK Midtrans Snap di template:
-       <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ config('services.midtrans.client_key') }}"></script>
-    2. Ubah `window.tendakuMidtrans.isSimulation = false;`
-    3. Controller backend akan mengembalikan `snap_token`, dan fungsi window.tendakuMidtrans.pay()
-       akan langsung memicu `window.snap.pay(paymentData.snapToken, ...)` secara otomatis.
-    ====================================================================================
-    -->
-    <script>
-        window.tendakuMidtrans = {
-            // Ubah menjadi false saat Server Key & Client Key Midtrans asli siap
-            isSimulation: true,
-
-            pay: function(paymentData, callbacks = {}) {
-                // 1. JIKA SUDAH MENGGUNAKAN SNAP ASLI
-                if (!this.isSimulation && typeof window.snap !== 'undefined' && paymentData.snapToken) {
-                    window.snap.pay(paymentData.snapToken, {
-                        onSuccess: function(result) {
-                            if (callbacks.onSuccess) callbacks.onSuccess(result);
-                            window.location.href = paymentData.redirectUrl;
-                        },
-                        onPending: function(result) {
-                            if (callbacks.onPending) callbacks.onPending(result);
-                            window.location.href = paymentData.redirectUrl;
-                        },
-                        onError: function(result) {
-                            if (callbacks.onError) callbacks.onError(result);
-                            alert("Pembayaran belum berhasil: " + (result.status_message || "Dibatalkan"));
-                        },
-                        onClose: function() {
-                            if (callbacks.onClose) callbacks.onClose();
-                        }
-                    });
-                    return;
-                }
-
-                // 2. MODE SIMULASI SANDBOX DEMO (DEFAULT SEMENTARA)
-                window.dispatchEvent(new CustomEvent('open-midtrans-simulation', {
-                    detail: paymentData
-                }));
-            }
-        };
-    </script>
+    {{-- Midtrans Snap SDK Sandbox — aktif saat MIDTRANS_CLIENT_KEY tersedia di .env --}}
+    @if(config('services.midtrans.client_key'))
+    <script src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
+            data-client-key="{{ config('services.midtrans.client_key') }}"></script>
+    @endif
 </x-layouts.customer>
