@@ -27,6 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'nik',
         'role',
         'is_active',
+        'cart',
     ];
 
     protected $hidden = [
@@ -42,6 +43,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'nik' => 'encrypted',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'cart' => 'array',
         ];
     }
 

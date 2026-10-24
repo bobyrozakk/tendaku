@@ -7,6 +7,7 @@ use App\Models\MasterItem;
 use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\CartService;
 use App\Services\PhoneNumberNormalizer;
 use App\Services\RentalService;
 use Carbon\Carbon;
@@ -66,7 +67,7 @@ class CheckoutController extends Controller
             $pickupMethod = in_array($requestedMethod, ['self_pickup', 'delivery'], true) ? $requestedMethod : 'delivery';
         }
 
-        $cart = Session::get('booking_cart');
+        $cart = app(CartService::class)->get($user);
 
         $booking = is_array($cart) && ! empty($cart['master_item_id'])
             ? $this->bookingFromCart($cart, $pickupMethod, $isLoggedIn, $user)
@@ -88,7 +89,7 @@ class CheckoutController extends Controller
             return redirect()->route('login')->with('warning', 'Layanan pengantaran (delivery) mengharuskan Anda memiliki akun terverifikasi. Silakan masuk atau daftar akun terlebih dahulu.');
         }
 
-        $cart = Session::get('booking_cart');
+        $cart = app(CartService::class)->get(Auth::user());
 
         if (! is_array($cart) || empty($cart['master_item_id'])) {
             return redirect()->route('customer.catalog.index')
@@ -143,7 +144,7 @@ class CheckoutController extends Controller
 
         $rental = $this->applyPreviewBookingCode($rental, $request->input('booking_code'));
 
-        Session::forget('booking_cart');
+        app(CartService::class)->clear(Auth::user());
 
         $methodLabel = $pickupMethod === 'delivery' ? 'Diantar ke Lokasi (Kurir Vendor)' : 'Ambil di Tempat (Self-Pickup)';
 

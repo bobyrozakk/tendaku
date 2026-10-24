@@ -23,6 +23,10 @@ new #[Layout('layouts.guest')] class extends Component
 
         $user = auth()->user();
 
+        if ($user) {
+            app(\App\Services\CartService::class)->syncOnLogin($user);
+        }
+
         // Jika email belum diverifikasi, arahkan ke halaman verifikasi email (resend email)
         if (! $user->hasVerifiedEmail()) {
             $this->redirect(route('verification.notice', absolute: false), navigate: true);
