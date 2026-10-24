@@ -216,6 +216,6 @@ class ProductBooking extends Component
 
     public function render(): View
     {
-        return view('livewire.product-booking');
+        return view('livewire.customer.product-booking');
     }
 }
