@@ -199,13 +199,13 @@ class MidtransFinePaymentTest extends TestCase
         $finePayment = $rental->payments()->create([
             'vendor_id' => $rental->vendor_id,
             'payment_type' => 'fine',
-            'payment_method' => 'midtrans_snap',
+            'channel' => 'midtrans',
             'amount' => 50000,
-            'midtrans_order_id' => 'TENDA-INV-FINE-001',
+            'order_id' => 'TDK-INV-FINE-001',
             'status' => 'pending',
         ]);
 
-        $notification = $this->signedNotificationForOrder('TENDA-INV-FINE-001', '50000.00', 'settlement');
+        $notification = $this->signedNotificationForOrder('TDK-INV-FINE-001', '50000.00', 'settlement');
 
         $this->postJson(route('webhook.midtrans'), $notification)
             ->assertOk()

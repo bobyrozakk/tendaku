@@ -12,6 +12,7 @@ use App\Models\RentalDetail;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Services\AvailabilityService;
+use App\Services\PaymentService;
 use App\Services\RentalService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -130,7 +131,7 @@ class RentalServiceTest extends TestCase
         $this->assertLessThanOrEqual(20, strlen($rental->booking_code));
     }
 
-    public function test_create_booking_automatically_creates_pending_settlement_payment(): void
+    public function test_create_booking_creates_pending_payment_via_payment_service(): void
     {
         $this->createUnit($this->item1, 'TD-001');
 
@@ -144,14 +145,17 @@ class RentalServiceTest extends TestCase
             ],
         ]);
 
+        $payment = app(PaymentService::class)->createOnlinePayment($rental, 'full');
+
         $this->assertDatabaseHas('payments', [
             'rental_id' => $rental->id,
             'vendor_id' => $this->vendor->id,
-            'payment_type' => 'settlement',
-            'payment_method' => 'midtrans_snap',
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
             'amount' => 150000,
             'status' => 'pending',
         ]);
+        $this->assertSame($payment->id, $rental->payments()->first()->id);
     }
 
     public function test_create_booking_payment_amount_matches_grand_total_with_delivery_and_discount(): void
@@ -171,6 +175,8 @@ class RentalServiceTest extends TestCase
                 ['master_item_id' => $this->item1->id, 'quantity' => 1],
             ],
         ]);
+
+        app(PaymentService::class)->createOnlinePayment($rental, 'full');
 
         // grand_total = 50.000 + 20.000 - 5.000 = 65.000
         $this->assertDatabaseHas('payments', [

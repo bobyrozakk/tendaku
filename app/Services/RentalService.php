@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Exceptions\InsufficientStockException;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
-use App\Models\Payment;
 use App\Models\Rental;
 use Carbon\Carbon;
 use DateTimeInterface;
@@ -193,15 +192,6 @@ class RentalService
             foreach ($detailsToCreate as $detail) {
                 $rental->details()->create($detail);
             }
-
-            // save record payment untuk proses pembayaran via Midtrans SNAP
-            $rental->payments()->create([
-                'vendor_id' => $rental->vendor_id,
-                'payment_type' => 'settlement',
-                'payment_method' => 'midtrans_snap',
-                'amount' => $grandTotal,
-                'status' => 'pending',
-            ]);
 
             return $rental->load(['details.masterItem', 'vendor']);
         });

@@ -21,7 +21,7 @@ use App\Models\Vendor;
 trait CreatesMidtransFixtures
 {
     /**
-     * Create a vendor, a customer, a rental, and a pending settlement payment.
+     * Create a vendor, a customer, a rental, and a pending full-payment record.
      *
      * @return array{User, Rental, Payment}
      */
@@ -52,10 +52,10 @@ trait CreatesMidtransFixtures
         $payment = Payment::query()->create([
             'rental_id' => $rental->getKey(),
             'vendor_id' => $vendor->getKey(),
-            'payment_type' => 'settlement',
-            'payment_method' => 'midtrans_snap',
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
             'amount' => 10000,
-            'midtrans_order_id' => 'TENDA-INV-001',
+            'order_id' => 'TDK-TEST-001-FULL-1',
             'status' => 'pending',
         ]);
 
@@ -79,7 +79,7 @@ trait CreatesMidtransFixtures
     private function signedNotification(array $overrides = []): array
     {
         $notification = array_merge([
-            'order_id' => 'TENDA-INV-001',
+            'order_id' => 'TDK-TEST-001-FULL-1',
             'status_code' => '200',
             'gross_amount' => '10000.00',
             'transaction_status' => 'settlement',

@@ -3,22 +3,22 @@
 namespace Tests\Unit;
 
 use App\Services\MidtransService;
-use InvalidArgumentException;
+use App\Services\PaymentService;
 use PHPUnit\Framework\TestCase;
 
 class MidtransServiceTest extends TestCase
 {
-    public function test_order_id_includes_tenda_prefix_and_payment_id(): void
+    public function test_order_id_prefix_is_tdk(): void
     {
-        $orderId = MidtransService::generateOrderId(1);
-
-        $this->assertSame('TENDA-INV-001', $orderId);
+        $this->assertSame('TDK-', MidtransService::ORDER_ID_PREFIX);
     }
 
-    public function test_order_id_rejects_a_non_positive_payment_id(): void
+    public function test_order_id_generation_matches_specification(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $service = new PaymentService;
+        $orderId = $service->generateOrderId('TDK-20261024-0001', 'dp', 1);
 
-        MidtransService::generateOrderId(0);
+        $this->assertSame('TDK-20261024-0001-DP-1', $orderId);
+        $this->assertStringStartsWith(MidtransService::ORDER_ID_PREFIX, $orderId);
     }
 }

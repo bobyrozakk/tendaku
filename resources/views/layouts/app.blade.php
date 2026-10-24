@@ -40,5 +40,6 @@
                 &copy; {{ date('Y') }} Tendaku - Platform Persewaan Alat Camping & Outdoor
             </footer>
         </div>
+        @stack('scripts')
     </body>
 </html>

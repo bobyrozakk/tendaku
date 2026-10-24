@@ -6,6 +6,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\MasterItem;
 use App\Services\MidtransService;
+use App\Services\PaymentService;
 use App\Services\RentalService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -57,8 +58,8 @@ class CheckoutController extends Controller
         $discount = 0;
         $grandTotal = $itemSubtotal + $totalDeposit + $deliveryFee - $discount;
 
-        // Opsi DP: 30% dari grand total
-        $dpPercentage = 30;
+        // Opsi DP: dari konfigurasi payment.dp_percentage (default 50%)
+        $dpPercentage = (int) config('payment.dp_percentage', 50);
         $dpAmount = (int) ceil($grandTotal * $dpPercentage / 100);
 
         $pickupDate = Carbon::parse($cart['pickup_date']);
@@ -143,6 +144,12 @@ class CheckoutController extends Controller
                     'desc' => 'Transfer via BRImo / ATM BRI',
                     'badge' => 'Otomatis',
                 ],
+                [
+                    'id' => 'bni_va',
+                    'name' => 'BNI Virtual Account',
+                    'desc' => 'Transfer via BNI Mobile Banking / ATM BNI',
+                    'badge' => 'Otomatis',
+                ],
             ],
         ];
 
@@ -154,9 +161,9 @@ class CheckoutController extends Controller
      *
      * Mengembalikan JSON {snap_token, booking_code, redirect_url} agar frontend
      * dapat langsung memicu window.snap.pay(snapToken).
-     * Jika user memilih DP, payment dibuat dengan payment_type='dp' dan nominal sesuai persentase.
+     * Nominal dihitung server-side (§0); order_id dengan prefix TDK- (§0, §7.2).
      */
-    public function store(Request $request, RentalService $rentalService, MidtransService $midtrans): JsonResponse|RedirectResponse
+    public function store(Request $request, RentalService $rentalService, PaymentService $paymentService, MidtransService $midtrans): JsonResponse|RedirectResponse
     {
         $cart = session('booking_cart');
 
@@ -184,6 +191,11 @@ class CheckoutController extends Controller
         $isGuest = ! Auth::check();
         $user = Auth::user();
 
+        // Guest tidak bisa DP (§3: DP tidak dihapus tetapi hanya untuk pelanggan terdaftar)
+        if ($isGuest && $paymentOption === 'dp') {
+            $paymentOption = 'full';
+        }
+
         $request->validate([
             'pickup_method' => ['required', 'in:self_pickup,delivery'],
             'delivery_address' => [$pickupMethod === 'delivery' ? 'required' : 'nullable', 'string', 'max:500'],
@@ -196,20 +208,7 @@ class CheckoutController extends Controller
         $masterItem = MasterItem::with('vendor')->findOrFail($cart['master_item_id']);
 
         $quantity = (int) ($cart['quantity'] ?? $cart['qty'] ?? 1);
-        $rentalDays = (int) ($cart['total_days'] ?? 1);
-        $dailyRate = (int) $masterItem->daily_rate;
-        $depositPerUnit = (int) ($masterItem->deposit_amount ?? 0);
-
-        $itemSubtotal = $dailyRate * $quantity * $rentalDays;
-        $totalDeposit = $depositPerUnit * $quantity;
         $deliveryFee = (! $isGuest && $pickupMethod === 'delivery') ? 25000 : 0;
-        $grandTotal = $itemSubtotal + $totalDeposit + $deliveryFee;
-
-        // Kalkulasi nominal DP jika dipilih (30% dari grand total)
-        $dpPercentage = 30;
-        $dpAmount = (int) ceil($grandTotal * $dpPercentage / 100);
-        $isDownPayment = ($paymentOption === 'dp') && ! $isGuest;
-        $paymentAmount = $isDownPayment ? $dpAmount : $grandTotal;
 
         try {
             $bookingData = [
@@ -236,23 +235,13 @@ class CheckoutController extends Controller
                 $bookingData['guest_id_number'] = $request->input('guest_id_number', '');
             }
 
+            // RentalService hanya membuat rental (status pending_payment) — tanpa payment
             $rental = $rentalService->createBooking($bookingData);
 
-            // Ambil payment settlement yang baru saja dibuat oleh createBooking()
-            $payment = $rental->payments()
-                ->where('status', 'pending')
-                ->where('payment_type', 'settlement')
-                ->latest('id')
-                ->firstOrFail();
-
-            // Jika DP: ubah payment_type dan amount sesuai pilihan pelanggan
-            if ($isDownPayment) {
-                $payment->update([
-                    'payment_type' => 'dp',
-                    'amount' => $paymentAmount,
-                ]);
-                $payment->refresh();
-            }
+            // PaymentService menghitung nominal server-side & membuat payment dengan order_id TDK- (§0, §7.2)
+            $paymentType = in_array($paymentOption, ['full', 'dp'], true) ? $paymentOption : 'full';
+            $paymentMethod = $request->input('payment_channel', 'qris');
+            $payment = $paymentService->createOnlinePayment($rental, $paymentType, 1, $paymentMethod);
 
             $snapToken = $midtrans->createTransaction($payment);
 

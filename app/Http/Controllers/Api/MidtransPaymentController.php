@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Rental;
 use App\Services\MidtransService;
+use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Auth;
 class MidtransPaymentController extends Controller
 {
     /**
-     * Generate Midtrans SNAP token untuk pembayaran pokok (settlement) rental.
+     * Generate Midtrans SNAP token untuk pembayaran pokok (full/dp) rental.
      */
     public function store(Request $request, Rental $rental, MidtransService $midtrans): JsonResponse
     {
@@ -29,17 +30,17 @@ class MidtransPaymentController extends Controller
 
         $payment = $rental->payments()
             ->where('status', 'pending')
-            ->where('payment_type', 'settlement')
-            ->where('payment_method', 'midtrans_snap')
+            ->whereIn('payment_type', ['full', 'dp'])
+            ->where('channel', 'midtrans')
             ->latest('id')
             ->firstOrFail();
 
-        $snapToken = $midtrans->createTransaction($payment);
+        $snapToken = $payment->snap_token ?: $midtrans->createTransaction($payment);
 
         return response()->json([
             'data' => [
                 'payment_id' => $payment->getKey(),
-                'order_id' => $payment->midtrans_order_id,
+                'order_id' => $payment->order_id,
                 'snap_token' => $snapToken,
             ],
         ]);
@@ -51,7 +52,7 @@ class MidtransPaymentController extends Controller
      * Endpoint ini dipanggil setelah proses pengembalian barang selesai dan
      * terdapat denda yang belum dibayar pada rental tersebut.
      */
-    public function storeFine(Request $request, Rental $rental, MidtransService $midtrans): JsonResponse
+    public function storeFine(Request $request, Rental $rental, PaymentService $paymentService, MidtransService $midtrans): JsonResponse
     {
         abort_unless(
             $request->user()?->role === 'customer' && $rental->user_id === Auth::id(),
@@ -65,7 +66,7 @@ class MidtransPaymentController extends Controller
             'Rental belum dalam status pengembalian. Denda hanya dapat dibayar setelah barang dikembalikan.',
         );
 
-        $fineTotal = (float) $rental->total_late_fee + (float) $rental->total_damage_fee;
+        $fineTotal = (int) round((float) $rental->total_late_fee + (float) $rental->total_damage_fee);
 
         abort_if(
             $fineTotal <= 0,
@@ -87,21 +88,15 @@ class MidtransPaymentController extends Controller
             ]);
         }
 
-        // Reuse payment pending yang sudah ada, atau buat yang baru
-        $payment = $existingFinePayment ?? $rental->payments()->create([
-            'vendor_id' => $rental->vendor_id,
-            'payment_type' => 'fine',
-            'payment_method' => 'midtrans_snap',
-            'amount' => $fineTotal,
-            'status' => 'pending',
-        ]);
+        // Reuse payment pending yang sudah ada, atau buat tagihan denda baru via PaymentService
+        $payment = $existingFinePayment ?? $paymentService->createOnlineFinePayment($rental, $fineTotal);
 
-        $snapToken = $midtrans->createTransaction($payment);
+        $snapToken = $payment->snap_token ?: $midtrans->createTransaction($payment);
 
         return response()->json([
             'data' => [
                 'payment_id' => $payment->getKey(),
-                'order_id' => $payment->midtrans_order_id,
+                'order_id' => $payment->order_id,
                 'snap_token' => $snapToken,
                 'fine_total' => (float) $fineTotal,
                 'late_fee' => (float) $rental->total_late_fee,

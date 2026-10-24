@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Payment;
 use App\Models\Rental;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -9,37 +10,59 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Job auto-cancel tagihan expired.
+ * Rental pending yang expires_at < now → expired.
+ * Payments pending terkait → expired (§4.2, §5.1).
+ * Idempoten: tidak menyentuh status non-pending.
+ *
+ * @see docs/TENDAKU_payment_spec.md §4.2, §5.2
+ */
 class ExpirePendingRentals implements ShouldQueue
 {
     use Queueable;
 
     /**
-     * Create a new job instance.
-     */
-    public function __construct()
-    {
-        //
-    }
-
-    /**
      * Execute the job.
      * Ubah status rental pending yang expires_at < now menjadi 'expired'.
-     * Idempoten dan tidak menyentuh status non-pending.
+     * Sekaligus expire payments pending yang terkait dengan rental tersebut.
      */
     public function handle(): int
     {
         $now = Carbon::now();
 
-        // Update rental berstatus 'pending' yang telah melewati 'expires_at'
         $affectedRows = DB::transaction(function () use ($now) {
-            return Rental::query()
+            // Cari rental pending yang sudah lewat expires_at
+            $expiredRentalIds = Rental::query()
                 ->where('status', 'pending')
                 ->whereNotNull('expires_at')
                 ->where('expires_at', '<', $now)
+                ->pluck('id');
+
+            if ($expiredRentalIds->isEmpty()) {
+                return 0;
+            }
+
+            // Expire payments pending yang terkait rental expired (§5.2: expire → expired)
+            // Hanya expire jika rental belum punya pembayaran yang sudah paid
+            // (jika sudah paid, rental tidak akan di-status pending lagi)
+            Payment::query()
+                ->whereIn('rental_id', $expiredRentalIds)
+                ->where('status', 'pending')
                 ->update([
                     'status' => 'expired',
                     'updated_at' => $now,
                 ]);
+
+            // Expire rental
+            $count = Rental::query()
+                ->whereIn('id', $expiredRentalIds)
+                ->update([
+                    'status' => 'expired',
+                    'updated_at' => $now,
+                ]);
+
+            return $count;
         });
 
         if ($affectedRows > 0) {

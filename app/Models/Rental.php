@@ -16,7 +16,7 @@ class Rental extends Model
         'booking_code', 'guest_name', 'guest_phone', 'guest_id_number',
         'pickup_date', 'return_date', 'actual_return_date', 'picked_up_at', 'returned_at',
         'pickup_method', 'delivery_address', 'rental_days',
-        'subtotal', 'delivery_fee', 'discount_amount', 'total_deposit', 'dp_amount', 'grand_total',
+        'subtotal', 'delivery_fee', 'discount_amount', 'total_deposit', 'dp_amount', 'harga_dp', 'grand_total',
         'ktp_collateral_photo_url', 'ktp_collateral_status', 'ktp_received_at', 'ktp_returned_at', 'ktp_collateral_notes',
         'total_late_fee', 'total_damage_fee', 'final_total',
         'status', 'expires_at', 'notes',
@@ -41,6 +41,7 @@ class Rental extends Model
         'discount_amount' => 'decimal:2',
         'total_deposit' => 'decimal:2',
         'dp_amount' => 'decimal:2',
+        'harga_dp' => 'decimal:2',
         'grand_total' => 'decimal:2',
         'total_late_fee' => 'decimal:2',
         'total_damage_fee' => 'decimal:2',
@@ -90,5 +91,15 @@ class Rental extends Model
     public function isGuest(): bool
     {
         return $this->user_id === null;
+    }
+
+    public function getHargaDpAttribute(): mixed
+    {
+        return $this->attributes['dp_amount'] ?? 0;
+    }
+
+    public function setHargaDpAttribute($value): void
+    {
+        $this->attributes['dp_amount'] = $value;
     }
 }

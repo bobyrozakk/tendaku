@@ -33,7 +33,7 @@ class MidtransPaymentTest extends TestCase
             $mock->shouldReceive('createTransaction')
                 ->once()
                 ->with(Mockery::on(fn (Payment $requestedPayment): bool => $requestedPayment->is($payment)
-                    && (float) $requestedPayment->amount === 10000.0))
+                    && (int) $requestedPayment->amount === 10000))
                 ->andReturn('sandbox-snap-token');
         });
 
@@ -43,7 +43,7 @@ class MidtransPaymentTest extends TestCase
         $response->assertOk()->assertExactJson([
             'data' => [
                 'payment_id' => $payment->getKey(),
-                'order_id' => 'TENDA-INV-001',
+                'order_id' => 'TDK-TEST-001-FULL-1',
                 'snap_token' => 'sandbox-snap-token',
             ],
         ]);
@@ -218,16 +218,6 @@ class MidtransPaymentTest extends TestCase
         ]);
     }
 
-    public function test_cancel_notification_fails_payment_without_confirming_rental(): void
-    {
-        $this->assertFailureNotificationLeavesRentalPending('cancel');
-    }
-
-    public function test_deny_notification_fails_payment_without_confirming_rental(): void
-    {
-        $this->assertFailureNotificationLeavesRentalPending('deny');
-    }
-
     public function test_repeated_settlement_notification_is_idempotent(): void
     {
         [, $rental, $payment] = $this->createRentalWithPendingPayment();
@@ -244,18 +234,18 @@ class MidtransPaymentTest extends TestCase
         ]);
     }
 
-    public function test_failed_notification_marks_payment_failed_without_confirming_rental(): void
+    public function test_failed_notification_marks_payment_expired_without_confirming_rental(): void
     {
         [, $rental, $payment] = $this->createRentalWithPendingPayment();
         $notification = $this->signedNotification(['transaction_status' => 'expire']);
 
         $this->postJson(route('webhook.midtrans'), $notification)
             ->assertOk()
-            ->assertJsonPath('payment_status', 'failed');
+            ->assertJsonPath('payment_status', 'expired');
 
         $this->assertDatabaseHas('payments', [
             'id' => $payment->getKey(),
-            'status' => 'failed',
+            'status' => 'expired',
             'midtrans_status' => 'expire',
         ]);
         $this->assertDatabaseHas('rentals', [
@@ -264,13 +254,29 @@ class MidtransPaymentTest extends TestCase
         ]);
     }
 
-    /**
-     * @param  'cancel'|'deny'  $transactionStatus
-     */
-    private function assertFailureNotificationLeavesRentalPending(string $transactionStatus): void
+    public function test_cancel_notification_cancels_payment_without_confirming_rental(): void
     {
         [, $rental, $payment] = $this->createRentalWithPendingPayment();
-        $notification = $this->signedNotification(['transaction_status' => $transactionStatus]);
+        $notification = $this->signedNotification(['transaction_status' => 'cancel']);
+
+        $this->postJson(route('webhook.midtrans'), $notification)
+            ->assertOk()
+            ->assertJsonPath('payment_status', 'cancelled');
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->getKey(),
+            'status' => 'cancelled',
+        ]);
+        $this->assertDatabaseHas('rentals', [
+            'id' => $rental->getKey(),
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_deny_notification_fails_payment_without_confirming_rental(): void
+    {
+        [, $rental, $payment] = $this->createRentalWithPendingPayment();
+        $notification = $this->signedNotification(['transaction_status' => 'deny']);
 
         $this->postJson(route('webhook.midtrans'), $notification)
             ->assertOk()

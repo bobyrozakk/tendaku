@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rental;
+use App\Services\MidtransService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -51,7 +53,77 @@ class BookingController extends Controller
             'payments' => fn ($q) => $q->latest('id'),
         ]);
 
-        return view('customer.booking.status', compact('rental'));
+        $latestPayment = $rental->payments
+            ->where('channel', 'midtrans')
+            ->first();
+
+        return view('customer.booking.status', compact('rental', 'latestPayment'));
+    }
+
+    /**
+     * Endpoint polling / sinkronisasi status pembayaran dengan Midtrans API.
+     */
+    public function syncPayment(Request $request, string $code, MidtransService $midtrans): JsonResponse
+    {
+        $rental = $this->resolveAndAuthorizeRental($request, $code);
+
+        $payment = $rental->payments()
+            ->where('channel', 'midtrans')
+            ->whereNotNull('order_id')
+            ->latest('id')
+            ->first();
+
+        if (! $payment) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tidak ditemukan tagihan pembayaran online aktif untuk rental ini.',
+            ], 404);
+        }
+
+        $payment = $midtrans->syncStatus($payment);
+        $rental->refresh();
+
+        return response()->json([
+            'status' => 'success',
+            'order_id' => $payment->order_id,
+            'payment_status' => $payment->status,
+            'rental_status' => $rental->status,
+            'is_paid' => $payment->status === 'paid',
+            'paid_at' => $payment->paid_at?->translatedFormat('d M Y, H:i').' WIB',
+            'message' => $payment->status === 'paid'
+                ? 'Pembayaran berhasil diverifikasi! Pesanan Anda telah dikonfirmasi.'
+                : 'Status pembayaran saat ini: '.$payment->status,
+        ]);
+    }
+
+    /**
+     * Dapatkan atau perbarui Snap token untuk pembayaran rental pending.
+     */
+    public function pay(Request $request, string $code, MidtransService $midtrans): JsonResponse
+    {
+        $rental = $this->resolveAndAuthorizeRental($request, $code);
+
+        abort_unless(
+            $rental->status === 'pending',
+            422,
+            'Rental ini tidak lagi menunggu pembayaran.',
+        );
+
+        $payment = $rental->payments()
+            ->where('status', 'pending')
+            ->whereIn('payment_type', ['full', 'dp'])
+            ->where('channel', 'midtrans')
+            ->latest('id')
+            ->firstOrFail();
+
+        $snapToken = $payment->snap_token ?: $midtrans->createTransaction($payment);
+
+        return response()->json([
+            'status' => 'success',
+            'order_id' => $payment->order_id,
+            'snap_token' => $snapToken,
+            'amount' => (int) $payment->amount,
+        ]);
     }
 
     /**

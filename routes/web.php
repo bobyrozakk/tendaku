@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
+use App\Http\Controllers\Customer\PaymentRetryController;
 use App\Http\Controllers\Vendor\CashierController;
+use App\Http\Controllers\Vendor\CashierPaymentController;
 use App\Http\Controllers\Vendor\CategoryController;
 use App\Http\Controllers\Vendor\OwnerDashboardController;
 use App\Http\Controllers\Vendor\ProductController;
@@ -22,6 +24,8 @@ Route::prefix('katalog/booking')->group(function () {
     Route::get('/', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('status/{code}', [BookingController::class, 'status'])->name('booking.status');
+    Route::post('status/{code}/sync', [BookingController::class, 'syncPayment'])->name('booking.sync');
+    Route::post('status/{code}/pay', [BookingController::class, 'pay'])->name('booking.pay');
     Route::get('receipt/{code}', [BookingController::class, 'receipt'])->name('booking.receipt');
     Route::get('receipt/{code}/photo', [BookingController::class, 'collateralPhoto'])->name('booking.receipt.photo');
 });
@@ -50,6 +54,22 @@ Route::post('rentals/{rental}/pay-fine', [MidtransPaymentController::class, 'sto
     ->name('rentals.pay-fine');
 Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
     ->name('webhook.midtrans');
+
+// Retry tagihan baru jika lama expired/failed; throttle mencegah abuse
+Route::post('payments/{order_id}/retry', [PaymentRetryController::class, 'store'])
+    ->middleware(['auth', 'throttle:5,1'])
+    ->name('payments.retry');
+
+// Endpoint kasir vendor: pelunasan sisa & denda (§7.4, §4.2)
+Route::middleware(['auth', 'verified', 'role:vendor_admin,vendor_owner', 'vendor.active'])
+    ->prefix('vendor/rentals')
+    ->name('vendor.rentals.')
+    ->group(function () {
+        Route::post('{rental}/pay-remaining', [CashierPaymentController::class, 'payRemaining'])
+            ->name('pay-remaining');
+        Route::post('{rental}/pay-fine', [CashierPaymentController::class, 'payFine'])
+            ->name('pay-fine');
+    });
 
 // Design System Reference
 Route::view('design-system', 'design-system')->name('design-system');
