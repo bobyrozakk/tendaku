@@ -15,8 +15,11 @@ class MidtransService
 {
     private const ORDER_ID_PREFIX = 'TENDA-INV-';
 
-    public function __construct()
-    {
+    public function __construct(
+        private readonly CommissionCalculator $calculator,
+        private readonly CommissionService $commissions,
+        private readonly EscrowService $escrow,
+    ) {
         // TODO(Role 2 + PM): This currently uses platform credentials from .env.
         // Switch to the payment vendor's encrypted credentials if vendor-owned accounts are required.
         $serverKey = config('services.midtrans.server_key');
@@ -90,6 +93,10 @@ class MidtransService
             $payment->midtrans_transaction_id = $notification['transaction_id'] ?? $payment->midtrans_transaction_id;
             $payment->midtrans_status = $notification['transaction_status'];
 
+            if (isset($notification['payment_type']) && $notification['payment_type'] !== '') {
+                $payment->payment_channel ??= $notification['payment_type'];
+            }
+
             // Midtrans "settlement" means paid; card "capture" is paid only when fraud_status is accept.
             if (in_array($notification['transaction_status'], ['settlement', 'capture'], true)
                 && ($notification['transaction_status'] !== 'capture' || ($notification['fraud_status'] ?? null) === 'accept')) {
@@ -108,6 +115,10 @@ class MidtransService
                 $payment->status = 'refunded';
             }
 
+            if ($payment->status === 'paid' && $payment->payment_channel === 'qris') {
+                $payment->gateway_fee_amount = $this->calculator->mdrFor((float) $payment->amount);
+            }
+
             $payment->save();
 
             if ($payment->status === 'paid' && $payment->payment_type === 'settlement') {
@@ -118,9 +129,35 @@ class MidtransService
                     ->update(['status' => 'confirmed']);
             }
 
+            $this->applyMonetization($payment);
+
             // TODO(Role 1 + PM): Define rental state handling for refunds and partial refunds before enabling refund flows.
             return $payment;
         });
+    }
+
+    /**
+     * Terapkan aturan escrow dan komisi setelah status pembayaran berubah.
+     */
+    private function applyMonetization(Payment $payment): void
+    {
+        if ($payment->status === 'paid') {
+            $this->escrow->markHeld($payment);
+            $this->commissions->accrueForPayment($payment);
+
+            return;
+        }
+
+        if ($payment->status === 'refunded') {
+            $this->escrow->markRefunded($payment);
+            $this->commissions->voidForPayment($payment);
+
+            return;
+        }
+
+        if ($payment->status === 'failed') {
+            $this->escrow->markVoid($payment);
+        }
     }
 
     public static function generateOrderId(int $paymentId): string

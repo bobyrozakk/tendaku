@@ -15,10 +15,11 @@ class Vendor extends Model
 
     protected $fillable = [
         'name', 'slug', 'description', 'phone', 'email', 'address',
-        'city', 'logo_url', 'status', 'approved_at', 'approved_by',
+        'city', 'logo_url', 'status', 'commission_rate', 'approved_at', 'approved_by',
     ];
 
     protected $casts = [
+        'commission_rate' => 'decimal:4',
         'approved_at' => 'datetime',
     ];
 
@@ -60,5 +61,10 @@ class Vendor extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function commissions(): HasMany
+    {
+        return $this->hasMany(PlatformCommission::class);
     }
 }

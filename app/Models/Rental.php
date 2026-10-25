@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Traits\BelongsToVendor;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Rental extends Model
 {
-    use BelongsToVendor;
+    use BelongsToVendor, HasFactory;
 
     protected $fillable = [
         'vendor_id', 'user_id', 'created_by', 'picked_up_by', 'returned_by',
@@ -80,6 +81,11 @@ class Rental extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function commissions(): HasMany
+    {
+        return $this->hasMany(PlatformCommission::class);
     }
 
     public function notificationLogs(): HasMany

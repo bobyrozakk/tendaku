@@ -81,7 +81,7 @@ class CheckoutController extends Controller
     public function store(Request $request, RentalService $rentalService): RedirectResponse
     {
         $pickupMethod = $request->input('pickup_method', 'self_pickup');
-        $paymentChannel = $request->input('payment_channel', 'qris');
+        $paymentChannel = $this->paymentChannel($request->input('payment_channel'));
 
         // Validasi aturan: Opsi delivery hanya diizinkan bagi user yang telah login
         if ($pickupMethod === 'delivery' && ! Auth::check()) {
@@ -143,6 +143,17 @@ class CheckoutController extends Controller
 
         $rental = $this->applyPreviewBookingCode($rental, $request->input('booking_code'));
 
+        if (! $isGuest) {
+            $rental->payments()->create([
+                'vendor_id' => $rental->vendor_id,
+                'payment_type' => 'settlement',
+                'payment_method' => 'midtrans_snap',
+                'payment_channel' => $paymentChannel,
+                'amount' => $rental->grand_total,
+                'status' => 'pending',
+            ]);
+        }
+
         Session::forget('booking_cart');
 
         $methodLabel = $pickupMethod === 'delivery' ? 'Diantar ke Lokasi (Kurir Vendor)' : 'Ambil di Tempat (Self-Pickup)';
@@ -155,8 +166,12 @@ class CheckoutController extends Controller
         ];
         $channelLabel = $channelNames[$paymentChannel] ?? 'Midtrans Sandbox';
 
+        $successMessage = $isGuest
+            ? "Booking #{$rental->booking_code} ({$methodLabel}) berhasil dibuat. Tunjukkan kode booking saat pengambilan; pembayaran diselesaikan di outlet vendor."
+            : "Booking #{$rental->booking_code} ({$methodLabel}) berhasil dibuat. Selesaikan pembayaran via {$channelLabel} sebelum batas waktu.";
+
         return redirect()->route('booking.status', $rental->booking_code)
-            ->with('success', "Pembayaran booking #{$rental->booking_code} ({$methodLabel}) via simulasi {$channelLabel} berhasil diverifikasi! Vendor {$rental->vendor?->name} telah menerima konfirmasi.");
+            ->with('success', $successMessage);
     }
 
     /**
@@ -344,6 +359,16 @@ class CheckoutController extends Controller
             'grand_total' => $grandTotal,
             'payment_methods' => $this->paymentMethods(),
         ];
+    }
+
+    /**
+     * Kanal pembayaran yang didukung halaman checkout.
+     */
+    protected function paymentChannel(?string $channel): string
+    {
+        return in_array($channel, ['qris', 'bca_va', 'mandiri_va', 'bri_va'], true)
+            ? $channel
+            : 'qris';
     }
 
     /**
