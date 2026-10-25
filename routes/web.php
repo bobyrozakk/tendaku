@@ -97,6 +97,9 @@ Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
         Route::get('owner/dashboard', [OwnerDashboardController::class, 'index'])
             ->name('owner.dashboard');
 
+        Route::get('owner/dashboard/export', [OwnerDashboardController::class, 'exportDailyRevenue'])
+            ->name('owner.dashboard.export');
+
         Route::resource('products', ProductController::class);
         Route::resource('categories', CategoryController::class)
             ->except(['show']);
