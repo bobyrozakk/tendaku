@@ -244,4 +244,62 @@ class OwnerAnalyticsTest extends TestCase
         $response->assertSee('Dashboard Owner');
         $response->assertSee('Omzet Harian');
     }
+
+    public function test_daily_revenue_histogram_renders_scaled_bars(): void
+    {
+        // Hari terbesar: Rp 300.000 (hari ini), hari sebelumnya: Rp 100.000
+        $this->createRentalOnDate('TND-CHART-PEAK', 300000, Carbon::today());
+        $this->createRentalOnDate('TND-CHART-SMALL', 100000, Carbon::today()->subDay());
+
+        $this->actingAs($this->owner1);
+
+        $response = $this->get(route('vendor.owner.dashboard', ['period' => '7_days']));
+
+        $response->assertOk();
+        $response->assertSee('Tren Pendapatan Harian');
+        // Bar tertinggi diskalakan ke 100% sumbu Y, bar Rp 100.000 menjadi ~33,33%.
+        $response->assertSee('height: 100%;', false);
+        $response->assertSee('height: 33.33%;', false);
+        $response->assertSee('Rp 300 rb');
+        $response->assertSee('Export Excel');
+        // Label nilai tampil permanen di atas bar (bukan hanya saat hover).
+        $response->assertSeeInOrder(['Rp 300 rb', 'Rp 100 rb'], false);
+    }
+
+    public function test_y_axis_uses_rounded_hundred_thousand_steps(): void
+    {
+        // Nilai tertinggi Rp 210.000 -> skala dibulatkan ke kelipatan 100 rb (0/100/200/300 rb),
+        // bukan pecahan seperti 52,5 rb atau 157,5 rb.
+        $this->createRentalOnDate('TND-AXIS-210', 210000, Carbon::today());
+
+        $this->actingAs($this->owner1);
+
+        $response = $this->get(route('vendor.owner.dashboard', ['period' => '7_days']));
+
+        $response->assertOk();
+        $response->assertSeeInOrder(['Rp 300 rb', 'Rp 200 rb', 'Rp 100 rb', '0'], false);
+        $response->assertDontSee('Rp 52,5 rb');
+        $response->assertDontSee('Rp 157,5 rb');
+        // Bar Rp 210.000 terhadap skala 300.000 = 70%.
+        $response->assertSee('height: 70%;', false);
+    }
+
+    private function createRentalOnDate(string $bookingCode, float $grandTotal, Carbon $date): Rental
+    {
+        $rental = Rental::create([
+            'vendor_id' => $this->vendor1->id,
+            'booking_code' => $bookingCode,
+            'pickup_date' => $date->copy(),
+            'return_date' => $date->copy()->addDay(),
+            'rental_days' => 1,
+            'subtotal' => $grandTotal,
+            'grand_total' => $grandTotal,
+            'final_total' => $grandTotal,
+            'status' => 'completed',
+        ]);
+
+        $rental->forceFill(['created_at' => $date->copy()])->save();
+
+        return $rental;
+    }
 }

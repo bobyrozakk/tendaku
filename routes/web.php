@@ -3,8 +3,11 @@
 use App\Http\Controllers\Admin\RevenueExportController;
 use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
+use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
+use App\Http\Controllers\Customer\PackageCheckoutController;
+use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
 use App\Http\Controllers\Vendor\CategoryController;
 use App\Http\Controllers\Vendor\OwnerDashboardController;
@@ -36,6 +39,19 @@ Route::get('/katalog', [CatalogController::class, 'index'])->name('customer.cata
 Route::get('/katalog/{id}', [CatalogController::class, 'show'])
     ->whereNumber('id')
     ->name('customer.product.show');
+
+// Paket Camping (publik)
+Route::get('/paket-camping', [CustomerCampingPackageController::class, 'index'])
+    ->name('customer.packages.index');
+Route::get('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'index'])
+    ->whereNumber('id')
+    ->name('customer.packages.checkout');
+Route::post('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'store'])
+    ->whereNumber('id')
+    ->name('customer.packages.checkout.store');
+Route::get('/paket-camping/{id}', [CustomerCampingPackageController::class, 'show'])
+    ->whereNumber('id')
+    ->name('customer.packages.show');
 
 // Prakiraan Cuaca Spot Camping (publik)
 Route::view('/cuaca', 'customer.weather.index')->name('customer.weather.index');
@@ -108,7 +124,12 @@ Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
         Route::get('owner/dashboard', [OwnerDashboardController::class, 'index'])
             ->name('owner.dashboard');
 
+        Route::get('owner/dashboard/export', [OwnerDashboardController::class, 'exportDailyRevenue'])
+            ->name('owner.dashboard.export');
+
         Route::resource('products', ProductController::class);
+        Route::resource('packages', CampingPackageController::class)
+            ->except(['show']);
         Route::resource('categories', CategoryController::class)
             ->except(['show']);
 

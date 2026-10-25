@@ -85,6 +85,7 @@
                     <ul class="space-y-2.5 text-sm text-wheat-400">
                         <li><a href="{{ url('/') }}" class="hover:text-sunglow-300 transition">Beranda</a></li>
                         <li><a href="{{ url('/katalog') }}" class="hover:text-sunglow-300 transition">Katalog Tenda & Matras</a></li>
+                        <li><a href="{{ route('customer.packages.index') }}" class="hover:text-sunglow-300 transition">Paket Camping</a></li>
                         <li><a href="{{ url('/design-system') }}" class="hover:text-sunglow-300 transition font-semibold text-sunglow-300">Design System Guide</a></li>
                         <li><a href="{{ route('dashboard') }}" class="hover:text-sunglow-300 transition">Portal Vendor & POS</a></li>
                     </ul>

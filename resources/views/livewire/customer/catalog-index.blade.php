@@ -115,9 +115,19 @@
 
                 <!-- Tanggal Sewa (Cek Stok) -->
                 <div>
-                    <label class="block text-xs font-bold uppercase text-darkbrown-600 mb-1 tracking-wider">
-                        📅 Cek Ketersediaan Tanggal
-                    </label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-bold uppercase text-darkbrown-600 tracking-wider">
+                            📅 Cek Tanggal
+                        </label>
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold text-darkbrown-700 hover:text-avocado-700 transition select-none">
+                            <input 
+                                type="checkbox" 
+                                wire:model.live="onlyAvailable" 
+                                class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500 w-3.5 h-3.5"
+                            />
+                            <span>Hanya Stok Tersedia</span>
+                        </label>
+                    </div>
                     <div class="flex items-center gap-1.5">
                         <input 
                             type="date" 

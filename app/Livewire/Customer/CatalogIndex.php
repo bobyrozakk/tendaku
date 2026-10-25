@@ -40,6 +40,9 @@ class CatalogIndex extends Component
     #[Url(as: 'end_date', history: true, keep: false)]
     public ?string $endDate = null;
 
+    #[Url(as: 'available_only', history: true, keep: false)]
+    public bool $onlyAvailable = false;
+
     public function updatedSearch(): void
     {
         $this->resetPage();
@@ -80,6 +83,11 @@ class CatalogIndex extends Component
         $this->resetPage();
     }
 
+    public function updatedOnlyAvailable(): void
+    {
+        $this->resetPage();
+    }
+
     public function selectCategory(?int $id = null): void
     {
         $this->categoryId = ($this->categoryId === $id) ? null : $id;
@@ -97,8 +105,10 @@ class CatalogIndex extends Component
             'sort',
             'startDate',
             'endDate',
+            'onlyAvailable',
         ]);
         $this->sort = 'latest';
+        $this->onlyAvailable = false;
         $this->resetPage();
     }
 
@@ -150,24 +160,42 @@ class CatalogIndex extends Component
             default => $itemsQuery->latest(),
         };
 
-        $items = $itemsQuery->paginate(12);
-
-        $dateStockMap = [];
+        $hasValidDateRange = false;
         if (! empty($this->startDate) && ! empty($this->endDate)) {
             try {
                 $sDate = Carbon::parse($this->startDate);
                 $eDate = Carbon::parse($this->endDate);
                 if ($eDate->gte($sDate) && $sDate->gte(Carbon::today())) {
-                    foreach ($items->items() as $item) {
-                        $dateStockMap[$item->id] = $availabilityService->checkAvailability(
-                            $item->id,
-                            $this->startDate,
-                            $this->endDate
-                        );
-                    }
+                    $hasValidDateRange = true;
                 }
             } catch (\Throwable) {
                 // Ignore parsing errors
+            }
+        }
+
+        // Jika filter "hanya yang tersedia" dicentang tanpa filter tanggal, pastikan unit fisik > 0
+        if ($this->onlyAvailable && ! $hasValidDateRange) {
+            $itemsQuery->has('units');
+        }
+
+        $items = $itemsQuery->paginate(12);
+
+        $dateStockMap = [];
+        if ($hasValidDateRange) {
+            foreach ($items->items() as $item) {
+                $dateStockMap[$item->id] = $availabilityService->checkAvailability(
+                    $item->id,
+                    $this->startDate,
+                    $this->endDate
+                );
+            }
+
+            // Jika user memilih filter tanggal dan juga mencentang "hanya yang tersedia"
+            if ($this->onlyAvailable) {
+                $filteredItems = $items->getCollection()->filter(function ($item) use ($dateStockMap) {
+                    return ($dateStockMap[$item->id] ?? 0) > 0;
+                });
+                $items->setCollection($filteredItems->values());
             }
         }
 

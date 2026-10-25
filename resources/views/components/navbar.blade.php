@@ -57,6 +57,20 @@
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Produk Owner</span>
                 </a>
 
+                <!-- Paket Camping Owner -->
+                <a href="{{ route('vendor.packages.index') }}"
+                   wire:navigate
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.packages.*')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.packages.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.packages.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <i data-lucide="tent-tree" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Paket Camping</span>
+                </a>
+
                 <!-- Kategori Owner -->
                 <a href="{{ route('vendor.categories.index') }}"
                    wire:navigate
@@ -200,7 +214,9 @@
                               {{ request()->is('katalog*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                         Katalog Alat
                     </a>
-                    <a href="#" class="px-3.5 py-2 rounded-xl text-sm font-medium text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 transition-all duration-150">
+                    <a href="{{ route('customer.packages.index') }}"
+                       class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
+                              {{ request()->is('paket-camping*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                         Paket Camping
                     </a>
                     <a href="{{ route('customer.weather.index') }}"
@@ -236,14 +252,22 @@
                 </button>
 
                 <!-- Cart -->
-                <a href="#" class="relative p-2 text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150" title="Keranjang Sewa">
+                @php
+                    $activeCart = app(\App\Services\CartService::class)->get(auth()->user());
+                    $cartQty = is_array($activeCart) && ! empty($activeCart['master_item_id'])
+                        ? (int) ($activeCart['qty'] ?? $activeCart['quantity'] ?? 1)
+                        : 0;
+                @endphp
+                <a href="{{ route('checkout.index') }}" class="relative p-2 text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150" title="Keranjang Sewa">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
-                    <span class="absolute top-1 right-1 w-4 h-4 rounded-full font-bold text-[10px] flex items-center justify-center text-white"
-                          style="background: linear-gradient(135deg, #d5a007, #fbce6b); box-shadow: 0 1px 6px rgba(213,160,7,0.5);">
-                        2
-                    </span>
+                    @if($cartQty > 0)
+                        <span class="absolute top-1 right-1 w-4 h-4 rounded-full font-bold text-[10px] flex items-center justify-center text-white"
+                              style="background: linear-gradient(135deg, #d5a007, #fbce6b); box-shadow: 0 1px 6px rgba(213,160,7,0.5);">
+                            {{ $cartQty }}
+                        </span>
+                    @endif
                 </a>
 
                 <!-- Auth -->

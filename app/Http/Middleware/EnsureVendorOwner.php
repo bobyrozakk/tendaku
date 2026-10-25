@@ -27,7 +27,7 @@ class EnsureVendorOwner
             abort(403, 'Akses ditolak. Fitur ini hanya dapat diakses oleh Owner Vendor.');
         }
 
-        if ($user->vendor && $user->vendor->status === 'pending' && ! $request->routeIs('vendor.owner.dashboard')) {
+        if ($user->vendor && $user->vendor->status === 'pending' && ! $request->routeIs('vendor.owner.dashboard', 'vendor.owner.dashboard.export')) {
             abort(403, 'Akses ditolak. Toko Anda masih berstatus pending dan menunggu persetujuan Super Admin.');
         }
 
