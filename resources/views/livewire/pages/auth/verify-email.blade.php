@@ -8,6 +8,49 @@ use Livewire\Volt\Component;
 
 new #[Layout('layouts.guest')] class extends Component
 {
+    public function mount(): void
+    {
+        $user = Auth::user();
+
+        if (! $user || ! $user->hasVerifiedEmail()) {
+            return;
+        }
+
+        $destination = match (true) {
+            $user->isVendorOwner() => route(
+                'vendor.owner.dashboard',
+                absolute: false
+            ),
+            $user->isVendorAdmin() => route(
+                'kasir.dashboard',
+                absolute: false
+            ),
+            $user->isVendorStaff() => route(
+                'dashboard',
+                absolute: false
+            ),
+            $user->isCustomer() => route(
+                'home',
+                absolute: false
+            ),
+            default => route('dashboard', absolute: false),
+        };
+
+        $intended = session('url.intended');
+
+        if (
+            $intended &&
+            str_contains($intended, 'verify-email')
+        ) {
+            session()->forget('url.intended');
+        }
+
+        $this->redirectIntended(
+            default: $destination,
+            navigate: false
+        );
+    }
+
     /**
      * Send an email verification notification to the user.
      */
@@ -17,9 +60,23 @@ new #[Layout('layouts.guest')] class extends Component
             $user = Auth::user();
 
             $destination = match (true) {
-                $user->isVendorStaff() => route('dashboard', absolute: false),
-                $user->isCustomer()    => route('home', absolute: false),
-                default                => route('dashboard', absolute: false), // super_admin
+                $user->isVendorOwner() => route(
+                    'vendor.owner.dashboard',
+                    absolute: false
+                ),
+                $user->isVendorAdmin() => route(
+                    'kasir.dashboard',
+                    absolute: false
+                ),
+                $user->isVendorStaff() => route(
+                    'dashboard',
+                    absolute: false
+                ),
+                $user->isCustomer() => route(
+                    'home',
+                    absolute: false
+                ),
+                default => route('dashboard', absolute: false),
             };
 
             $this->redirectIntended(default: $destination, navigate: true);
@@ -59,10 +116,11 @@ new #[Layout('layouts.guest')] class extends Component
             <x-auth.button class="w-full sm:w-auto">Kirim ulang email</x-auth.button>
         </form>
 
-        <button wire:click="logout" type="button"
-                class="rounded text-sm font-medium text-tendaku-brown/70 underline-offset-4 hover:text-tendaku-brown hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-brown/40">
-            Keluar
-        </button>
+        <a href="{{ route('login') }}"
+           wire:navigate
+           class="rounded text-sm font-medium text-tendaku-brown/70 underline-offset-4 hover:text-tendaku-brown hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-brown/40">
+            Kembali
+        </a>
     </div>
 
     <p class="mt-8 text-sm text-tendaku-brown/70">Email belum masuk? Cek juga folder spam.</p>

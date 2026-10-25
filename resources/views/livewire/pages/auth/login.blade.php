@@ -29,7 +29,12 @@ new #[Layout('layouts.guest')] class extends Component
 
         // Jika email belum diverifikasi, arahkan ke halaman verifikasi email (resend email)
         if (! $user->hasVerifiedEmail()) {
-            $this->redirect(route('verification.notice', absolute: false), navigate: true);
+            session()->forget('url.intended');
+
+            $this->redirect(
+                route('verification.notice', absolute: false),
+                navigate: false
+            );
 
             return;
         }
@@ -80,6 +85,19 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::flash('status', $welcomeMessage);
         Session::flash('success', $welcomeMessage);
+
+        $intended = session('url.intended');
+
+        if ($intended && (
+            str_contains($intended, 'verify-email') ||
+            $intended === route('verification.notice') ||
+            $intended === route(
+                'verification.notice',
+                absolute: false
+            )
+        )) {
+            session()->forget('url.intended');
+        }
 
         // Redirect cukup dilakukan satu kali.
         $this->redirectIntended(
