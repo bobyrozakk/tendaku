@@ -1,12 +1,12 @@
 # 💰 USULAN MONETISASI PLATFORM — TENDAKU
 
-**Status:** 🚧 Implementasi bertahap — NTN-62 ✅ (2026-10-24), NTN-63 ✅ (2026-10-25); NTN-64–NTN-68 menyusul  
+**Status:** 🚧 Implementasi bertahap — NTN-62 ✅ (2026-10-24), NTN-63 ✅ (2026-10-25), NTN-64 ✅ (2026-10-25); NTN-65–NTN-68 menyusul<br>
 **Pemilik dokumen:** Boby Rozak (PM · Super Admin · QA Lead)  
 **Tanggal:** 24 Oktober 2026  
 **Disetujui:** Boby Rozak (PM), 24 Oktober 2026  
 **Acuan:** `PRD_BOBY.md`, `PRD.md`, `PRD_ROLES.md`, `docs/contract.md`, `excel/gantchart_tendaku.xlsx`
 
-> Dokumen ini adalah **usulan perencanaan** yang kini dieksekusi bertahap. NTN-62 (engine komisi + skema) dan NTN-63 (escrow + akrual komisi di webhook) sudah diimplementasikan; rincian skema aktual dicatat di `docs/contract.md` §5. Tabel/kolom yang belum memiliki migrasi tetap berstatus rencana.
+> Dokumen ini adalah **usulan perencanaan** yang kini dieksekusi bertahap. NTN-62 (engine komisi + skema), NTN-63 (escrow + akrual komisi di webhook), dan NTN-64 (dashboard pendapatan superadmin + filter/chart + export CSV) sudah diimplementasikan; rincian skema aktual dicatat di `docs/contract.md` §5. Tabel/kolom yang belum memiliki migrasi tetap berstatus rencana, termasuk `settlements` (NTN-67).
 
 ---
 
@@ -458,6 +458,8 @@ Aturan keras:
 - Print view.
 - Buka detail batch, approve, tandai paid, unggah bukti.
 
+> **Status implementasi NTN-64 (2026-10-25):** route `/admin/pendapatan` dan `/admin/pendapatan/export` aktif untuk `super_admin` (role lain HTTP 403, guest diarahkan ke `superadmin.login`). Filter periode/vendor/metode/escrow/tipe, chart 30 hari/12 minggu/12 bulan/5 tahun, ringkasan per vendor, dan tabel 50 transaksi terbaru sudah tersedia. KPI **batch menunggu approval** dan **total payout bulan ini** sengaja bernilai **0** karena tabel `settlements` baru dibuat di NTN-67. Laba platform ditampilkan sebagai estimasi `komisi - MDR standar - (biaya transfer × jumlah vendor)`, bukan hasil batch final.
+
 ### 6.3 Owner — `/vendor/pendapatan`
 
 - Komponen yang sama dengan super admin, tetapi **scoped** `vendor_id` dan tanpa data platform.
@@ -809,6 +811,8 @@ Ketentuan:
 - Angka cocok dengan data contoh (Rp1.200.000 → komisi Rp60.000 → laba Rp48.100).
 - Tidak ada query N+1 parah; index digunakan.
 
+> **Verifikasi 2026-10-25:** 13 test / 74 assertion untuk dashboard + export; full suite branch 306 test / 1092 assertion hijau; Pint bersih. Index pelaporan ditambahkan lewat `2026_10_25_124318_add_revenue_reporting_indexes.php`. Batch/payout tetap placeholder sampai NTN-67.
+
 **NTN-65**
 - Owner hanya melihat data vendor sendiri.
 - Invoice hanya bisa dibuka owner yang berhak.
@@ -979,16 +983,16 @@ vendor/bin/pint --dirty --format agent
 - [ ] Konfirmasi jadwal 5 hari (17–21 Nov 2026) dan slot review cross-module ke tim.
 - [ ] Buat tiket NTN-62..68 di tracker (Gantt sudah diperbarui).
 - [ ] Buat migrasi + model + factory.
-- [ ] Buat `CommissionCalculator` + unit test.
-- [ ] Integrasikan webhook + escrow.
-- [ ] Buat dashboard admin + CSV.
+- [x] Buat `CommissionCalculator` + unit test. *(NTN-62)*
+- [x] Integrasikan webhook + escrow. *(NTN-63)*
+- [x] Buat dashboard admin + CSV. *(NTN-64)*
 - [ ] Buat dashboard owner + invoice.
 - [ ] Buat aturan kasir + rekap shift.
 - [ ] Buat batch settlement + command.
 - [ ] UAT formal + perbaiki temuan (setelah sprint 5 hari).
-- [ ] Update `docs/contract.md` §5 setelah migrasi.
+- [x] Update `docs/contract.md` §5 setelah migrasi. *(NTN-62/64)*
 - [ ] Update `test-cases.md` dan `uat-checklist.md`.
-- [ ] Pint + test suite penuh.
+- [x] Pint + test suite penuh. *(branch NTN-64, 2026-10-25)*
 
 ---
 
