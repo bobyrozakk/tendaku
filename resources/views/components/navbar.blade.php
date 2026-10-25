@@ -57,6 +57,20 @@
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Produk Owner</span>
                 </a>
 
+                <!-- Paket Camping Owner -->
+                <a href="{{ route('vendor.packages.index') }}"
+                   wire:navigate
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.packages.*')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.packages.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.packages.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <i data-lucide="tent-tree" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Paket Camping</span>
+                </a>
+
                 <!-- Kategori Owner -->
                 <a href="{{ route('vendor.categories.index') }}"
                    wire:navigate
@@ -200,7 +214,9 @@
                               {{ request()->is('katalog*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                         Katalog Alat
                     </a>
-                    <a href="#" class="px-3.5 py-2 rounded-xl text-sm font-medium text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 transition-all duration-150">
+                    <a href="{{ route('customer.packages.index') }}"
+                       class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
+                              {{ request()->is('paket-camping*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                         Paket Camping
                     </a>
                     <a href="{{ route('customer.weather.index') }}"
