@@ -52,6 +52,11 @@ class Vendor extends Model
         return $this->hasMany(ItemUnit::class);
     }
 
+    public function campingPackages(): HasMany
+    {
+        return $this->hasMany(CampingPackage::class);
+    }
+
     public function rentals(): HasMany
     {
         return $this->hasMany(Rental::class);
