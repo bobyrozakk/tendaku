@@ -56,11 +56,57 @@ class Payment extends Model
         'raw_notification' => 'array',
     ];
 
+    /**
+     * Ekstrak informasi Virtual Account / Cara Bayar dari notifikasi Midtrans.
+     *
+     * @return array{bank: string, va_number: string, biller_code: ?string, qr_code_url: ?string}|null
+     */
+    public function getVaDetailsAttribute(): ?array
+    {
+        $raw = $this->raw_notification;
+        if (empty($raw) || ! is_array($raw)) {
+            return null;
+        }
+
+        // 1. Bank BCA, BNI, BRI, CIMB, dll
+        if (! empty($raw['va_numbers']) && is_array($raw['va_numbers'])) {
+            $first = $raw['va_numbers'][0];
+
+            return [
+                'bank' => strtoupper($first['bank'] ?? 'Bank Transfer'),
+                'va_number' => $first['va_number'] ?? '',
+                'biller_code' => null,
+                'qr_code_url' => null,
+            ];
+        }
+
+        // 2. Mandiri Bill Payment
+        if (! empty($raw['bill_key'])) {
+            return [
+                'bank' => 'MANDIRI',
+                'va_number' => $raw['bill_key'],
+                'biller_code' => $raw['biller_code'] ?? null,
+                'qr_code_url' => null,
+            ];
+        }
+
+        // 3. Permata Bank
+        if (! empty($raw['permata_va_number'])) {
+            return [
+                'bank' => 'PERMATA',
+                'va_number' => $raw['permata_va_number'],
+                'biller_code' => null,
+                'qr_code_url' => null,
+            ];
+        }
+
+        return null;
+    }
+
     // ── Scopes ───────────────────────────────────────────────────────────────
 
     /**
      * Scope: pembayaran yang masuk platform dan belum dicairkan, untuk rental yang sudah picked_up.
-     * Digunakan Boby untuk menghitung dana layak cair (§9).
      */
     public function scopePayoutEligible(Builder $query): Builder
     {

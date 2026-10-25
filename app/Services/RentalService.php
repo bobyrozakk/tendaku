@@ -10,7 +10,6 @@ use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -202,11 +201,17 @@ class RentalService
      */
     public function generateBookingCode(): string
     {
-        $year = date('Y');
+        $datePrefix = 'TDK'.date('Ymd');
+        $lastBooking = Rental::query()
+            ->where('booking_code', 'like', "{$datePrefix}%")
+            ->orderBy('booking_code', 'desc')
+            ->value('booking_code');
+
+        $nextNumber = $lastBooking ? ((int) substr($lastBooking, -4) + 1) : 1;
 
         do {
-            $randomString = strtoupper(Str::random(5));
-            $code = "TDK-{$year}-{$randomString}";
+            $code = $datePrefix.str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+            $nextNumber++;
         } while (Rental::query()->where('booking_code', $code)->exists());
 
         return $code;

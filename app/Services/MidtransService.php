@@ -25,7 +25,7 @@ class MidtransService
      * Prefix wajib untuk semua order_id Midtrans project ini (§0).
      * Akun sandbox pernah dipakai project lain; prefix memisahkan log dashboard.
      */
-    public const ORDER_ID_PREFIX = 'TDK-';
+    public const ORDER_ID_PREFIX = 'TDK';
 
     public function __construct()
     {
@@ -42,9 +42,6 @@ class MidtransService
 
     /**
      * Buat Snap token untuk payment yang diberikan.
-     *
-     * Wajib: order_id harus ada di payment (dari PaymentService::createOnlinePayment).
-     * Snap token dikembalikan dan disimpan ke kolom snap_token untuk keperluan retry (§7.2).
      *
      * @throws InvalidArgumentException
      */
@@ -64,15 +61,15 @@ class MidtransService
             throw new InvalidArgumentException('Payment belum memiliki order_id. Panggil PaymentService::createOnlinePayment terlebih dahulu.');
         }
 
-        // Pastikan order_id ber-prefix TDK- (§0)
         if (! str_starts_with($orderId, self::ORDER_ID_PREFIX)) {
-            throw new InvalidArgumentException("order_id harus ber-prefix 'TDK-'. Ditemukan: {$orderId}");
+            throw new InvalidArgumentException('Invalid order ID format. Expected prefix: '.self::ORDER_ID_PREFIX);
         }
 
-        // Muat relasi jika belum tersedia
         $payment->loadMissing(['rental.details.masterItem', 'rental.customer']);
 
         $rental = $payment->rental;
+
+        $statusUrl = route('booking.status', $rental->booking_code);
 
         $params = [
             'transaction_details' => [
@@ -81,20 +78,15 @@ class MidtransService
             ],
             'item_details' => $this->buildItemDetails($payment, $rental),
             'customer_details' => $this->buildCustomerDetails($rental),
-            'enabled_payments' => config('payment.enabled_channels', [
-                'qris',
-                'bank_transfer',
-                'bca_va',
-                'bni_va',
-                'bri_va',
-                'echannel',
-                'permata_va',
-                'cimb_va',
-                'other_va',
-            ]),
+            'enabled_payments' => config('payment.enabled_channels'),
+            'callbacks' => [
+                'finish' => $statusUrl,
+                'unfinish' => $statusUrl,
+                'error' => $statusUrl,
+            ],
         ];
 
-        // Sesuaikan expiry dengan rentals.expires_at (§7.2)
+        // Sesuaikan expiry dengan rentals.expires_at
         if ($rental?->expires_at) {
             $expiryDuration = now()->diffInMinutes($rental->expires_at, false);
             if ($expiryDuration > 0) {
@@ -118,7 +110,6 @@ class MidtransService
      * Sinkronisasi status pembayaran langsung dari API Midtrans (§0, §7.1).
      *
      * Digunakan untuk mengecek status secara aktif saat polling di halaman status
-     * atau saat webhook tertunda/belum sampai di sandbox lokal.
      *
      * @throws InvalidArgumentException
      */
@@ -180,16 +171,7 @@ class MidtransService
     }
 
     /**
-     * Validasi dan proses notifikasi webhook Midtrans (§7.3).
-     *
-     * Alur:
-     * 1. Verifikasi signature (constant-time, beda → exception)
-     * 2. Cari payment by order_id (tidak ada → exception)
-     * 3. Lock baris dengan FOR UPDATE
-     * 4. Validasi gross_amount
-     * 5. Terapkan status (hanya maju, idempotent)
-     * 6. Simpan raw_notification
-     * 7. Jika pertama kali paid → konfirmasi rental
+     * Validasi dan proses notifikasi webhook Midtrans
      *
      * @param  array<string, string>  $notification
      *
@@ -253,6 +235,24 @@ class MidtransService
 
             return $payment;
         });
+    }
+
+    public function createTransactionWithBank(Payment $payment, ?string $bank = null): string
+    {
+        $channelMap = [
+            'bca' => ['bca_va'],
+            'bni' => ['bni_va'],
+            'bri' => ['bri_va'],
+            'mandiri' => ['echannel'],
+            'permata' => ['permata_va'],
+            'cimb' => ['cimb_va'],
+        ];
+
+        $enabledPayments = ($bank && isset($channelMap[strtolower($bank)]))
+            ? $channelMap[strtolower($bank)]
+            : null;
+
+        return $this->createTransaction($payment, $enabledPayments);
     }
 
     /**
@@ -349,23 +349,32 @@ class MidtransService
      * Konfirmasi rental menjadi 'confirmed' saat pembayaran pertama berhasil (§5.4, §7.3).
      *
      * Rental hanya perlu dikonfirmasi sekali (dari status pending_payment / pending).
+     * Menggunakan lockForUpdate agar tidak ada race condition saat webhook diterima ganda.
      */
     private function confirmRentalIfFirstPayment(Payment $payment): void
     {
         /** @var Rental|null $rental */
-        $rental = Rental::query()->find($payment->rental_id);
+        $rental = Rental::query()
+            ->where('id', $payment->rental_id)
+            ->lockForUpdate()
+            ->first();
+
         if ($rental === null) {
             return;
         }
 
-        // Konfirmasi jika belum ada pembayaran sukses sebelumnya (pembayaran pertama)
+        // Hanya konfirmasi jika rental masih pending (belum dikonfirmasi oleh webhook sebelumnya)
+        if ($rental->status !== 'pending') {
+            return;
+        }
+
+        // Konfirmasi jika ini pembayaran paid pertama (count setelah save = 1)
         $paidCount = Payment::query()
             ->where('rental_id', $rental->id)
             ->where('status', 'paid')
             ->count();
 
-        // Jika ini pembayaran paid pertama (baru saja diubah = 1)
-        if ($paidCount === 1 && $rental->status === 'pending') {
+        if ($paidCount === 1) {
             $rental->update(['status' => 'confirmed']);
         }
     }
@@ -401,8 +410,11 @@ class MidtransService
             ])->toArray();
 
             // Rekonsiliasi total agar selalu sama dengan gross_amount
-            $itemTotal = array_sum(array_column($items, 'price'));
-            $diff = $amount - ($itemTotal * ($items[0]['quantity'] ?? 1));
+            $itemTotal = array_sum(array_map(
+                fn ($item) => $item['price'] * $item['quantity'],
+                $items
+            ));
+            $diff = $amount - $itemTotal;
             if ($diff !== 0 && ! empty($items)) {
                 $items[] = [
                     'id' => 'ADJ',
@@ -451,6 +463,79 @@ class MidtransService
             'email' => $customer?->email ?? '',
             'phone' => $customer?->phone ?? '',
         ];
+    }
+
+        /**
+     * Generate nomor Virtual Account resmi dari Midtrans Sandbox via Core API (tanpa Snap pop-up).
+     *
+     * @param Payment $payment
+     * @param string $bank 'bca', 'bni', 'bri', 'mandiri', 'permata'
+     * @return array{bank: string, va_number: string, biller_code: ?string, qr_code_url: ?string}|null
+     */
+    public function chargeBankTransfer(Payment $payment, string $bank = 'bca'): ?array
+    {
+        $bank = strtolower(trim($bank ?: 'bca'));
+        $amount = (int) $payment->amount;
+        $rental = $payment->rental;
+
+        // Jika transaksi ini sudah memiliki nomor VA untuk bank yang sama dan masih pending, langsung kembalikan
+        if ($payment->raw_notification && ! empty($payment->va_details)) {
+            $existingBank = strtolower($payment->va_details['bank'] ?? '');
+            if ($existingBank === $bank) {
+                return $payment->va_details;
+            }
+
+            // Jika user memilih bank berbeda di dropdown, Midtrans tidak membolehkan charge ulang dengan order_id yang sama.
+            // Buat order_id baru dengan suffix unik agar Midtrans Sandbox menerima charge bank baru:
+            $baseOrderId = explode('-', $payment->order_id)[0];
+            $payment->order_id = $baseOrderId . '-' . substr(str_shuffle('123456789'), 0, 3);
+            $payment->save();
+        }
+
+        $params = [
+            'transaction_details' => [
+                'order_id' => $payment->order_id,
+                'gross_amount' => $amount,
+            ],
+            'customer_details' => $this->buildCustomerDetails($rental),
+            'item_details' => $this->buildItemDetails($payment, $rental),
+        ];
+
+        if ($bank === 'mandiri') {
+            $params['payment_type'] = 'echannel';
+            $params['echannel'] = [
+                'bill_info1' => 'Pembayaran Sewa',
+                'bill_info2' => 'Tendaku #' . ($rental?->booking_code ?? ''),
+            ];
+        } elseif ($bank === 'permata') {
+            $params['payment_type'] = 'permata';
+        } else {
+            // bca, bni, bri, dll
+            $params['payment_type'] = 'bank_transfer';
+            $params['bank_transfer'] = [
+                'bank' => $bank,
+            ];
+        }
+
+        try {
+            $response = \Midtrans\CoreApi::charge($params);
+            $raw = json_decode(json_encode($response), true);
+
+            $payment->update([
+                'midtrans_transaction_id' => $raw['transaction_id'] ?? $payment->midtrans_transaction_id,
+                'midtrans_status' => $raw['transaction_status'] ?? 'pending',
+                'method' => $bank === 'mandiri' ? 'echannel' : 'va_' . $bank,
+                'raw_notification' => $raw,
+            ]);
+
+            return $payment->fresh()->va_details;
+        } catch (\Throwable $e) {
+            Log::error('Midtrans CoreApi Charge error: ' . $e->getMessage(), [
+                'order_id' => $payment->order_id,
+                'bank' => $bank,
+            ]);
+            throw $e;
+        }
     }
 
     /**

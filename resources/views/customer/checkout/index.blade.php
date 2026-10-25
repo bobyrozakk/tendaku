@@ -1,797 +1,896 @@
 <x-layouts.customer>
-    <x-slot name="title">
-        Checkout Booking #{{ $booking['booking_code'] }} - Tendaku
-    </x-slot>
-
+    <title>Checkout Sewa Alat Camping - Tendaku</title>
     <x-slot name="header">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-                <nav class="flex items-center gap-2 text-xs text-darkbrown-500 mb-1.5">
-                    <a href="{{ route('home') }}" class="hover:text-avocado-600 transition">Beranda</a>
+                <nav class="flex items-center gap-2 text-sm text-darkbrown-500 mb-1.5">
+                    <a href="{{ route('home') }}" class="hover:text-avocado-700 transition">Beranda</a>
                     <span class="text-wheat-400">/</span>
-                    <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-600 transition">Katalog</a>
+                    <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-700 transition">Katalog</a>
                     <span class="text-wheat-400">/</span>
                     <span class="text-darkbrown-800 font-semibold">Booking</span>
                 </nav>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-800 tracking-tight">
-                        Checkout & Pembayaran
-                    </h1>
-                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
+                    Checkout & Pembayaran
+                </h1>
             </div>
 
-            <!-- Expiration Countdown Badge -->
-            <div class="flex items-center gap-2.5 px-4 py-2.5 bg-wheat-100/90 rounded-2xl border border-wheat-300/80 shadow-tendaku-sm self-start sm:self-auto">
-                <div class="w-8 h-8 rounded-xl bg-sunglow-300 text-darkbrown-800 flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <div>
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-darkbrown-500 block leading-none">Batas Waktu Bayar</span>
-                    <span class="text-xs font-bold text-darkbrown-800">{{ $booking['expires_at'] }}</span>
-                </div>
-            </div>
+            <ol class="hidden sm:flex items-center gap-2 text-sm" aria-label="Tahapan pemesanan">
+                <li class="flex items-center gap-2 text-avocado-700 font-semibold">
+                    <span class="w-6 h-6 rounded-full bg-avocado-600 text-white flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </span>
+                    Pilih alat
+                </li>
+                <span class="w-8 h-0.5 rounded bg-avocado-500"></span>
+                <li class="flex items-center gap-2 text-darkbrown-900 font-bold" aria-current="step">
+                    <span class="w-6 h-6 rounded-full bg-darkbrown-900 text-wheat-100 flex items-center justify-center text-xs">2</span>
+                    Checkout
+                </li>
+                <span class="w-8 h-0.5 rounded bg-wheat-300"></span>
+                <li class="flex items-center gap-2 text-darkbrown-500 font-medium">
+                    <span class="w-6 h-6 rounded-full border-2 border-wheat-300 text-darkbrown-500 flex items-center justify-center text-xs">3</span>
+                    Bayar
+                </li>
+            </ol>
         </div>
     </x-slot>
 
-    <!-- Interactive Alpine.js Container for Realtime Calculation & Method Switch -->
-    <div x-data="{
-        isLoggedIn: {{ $isLoggedIn ? 'true' : 'false' }},
-        pickupMethod: '{{ $booking['pickup_method'] }}',
-        selectedChannel: 'qris',
-        paymentOption: 'full',
-        subtotal: {{ $booking['subtotal'] }},
-        deposit: {{ $booking['deposit'] }},
-        deliveryFeeAmount: 25000,
-        dpAmount: {{ $booking['dp_amount'] ?? 0 }},
-        dpPercentage: {{ $booking['dp_percentage'] ?? 30 }},
-        isProcessing: false,
-        get deliveryFee() {
-            return (this.isLoggedIn && this.pickupMethod === 'delivery') ? this.deliveryFeeAmount : 0;
-        },
-        get grandTotal() {
-            return this.subtotal + this.deposit + this.deliveryFee;
-        },
-        get payableAmount() {
-            return (this.paymentOption === 'dp' && this.isLoggedIn) ? this.dpAmount : this.grandTotal;
-        },
-        formatRupiah(num) {
-            return 'Rp ' + (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        },
-        async payWithMidtrans() {
-            if (this.pickupMethod === 'delivery' && !this.isLoggedIn) {
-                window.location.href = '{{ route('login') }}';
-                return;
-            }
+    @php
+        $user = auth()->user();
+        $isGuest = ! $isLoggedIn;
 
-            if (this.isProcessing) return;
-            this.isProcessing = true;
+        /*
+         | Field yang perlu diisi. Tamu: nama, WA, NIK SELALU muncul.
+         | Member: hanya muncul kalau data di akunnya masih kosong.
+         */
+        $needsName  = $isGuest || empty($user?->name);
+        $needsPhone = $isGuest || empty($user?->phone);
+        $needsNik   = $isGuest || empty($user?->nik);
 
-            try {
-                const formData = new FormData();
-                formData.append('_token', '{{ csrf_token() }}');
-                formData.append('pickup_method', this.pickupMethod);
-                formData.append('payment_option', this.paymentOption);
-                formData.append('payment_channel', this.selectedChannel);
+        // Alamat antar: hanya relevan untuk member (tamu tidak bisa delivery)
+        $savedAddress = $booking['delivery_address'] ?? ($user?->address ?? '');
+        $needsAddress = $isLoggedIn && blank($savedAddress);
 
-                const guestName = document.getElementById('guest_name');
-                const guestPhone = document.getElementById('guest_phone');
-                if (guestName) { formData.append('guest_name', guestName.value); }
-                if (guestPhone) { formData.append('guest_phone', guestPhone.value); }
+        $maskedNik = (! $isGuest && ! empty($user?->nik))
+            ? substr($user->nik, 0, 4) . str_repeat('•', max(0, strlen($user->nik) - 8)) . substr($user->nik, -4)
+            : null;
 
-                const response = await fetch('{{ route('checkout.store') }}', {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                    body: formData,
-                });
+        // Tanggal ISO (Y-m-d) untuk input date. Idealnya controller kirim pickup_date_iso & return_date_iso.
+        $toIso = function ($formatted, $iso) {
+            if ($iso) return $iso;
+            try { return \Carbon\Carbon::parse($formatted)->toDateString(); } catch (\Throwable $e) { return null; }
+        };
 
-                const data = await response.json();
+        $items = collect($booking['items'])->values()->map(fn ($it, $k) => [
+            'id'               => $it['id'] ?? $k,
+            'name'             => $it['name'],
+            'category'         => $it['category'] ?? '',
+            'specs'            => $it['specs'] ?? '',
+            'icon'             => $it['icon'] ?? 'default',
+            'price_per_day'    => (int) $it['price_per_day'],
+            'deposit_per_unit' => (int) ($it['deposit_per_unit'] ?? 0),
+            'qty'              => (int) $it['qty'],
+            'max_qty'          => (int) ($it['max_qty'] ?? $it['stock'] ?? 99),
+        ])->all();
 
-                if (!response.ok) {
-                    alert(data.message || 'Terjadi kesalahan. Silakan coba lagi.');
-                    this.isProcessing = false;
-                    return;
-                }
+        $checkoutConfig = [
+            'isLoggedIn'        => (bool) $isLoggedIn,
+            'needsName'         => (bool) $needsName,
+            'needsPhone'        => (bool) $needsPhone,
+            'needsNik'          => (bool) $needsNik,
+            'needsAddress'      => (bool) $needsAddress,
+            // Guest tidak boleh delivery: paksa self_pickup sejak awal
+            'pickupMethod'      => $isLoggedIn ? $booking['pickup_method'] : 'self_pickup',
+            'name'              => $needsName ? '' : ($user->name ?? ''),
+            'deliveryAddress'   => $savedAddress,
+            'deliveryNotes'     => $booking['delivery_notes'] ?? '',
+            'items'             => $items,
+            'pickupDate'        => $toIso($booking['pickup_date'], $booking['pickup_date_iso'] ?? null),
+            'returnDate'        => $toIso($booking['return_date'], $booking['return_date_iso'] ?? null),
+            'minDate'           => now()->toDateString(),
+            'initialDays'       => (int) $booking['rental_days'],
+            'discount'          => (int) ($booking['discount'] ?? 0),
+            'deliveryFeeAmount' => 25000,
+            'serverDpAmount'    => (int) ($booking['dp_amount'] ?? 0),
+            'dpPercentage'      => (int) ($booking['dp_percentage'] ?? 50),
+            'expiresAtIso'      => $booking['expires_at_iso'] ?? null,
+            'loginUrl'          => route('login'),
+            'storeUrl'          => route('checkout.store'),
+            'csrf'              => csrf_token(),
+        ];
 
-                if (data.snap_token && typeof window.snap !== 'undefined') {
-                    window.snap.pay(data.snap_token, {
-                        onSuccess: () => { window.location.href = data.redirect_url; },
-                        onPending: () => { window.location.href = data.redirect_url; },
-                        onError: (result) => {
-                            alert('Pembayaran gagal: ' + (result.status_message || 'Terjadi kesalahan'));
-                            this.isProcessing = false;
-                        },
-                        onClose: () => { window.location.href = data.redirect_url; },
-                    });
-                } else if (data.snap_token) {
-                    // Snap.js belum tersedia — fallback ke simulasi
-                    window.dispatchEvent(new CustomEvent('open-midtrans-simulation', { detail: data }));
-                    this.isProcessing = false;
-                } else {
-                    alert('Gagal mendapatkan token pembayaran. Silakan coba lagi.');
-                    this.isProcessing = false;
-                }
-            } catch (err) {
-                alert('Koneksi bermasalah. Silakan periksa internet dan coba lagi.');
-                this.isProcessing = false;
-            }
+        $inputBase = 'w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-darkbrown-900 placeholder:text-darkbrown-400 focus:ring-2 transition';
+        $okBorder  = 'border-wheat-300 focus:border-avocado-600 focus:ring-avocado-500/30';
+        $errBorder = 'border-red-400 focus:border-red-500 focus:ring-red-200';
+    @endphp
+
+    <style>
+        [x-cloak] {
+            display: none !important;
         }
-    }" class="py-2 sm:py-4">
 
-        <!-- Main Checkout Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            margin: 0 !important;
+        }
 
-            <!-- LEFT COLUMN: Booking Details (8 Cols) -->
-            <div class="lg:col-span-7 xl:col-span-8 space-y-6">
+        input[type="number"] {
+            -moz-appearance: textfield !important;
+            appearance: textfield !important;
+        }
 
-                <!-- 1. System Rule Notice: Guest vs Logged In Authentication Status -->
-                @guest
-                <div class="p-4 sm:p-5 rounded-2xl bg-wheat-100 border border-wheat-300 text-darkbrown-800 shadow-tendaku-sm">
-                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div class="flex items-start gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-goldenrod-500 text-white flex items-center justify-center shrink-0 font-extrabold text-sm shadow-sm">
-                                !
-                            </div>
-                            <div class="space-y-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-extrabold text-sm text-darkbrown-900">Pemesanan Tanpa Login (Mode Tamu)</span>
-                                </div>
-                                <p class="text-xs text-darkbrown-700 leading-relaxed">
-                                    Butuh barang diantar ke lokasi? Masuk atau daftar akun untuk menikmati layanan delivery.
-                                </p>
-                            </div>
-                        </div>
+        /* ===== Serah terima: form menyusut ke atas, berganti alur status ===== */
+        .co-collapse { display: grid; grid-template-rows: 1fr; transform-origin: top center;
+            transition: grid-template-rows .8s cubic-bezier(.65, 0, .35, 1), opacity .5s ease, transform .8s cubic-bezier(.65, 0, .35, 1); }
+        .co-collapse > .co-inner { min-height: 0; }
+        .co-collapse.is-collapsed { grid-template-rows: 0fr; opacity: 0; transform: translateY(-1.25rem) scale(.985); }
+        .co-collapse.is-collapsed > .co-inner { overflow: hidden; }
 
-                        <div class="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                            <a href="{{ route('login') }}" class="px-3.5 py-2 rounded-xl text-xs font-bold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 transition shadow-sm">
-                                Masuk (Login)
-                            </a>
-                            <a href="{{ route('register') }}" class="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-avocado-500 hover:bg-avocado-600 active:bg-avocado-700 transition shadow-sm">
-                                Daftar Akun
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                @else
-                <div class="p-4 rounded-2xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm text-avocado-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-tendaku-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-lg bg-avocado-100 text-avocado-700 flex items-center justify-center font-bold">
-                            ✓
-                        </div>
-                        <div>
-                            <span class="font-bold text-avocado-900 block">Akun Terverifikasi</span>
-                            <span class="text-xs text-avocado-800">Login sebagai <strong>{{ auth()->user()->name }}</strong> ({{ auth()->user()->email }}). Anda dapat memilih Ambil di Tempat maupun Layanan Pengantaran.</span>
-                        </div>
-                    </div>
-                    <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-white text-avocado-800 border border-avocado-300 shrink-0 self-start sm:self-center">
-                        Delivery Aktif
-                    </span>
-                </div>
-                @endguest
+        .co-preview { display: grid; grid-template-rows: 0fr; opacity: 0;
+            transition: grid-template-rows .8s cubic-bezier(.65, 0, .35, 1) .3s, opacity .5s ease .5s; }
+        .co-preview.is-open { grid-template-rows: 1fr; opacity: 1; }
+        .co-preview > .co-inner { overflow: hidden; min-height: 0; }
 
-                <!-- 2. Booking Header Identifier -->
-                <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 sm:p-6 shadow-tendaku-sm">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-wheat-200/70">
-                        <div>
-                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-400">Kode Booking Resmi</span>
-                            <div class="flex items-center gap-2 mt-0.5">
-                                <span class="font-mono text-xl sm:text-2xl font-extrabold text-darkbrown-900 tracking-tight">
-                                    #{{ $booking['booking_code'] }}
-                                </span>
-                            </div>
-                        </div>
+        .co-tick { stroke-dasharray: 24; stroke-dashoffset: 24; animation: co-draw .45s cubic-bezier(.65, 0, .35, 1) forwards; }
+        @@keyframes co-draw { to { stroke-dashoffset: 0; } }
+        .co-pop { animation: co-pop .55s cubic-bezier(.34, 1.56, .64, 1); }
+        @@keyframes co-pop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
 
-                        <div class="text-left sm:text-right">
-                            <span class="text-xs font-medium text-darkbrown-500 block">Waktu Pemesanan:</span>
-                            <span class="text-xs font-bold text-darkbrown-800">{{ $booking['created_at'] }}</span>
-                        </div>
-                    </div>
+        .co-ring { stroke-dasharray: 166; stroke-dashoffset: 166; animation: co-draw .7s cubic-bezier(.65, 0, .45, 1) .25s forwards; }
+        .co-bigtick { stroke-dasharray: 48; stroke-dashoffset: 48; animation: co-draw .4s cubic-bezier(.65, 0, .45, 1) .85s forwards; }
+        .co-halo { animation: co-halo 1s ease-out .9s both; }
+        @@keyframes co-halo { 0% { opacity: .9; transform: scale(.7); } 100% { opacity: 0; transform: scale(1.5); } }
+        .co-copy { animation: co-copy .6s cubic-bezier(.2, .8, .2, 1) 1.1s both; }
+        @@keyframes co-copy { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-                    <div class="mt-4 flex items-start gap-3 p-3.5 rounded-xl bg-wheat-50 border border-wheat-200/80 text-xs text-darkbrown-700 leading-relaxed">
-                        <svg class="w-5 h-5 text-goldenrod-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            Peralatan sewa telah diamankan selama <strong class="text-darkbrown-900">12 jam</strong>. Selesaikan transaksi sebelum batas waktu berakhir agar unit tidak dialihkan ke penyewa lain.
-                        </div>
-                    </div>
-                </div>
+        @@media (prefers-reduced-motion: reduce) {
+            .co-collapse, .co-preview { transition: none; }
+            .co-tick, .co-ring, .co-bigtick { animation-duration: .01s; animation-delay: 0s; }
+            .co-halo { animation: none; opacity: 0; }
+            .co-copy { animation: none; }
+            .co-pop { animation: none; }
+        }
+    </style>
 
-                <!-- 3. Metode Pengambilan & Logistik (Business Rule Enforced) -->
-                <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 sm:p-6 shadow-tendaku-sm space-y-5">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-goldenrod-100 text-goldenrod-800 flex items-center justify-center font-bold">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+    <div x-data="checkoutPage({{ \Illuminate\Support\Js::from($checkoutConfig) }})" class="py-2 sm:py-4">
+
+        <!-- ============ ANIMASI "BOOKING DIBUAT" (menggantikan form, header & footer tetap) ============ -->
+        <div class="co-preview" :class="{ 'is-open': phase !== 'form' }" :inert="phase === 'form'" :aria-hidden="phase === 'form' ? 'true' : 'false'">
+            <div class="co-inner">
+                <div class="flex flex-col items-center justify-center text-center gap-5 px-4" style="min-height: 62vh;" role="status" aria-live="polite">
+                    <template x-if="phase !== 'form'">
+                        <div class="flex flex-col items-center gap-5">
+                            <div class="relative w-32 h-32 flex items-center justify-center">
+                                <span class="co-halo absolute inset-0 rounded-full bg-avocado-200/70" aria-hidden="true"></span>
+                                <svg class="relative w-28 h-28 text-avocado-600" viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle class="co-ring" cx="28" cy="28" r="26.5" />
+                                    <path class="co-bigtick" d="M16 29l8 8 16-17" />
                                 </svg>
                             </div>
-                            <div>
-                                <h3 class="text-base font-bold text-darkbrown-800">Metode Pengambilan Barang</h3>
-                                <p class="text-xs text-darkbrown-500">Pilih bagaimana peralatan camping akan diserahkan kepada Anda</p>
+
+                            <div class="co-copy space-y-2">
+                                <h2 class="text-3xl sm:text-4xl font-extrabold text-darkbrown-900 tracking-tight font-heading">Booking dibuat</h2>
+                                <p x-show="createdCode" x-cloak class="font-mono text-base font-extrabold text-darkbrown-800" x-text="'#' + createdCode"></p>
+                                <p class="text-sm text-darkbrown-600">Menyiapkan halaman pembayaran Anda…</p>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Method Option Cards -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                        <!-- OPTION 1: Ambil di Tempat (Self-Pickup) - Available for EVERYONE -->
-                        <div @click="pickupMethod = 'self_pickup'"
-                            :class="pickupMethod === 'self_pickup' ? 'border-avocado-500 bg-[#FAF6ED] ring-2 ring-avocado-400/40' : 'border-wheat-200 bg-white hover:border-wheat-400'"
-                            class="p-4 rounded-2xl border transition duration-200 cursor-pointer flex flex-col justify-between space-y-3">
-                            <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="flex items-center gap-2">
-                                        <input type="radio" name="ui_pickup_method" value="self_pickup"
-                                            :checked="pickupMethod === 'self_pickup'"
-                                            @change="pickupMethod = 'self_pickup'"
-                                            class="text-avocado-600 focus:ring-avocado-500 border-wheat-400">
-                                        <span class="font-extrabold text-sm text-darkbrown-900">Ambil di Tempat</span>
-                                    </div>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
-                                        Gratis Ongkir
-                                    </span>
-                                </div>
-                                <p class="text-xs text-darkbrown-600 leading-relaxed">
-                                    Ambil sendiri peralatan langsung ke toko/workshop vendor tanpa biaya antar tambahan.
-                                </p>
-                            </div>
-
-                            <div class="pt-2 border-t border-wheat-200/80 text-[11px] text-darkbrown-500 space-y-1">
-                                <span class="font-semibold text-darkbrown-800 block">Tersedia untuk: Tamu & Member</span>
-                                <span>Outlet: {{ $booking['vendor']['city'] }}</span>
-                            </div>
-                        </div>
-
-                        <!-- OPTION 2: Diantar ke Lokasi (Delivery) - Available ONLY FOR LOGGED IN USERS -->
-                        @if ($isLoggedIn)
-                        <!-- Logged in state: fully active and selectable -->
-                        <div @click="pickupMethod = 'delivery'"
-                            :class="pickupMethod === 'delivery' ? 'border-goldenrod-500 bg-[#FAF6ED] ring-2 ring-goldenrod-400/40' : 'border-wheat-200 bg-white hover:border-wheat-400'"
-                            class="p-4 rounded-2xl border transition duration-200 cursor-pointer flex flex-col justify-between space-y-3">
-                            <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="flex items-center gap-2">
-                                        <input type="radio" name="ui_pickup_method" value="delivery"
-                                            :checked="pickupMethod === 'delivery'"
-                                            @change="pickupMethod = 'delivery'"
-                                            class="text-goldenrod-600 focus:ring-goldenrod-500 border-wheat-400">
-                                        <span class="font-extrabold text-sm text-darkbrown-900">Diantar ke Lokasi</span>
-                                    </div>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-goldenrod-100 text-goldenrod-900 border border-goldenrod-200">
-                                        Ongkir Rp 25.000
-                                    </span>
-                                </div>
-                                <p class="text-xs text-darkbrown-600 leading-relaxed">
-                                    Peralatan diantar oleh kurir resmi vendor langsung ke alamat rumah atau titik kumpul trip Anda.
-                                </p>
-                            </div>
-
-                            <div class="pt-2 border-t border-wheat-200/80 text-[11px] text-darkbrown-500 space-y-1">
-                                <span class="font-semibold text-avocado-700 block">✓ Akun Terverifikasi</span>
-                                <span>Area cakupan: Malang Raya & Batu</span>
-                            </div>
-                        </div>
-                        @else
-                        <!-- Guest state: locked/restricted with clear login requirement -->
-                        <div class="p-4 rounded-2xl border border-dashed border-wheat-300 bg-wheat-100/50 opacity-90 flex flex-col justify-between space-y-3">
-                            <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <div class="flex items-center gap-2">
-                                        <input type="radio" disabled class="text-gray-400 border-gray-300 cursor-not-allowed">
-                                        <span class="font-bold text-sm text-darkbrown-700 line-through">Diantar ke Lokasi</span>
-                                    </div>
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-wheat-200 text-darkbrown-800 border border-wheat-300">
-                                        🔒 Wajib Login
-                                    </span>
-                                </div>
-                                <p class="text-xs text-darkbrown-600 leading-relaxed">
-                                    Layanan pengantaran (delivery) mengharuskan akun terdaftar untuk verifikasi alamat dan serah terima kurir.
-                                </p>
-                            </div>
-
-                            <div class="pt-2 border-t border-wheat-200 flex items-center justify-between text-[11px]">
-                                <span class="text-darkbrown-500">Ingin diantar?</span>
-                                <a href="{{ route('login') }}" class="font-bold text-goldenrod-800 hover:text-goldenrod-900 underline underline-offset-2">
-                                    Masuk / Daftar Akun →
-                                </a>
-                            </div>
-                        </div>
-                        @endif
-
-                    </div>
-
-                    <!-- Dynamic Details Box Based on Selected Method -->
-                    <!-- Detail Ambil di Tempat -->
-                    <div x-show="pickupMethod === 'self_pickup'" x-cloak class="p-4 rounded-xl bg-[#FAF6ED] border border-wheat-200/90 space-y-3 text-xs">
-                        <div class="flex items-center justify-between border-b border-wheat-200/70 pb-2">
-                            <span class="font-bold text-darkbrown-900 text-sm flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-avocado-500"></span>
-                                Lokasi Pengambilan Toko Vendor:
-                            </span>
-                        </div>
-
-                        <div class="space-y-1">
-                            <div class="font-extrabold text-darkbrown-900">{{ $booking['vendor']['pickup_location'] }}</div>
-                            <div class="text-darkbrown-600">{{ $booking['vendor']['address'] }}</div>
-                            <div class="text-darkbrown-500 pt-1">
-                                <strong>Jam Operasional:</strong> {{ $booking['vendor']['operational_hours'] }}
-                            </div>
-                        </div>
-
-                        @guest
-                        <!-- Guest Identity Input Form for Store Pickup -->
-                        <div class="pt-3 border-t border-wheat-200/80 space-y-2">
-                            <span class="font-bold text-darkbrown-900 block">Data Identitas Tamu untuk Serah Terima:</span>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-darkbrown-600 mb-1">Nama Lengkap Tamu</label>
-                                    <input type="text" name="guest_name" id="guest_name" class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500" placeholder="Nama sesuai KTP">
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-semibold text-darkbrown-600 mb-1">No. WhatsApp Aktif</label>
-                                    <input type="text" name="guest_phone" id="guest_phone" class="w-full text-xs rounded-lg border-wheat-300 bg-white text-darkbrown-800 focus:border-avocado-500 focus:ring-1 focus:ring-avocado-500" placeholder="08xxxxxxxxxx">
-                                </div>
-                            </div>
-                            <p class="text-[11px] text-darkbrown-500">
-                                *Wajib menunjukkan KTP asli dan bukti nomor booking saat pengambilan unit di outlet.
-                            </p>
-                        </div>
-                        @endguest
-                    </div>
-
-                    <!-- Detail Diantar ke Lokasi (Hanya muncul jika Logged In dan memilih delivery) -->
-                    <div x-show="pickupMethod === 'delivery'" x-cloak class="p-4 rounded-xl bg-[#FAF6ED] border border-wheat-200/90 space-y-3 text-xs">
-                        <div class="flex items-center justify-between border-b border-wheat-200/70 pb-2">
-                            <span class="font-bold text-darkbrown-900 text-sm flex items-center gap-1.5">
-                                <span class="w-2 h-2 rounded-full bg-goldenrod-500"></span>
-                                Alamat Tujuan Pengantaran (Kurir Vendor):
-                            </span>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-white text-darkbrown-700 border border-wheat-300">
-                                Biaya Kurir: Rp 25.000
-                            </span>
-                        </div>
-
-                        <div class="space-y-1">
-                            <p class="text-darkbrown-700 leading-relaxed font-medium">{{ $booking['delivery_address'] }}</p>
-                            <p class="text-[11px] text-darkbrown-500 pt-1">
-                                <strong class="text-goldenrod-800">Catatan Khusus Pengantaran:</strong> {{ $booking['delivery_notes'] }}
-                            </p>
-                        </div>
-                    </div>
+                    </template>
                 </div>
+            </div>
+        </div>
 
-                <!-- 4. Vendor Partner Information -->
-                <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 sm:p-6 shadow-tendaku-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-avocado-100 text-avocado-700 flex items-center justify-center">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="text-base font-bold text-darkbrown-800">Vendor Penyedia Alat</h3>
-                                <p class="text-xs text-darkbrown-500">Peralatan camping disediakan dan disiapkan oleh mitra resmi</p>
-                            </div>
-                        </div>
+        <!-- ============ FORM CHECKOUT (menyusut ke atas setelah booking dibuat) ============ -->
+        <div class="co-collapse" :class="{ 'is-collapsed': phase !== 'form' }">
+        <div class="co-inner space-y-6">
+
+        <!-- ============ TRIP BANNER ============ -->
+        <div class="relative overflow-hidden rounded-3xl bg-avocado-900 text-white shadow-tendaku">
+            <svg class="absolute inset-0 w-full h-full text-avocado-300 pointer-events-none" viewBox="0 0 800 220" preserveAspectRatio="xMaxYMid slice" fill="none" stroke="currentColor" aria-hidden="true">
+                <g opacity=".22" stroke-width="1.2">
+                    <path d="M470 220c20-60 70-96 140-100s150-30 190-110" />
+                    <path d="M520 220c20-48 64-76 124-80s126-26 156-84" />
+                    <path d="M560 110c0-40 40-70 90-72s100 24 104 66-34 78-92 82-102-30-102-76z" />
+                    <path d="M590 110c0-26 26-46 62-48s68 16 70 44-22 52-62 54-70-20-70-50z" />
+                    <path d="M620 108c0-14 14-26 34-27s38 9 39 25-12 30-34 31-39-12-39-29z" />
+                    <path d="M330 220c30-30 70-40 110-34" />
+                </g>
+            </svg>
+
+            <div class="relative p-5 sm:p-7 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                <div class="space-y-4 min-w-0">
+                    <div>
+                        <span class="text-sm text-avocado-200">Status Pemesanan</span>
+                        <div class="text-2xl sm:text-3xl font-extrabold tracking-tight">Pemesanan Baru</div>
                     </div>
 
-                    <div class="p-4 rounded-xl bg-[#FAF6ED] border border-wheat-200/80 space-y-3">
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            <div class="flex items-center gap-3">
-                                <div class="w-11 h-11 rounded-xl bg-darkbrown-800 text-wheat-200 flex items-center justify-center font-bold text-lg shrink-0">
-                                    M
-                                </div>
-                                <div>
-                                    <h4 class="font-extrabold text-darkbrown-900 text-sm sm:text-base">
-                                        {{ $booking['vendor']['name'] }}
-                                    </h4>
-                                    <div class="flex items-center gap-3 text-xs text-darkbrown-600 mt-0.5">
-                                        <span class="inline-flex items-center gap-1 font-semibold text-goldenrod-700">
-                                            ★ {{ $booking['vendor']['rating'] }} <span class="text-darkbrown-500 font-normal">({{ $booking['vendor']['total_reviews'] }} ulasan)</span>
-                                        </span>
-                                        <span>•</span>
-                                        <span class="text-darkbrown-600 font-medium">{{ $booking['vendor']['city'] }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="shrink-0 self-start sm:self-center">
-                                <a href="tel:{{ $booking['vendor']['phone'] }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-darkbrown-800 bg-white border border-wheat-300 hover:bg-wheat-100 transition shadow-sm">
-                                    <svg class="w-3.5 h-3.5 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                    </svg>
-                                    {{ $booking['vendor']['phone'] }}
-                                </a>
-                            </div>
-                        </div>
-
-                        <div class="pt-3 border-t border-wheat-300/60 flex items-start gap-2 text-xs text-darkbrown-600">
-                            <svg class="w-4 h-4 text-darkbrown-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <span><strong class="text-darkbrown-800">Alamat Workshop/Store:</strong> {{ $booking['vendor']['address'] }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 5. Jadwal Rental (Tanggal Ambil & Tanggal Kembali) -->
-                <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 sm:p-6 shadow-tendaku-sm">
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-8 h-8 rounded-lg bg-goldenrod-100 text-goldenrod-800 flex items-center justify-center">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-base font-bold text-darkbrown-800">Jadwal Rental</h3>
-                            <p class="text-xs text-darkbrown-500">Waktu pengambilan dan pengembalian unit</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <!-- Tanggal Ambil -->
-                        <div class="p-4 rounded-xl bg-[#FAF6ED] border border-wheat-200/90">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs font-bold uppercase tracking-wider text-avocado-700">Tanggal Ambil</span>
-                            </div>
-                            <div class="text-base font-extrabold text-darkbrown-900">
-                                {{ $booking['pickup_date'] }}
-                            </div>
-                            <div class="text-xs text-darkbrown-600 font-semibold mt-0.5 flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Pukul {{ $booking['pickup_time'] }}
-                            </div>
-                        </div>
-
-                        <!-- Tanggal Kembali -->
-                        <div class="p-4 rounded-xl bg-[#FAF6ED] border border-wheat-200/90">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-xs font-bold uppercase tracking-wider text-goldenrod-700">Tanggal Kembali</span>
-                            </div>
-                            <div class="text-base font-extrabold text-darkbrown-900">
-                                {{ $booking['return_date'] }}
-                            </div>
-                            <div class="text-xs text-darkbrown-600 font-semibold mt-0.5 flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Maksimal {{ $booking['return_time'] }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Rental Duration Pill -->
-                    <div class="mt-4 p-3 rounded-xl bg-wheat-100/70 border border-wheat-200 flex items-center justify-between text-xs">
-                        <span class="text-darkbrown-600 font-medium">Total Durasi Pemakaian:</span>
-                        <span class="font-extrabold text-darkbrown-900 bg-white px-2.5 py-1 rounded-lg border border-wheat-300">
-                            {{ $booking['rental_days'] }} Hari ({{ max(1, $booking['rental_days'] - 1) }} Malam)
+                    <div class="flex flex-wrap gap-2 text-sm">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1">
+                            <svg class="w-4 h-4 text-sunglow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                            {{ $booking['vendor']['name'] }}
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1">
+                            <svg class="w-4 h-4 text-sunglow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            <span x-text="fmtShort(pickupDate) + ' – ' + fmtShort(returnDate)">{{ $booking['pickup_date'] }} – {{ $booking['return_date'] }}</span>
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1"
+                              x-text="rentalDays + ' hari · ' + totalUnits + ' unit alat'">
+                            {{ $booking['rental_days'] }} hari
                         </span>
                     </div>
                 </div>
 
-                <!-- 6. Daftar Barang yang Disewa (Equipment List) -->
-                <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 sm:p-6 shadow-tendaku-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-sunglow-200 text-darkbrown-800 flex items-center justify-center font-bold">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="text-base font-bold text-darkbrown-800">Daftar Peralatan Camping</h3>
-                                <p class="text-xs text-darkbrown-500">Rincian unit yang disewa untuk trip petualangan Anda</p>
-                            </div>
-                        </div>
+                <div class="shrink-0 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm px-4 py-3 lg:min-w-[15rem]">
+                    <div class="flex items-center gap-2 text-sm text-avocado-100">
+                        <svg class="w-4 h-4 text-sunglow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Bayar sebelum
                     </div>
-
-                    <!-- Items Table / Stacked Card List -->
-                    <div class="divide-y divide-wheat-200/70">
-                        @foreach ($booking['items'] as $item)
-                        <div class="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div class="flex items-start gap-3.5 flex-1 min-w-0">
-                                <!-- Gear Icon Visual -->
-                                <div class="w-12 h-12 rounded-xl bg-wheat-100 border border-wheat-200/90 flex items-center justify-center shrink-0 text-darkbrown-800 shadow-sm">
-                                    @if ($item['icon'] === 'tent')
-                                    <svg class="w-6 h-6 text-avocado-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M19 20 10 4 1 20h18Z" />
-                                        <path d="m14 20-4-8-4 8" />
-                                    </svg>
-                                    @elseif ($item['icon'] === 'sleeping_bag')
-                                    <svg class="w-6 h-6 text-goldenrod-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect width="12" height="18" x="6" y="3" rx="4" />
-                                        <path d="M10 7h4" />
-                                        <path d="M10 11h4" />
-                                    </svg>
-                                    @elseif ($item['icon'] === 'stove')
-                                    <svg class="w-6 h-6 text-sunglow-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="7" />
-                                        <path d="M12 9v6" />
-                                        <path d="M9 12h6" />
-                                    </svg>
-                                    @else
-                                    <svg class="w-6 h-6 text-avocado-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M9 18h6" />
-                                        <path d="M10 22h4" />
-                                        <path d="M12 2v1" />
-                                        <path d="M12 7a5 5 0 0 0-5 5c0 2 1.5 3.5 2 4.5h6c.5-1 2-2.5 2-4.5a5 5 0 0 0-5-5Z" />
-                                    </svg>
-                                    @endif
-                                </div>
-
-                                <div class="space-y-1 min-w-0">
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <h4 class="font-bold text-darkbrown-900 text-sm sm:text-base leading-snug">
-                                            {{ $item['name'] }}
-                                        </h4>
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-wheat-100 text-darkbrown-700 border border-wheat-200">
-                                            {{ $item['category'] }}
-                                        </span>
-                                    </div>
-
-                                    <p class="text-xs text-darkbrown-500 line-clamp-1">
-                                        {{ $item['specs'] }}
-                                    </p>
-
-                                    <div class="flex flex-wrap items-center gap-2 pt-1 text-xs text-darkbrown-600">
-                                        <span class="font-semibold text-darkbrown-800">
-                                            Rp {{ number_format($item['price_per_day'], 0, ',', '.') }}<span class="font-normal text-darkbrown-500">/hari</span>
-                                        </span>
-                                        <span>•</span>
-                                        <span class="bg-wheat-100 px-2 py-0.5 rounded font-bold text-darkbrown-800">
-                                            {{ $item['qty'] }} Unit
-                                        </span>
-                                        <span>•</span>
-                                        <span class="text-darkbrown-500">
-                                            {{ $booking['rental_days'] }} Hari
-                                        </span>
-                                        @if ($item['deposit_per_unit'] > 0)
-                                        <span>•</span>
-                                        <span class="text-[11px] font-semibold text-goldenrod-800 bg-goldenrod-50 px-2 py-0.5 rounded border border-goldenrod-200">
-                                            Deposit: Rp {{ number_format($item['deposit_per_unit'] * $item['qty'], 0, ',', '.') }}
-                                        </span>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="text-left sm:text-right shrink-0 pt-2 sm:pt-0 self-end sm:self-center">
-                                <span class="text-[10px] text-darkbrown-400 block font-bold uppercase">Subtotal Sewa</span>
-                                <span class="text-base sm:text-lg font-extrabold text-darkbrown-900">
-                                    Rp {{ number_format($item['subtotal'], 0, ',', '.') }}
-                                </span>
-                            </div>
-                        </div>
-                        @endforeach
+                    <div class="mt-0.5 font-bold">{{ $booking['expires_at'] }}</div>
+                    <div x-show="remaining" x-cloak class="mt-1 text-sm text-sunglow-200">
+                        Sisa waktu <span class="font-mono font-bold" x-text="remaining"></span>
                     </div>
+                    <p class="mt-1 text-xs text-avocado-200 leading-relaxed">Alat ditahan 12 jam. Lewat dari itu, unit dilepas ke penyewa lain.</p>
                 </div>
+            </div>
+        </div>
 
-                <!-- 7. Deposit & Security Terms Policy -->
-                <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 sm:p-6 shadow-tendaku-sm">
-                    <div class="flex items-start gap-3.5">
-                        <div class="w-10 h-10 rounded-xl bg-avocado-100 text-avocado-800 flex items-center justify-center shrink-0">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                        </div>
-                        <div class="space-y-1.5 text-xs text-darkbrown-700">
-                            <h4 class="font-bold text-darkbrown-900 text-sm">
-                                Ketentuan Uang Jaminan (Deposit) 100% Refundable
-                            </h4>
-                            <p class="leading-relaxed text-darkbrown-600">
-                                Deposit sebesar <strong class="text-darkbrown-900">Rp {{ number_format($booking['deposit'], 0, ',', '.') }}</strong> berfungsi sebagai uang jaminan keutuhan fisik unit selama masa penyewaan. Uang jaminan ini akan ditransfer kembali secara utuh ke rekening/e-wallet Anda segera setelah unit diperiksa dan diterima kembali oleh vendor.
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+
+            <!-- ============ KOLOM KIRI ============ -->
+            <div class="lg:col-span-7 xl:col-span-8 space-y-6">
+
+                <!-- DATA PENYEWA -->
+                <section id="section-identity" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm">
+                    <div class="flex items-center gap-3 px-5 sm:px-6 pt-5 sm:pt-6">
+                        <span class="w-8 h-8 rounded-full bg-avocado-700 text-white font-bold flex items-center justify-center shrink-0">1</span>
+                        <div>
+                            <h2 class="text-lg font-bold text-darkbrown-900 font-heading leading-tight">Data penyewa</h2>
+                            <p class="text-sm text-darkbrown-500">
+                                @if ($isGuest || $needsName || $needsPhone || $needsNik)
+                                    Dipakai vendor untuk mencocokkan identitas saat serah terima alat.
+                                @else
+                                    Data diambil dari akun Anda. Sudah lengkap.
+                                @endif
                             </p>
                         </div>
                     </div>
-                </div>
 
-            </div>
+                    <div class="p-5 sm:p-6 space-y-4">
 
-            <!-- RIGHT COLUMN: Order Summary & Payment Button (4-5 Cols Sticky) -->
-            <div class="lg:col-span-5 xl:col-span-4 space-y-6 lg:sticky lg:top-24">
-
-                <!-- Order Summary Card -->
-                <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 sm:p-6 shadow-tendaku-sm">
-                    <h3 class="text-lg font-extrabold text-darkbrown-800 tracking-tight mb-4 pb-3 border-b border-wheat-200">
-                        Ringkasan Pembayaran
-                    </h3>
-
-                    <!-- Price Breakdown List with Realtime Alpine.js Reactive Bindings -->
-                    <div class="space-y-3 text-xs sm:text-sm">
-                        <!-- Subtotal Sewa -->
-                        <div class="flex items-center justify-between text-darkbrown-600">
-                            <span>Subtotal Sewa Alat ({{ $booking['rental_days'] }} Hari)</span>
-                            <span class="font-bold text-darkbrown-800">
-                                Rp {{ number_format($booking['subtotal'], 0, ',', '.') }}
-                            </span>
-                        </div>
-
-                        <!-- Biaya Pengiriman (Dynamically Recalculated) -->
-                        <div class="flex items-center justify-between text-darkbrown-600">
-                            <div>
-                                <span class="flex items-center gap-1 font-medium">
-                                    Ongkir Pengambilan
-                                </span>
-                                <span x-show="pickupMethod === 'self_pickup'" class="block text-[10px] text-avocado-700 font-semibold">
-                                    Ambil di Tempat (Gratis)
-                                </span>
-                                <span x-show="pickupMethod === 'delivery'" class="block text-[10px] text-goldenrod-700 font-semibold">
-                                    Kurir Vendor ke Lokasi
-                                </span>
+                        {{-- Member: tampilkan data yang sudah ada --}}
+                        @if ($isLoggedIn && (! $needsName || ! $needsPhone || ! $needsNik))
+                        <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                            @unless ($needsName)
+                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5">
+                                <dt class="text-darkbrown-500">Nama</dt>
+                                <dd class="font-bold text-darkbrown-900 truncate">{{ $user->name }}</dd>
                             </div>
-                            <span x-text="pickupMethod === 'delivery' ? formatRupiah(deliveryFee) : 'Rp 0'" class="font-bold text-darkbrown-800">
-                                {{ $booking['pickup_method'] === 'delivery' ? 'Rp '.number_format($booking['delivery_fee'], 0, ',', '.') : 'Rp 0' }}
-                            </span>
-                        </div>
-
-                        <!-- Uang Jaminan / Deposit -->
-                        <div class="flex items-center justify-between text-darkbrown-600">
-                            <div>
-                                <span>Uang Jaminan (Deposit)</span>
-                                <span class="block text-[10px] text-goldenrod-700 font-semibold">100% Refundable saat retur</span>
+                            @endunless
+                            @unless ($needsPhone)
+                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5">
+                                <dt class="text-darkbrown-500">WhatsApp</dt>
+                                <dd class="font-bold text-darkbrown-900">{{ $user->phone }}</dd>
                             </div>
-                            <span class="font-bold text-darkbrown-800">
-                                Rp {{ number_format($booking['deposit'], 0, ',', '.') }}
-                            </span>
-                        </div>
+                            @endunless
+                            @unless ($needsNik)
+                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5">
+                                <dt class="text-darkbrown-500">NIK</dt>
+                                <dd class="font-mono font-bold text-darkbrown-900">{{ $maskedNik }}</dd>
+                            </div>
+                            @endunless
+                        </dl>
+                        @endif
 
-                        <!-- Diskon Promosi -->
-                        @if ($booking['discount'] > 0)
-                        <div class="flex items-center justify-between text-avocado-700">
-                            <span>Diskon Promosi</span>
-                            <span class="font-bold">
-                                - Rp {{ number_format($booking['discount'], 0, ',', '.') }}
-                            </span>
+                        {{-- Input hanya untuk data yang belum ada (tamu: selalu semua) --}}
+                        @if ($needsName || $needsPhone || $needsNik)
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            @if ($needsName)
+                            <div class="sm:col-span-2">
+                                <label for="f_name" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">Nama lengkap</label>
+                                <input type="text" id="f_name" x-model="name" autocomplete="name" placeholder="Sesuai KTP"
+                                       :class="errors.name ? '{{ $errBorder }}' : '{{ $okBorder }}'"
+                                       class="{{ $inputBase }}">
+                                <p x-show="errors.name" x-text="errors.name" x-cloak class="mt-1 text-sm text-red-700"></p>
+                            </div>
+                            @endif
+
+                            @if ($needsNik)
+                            <div>
+                                <label for="f_nik" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">NIK (nomor KTP)</label>
+                                <div class="relative">
+                                    <input type="text" id="f_nik" x-model="nik" @input="nik = nik.replace(/\D/g, '').slice(0, 16)"
+                                           inputmode="numeric" maxlength="16" autocomplete="off" placeholder="16 digit angka"
+                                           :class="errors.nik ? '{{ $errBorder }}' : '{{ $okBorder }}'"
+                                           class="{{ $inputBase }} font-mono tracking-wide pr-14">
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono"
+                                          :class="nik.length === 16 ? 'text-avocado-700 font-bold' : 'text-darkbrown-400'"
+                                          x-text="nik.length + '/16'"></span>
+                                </div>
+                                <p x-show="errors.nik" x-text="errors.nik" x-cloak class="mt-1 text-sm text-red-700"></p>
+                            </div>
+                            @endif
+
+                            @if ($needsPhone)
+                            <div>
+                                <label for="f_phone" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">No. WhatsApp aktif</label>
+                                <input type="tel" id="f_phone" x-model="phone" inputmode="tel" autocomplete="tel" placeholder="08xxxxxxxxxx"
+                                       :class="errors.phone ? '{{ $errBorder }}' : '{{ $okBorder }}'"
+                                       class="{{ $inputBase }}">
+                                <p x-show="errors.phone" x-text="errors.phone" x-cloak class="mt-1 text-sm text-red-700"></p>
+                            </div>
+                            @endif
                         </div>
                         @endif
 
-                        <!-- Grand Total Highlight (Reactive to Method) -->
-                        <div class="pt-4 border-t-2 border-wheat-200/90 mt-4">
-                            <div class="flex items-baseline justify-between mb-1">
-                                <span class="text-xs sm:text-sm font-bold uppercase tracking-wider text-darkbrown-700">
-                                    Total Pembayaran
-                                </span>
-                                <span x-text="formatRupiah(grandTotal)" class="text-xl sm:text-2xl font-extrabold text-darkbrown-900 tracking-tight">
-                                    Rp {{ number_format($booking['grand_total'], 0, ',', '.') }}
-                                </span>
-                            </div>
-                            <p class="text-[11px] text-darkbrown-500">
-                                Termasuk {{ count($booking['items']) }} unit alat, metode penyerahan terpilih, & deposit jaminan.
-                            </p>
+                        <div class="flex items-start gap-2.5 rounded-xl bg-sunglow-100/70 border border-sunglow-300/70 px-3.5 py-3 text-sm text-darkbrown-800">
+                            <svg class="w-5 h-5 text-goldenrod-700 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0M9 14h.01M13 14h2" /></svg>
+                            <span>Bawa <strong>KTP asli</strong> dan nomor booking saat mengambil alat. KTP ditahan toko selama masa sewa dan dikembalikan setelah alat diperiksa.</span>
                         </div>
                     </div>
+                </section>
 
-                    <!-- Opsi DP / Cicilan Awal (hanya untuk user login) -->
-                    @auth
-                    <div class="mt-5 pt-5 border-t border-wheat-200">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-3">
-                            Opsi Pembayaran
-                        </label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <!-- Bayar Lunas -->
-                            <div @click="paymentOption = 'full'"
-                                 :class="paymentOption === 'full' ? 'border-avocado-500 bg-avocado-50 ring-2 ring-avocado-400/30' : 'border-wheat-200 bg-white hover:border-wheat-400'"
-                                 class="p-3.5 rounded-2xl border cursor-pointer transition">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <input type="radio" name="ui_payment_option" value="full" :checked="paymentOption === 'full'" @change="paymentOption = 'full'" class="text-avocado-600">
-                                    <span class="font-extrabold text-xs text-darkbrown-900">Bayar Lunas</span>
-                                </div>
-                                <p class="text-[10px] text-darkbrown-500 leading-relaxed pl-5">Bayar penuh langsung. Booking langsung terkonfirmasi.</p>
-                                <span x-text="formatRupiah(grandTotal)" class="block mt-1.5 pl-5 text-xs font-black text-avocado-800"></span>
-                            </div>
-                            <!-- Uang Muka (DP) -->
-                            <div @click="paymentOption = 'dp'"
-                                 :class="paymentOption === 'dp' ? 'border-goldenrod-500 bg-goldenrod-50 ring-2 ring-goldenrod-400/30' : 'border-wheat-200 bg-white hover:border-wheat-400'"
-                                 class="p-3.5 rounded-2xl border cursor-pointer transition">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <input type="radio" name="ui_payment_option" value="dp" :checked="paymentOption === 'dp'" @change="paymentOption = 'dp'" class="text-goldenrod-600">
-                                    <span class="font-extrabold text-xs text-darkbrown-900">Uang Muka (DP)</span>
-                                </div>
-                                <p class="text-[10px] text-darkbrown-500 leading-relaxed pl-5">Bayar <span x-text="dpPercentage + '%'"></span> sekarang, sisanya saat pengambilan barang.</p>
-                                <span x-text="formatRupiah(dpAmount)" class="block mt-1.5 pl-5 text-xs font-black text-goldenrod-800"></span>
-                            </div>
-                        </div>
-                    </div>
-                    @endauth
-
-                    <!-- Payment Method Selector -->
-                    <div class="mt-6 pt-5 border-t border-wheat-200">
-                        <div class="flex items-center justify-between mb-3">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700">
-                                Pilih Saluran Pembayaran
-                            </label>
-                            <span class="text-[10px] font-bold text-darkbrown-500 uppercase tracking-widest bg-wheat-100 px-2 py-0.5 rounded border border-wheat-200">
-                                Midtrans Gateway
-                            </span>
-                        </div>
-
-                        <div class="space-y-2.5">
-                            @foreach ($booking['payment_methods'] as $index => $channel)
-                            <label class="flex items-start gap-3 p-3 rounded-xl border border-wheat-300/80 bg-[#FAF6ED] hover:bg-wheat-100/70 hover:border-goldenrod-400 cursor-pointer transition select-none">
-                                <input type="radio" name="checkout_channel" value="{{ $channel['id'] }}" x-model="selectedChannel" class="mt-1 text-avocado-600 focus:ring-avocado-500 border-wheat-400">
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center justify-between gap-1">
-                                        <span class="font-bold text-xs sm:text-sm text-darkbrown-900">{{ $channel['name'] }}</span>
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-darkbrown-700 border border-wheat-300 shrink-0">
-                                            {{ $channel['badge'] }}
-                                        </span>
-                                    </div>
-                                    <p class="text-[11px] text-darkbrown-500 mt-0.5 line-clamp-1">{{ $channel['desc'] }}</p>
-                                </div>
-                            </label>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <!-- TOMBOL BAYAR SEKARANG -->
-                    <div class="mt-6 pt-2">
-                        <button
-                            type="button"
-                            x-on:click="payWithMidtrans()"
-                            :disabled="isProcessing"
-                            :class="isProcessing ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
-                            class="w-full py-4 px-6 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 group focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2"
-                        >
-                            <template x-if="!isProcessing">
-                                <svg class="w-5 h-5 text-darkbrown-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                </svg>
-                            </template>
-                            <template x-if="isProcessing">
-                                <svg class="w-5 h-5 animate-spin text-darkbrown-700" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path>
-                                </svg>
-                            </template>
-                            <span x-text="isProcessing ? 'Memproses...' : 'Bayar Sekarang'"></span>
-                            <span x-text="formatRupiah(payableAmount)" class="font-mono text-sm font-black px-2 py-0.5 rounded-lg bg-darkbrown-800 text-sunglow-300 ml-1">
-                                Rp {{ number_format($booking['grand_total'], 0, ',', '.') }}
-                            </span>
-                        </button>
-                        <p class="text-[10px] text-center text-darkbrown-500 mt-2">
-                            Pembayaran diproses aman melalui <strong>Midtrans</strong> — tidak menyimpan data kartu Anda.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- CS Support Help Box -->
-                <div class="bg-white rounded-2xl border border-wheat-200/90 p-5 shadow-tendaku-sm space-y-2">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-lg bg-wheat-100 text-darkbrown-800 flex items-center justify-center shrink-0">
-                            <svg class="w-4 h-4 text-goldenrod-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                            </svg>
-                        </div>
+                <!-- 2. CARA MENERIMA ALAT -->
+                <section id="section-delivery" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm">
+                    <div class="flex items-center gap-3 px-5 sm:px-6 pt-5 sm:pt-6">
+                        <span class="w-8 h-8 rounded-full bg-avocado-700 text-white font-bold flex items-center justify-center shrink-0">2</span>
                         <div>
-                            <h4 class="font-bold text-xs sm:text-sm text-darkbrown-800">Pusat Bantuan Booking</h4>
-                            <p class="text-[11px] text-darkbrown-500">Ada kendala pembayaran atau ubah jadwal rental?</p>
+                            <h2 class="text-lg font-bold text-darkbrown-900 font-heading leading-tight">Cara menerima alat</h2>
+                            <p class="text-sm text-darkbrown-500">Ambil sendiri di toko, atau diantar kurir vendor.</p>
                         </div>
                     </div>
-                    <div class="pt-2 flex items-center justify-between text-xs text-darkbrown-600 border-t border-wheat-200/70">
-                        <span>WhatsApp CS Tendaku:</span>
-                        <a href="https://wa.me/6281234567890" target="_blank" class="font-bold text-avocado-700 hover:text-avocado-800 flex items-center gap-1">
-                            0812-3456-7890 ↗
-                        </a>
-                    </div>
-                </div>
 
+                    <div class="p-5 sm:p-6 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Metode pengambilan">
+
+                            <!-- Ambil di tempat: semua orang -->
+                            <label :class="pickupMethod === 'self_pickup' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
+                                   class="relative flex gap-3 rounded-2xl border p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                <input type="radio" name="ui_pickup_method" value="self_pickup" x-model="pickupMethod" class="sr-only">
+                                <div class="w-10 h-10 rounded-xl bg-avocado-100 text-avocado-700 flex items-center justify-center shrink-0">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                </div>
+                                <div class="min-w-0 flex-1 pr-6">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="font-bold text-darkbrown-900">Ambil di toko</span>
+                                        <span class="rounded-md bg-avocado-100 border border-avocado-200 px-2 py-0.5 text-xs font-bold text-avocado-800">Gratis</span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Datang ke outlet vendor di {{ $booking['vendor']['city'] }}. Bisa untuk tamu maupun member.</p>
+                                </div>
+                                <span class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition"
+                                      :class="pickupMethod === 'self_pickup' ? 'bg-avocado-600 border-avocado-600' : 'border-wheat-400 bg-white'" aria-hidden="true">
+                                    <svg x-show="pickupMethod === 'self_pickup'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                </span>
+                            </label>
+
+                            <!-- Diantar: hanya member login -->
+                            @if ($isLoggedIn)
+                            <label :class="pickupMethod === 'delivery' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
+                                   class="relative flex gap-3 rounded-2xl border p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                <input type="radio" name="ui_pickup_method" value="delivery" x-model="pickupMethod" class="sr-only">
+                                <div class="w-10 h-10 rounded-xl bg-sunglow-200 text-goldenrod-800 flex items-center justify-center shrink-0">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" /><circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" /></svg>
+                                </div>
+                                <div class="min-w-0 flex-1 pr-6">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="font-bold text-darkbrown-900">Diantar ke lokasi</span>
+                                        <span class="rounded-md bg-sunglow-100 border border-sunglow-300 px-2 py-0.5 text-xs font-bold text-darkbrown-900">Rp 25.000</span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Kurir vendor mengantar ke rumah atau titik kumpul trip. Area Malang Raya & Batu.</p>
+                                </div>
+                                <span class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition"
+                                      :class="pickupMethod === 'delivery' ? 'bg-avocado-600 border-avocado-600' : 'border-wheat-400 bg-white'" aria-hidden="true">
+                                    <svg x-show="pickupMethod === 'delivery'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                </span>
+                            </label>
+                            @else
+                            <div class="flex gap-3 rounded-2xl border border-dashed border-wheat-400 bg-wheat-50 p-4" aria-disabled="true">
+                                <div class="w-10 h-10 rounded-xl bg-wheat-200 text-darkbrown-500 flex items-center justify-center shrink-0">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <span class="font-bold text-darkbrown-700">Diantar ke lokasi</span>
+                                    <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Khusus member, karena alamat dan serah terima kurir perlu akun terverifikasi.</p>
+                                    <a href="{{ route('login') }}" class="mt-2 inline-block text-sm font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">Masuk atau daftar dulu</a>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+
+                        <!-- Detail: ambil di toko -->
+                        <div x-show="pickupMethod === 'self_pickup'" class="flex items-start gap-3 rounded-xl bg-wheat-50 border border-wheat-200 p-4 text-sm">
+                            <svg class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            <div class="space-y-0.5">
+                                <div class="font-bold text-darkbrown-900">{{ $booking['vendor']['pickup_location'] }}</div>
+                                <div class="text-darkbrown-600">{{ $booking['vendor']['address'] }}</div>
+                                <div class="text-darkbrown-600 pt-1">Jam operasional: <strong class="text-darkbrown-800">{{ $booking['vendor']['operational_hours'] }}</strong></div>
+                            </div>
+                        </div>
+
+                        <!-- Detail: diantar (member saja) -->
+                        @if ($isLoggedIn)
+                        <div x-show="pickupMethod === 'delivery'" x-cloak class="rounded-xl bg-wheat-50 border border-wheat-200 p-4 space-y-3 text-sm">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="font-bold text-darkbrown-900">Alamat pengantaran</span>
+                                <button type="button" x-show="!needsAddress" @click="editAddress = !editAddress"
+                                        class="text-sm font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2"
+                                        x-text="editAddress ? 'Selesai' : 'Ubah'"></button>
+                            </div>
+
+                            <!-- Tampil saja kalau alamat sudah tersimpan -->
+                            <div x-show="!showAddressForm" class="space-y-1">
+                                <p class="font-semibold text-darkbrown-900 leading-relaxed" x-text="address"></p>
+                                <p x-show="notes" class="text-darkbrown-600">Catatan untuk kurir: <span x-text="notes"></span></p>
+                            </div>
+
+                            <!-- Form alamat + penjelasan -->
+                            <div x-show="showAddressForm" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="f_address" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">Alamat lengkap</label>
+                                    <textarea id="f_address" rows="4" x-model="address" placeholder="Jalan, nomor, RT/RW, kelurahan, kecamatan, kota"
+                                              :class="errors.address ? '{{ $errBorder }}' : '{{ $okBorder }}'"
+                                              class="{{ $inputBase }} resize-none"></textarea>
+                                    <p x-show="errors.address" x-text="errors.address" x-cloak class="mt-1 text-sm text-red-700"></p>
+                                </div>
+                                <div>
+                                    <label for="f_notes" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">Penjelasan lokasi <span class="font-normal text-darkbrown-500">(opsional)</span></label>
+                                    <textarea id="f_notes" rows="4" x-model="notes" placeholder="Patokan, warna pagar, titik kumpul trip, atau pesan untuk kurir"
+                                              :class="errors.notes ? '{{ $errBorder }}' : '{{ $okBorder }}'"
+                                              class="{{ $inputBase }} resize-none"></textarea>
+                                    <p x-show="errors.notes" x-text="errors.notes" x-cloak class="mt-1 text-sm text-red-700"></p>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                </section>
+
+                <!-- RINCIAN SEWA -->
+                <section id="section-rental" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm divide-y divide-wheat-200">
+
+                    <!-- Vendor -->
+                    <div class="p-5 sm:p-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-12 h-12 rounded-xl bg-avocado-800 text-wheat-100 flex items-center justify-center font-extrabold text-lg shrink-0">
+                                    {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($booking['vendor']['name'], 0, 1)) }}
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-sm text-darkbrown-500">Disiapkan oleh</div>
+                                    <h3 class="font-bold text-darkbrown-900 text-base leading-snug">{{ $booking['vendor']['name'] }}</h3>
+                                    <div class="text-sm text-darkbrown-600">{{ $booking['vendor']['city'] }}</div>
+                                </div>
+                            </div>
+                            <a href="tel:{{ $booking['vendor']['phone'] }}" class="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-sm font-bold text-darkbrown-800 bg-white border border-wheat-300 hover:bg-wheat-50 transition self-start sm:self-center">
+                                <svg class="w-4 h-4 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                {{ $booking['vendor']['phone'] }}
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Jadwal (bisa diubah) -->
+                    <div class="p-5 sm:p-6">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <h3 class="font-bold text-darkbrown-900">Jadwal sewa</h3>
+                            <span class="text-sm text-darkbrown-500">Tanggal bisa diubah</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-stretch gap-3">
+                            <div class="rounded-xl bg-avocado-50 border border-avocado-200 p-4">
+                                <label for="f_pickup_date" class="text-sm font-semibold text-avocado-800">Tanggal ambil</label>
+                                <input type="date" id="f_pickup_date" x-model="pickupDate" :min="minDate" @change="onPickupChange()"
+                                       class="mt-1.5 w-full rounded-lg border border-avocado-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 focus:border-avocado-600 focus:ring-2 focus:ring-avocado-500/30">
+                                <div class="mt-1.5 text-sm text-darkbrown-600"><span x-text="fmtLong(pickupDate)"></span> · pukul {{ $booking['pickup_time'] }}</div>
+                            </div>
+
+                            <div class="flex sm:flex-col items-center justify-center gap-2">
+                                <span class="hidden sm:block w-px flex-1 bg-wheat-300"></span>
+                                <span class="rounded-full bg-darkbrown-900 text-wheat-100 px-3 py-1 text-xs font-bold whitespace-nowrap"
+                                      x-text="rentalDays + ' hari · ' + Math.max(1, rentalDays - 1) + ' malam'"></span>
+                                <span class="hidden sm:block w-px flex-1 bg-wheat-300"></span>
+                            </div>
+
+                            <div class="rounded-xl bg-sunglow-100/70 border border-sunglow-300/80 p-4">
+                                <label for="f_return_date" class="text-sm font-semibold text-goldenrod-800">Tanggal kembali</label>
+                                <input type="date" id="f_return_date" x-model="returnDate" :min="pickupDate || minDate" @change="touched = true"
+                                       class="mt-1.5 w-full rounded-lg border border-sunglow-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 focus:border-goldenrod-500 focus:ring-2 focus:ring-goldenrod-400/30">
+                                <div class="mt-1.5 text-sm text-darkbrown-600"><span x-text="fmtLong(returnDate)"></span> · maksimal {{ $booking['return_time'] }}</div>
+                            </div>
+                        </div>
+                        <p x-show="errors.dates" x-text="errors.dates" x-cloak class="mt-2 text-sm text-red-700"></p>
+                    </div>
+
+                    <!-- Peralatan (jumlah unit bisa diubah) -->
+                    <div class="p-5 sm:p-6">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <h3 class="font-bold text-darkbrown-900">Peralatan yang disewa</h3>
+                        </div>
+
+                        <ul class="divide-y divide-wheat-200">
+                            <template x-for="(item, i) in items" :key="item.id">
+                                <li class="py-4 first:pt-0 last:pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div class="flex items-start gap-3.5 min-w-0">
+                                        <div class="w-12 h-12 rounded-xl bg-wheat-100 border border-wheat-200 flex items-center justify-center shrink-0">
+                                            <template x-if="item.icon === 'tent'">
+                                                <svg class="w-6 h-6 text-avocado-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20 10 4 1 20h18Z" /><path d="m14 20-4-8-4 8" /></svg>
+                                            </template>
+                                            <template x-if="item.icon === 'sleeping_bag'">
+                                                <svg class="w-6 h-6 text-goldenrod-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="12" height="18" x="6" y="3" rx="4" /><path d="M10 7h4" /><path d="M10 11h4" /></svg>
+                                            </template>
+                                            <template x-if="item.icon === 'stove'">
+                                                <svg class="w-6 h-6 text-sunglow-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" /><path d="M12 9v6" /><path d="M9 12h6" /></svg>
+                                            </template>
+                                            <template x-if="!['tent','sleeping_bag','stove'].includes(item.icon)">
+                                                <svg class="w-6 h-6 text-avocado-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2v1" /><path d="M12 7a5 5 0 0 0-5 5c0 2 1.5 3.5 2 4.5h6c.5-1 2-2.5 2-4.5a5 5 0 0 0-5-5Z" /></svg>
+                                            </template>
+                                        </div>
+
+                                        <div class="min-w-0 space-y-0.5">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <h4 class="font-bold text-darkbrown-900 leading-snug" x-text="item.name"></h4>
+                                                <span x-show="item.category" class="rounded-md bg-wheat-100 border border-wheat-200 px-2 py-0.5 text-xs font-semibold text-darkbrown-700" x-text="item.category"></span>
+                                            </div>
+                                            <p x-show="item.specs" class="text-sm text-darkbrown-500 line-clamp-2" x-text="item.specs"></p>
+                                            <p class="text-sm text-darkbrown-700" x-text="formatRupiah(item.price_per_day) + '/hari × ' + rentalDays + ' hari'"></p>
+                                            <p x-show="item.deposit_per_unit > 0" class="text-sm text-goldenrod-800" x-text="'Deposit ' + formatRupiah(item.deposit_per_unit * item.qty)"></p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center justify-between md:justify-end gap-5 shrink-0 pl-[3.75rem] md:pl-0">
+                                        <div>
+                                            <div class="inline-flex items-center rounded-xl border border-wheat-300 bg-white">
+                                                <button type="button" @click="changeQty(i, -1)" :disabled="item.qty <= 1" aria-label="Kurangi unit"
+                                                        class="w-9 h-9 flex items-center justify-center text-lg font-bold text-darkbrown-800 rounded-l-xl hover:bg-wheat-100 disabled:opacity-40 disabled:cursor-not-allowed transition">−</button>
+                                                <input type="number" min="1" :max="item.max_qty" x-model.number="item.qty" @change="clampQty(i)" aria-label="Jumlah unit"
+                                                       class="w-12 h-9 border-0 border-x border-wheat-200 p-0 text-center text-sm font-bold text-darkbrown-900 focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
+                                                <button type="button" @click="changeQty(i, 1)" :disabled="item.qty >= item.max_qty" aria-label="Tambah unit"
+                                                        class="w-9 h-9 flex items-center justify-center text-lg font-bold text-darkbrown-800 rounded-r-xl hover:bg-wheat-100 disabled:opacity-40 disabled:cursor-not-allowed transition">+</button>
+                                            </div>
+                                            <div x-show="item.max_qty < 99" class="mt-1 text-xs text-darkbrown-500 text-center" x-text="'Maks ' + item.max_qty + ' unit'"></div>
+                                        </div>
+                                    </div>
+                                </li>
+                            </template>
+                        </ul>
+                        <p x-show="errors.items" x-text="errors.items" x-cloak class="mt-2 text-sm text-red-700"></p>
+                    </div>
+                </section>
             </div>
 
+            <!-- ============ KOLOM KANAN: RINGKASAN & BAYAR ============ -->
+            <div class="lg:col-span-5 xl:col-span-4 space-y-5 lg:sticky lg:top-24">
+
+                <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm overflow-hidden">
+                    <div class="px-5 sm:px-6 py-4 bg-wheat-100 border-b border-wheat-200">
+                        <h3 class="text-lg font-extrabold text-darkbrown-900 font-heading">Ringkasan pembayaran</h3>
+                    </div>
+
+                    <div class="p-5 sm:p-6 space-y-5">
+                        <div class="space-y-3 text-sm">
+                            <div class="flex items-center justify-between text-darkbrown-600">
+                                <span x-text="'Sewa alat (' + totalUnits + ' unit, ' + rentalDays + ' hari)'"></span>
+                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(subtotal)"></span>
+                            </div>
+
+                            <div class="flex items-start justify-between text-darkbrown-600">
+                                <div>
+                                    <span>Ongkos kirim</span>
+                                    <span x-show="pickupMethod === 'delivery'" x-cloak class="block text-xs text-goldenrod-700 font-semibold">Kurir vendor ke lokasi</span>
+                                </div>
+                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(deliveryFee)">Rp 0</span>
+                            </div>
+
+                            <div x-show="discount > 0" x-cloak class="flex items-center justify-between text-avocado-700">
+                                <span>Diskon promo</span>
+                                <span class="font-bold" x-text="'- ' + formatRupiah(discount)"></span>
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-avocado-900 text-white px-4 py-3.5">
+                            <div class="flex items-baseline justify-between gap-3">
+                                <span class="text-sm text-avocado-100">Total pembayaran</span>
+                                <span class="text-2xl font-extrabold tracking-tight font-heading" x-text="formatRupiah(grandTotal)"></span>
+                            </div>
+                        </div>
+
+                        <p x-show="touched" x-cloak class="text-xs text-darkbrown-500 leading-relaxed">
+                            Total dihitung ulang dari perubahan jadwal atau jumlah unit. Ketersediaan dan harga final dicek saat Anda menekan Bayar.
+                        </p>
+
+                        <!-- Opsi Pembayaran-->
+                        <fieldset>
+                            <legend class="text-sm font-bold text-darkbrown-900 mb-2.5">Opsi pembayaran</legend>
+                            <div class="grid grid-cols-2 gap-3">
+                                <label :class="paymentOption === 'full' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
+                                       class="rounded-xl border p-3 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                    <input type="radio" name="ui_payment_option" value="full" x-model="paymentOption" class="sr-only">
+                                    <span class="block font-bold text-sm text-darkbrown-900">Bayar lunas</span>
+                                    <span class="block mt-0.5 text-xs text-darkbrown-600 leading-relaxed">Langsung terkonfirmasi.</span>
+                                    <span class="block mt-1.5 text-sm font-extrabold text-avocado-800" x-text="formatRupiah(grandTotal)"></span>
+                                </label>
+                                <label :class="paymentOption === 'dp' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
+                                       class="rounded-xl border p-3 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                    <input type="radio" name="ui_payment_option" value="dp" x-model="paymentOption" class="sr-only">
+                                    <span class="block font-bold text-sm text-darkbrown-900">Uang muka (DP)</span>
+                                    <span class="block mt-0.5 text-xs text-darkbrown-600 leading-relaxed">Bayar <span x-text="dpPercentage + '%'"></span> dulu, sisanya saat ambil alat.</span>
+                                    <span class="block mt-1.5 text-sm font-extrabold text-avocado-800" x-text="formatRupiah(dpAmount)"></span>
+                                </label>
+                            </div>
+                        </fieldset>
+
+                        <div x-show="formError" x-cloak role="alert" class="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-3 text-sm text-red-800">
+                            <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span x-text="formError"></span>
+                        </div>
+
+                        <div>
+                            <button type="button" x-on:click="submitBooking()" :disabled="isProcessing"
+                                    :class="isProcessing ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
+                                    class="w-full py-3.5 px-5 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
+                                <template x-if="!isProcessing">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                </template>
+                                <template x-if="isProcessing">
+                                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
+                                </template>
+                                <span x-text="isProcessing ? 'Membuat booking...' : 'Buat booking'"></span>
+                                <span x-text="formatRupiah(payableAmount)" class="font-mono text-sm font-black px-2 py-0.5 rounded-lg bg-darkbrown-900 text-sunglow-300"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm px-5 py-4 flex items-center justify-between gap-3 text-sm">
+                    <div>
+                        <div class="font-bold text-darkbrown-900">Butuh bantuan?</div>
+                        <div class="text-darkbrown-500">Kendala bayar atau ubah jadwal.</div>
+                    </div>
+                    <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 font-bold text-avocado-700 hover:text-avocado-800">WhatsApp CS</a>
+                </div>
+            </div>
+        </div>
+
+        </div>
         </div>
     </div>
-    <!-- MODAL SIMULASI MIDTRANS SNAP (fallback jika Snap.js belum tersedia) -->
-    <x-midtrans-simulation-modal :booking="$booking" />
 
-    {{-- Midtrans Snap SDK Sandbox — aktif saat MIDTRANS_CLIENT_KEY tersedia di .env --}}
-    @if(config('services.midtrans.client_key'))
-    <script src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
-            data-client-key="{{ config('services.midtrans.client_key') }}"></script>
-    @endif
+    <script>
+        function checkoutPage(cfg) {
+            return {
+                ...cfg,
+                selectedChannel: 'qris',
+                paymentOption: 'full',
+                isProcessing: false,
+                formError: '',
+                errors: {},
+                // name sudah diisi dari cfg (kosong untuk tamu / member tanpa nama)
+                phone: '',
+                nik: '',
+                address: cfg.deliveryAddress || '',
+                notes: cfg.deliveryNotes || '',
+                editAddress: false,
+                touched: false,
+                remaining: '',
+
+                // Serah terima setelah booking dibuat: form -> handoff
+                phase: 'form',
+                createdCode: '',
+
+                init() { this.startCountdown(); },
+
+                get isGuest() { return !this.isLoggedIn; },
+                get showAddressForm() { return this.needsAddress || this.editAddress; },
+
+                get rentalDays() {
+                    const a = new Date(this.pickupDate), b = new Date(this.returnDate);
+                    if (isNaN(a) || isNaN(b)) return this.initialDays;
+                    return Math.max(1, Math.round((b - a) / 86400000) + 1);
+                },
+                get totalUnits() { return this.items.reduce((n, it) => n + (Number(it.qty) || 0), 0); },
+                get subtotal() {
+                    return this.items.reduce((n, it) => n + it.price_per_day * (Number(it.qty) || 0), 0) * this.rentalDays;
+                },
+                get deposit() {
+                    return this.items.reduce((n, it) => n + it.deposit_per_unit * (Number(it.qty) || 0), 0);
+                },
+                get deliveryFee() {
+                    return (this.isLoggedIn && this.pickupMethod === 'delivery') ? this.deliveryFeeAmount : 0;
+                },
+                get grandTotal() {
+                    return Math.max(0, this.subtotal + this.deposit + this.deliveryFee - this.discount);
+                },
+                get dpAmount() {
+                    // Sebelum ada perubahan pakai angka dari server; setelah diubah, perkiraan dari persentase
+                    return this.touched ? Math.round(this.grandTotal * this.dpPercentage / 100) : this.serverDpAmount;
+                },
+                get payableAmount() {
+                    return (this.paymentOption === 'dp') ? this.dpAmount : this.grandTotal;
+                },
+
+                // Form menyusut ke atas, animasi "Booking dibuat" tampil di area konten, lalu ke halaman status.
+                // Animasi "booking dibuat" yang sebenarnya dimainkan di halaman status (param ?new=1).
+                async playHandoff(data) {
+                    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+                    const full = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                    this.createdCode = data.booking_code || '';
+                    const url = new URL(data.redirect_url, window.location.origin);
+                    url.searchParams.set('new', '1');
+
+                    window.scrollTo({ top: 0, behavior: full ? 'smooth' : 'auto' });
+                    this.phase = 'handoff';
+                    await wait(full ? 2400 : 300);
+                    window.location.href = url.toString();
+                },
+
+                formatRupiah(num) {
+                    return 'Rp ' + Math.round(num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                },
+                fmtLong(iso) {
+                    const d = new Date(iso);
+                    return isNaN(d) ? '-' : d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+                },
+                fmtShort(iso) {
+                    const d = new Date(iso);
+                    return isNaN(d) ? '-' : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+                },
+
+                changeQty(i, delta) {
+                    this.items[i].qty = Number(this.items[i].qty || 1) + delta;
+                    this.clampQty(i);
+                },
+                clampQty(i) {
+                    const it = this.items[i];
+                    let q = parseInt(it.qty, 10);
+                    if (isNaN(q) || q < 1) q = 1;
+                    if (q > it.max_qty) q = it.max_qty;
+                    it.qty = q;
+                    this.touched = true;
+                },
+                onPickupChange() {
+                    if (this.pickupDate && (!this.returnDate || this.returnDate < this.pickupDate)) {
+                        this.returnDate = this.pickupDate;
+                    }
+                    this.touched = true;
+                },
+
+                startCountdown() {
+                    if (!this.expiresAtIso) return;
+                    const tick = () => {
+                        const ms = new Date(this.expiresAtIso) - new Date();
+                        if (isNaN(ms)) { this.remaining = ''; return; }
+                        if (ms <= 0) { this.remaining = 'habis'; return; }
+                        const h = Math.floor(ms / 3600000);
+                        const m = Math.floor((ms % 3600000) / 60000);
+                        const s = Math.floor((ms % 60000) / 1000);
+                        this.remaining = [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
+                    };
+                    tick();
+                    setInterval(tick, 1000);
+                },
+
+                validate() {
+                    const e = {};
+                    if (this.needsName && this.name.trim().length < 3) e.name = 'Isi nama lengkap sesuai KTP.';
+                    if (this.needsPhone && !/^(\+62|62|0)8[0-9]{8,12}$/.test(this.phone.replace(/[\s-]/g, ''))) {
+                        e.phone = 'Nomor WhatsApp belum valid. Contoh: 081234567890';
+                    }
+                    if (this.needsNik && !/^\d{16}$/.test(this.nik)) e.nik = 'NIK harus 16 digit angka.';
+
+                    if (this.pickupMethod === 'delivery' && this.address.trim().length < 10) {
+                        e.address = 'Alamat pengantaran belum lengkap.';
+                        this.editAddress = true;
+                    }
+                    if (!this.pickupDate || !this.returnDate || this.returnDate < this.pickupDate) {
+                        e.dates = 'Tanggal kembali tidak boleh sebelum tanggal ambil.';
+                    } else if (this.pickupDate < this.minDate) {
+                        e.dates = 'Tanggal ambil tidak boleh sebelum hari ini.';
+                    }
+                    if (this.items.some(it => !(it.qty >= 1 && it.qty <= it.max_qty))) {
+                        e.items = 'Jumlah unit tidak valid.';
+                    }
+
+                    this.errors = e;
+                    this.scrollToError();
+                    return Object.keys(e).length === 0;
+                },
+
+                scrollToError() {
+                    const e = this.errors;
+                    const target = (e.name || e.phone || e.nik) ? 'section-identity'
+                        : (e.address || e.notes) ? 'section-delivery'
+                        : (e.dates || e.items) ? 'section-rental' : null;
+                    if (!target) return;
+                    const el = document.getElementById(target);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                },
+
+                async submitBooking() {
+                    // Aturan bisnis: delivery hanya untuk akun login
+                    if (this.pickupMethod === 'delivery' && !this.isLoggedIn) {
+                        window.location.href = this.loginUrl;
+                        return;
+                    }
+                    if (this.isProcessing) return;
+
+                    this.formError = '';
+                    if (!this.validate()) return;
+
+                    this.isProcessing = true;
+
+                    try {
+                        const fd = new FormData();
+                        fd.append('_token', this.csrf);
+                        fd.append('pickup_method', this.pickupMethod);
+                        fd.append('payment_option', this.paymentOption);
+                        fd.append('payment_channel', this.selectedChannel);
+
+                        // Jadwal & jumlah unit (harga dihitung ulang di server)
+                        fd.append('pickup_date', this.pickupDate);
+                        fd.append('return_date', this.returnDate);
+                        this.items.forEach((it, i) => {
+                            fd.append('items[' + i + '][id]', it.id);
+                            fd.append('items[' + i + '][qty]', it.qty);
+                        });
+
+                        // Data penyewa (hanya yang memang diminta)
+                        if (this.isGuest) {
+                            fd.append('guest_name', this.name.trim());
+                            fd.append('guest_phone', this.phone.trim());
+                            fd.append('guest_id_number', this.nik);
+                        } else {
+                            if (this.needsName) fd.append('name', this.name.trim());
+                            if (this.needsPhone) fd.append('phone', this.phone.trim());
+                            if (this.needsNik) fd.append('nik', this.nik);
+                        }
+
+                        // Alamat antar (member + delivery)
+                        if (this.pickupMethod === 'delivery') {
+                            fd.append('delivery_address', this.address.trim());
+                            fd.append('delivery_notes', this.notes.trim());
+                        }
+
+                        const response = await fetch(this.storeUrl, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
+                            body: fd,
+                        });
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            const map = {
+                                guest_name: 'name', name: 'name',
+                                guest_phone: 'phone', phone: 'phone',
+                                guest_id_number: 'nik', nik: 'nik',
+                                delivery_address: 'address', delivery_notes: 'notes',
+                                pickup_date: 'dates', return_date: 'dates',
+                            };
+                            const serverErrors = {};
+                            Object.keys(data.errors || {}).forEach(k => {
+                                const key = k.startsWith('items') ? 'items' : map[k];
+                                if (key && !serverErrors[key]) serverErrors[key] = data.errors[k][0];
+                            });
+                            this.errors = serverErrors;
+                            this.formError = data.message || 'Terjadi kesalahan. Silakan coba lagi.';
+                            this.scrollToError();
+                            this.isProcessing = false;
+                            return;
+                        }
+
+                        if (!data.redirect_url) {
+                            this.formError = 'Booking dibuat, tetapi halaman status tidak ditemukan. Buka Riwayat Sewa untuk melanjutkan pembayaran.';
+                            this.isProcessing = false;
+                            return;
+                        }
+
+                        await this.playHandoff(data);
+                    } catch (err) {
+                        this.formError = 'Koneksi bermasalah. Periksa internet Anda lalu coba lagi.';
+                        this.isProcessing = false;
+                    }
+                },
+            };
+        }
+    </script>
 </x-layouts.customer>

@@ -9,6 +9,7 @@ use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class MidtransPaymentController extends Controller
 {
@@ -74,34 +75,40 @@ class MidtransPaymentController extends Controller
             'Tidak terdapat denda yang perlu dibayar pada rental ini.',
         );
 
-        // Cegah double payment: pastikan belum ada pembayaran denda yang pending atau sudah lunas
-        $existingFinePayment = $rental->payments()
-            ->where('payment_type', 'fine')
-            ->whereIn('status', ['pending', 'paid'])
-            ->latest('id')
-            ->first();
+        // Cegah double payment dalam DB transaction + lockForUpdate
+        return DB::transaction(function () use ($rental, $fineTotal, $paymentService, $midtrans) {
+            // Lock rental row agar tidak ada request lain yang lolos bersamaan
+            Rental::query()->where('id', $rental->id)->lockForUpdate()->first();
 
-        if ($existingFinePayment?->status === 'paid') {
+            $existingFinePayment = $rental->payments()
+                ->where('payment_type', 'fine')
+                ->whereIn('status', ['pending', 'paid'])
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingFinePayment?->status === 'paid') {
+                return response()->json([
+                    'message' => 'Denda pada rental ini sudah lunas.',
+                    'data' => ['payment_id' => $existingFinePayment->getKey()],
+                ]);
+            }
+
+            // Reuse payment pending yang sudah ada, atau buat tagihan denda baru via PaymentService
+            $payment = $existingFinePayment ?? $paymentService->createOnlineFinePayment($rental, $fineTotal);
+
+            $snapToken = $payment->snap_token ?: $midtrans->createTransaction($payment);
+
             return response()->json([
-                'message' => 'Denda pada rental ini sudah lunas.',
-                'data' => ['payment_id' => $existingFinePayment->getKey()],
+                'data' => [
+                    'payment_id' => $payment->getKey(),
+                    'order_id' => $payment->order_id,
+                    'snap_token' => $snapToken,
+                    'fine_total' => (float) $fineTotal,
+                    'late_fee' => (float) $rental->total_late_fee,
+                    'damage_fee' => (float) $rental->total_damage_fee,
+                ],
             ]);
-        }
-
-        // Reuse payment pending yang sudah ada, atau buat tagihan denda baru via PaymentService
-        $payment = $existingFinePayment ?? $paymentService->createOnlineFinePayment($rental, $fineTotal);
-
-        $snapToken = $payment->snap_token ?: $midtrans->createTransaction($payment);
-
-        return response()->json([
-            'data' => [
-                'payment_id' => $payment->getKey(),
-                'order_id' => $payment->order_id,
-                'snap_token' => $snapToken,
-                'fine_total' => (float) $fineTotal,
-                'late_fee' => (float) $rental->total_late_fee,
-                'damage_fee' => (float) $rental->total_damage_fee,
-            ],
-        ]);
+        });
     }
 }

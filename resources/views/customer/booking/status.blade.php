@@ -1,6 +1,10 @@
 <x-layouts.customer>
     <x-slot name="title">
-        Status Booking #{{ $rental->booking_code }} - Tendaku
+        @if(isset($rental) && $rental)
+            Status Booking #{{ $rental->booking_code }} - Tendaku
+        @else
+            Riwayat Sewa Saya - Tendaku
+        @endif
     </x-slot>
 
     <x-slot name="header">
@@ -9,792 +13,987 @@
                 <nav class="flex items-center gap-2 text-xs text-darkbrown-500 mb-1.5">
                     <a href="{{ route('home') }}" class="hover:text-avocado-600 transition">Beranda</a>
                     <span class="text-wheat-400">/</span>
-                    <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-600 transition">Katalog</a>
-                    <span class="text-wheat-400">/</span>
                     @auth
-                        <a href="{{ route('customer.booking.index') }}" class="hover:text-avocado-600 transition">Riwayat</a>
+                        @if(isset($rental) && $rental)
+                            <a href="{{ route('customer.booking.index') }}" class="hover:text-avocado-600 transition">Riwayat Sewa</a>
+                            <span class="text-wheat-400">/</span>
+                            <span class="text-darkbrown-800 font-semibold">Status #{{ $rental->booking_code }}</span>
+                        @else
+                            <span class="text-darkbrown-800 font-semibold">Riwayat Sewa</span>
+                        @endif
+                    @else
+                        <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-600 transition">Katalog</a>
                         <span class="text-wheat-400">/</span>
+                        <span class="text-darkbrown-800 font-semibold">Status #{{ $rental->booking_code }}</span>
                     @endauth
-                    <span class="text-darkbrown-800 font-semibold">Status #{{ $rental->booking_code }}</span>
                 </nav>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-800 tracking-tight font-heading">
-                        Status Booking & Rental
-                    </h1>
-                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
+                    @auth Riwayat & Status Sewa @else Status Booking & Rental @endauth
+                </h1>
+                @auth
+                    <p class="text-xs text-darkbrown-600 mt-1">
+                        Daftar seluruh pesanan peralatan camping dan status sewa Anda di Tendaku.
+                    </p>
+                @endauth
             </div>
 
-            <!-- Booking Code Monospace Tag -->
-            <div class="flex items-center gap-2.5 px-4 py-2.5 bg-wheat-100 rounded-2xl border border-wheat-300 shadow-tendaku-sm self-start sm:self-auto">
-                <div class="w-8 h-8 rounded-xl bg-darkbrown-800 text-wheat-200 flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                </div>
-                <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500 block leading-none">Kode Booking</span>
-                    <span class="font-mono text-sm sm:text-base font-extrabold text-darkbrown-900">#{{ $rental->booking_code }}</span>
-                </div>
+            <div class="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+                @if(isset($rental) && $rental)
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-wheat-100 rounded-2xl border border-wheat-300 shadow-tendaku-sm">
+                        <div class="w-8 h-8 rounded-xl bg-darkbrown-800 text-wheat-200 flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="text-xs font-semibold text-darkbrown-500 block leading-none mb-0.5">Kode booking</span>
+                            <span class="font-mono text-sm sm:text-base font-extrabold text-darkbrown-900">#{{ $rental->booking_code }}</span>
+                        </div>
+                    </div>
+                @endif
+                <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-primary py-2.5 px-4 rounded-xl text-xs font-bold">
+                    + Sewa Alat Baru
+                </a>
             </div>
         </div>
     </x-slot>
 
     @php
+        $filterStatus = request('status', '');
+        $hasRental    = isset($rental) && $rental;
+        $hasList      = auth()->check() && isset($rentals);
+
         $statusLabels = [
-            'pending' => 'Menunggu Pembayaran',
+            'pending'   => 'Menunggu Pembayaran',
             'confirmed' => 'Dikonfirmasi (Siap Pickup)',
             'picked_up' => 'Sedang Dipakai (Disewa)',
-            'returned' => 'Telah Dikembalikan',
+            'returned'  => 'Telah Dikembalikan',
             'completed' => 'Selesai',
             'cancelled' => 'Dibatalkan',
-            'expired' => 'Kedaluwarsa',
+            'expired'   => 'Kedaluwarsa',
         ];
 
-        // Definisi alur timeline standar: pending -> confirmed -> picked_up -> returned -> completed
-        $allSteps = [
-            'pending' => [
-                'title' => 'Booking Dibuat',
-                'description' => 'Pesanan berhasil dibuat, menunggu pelunasan tagihan sewa.',
-                'time' => $rental->created_at->translatedFormat('d M Y, H:i') . ' WIB',
-            ],
-            'confirmed' => [
-                'title' => 'Pembayaran Lunas',
-                'description' => 'Pembayaran terverifikasi, barang disiapkan oleh staf vendor.',
-                'time' => $rental->payments->where('status', 'paid')->first()?->paid_at?->translatedFormat('d M Y, H:i') ?? 'Menunggu pelunasan',
-            ],
-            'picked_up' => [
-                'title' => 'Serah Terima (Pickup)',
-                'description' => 'Peralatan diserahkan dan fisik KTP ditahan sebagai jaminan.',
-                'time' => $rental->picked_up_at?->translatedFormat('d M Y, H:i') ?? \Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y'),
-            ],
-            'returned' => [
-                'title' => 'Pengembalian (Return)',
-                'description' => 'Unit diperiksa kondisinya dan fisik KTP dikembalikan.',
-                'time' => $rental->returned_at?->translatedFormat('d M Y, H:i') ?? 'Maks: ' . \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y'),
-            ],
-            'completed' => [
-                'title' => 'Transaksi Selesai',
-                'description' => 'Seluruh kewajiban sewa dan inspeksi telah rampung.',
-                'time' => $rental->status === 'completed' ? ($rental->updated_at->translatedFormat('d M Y, H:i') . ' WIB') : 'Menunggu selesai',
-            ],
-        ];
-
-        $stepOrder = ['pending', 'confirmed', 'picked_up', 'returned', 'completed'];
-        $currentIdx = array_search($rental->status, $stepOrder, true);
-        if ($currentIdx === false) {
-            $currentIdx = -1; // untuk cancelled/expired
-        }
-
-        $isExpiredOrCancelled = in_array($rental->status, ['cancelled', 'expired'], true);
-        $hasDenda = ($rental->total_late_fee > 0 || $rental->total_damage_fee > 0);
-        $totalFinal = $rental->final_total ?: ($rental->grand_total + $rental->total_late_fee + $rental->total_damage_fee);
+        $statusTabs = ['' => 'Semua Transaksi'] + $statusLabels;
     @endphp
 
-    <div class="py-4 sm:py-6 space-y-6">
+    @if($hasRental)
+    @php
+        $status = $rental->status;
 
-        <!-- ALERT KHUSUS JIKA STATUS PENDING & COUNTDOWN EXPIRES_AT -->
-        @if($rental->status === 'pending' && $rental->expires_at)
-            @php
-                $isExpiredNow = $rental->expires_at->isPast();
-                $onlinePayment = $latestPayment ?? $rental->payments->where('channel', 'midtrans')->first();
-            @endphp
+        // Urutan titik di timeline & pemetaan status rental -> titik yang sedang terbuka
+        $nodeOrder    = ['created', 'payment', 'pickup', 'rental', 'return', 'done'];
+        $statusToNode = [
+            'pending'   => 'payment',
+            'confirmed' => 'pickup',
+            'picked_up' => 'rental',
+            'returned'  => 'return',
+            'completed' => 'done',
+        ];
 
-            <div class="space-y-4">
-                <!-- 1. ALERT STATUS & TOMBOL AKSI UTAMA -->
-                <div class="p-5 rounded-3xl border {{ $isExpiredNow ? 'bg-red-50 border-red-200' : 'bg-gradient-to-r from-wheat-100 to-[#FAF6ED] border-wheat-300' }} shadow-tendaku-sm">
-                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2">
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sunglow-200 text-darkbrown-900 border border-goldenrod-400">
-                                    {{ $isExpiredNow ? 'Kadaluwarsa' : 'Menunggu Pembayaran' }}
-                                </span>
-                                @if($onlinePayment)
-                                    <span class="font-mono text-xs text-darkbrown-600 font-semibold">
-                                        #{{ $onlinePayment->order_id }}
-                                    </span>
-                                @endif
-                            </div>
-                            <h3 class="text-lg sm:text-xl font-extrabold text-darkbrown-900 tracking-tight">
-                                Tagihan: Rp {{ number_format($onlinePayment?->amount ?? $totalFinal, 0, ',', '.') }}
-                                <span class="text-xs font-bold text-darkbrown-500 font-normal">
-                                    ({{ $onlinePayment?->payment_type === 'dp' ? 'Uang Muka / DP 50%' : 'Pelunasan Penuh' }})
-                                </span>
-                            </h3>
-                            <p class="text-xs text-darkbrown-600 leading-relaxed">
-                                Rekening Penampung: <strong class="text-darkbrown-900">Platform TENDAKU (Super Admin)</strong> • Batas bayar: <strong>{{ $rental->expires_at->translatedFormat('d M Y, H:i') }} WIB</strong> ({{ $rental->expires_at->diffForHumans() }}).
-                            </p>
-                        </div>
+        $isExpiredOrCancelled = in_array($status, ['cancelled', 'expired'], true);
+        $isExpiredNow = $status === 'pending' && $rental->expires_at && $rental->expires_at->isPast();
 
-                        @if(!$isExpiredNow)
-                            <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-                                <button 
-                                    type="button"
-                                    onclick="payPendingBooking()"
-                                    id="btn-pay-pending"
-                                    class="py-3 px-5 rounded-xl text-xs font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2 cursor-pointer"
-                                >
-                                    <svg class="w-4 h-4 text-darkbrown-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                    </svg>
-                                    <span>Buka Pembayaran (Midtrans Snap)</span>
-                                </button>
+        $onlinePayment = $latestPayment ?? $rental->payments->where('channel', 'midtrans')->first();
+        $paidPayment   = $rental->payments->where('status', 'paid')->sortByDesc('paid_at')->first();
+        $vaInfo        = $onlinePayment?->va_details;
 
-                                <button 
-                                    type="button"
-                                    onclick="syncPaymentStatus()"
-                                    id="btn-sync-status"
-                                    class="py-3 px-4 rounded-xl text-xs font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                                    title="Cek apakah pembayaran sudah masuk di Midtrans"
-                                >
-                                    <span id="sync-icon">🔄</span>
-                                    <span>Cek Status</span>
-                                </button>
-                            </div>
-                        @endif
-                    </div>
-                </div>
+        $hasDenda   = ($rental->total_late_fee > 0 || $rental->total_damage_fee > 0);
+        $totalFinal = $rental->final_total ?: ($rental->grand_total + $rental->total_late_fee + $rental->total_damage_fee);
+        $canPayFine = $hasDenda && Auth::check() && Auth::id() === $rental->user_id;
 
-                <!-- 2. PILIHAN CARA PEMBAYARAN: QRIS & REKENING SUPERADMIN TENDAKU -->
-                @if(!$isExpiredNow)
-                    <div x-data="{ 
-                        activeMethod: '{{ ($onlinePayment?->method && str_contains($onlinePayment->method, 'va')) ? 'va' : 'qris' }}',
-                        copiedVa: '',
-                        copyText(text, key) {
-                            if (navigator.clipboard) {
-                                navigator.clipboard.writeText(text);
-                                this.copiedVa = key;
-                                setTimeout(() => { this.copiedVa = ''; }, 2000);
-                            }
-                        }
-                    }" class="p-5 sm:p-6 rounded-3xl bg-white border-2 border-wheat-300 shadow-tendaku-sm space-y-6">
+        $payAmount     = $onlinePayment?->amount ?? $totalFinal;
+        $payTypeLabel  = $onlinePayment?->payment_type === 'dp' ? 'Uang muka (DP)' : 'Pelunasan penuh';
+        $rupiah        = fn ($n) => 'Rp ' . number_format((int) $n, 0, ',', '.');
+        $fmtDateTime   = fn ($d) => $d ? \Carbon\Carbon::parse($d)->translatedFormat('d M Y, H:i') : '';
+        $fmtDate       = fn ($d) => $d ? \Carbon\Carbon::parse($d)->translatedFormat('d M Y') : '';
 
-                        <!-- Header & Tab Switcher -->
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-wheat-200">
-                            <div>
-                                <span class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500 block">Pilihan Pembayaran Resmi</span>
-                                <h4 class="font-extrabold text-base sm:text-lg text-darkbrown-900">
-                                    Bayar ke Rekening Platform Tendaku
-                                </h4>
-                            </div>
+        // Data penyewa (member atau tamu)
+        $renterName  = $rental->isGuest() ? ($rental->guest_name ?? 'Penyewa Tamu') : ($rental->customer?->name ?? 'Pelanggan');
+        $renterPhone = $rental->isGuest() ? ($rental->guest_phone ?? null) : ($rental->customer?->phone ?? null);
 
-                            <!-- Method Switcher Pills -->
-                            <div class="flex items-center gap-1.5 p-1 bg-wheat-100 rounded-2xl border border-wheat-300 self-start sm:self-auto">
-                                <button
-                                    type="button"
-                                    @click="activeMethod = 'qris'"
-                                    :class="activeMethod === 'qris' ? 'bg-sunglow-300 text-darkbrown-900 font-extrabold shadow-sm' : 'text-darkbrown-600 hover:text-darkbrown-900 font-semibold'"
-                                    class="px-3.5 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5"
-                                >
-                                    <span>📱</span>
-                                    <span>QRIS Realtime</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="activeMethod = 'va'"
-                                    :class="activeMethod === 'va' ? 'bg-sunglow-300 text-darkbrown-900 font-extrabold shadow-sm' : 'text-darkbrown-600 hover:text-darkbrown-900 font-semibold'"
-                                    class="px-3.5 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5"
-                                >
-                                    <span>🏦</span>
-                                    <span>Rekening / VA Superadmin</span>
-                                </button>
-                            </div>
-                        </div>
+        // Meta tiap titik timeline
+        $nodes = [
+            'created' => ['title' => 'Booking dibuat',        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+            'payment' => ['title' => 'Pembayaran',            'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
+            'pickup'  => ['title' => 'Serah terima alat',     'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'],
+            'rental'  => ['title' => 'Masa sewa',             'icon' => 'M19 20L10 4 1 20h18z'],
+            'return'  => ['title' => 'Pengembalian',          'icon' => 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6'],
+            'done'    => ['title' => 'Transaksi selesai',     'icon' => 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9'],
+        ];
 
-                        <!-- ── TAB 1: PEMBAYARAN QRIS ────────────────────────────────────────────── -->
-                        <div x-show="activeMethod === 'qris'" x-cloak class="space-y-5">
-                            <div class="flex flex-col md:flex-row items-center gap-6 p-5 sm:p-6 rounded-2xl bg-[#FAF6ED] border border-wheat-300">
-                                <!-- Kartu QRIS Resmi Midtrans -->
-                                <div class="w-64 sm:w-72 bg-white p-5 rounded-2xl border-2 border-darkbrown-800 shadow-md shrink-0 flex flex-col items-center text-center space-y-3.5">
-                                    <div class="w-full flex items-center justify-between pb-2 border-b border-gray-200">
-                                        <div class="flex items-center gap-1">
-                                            <span class="font-black text-sm tracking-tighter text-red-600 font-sans">QRIS</span>
-                                            <span class="text-[9px] font-bold text-gray-500 uppercase leading-none">Standar Pembayaran Nasional</span>
-                                        </div>
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-black bg-darkbrown-800 text-white">GPN</span>
-                                    </div>
+        $descs = [
+            'created' => ['todo' => 'Pesanan tercatat', 'active' => 'Pesanan tercatat', 'done' => 'Pesanan tercatat dengan kode #' . $rental->booking_code],
+            'payment' => ['todo' => 'Menunggu tagihan', 'active' => 'Menunggu pembayaran', 'done' => 'Pembayaran terverifikasi'],
+            'pickup'  => ['todo' => 'Disiapkan setelah pembayaran', 'active' => 'Alat siap diserahkan', 'done' => 'Alat telah diserahkan'],
+            'rental'  => ['todo' => 'Dimulai setelah serah terima', 'active' => 'Alat sedang dipakai', 'done' => 'Masa sewa selesai'],
+            'return'  => ['todo' => 'Setelah alat dikembalikan', 'active' => 'Alat diperiksa vendor', 'done' => 'Alat dikembalikan dan diperiksa'],
+            'done'    => ['todo' => 'Setelah semua kewajiban selesai', 'active' => 'Menyelesaikan transaksi', 'done' => 'Seluruh kewajiban sewa selesai'],
+        ];
 
-                                    <div class="space-y-0.5">
-                                        <h5 class="font-extrabold text-xs text-darkbrown-900 uppercase tracking-tight">
-                                            TENDAKU PLATFORM
-                                        </h5>
-                                        <p class="text-[10px] text-darkbrown-500">
-                                            Midtrans Payment Gateway Resmi
-                                        </p>
-                                    </div>
+        $times = [
+            'created' => $fmtDateTime($rental->created_at),
+            'payment' => $paidPayment?->paid_at
+                ? $fmtDateTime($paidPayment->paid_at)
+                : ($status === 'pending' && $rental->expires_at ? 'Batas ' . $fmtDateTime($rental->expires_at) : ''),
+            'pickup'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : $fmtDate($rental->pickup_date),
+            'rental'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : '',
+            'return'  => $rental->returned_at ? $fmtDateTime($rental->returned_at) : 'Maks ' . $fmtDate($rental->return_date),
+            'done'    => $status === 'completed' ? $fmtDateTime($rental->updated_at) : '',
+        ];
 
-                                    <!-- Action Card to open dynamic QRIS -->
-                                    <div class="p-4 bg-wheat-50 rounded-xl border border-wheat-300 w-full flex flex-col items-center justify-center space-y-2.5">
-                                        <span class="text-3xl">📱</span>
-                                        <p class="text-[11px] font-semibold text-darkbrown-700 leading-snug">
-                                            Kode QRIS dinamis &amp; resmi akan ditampilkan langsung di popup Midtrans.
-                                        </p>
-                                        <button
-                                            type="button"
-                                            onclick="payPendingBooking()"
-                                            class="w-full py-2.5 px-3 rounded-xl text-xs font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
-                                        >
-                                            <span>📷 Tampilkan Kode QRIS</span>
-                                        </button>
-                                    </div>
+        // Riwayat aktivitas, semua dari data nyata
+        $acts = collect();
+        $acts->push(['title' => 'Booking dibuat', 'sub' => '#' . $rental->booking_code, 'at' => $rental->created_at, 'type' => 'doc', 'tone' => 'plain']);
+        foreach ($rental->payments as $p) {
+            $isPaid = $p->status === 'paid';
+            $label = $isPaid ? 'Pembayaran diterima' : match ($p->status) {
+                'pending'                  => 'Tagihan dibuat',
+                'expire', 'expired'        => 'Tagihan kedaluwarsa',
+                'failed', 'deny', 'cancel' => 'Pembayaran gagal',
+                default                    => 'Tagihan ' . $p->status,
+            };
+            $acts->push([
+                'title' => $label,
+                'sub'   => $rupiah($p->amount),
+                'at'    => $isPaid ? ($p->paid_at ?? $p->created_at) : $p->created_at,
+                'type'  => 'card',
+                'tone'  => $isPaid ? 'green' : ($p->status === 'pending' ? 'amber' : 'red'),
+            ]);
+        }
+        if ($rental->picked_up_at)   $acts->push(['title' => 'Alat diserahkan',      'sub' => '', 'at' => $rental->picked_up_at,   'type' => 'bag',    'tone' => 'green']);
+        if ($rental->ktp_received_at) $acts->push(['title' => 'KTP diterima toko',    'sub' => '', 'at' => $rental->ktp_received_at, 'type' => 'id',     'tone' => 'plain']);
+        if ($rental->returned_at)    $acts->push(['title' => 'Alat dikembalikan',    'sub' => '', 'at' => $rental->returned_at,    'type' => 'return', 'tone' => 'green']);
+        if ($rental->ktp_returned_at) $acts->push(['title' => 'KTP dikembalikan',     'sub' => '', 'at' => $rental->ktp_returned_at, 'type' => 'id',     'tone' => 'plain']);
+        if ($status === 'completed') $acts->push(['title' => 'Transaksi selesai',    'sub' => '', 'at' => $rental->updated_at,     'type' => 'flag',   'tone' => 'green']);
 
-                                    <!-- Nominal Pas -->
-                                    <div class="w-full pt-1.5 border-t border-gray-100">
-                                        <span class="text-[10px] text-gray-400 block font-bold uppercase">Total Tagihan Pas</span>
-                                        <span class="font-mono text-base font-black text-darkbrown-900">
-                                            Rp {{ number_format($onlinePayment?->amount ?? $totalFinal, 0, ',', '.') }}
-                                        </span>
-                                    </div>
-                                </div>
+        $activities = $acts
+            ->sortByDesc(fn ($a) => \Carbon\Carbon::parse($a['at'])->timestamp)
+            ->map(fn ($a) => [
+                'title' => $a['title'],
+                'sub'   => $a['sub'],
+                'time'  => \Carbon\Carbon::parse($a['at'])->translatedFormat('d M, H:i'),
+                'type'  => $a['type'],
+                'tone'  => $a['tone'],
+                'fresh' => false,
+            ])->values()->all();
 
-                                <!-- Panduan Sisi Kanan QRIS -->
-                                <div class="flex-1 space-y-3.5 text-xs">
-                                    <div>
-                                        <h4 class="font-extrabold text-sm sm:text-base text-darkbrown-900">
-                                            Cara Pembayaran QRIS Realtime:
-                                        </h4>
-                                        <p class="text-darkbrown-600 mt-1 leading-relaxed">
-                                            Dapat dibayar menggunakan aplikasi m-Banking atau e-Wallet apa pun di Indonesia (BCA Mobile, Livin' Mandiri, BRImo, BNI Mobile, GoPay, OVO, Dana, ShopeePay, LinkAja).
-                                        </p>
-                                    </div>
+        $pageConfig = [
+            'status'        => $status,
+            'statusLabels'  => $statusLabels,
+            'order'         => $nodeOrder,
+            'statusToNode'  => $statusToNode,
+            'descs'         => $descs,
+            'times'         => $times,
+            'activities'    => $activities,
+            'expired'       => (bool) $isExpiredNow,
+            'expiresAtIso'  => $status === 'pending' ? $rental->expires_at?->toIso8601String() : null,
+            'payAmountText' => $rupiah($payAmount),
+            'payUrl'        => route('booking.pay', $rental->booking_code),
+            'syncUrl'       => route('booking.sync', $rental->booking_code),
+            'csrf'          => csrf_token(),
+            // Baru dibuat dari checkout (?new=1): mainkan animasi masuk sekali saja
+            'fresh'         => $status === 'pending' && request()->boolean('new'),
+        ];
 
-                                    <div class="p-3.5 rounded-xl bg-white border border-wheat-200 space-y-1.5">
-                                        <span class="font-bold text-darkbrown-900 block">Langkah Pembayaran:</span>
-                                        <ol class="list-decimal list-inside space-y-1 text-darkbrown-600 leading-relaxed">
-                                            <li>Klik tombol <strong>Tampilkan Kode QRIS</strong> di samping.</li>
-                                            <li>Scan kode QR yang muncul dengan aplikasi m-Banking atau E-Wallet Anda.</li>
-                                            <li>Periksa nama merchant <strong>TENDAKU PLATFORM</strong> dan nominal tagihan.</li>
-                                            <li>Selesaikan pembayaran. Status booking akan otomatis terkonfirmasi.</li>
-                                        </ol>
-                                    </div>
+        $ktpLabel = match ($rental->ktp_collateral_status) {
+            'held'     => 'KTP ditahan di toko',
+            'returned' => 'KTP sudah dikembalikan',
+            default    => 'Menunggu serah terima',
+        };
+        $ktpBadge = match ($rental->ktp_collateral_status) {
+            'held'     => 'bg-goldenrod-100 text-goldenrod-900 border-goldenrod-300',
+            'returned' => 'bg-avocado-100 text-avocado-900 border-avocado-300',
+            default    => 'bg-wheat-100 text-darkbrown-700 border-wheat-300',
+        };
+    @endphp
+    @endif
 
-                                    <!-- Tombol Aksi Snap & Cek Status -->
-                                    <div class="flex flex-wrap items-center gap-2.5 pt-2">
-                                        <button
-                                            type="button"
-                                            onclick="payPendingBooking()"
-                                            class="py-2.5 px-4 rounded-xl text-xs font-bold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                                        >
-                                            <span>💳 Buka Pembayaran (Midtrans Snap)</span>
-                                        </button>
+    <style>
+        [x-cloak] { display: none !important; }
 
-                                        <button
-                                            type="button"
-                                            onclick="syncPaymentStatus()"
-                                            class="py-2.5 px-4 rounded-xl text-xs font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                                        >
-                                            <span>🔄 Cek Status Pembayaran</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        /* Layout: daftar booking | status | aktivitas & info. Ditulis manual supaya tidak bergantung pada build Tailwind */
+        .status-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+        .status-list  { order: 0; min-width: 0; }
+        .status-main  { order: 1; min-width: 0; }
+        .status-right { order: 2; min-width: 0; }
+        .status-right > * + * { margin-top: 1.25rem; }
+        .status-list .bk-toggle { display: flex; }
+        .status-list .bk-body { display: none; margin-top: .75rem; }
+        .status-list .bk-body.is-open { display: block; }
+        @@media (min-width: 1024px) {
+            .status-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 6fr) minmax(0, 3fr); gap: 2rem; }
+            .status-grid.no-list { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
+            .status-grid.no-right { grid-template-columns: minmax(0, 3fr) minmax(0, 9fr); }
+            .status-list { position: sticky; top: 6rem; max-height: calc(100vh - 7.5rem); overflow-y: auto; padding: 2px; }
+            .status-list .bk-toggle { display: none; }
+            .status-list .bk-body { display: block; margin-top: 0; }
+        }
 
-                        <!-- ── TAB 2: VIRTUAL ACCOUNT (BANK TRANSFER RESMI) ───────────────────── -->
-                        <div x-show="activeMethod === 'va'" x-cloak class="space-y-4">
-                            <div class="p-4 rounded-xl bg-[#FAF6ED] border border-wheat-300 text-xs text-darkbrown-700 leading-relaxed">
-                                Pembayaran transfer ditampung secara aman oleh <strong>Platform TENDAKU melalui Gateway Resmi Midtrans</strong>. Nomor Virtual Account unik dan resmi untuk pesanan Anda akan otomatis diterbitkan saat Anda membuka pembayaran.
-                            </div>
+        /* Tab timeline: hanya satu yang terbuka, buka-tutup mulus tanpa hitung tinggi */
+        .tl-collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .6s cubic-bezier(.4, 0, .2, 1); }
+        .tl-collapse.is-open { grid-template-rows: 1fr; }
+        .tl-collapse > .tl-inner { overflow: hidden; min-height: 0; opacity: 0; transition: opacity .35s ease; }
+        .tl-collapse.is-open > .tl-inner { opacity: 1; transition: opacity .5s ease .2s; }
 
-                            <!-- List Bank Cards (Informasi Channel Tersedia) -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                                <!-- 1. BCA Virtual Account -->
-                                <div class="p-4 rounded-2xl bg-white border-2 border-wheat-200 hover:border-goldenrod-400 transition space-y-2.5 shadow-sm">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-800 flex items-center justify-center font-black text-xs border border-blue-200">
-                                                BCA
-                                            </span>
-                                            <div>
-                                                <h5 class="font-extrabold text-darkbrown-900 text-xs sm:text-sm">BCA Virtual Account</h5>
-                                                <span class="text-[10px] text-darkbrown-500">Bank Central Asia</span>
-                                            </div>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-avocado-800 bg-avocado-100 px-2 py-0.5 rounded">Otomatis</span>
-                                    </div>
-                                    <p class="text-[11px] text-darkbrown-600">Transfer via BCA Mobile, myBCA, KlikBCA, atau ATM BCA 24 jam.</p>
-                                </div>
+        /* Centang "pembayaran diterima" */
+        .pay-ring { stroke-dasharray: 166; stroke-dashoffset: 166; animation: tl-draw .6s cubic-bezier(.65, 0, .45, 1) forwards; }
+        .pay-tick { stroke-dasharray: 48; stroke-dashoffset: 48; animation: tl-draw .35s cubic-bezier(.65, 0, .45, 1) .5s forwards; }
+        @@keyframes tl-draw { to { stroke-dashoffset: 0; } }
 
-                                <!-- 2. Mandiri Virtual Account -->
-                                <div class="p-4 rounded-2xl bg-white border-2 border-wheat-200 hover:border-goldenrod-400 transition space-y-2.5 shadow-sm">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-800 flex items-center justify-center font-black text-xs border border-amber-200">
-                                                MDR
-                                            </span>
-                                            <div>
-                                                <h5 class="font-extrabold text-darkbrown-900 text-xs sm:text-sm">Mandiri Virtual Account</h5>
-                                                <span class="text-[10px] text-darkbrown-500">Bank Mandiri (Bill Payment)</span>
-                                            </div>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-avocado-800 bg-avocado-100 px-2 py-0.5 rounded">Otomatis</span>
-                                    </div>
-                                    <p class="text-[11px] text-darkbrown-600">Transfer via Livin' by Mandiri, Kopra Mandiri, atau ATM Mandiri.</p>
-                                </div>
+        /* Bulatan selesai: membal sekali */
+        .dot-pop { animation: tl-pop .55s cubic-bezier(.34, 1.56, .64, 1); }
+        @@keyframes tl-pop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
 
-                                <!-- 3. BRI Virtual Account (BRIVA) -->
-                                <div class="p-4 rounded-2xl bg-white border-2 border-wheat-200 hover:border-goldenrod-400 transition space-y-2.5 shadow-sm">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center font-black text-xs border border-blue-200">
-                                                BRI
-                                            </span>
-                                            <div>
-                                                <h5 class="font-extrabold text-darkbrown-900 text-xs sm:text-sm">BRI Virtual Account (BRIVA)</h5>
-                                                <span class="text-[10px] text-darkbrown-500">Bank Rakyat Indonesia</span>
-                                            </div>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-avocado-800 bg-avocado-100 px-2 py-0.5 rounded">Otomatis</span>
-                                    </div>
-                                    <p class="text-[11px] text-darkbrown-600">Transfer via BRImo, Internet Banking BRI, atau ATM BRI.</p>
-                                </div>
+        /* Aktivitas baru masuk dari atas */
+        .act-in { animation: tl-in .5s ease; }
+        @@keyframes tl-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
-                                <!-- 4. BNI Virtual Account -->
-                                <div class="p-4 rounded-2xl bg-white border-2 border-wheat-200 hover:border-goldenrod-400 transition space-y-2.5 shadow-sm">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-8 h-8 rounded-lg bg-teal-50 text-teal-800 flex items-center justify-center font-black text-xs border border-teal-200">
-                                                BNI
-                                            </span>
-                                            <div>
-                                                <h5 class="font-extrabold text-darkbrown-900 text-xs sm:text-sm">BNI Virtual Account</h5>
-                                                <span class="text-[10px] text-darkbrown-500">Bank Negara Indonesia</span>
-                                            </div>
-                                        </div>
-                                        <span class="text-[10px] font-bold text-avocado-800 bg-avocado-100 px-2 py-0.5 rounded">Otomatis</span>
-                                    </div>
-                                    <p class="text-[11px] text-darkbrown-600">Transfer via BNI Mobile Banking, BNI Direct, atau ATM BNI.</p>
-                                </div>
-                            </div>
+        @@media (prefers-reduced-motion: reduce) {
+            .tl-collapse, .tl-collapse > .tl-inner { transition: none; }
+            .pay-ring, .pay-tick { animation-duration: .01s; animation-delay: 0s; }
+            .dot-pop, .act-in { animation: none; }
+        }
+    </style>
 
-                            <!-- Petunjuk & Tombol Aksi -->
-                            <div class="p-3.5 rounded-xl bg-sunglow-50 border border-sunglow-200 text-xs text-darkbrown-800 flex items-start gap-2.5">
-                                <span class="text-base shrink-0">ℹ️</span>
-                                <p class="leading-relaxed">
-                                    Klik tombol <strong>Dapatkan Nomor VA (Midtrans)</strong> di bawah. Anda akan diarahkan ke pop-up resmi untuk memilih bank Anda dan mendapatkan nomor Virtual Account secara instan.
-                                </p>
-                            </div>
+    <div @if($hasRental) x-data="statusPage({{ \Illuminate\Support\Js::from($pageConfig) }})" @endif class="py-4 sm:py-6">
 
-                            <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-wheat-200 text-xs">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onclick="payPendingBooking()"
-                                        class="py-2.5 px-4 rounded-xl text-xs font-bold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                                    >
-                                        <span>🏦 Dapatkan Nomor VA (Midtrans)</span>
-                                    </button>
-
-                                    @if(!config('services.midtrans.is_production'))
-                                    <a
-                                        href="https://simulator.sandbox.midtrans.com/"
-                                        target="_blank"
-                                        class="py-2.5 px-4 rounded-xl text-xs font-bold text-darkbrown-800 bg-wheat-100 hover:bg-wheat-200 border border-wheat-300 shadow-sm transition flex items-center gap-1.5"
-                                    >
-                                        <span>🧪 Simulator Sandbox ↗</span>
-                                    </a>
-                                    @endif
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onclick="syncPaymentStatus()"
-                                    class="py-2.5 px-4 rounded-xl text-xs font-bold text-darkbrown-900 bg-goldenrod-200 hover:bg-goldenrod-300 border border-goldenrod-400 shadow-sm transition flex items-center gap-1.5 cursor-pointer"
-                                >
-                                    <span>🔄 Cek Status Pembayaran</span>
-                                </button>
-                            </div>
-                        </div>
-
-                    </div>
-                @endif
-            </div>
-        @elseif($isExpiredOrCancelled)
-            <div class="p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
-                <span class="text-lg">❌</span>
-                <span>Transaksi ini telah <strong>{{ $statusLabels[$rental->status] }}</strong>. Unit perlengkapan camping telah dilepaskan kembali ke katalog.</span>
+        @if($hasRental && $isExpiredOrCancelled)
+            <div class="mb-6 p-4 rounded-2xl bg-red-50 border border-red-200 text-sm text-red-800 flex items-start gap-2.5">
+                <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>Transaksi ini <strong>{{ strtolower($statusLabels[$status]) }}</strong>. Unit alat sudah dilepas kembali ke katalog.</span>
             </div>
         @endif
 
-        <!-- 1. RENTAL TIMELINE TRACKER -->
-        <div class="bg-white rounded-2xl border border-wheat-200 p-5 sm:p-6 shadow-tendaku-sm">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-darkbrown-500 mb-4">
-                Alur Tahapan Rental & Verifikasi
-            </h3>
+        <div class="status-grid {{ $hasList ? '' : 'no-list' }} {{ $hasRental ? '' : 'no-right' }}">
+            @if($hasList)
+            <!-- ============ DAFTAR BOOKING (riwayat) ============ -->
+            <aside class="status-list" x-data="{ listOpen: false }">
+                @if($hasRental)
+                    <button type="button" class="bk-toggle w-full items-center justify-between gap-3 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm px-4 py-3 text-left"
+                            @click="listOpen = !listOpen" :aria-expanded="listOpen.toString()">
+                        <span>
+                            <span class="block text-xs text-darkbrown-500">Booking dipilih</span>
+                            <span class="font-mono text-sm font-extrabold text-darkbrown-900">#{{ $rental->booking_code }}</span>
+                        </span>
+                        <span class="text-sm font-bold text-avocado-700" x-text="listOpen ? 'Tutup daftar' : 'Ganti booking'">Ganti booking</span>
+                    </button>
+                @endif
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-                @foreach ($stepOrder as $idx => $stepKey)
-                    @php
-                        $step = $allSteps[$stepKey];
-                        $isCompleted = ($currentIdx !== -1 && $idx < $currentIdx) || ($rental->status === 'completed');
-                        $isActive = ($currentIdx !== -1 && $idx === $currentIdx && $rental->status !== 'completed');
-                    @endphp
-                    <div class="p-3.5 rounded-xl border flex flex-col justify-between space-y-2 {{ $isActive ? 'bg-sunglow-50 border-goldenrod-400 ring-2 ring-goldenrod-400/30' : ($isCompleted ? 'bg-avocado-50/60 border-avocado-200' : 'bg-[#FAF6ED] border-wheat-200') }}">
+                <div class="bk-body {{ $hasRental ? '' : 'is-open' }} space-y-3" :class="{ 'is-open': listOpen }">
+
+                    <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="font-extrabold text-darkbrown-900 font-heading">Riwayat sewa</h2>
+                            <span class="text-xs text-darkbrown-500">{{ method_exists($rentals, 'total') ? $rentals->total() : $rentals->count() }} transaksi</span>
+                        </div>
                         <div>
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold {{ $isActive ? 'bg-goldenrod-500 text-white' : ($isCompleted ? 'bg-avocado-500 text-white' : 'bg-wheat-200 text-darkbrown-600') }}">
-                                    @if ($isCompleted)
-                                        ✓
-                                    @elseif ($isActive)
-                                        ●
-                                    @else
-                                        {{ $idx + 1 }}
-                                    @endif
-                                </span>
-                                <span class="text-[10px] font-bold uppercase tracking-wider {{ $isActive ? 'text-goldenrod-800' : ($isCompleted ? 'text-avocado-800' : 'text-darkbrown-400') }}">
-                                    {{ $isActive ? 'Sedang Berjalan' : ($isCompleted ? 'Selesai' : 'Menunggu') }}
-                                </span>
-                            </div>
-                            <h4 class="font-extrabold text-xs text-darkbrown-900 leading-snug">
-                                {{ $step['title'] }}
-                            </h4>
-                            <p class="text-[11px] text-darkbrown-600 mt-0.5 leading-relaxed line-clamp-2">
-                                {{ $step['description'] }}
-                            </p>
-                        </div>
-                        <div class="pt-1.5 border-t {{ $isActive ? 'border-goldenrod-300' : ($isCompleted ? 'border-avocado-200' : 'border-wheat-200') }} text-[10px] font-semibold text-darkbrown-500">
-                            {{ $step['time'] }}
+                            <label for="bk-filter" class="text-xs font-semibold text-darkbrown-600">Filter status</label>
+                            <select id="bk-filter" onchange="window.location.href = this.value"
+                                    class="mt-1 w-full rounded-xl border border-wheat-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 focus:border-avocado-600 focus:ring-2 focus:ring-avocado-500/30">
+                                @foreach($statusTabs as $tabKey => $tabLabel)
+                                    <option value="{{ route('customer.booking.index', $tabKey ? ['status' => $tabKey] : []) }}" {{ $filterStatus === $tabKey ? 'selected' : '' }}>{{ $tabLabel }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
-                @endforeach
-            </div>
-        </div>
 
-        <!-- 2. CARD UTAMA RINCIAN TRANSAKSI -->
-        <div class="bg-white rounded-3xl border border-wheat-300 p-6 sm:p-8 shadow-tendaku-sm space-y-6">
-
-            <!-- HEADER CARD: VENDOR TOKO -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-wheat-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-xl bg-darkbrown-800 text-wheat-200 flex items-center justify-center font-black text-lg shrink-0">
-                        🏬
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-base sm:text-lg font-extrabold text-darkbrown-900 leading-tight">
-                                {{ $rental->vendor?->name }}
-                            </h3>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-300">
-                                Verified Vendor
-                            </span>
-                        </div>
-                        <p class="text-xs text-darkbrown-500 mt-0.5">
-                            {{ $rental->vendor?->address }} • {{ $rental->vendor?->city }}
-                        </p>
-                    </div>
-                </div>
-
-                @if($rental->vendor?->phone)
-                    <a href="tel:{{ $rental->vendor->phone }}"
-                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-darkbrown-800 bg-[#FAF6ED] border border-wheat-300 hover:bg-wheat-100 transition shadow-sm self-start sm:self-center">
-                        <svg class="w-3.5 h-3.5 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                        <span>{{ $rental->vendor->phone }}</span>
-                    </a>
-                @endif
-            </div>
-
-            <!-- JADWAL SEWA & METODE -->
-            <div class="space-y-2.5">
-                <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-400 block">Jadwal Sewa & Pengambilan</span>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-[#FAF6ED] border border-wheat-200 text-xs">
-                    <div class="space-y-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-avocado-700 block">Tanggal Ambil (Pickup)</span>
-                        <div class="text-sm font-extrabold text-darkbrown-900">
-                            {{ \Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y') }}
-                        </div>
-                        <div class="text-darkbrown-600">
-                            Metode: <strong>{{ $rental->pickup_method === 'delivery' ? 'Diantar (Delivery)' : 'Ambil di Toko (Self-Pickup)' }}</strong>
-                        </div>
-                    </div>
-                    <div class="space-y-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-goldenrod-700 block">Tanggal Kembali (Return)</span>
-                        <div class="text-sm font-extrabold text-darkbrown-900">
-                            {{ \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y') }}
-                        </div>
-                        <div class="text-darkbrown-600">
-                            Pengembalian Fisik
-                        </div>
-                    </div>
-                    <div class="space-y-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-darkbrown-500 block">Durasi Sewa</span>
-                        <div class="text-sm font-extrabold text-darkbrown-900">{{ $rental->rental_days }} Hari</div>
-                        <div class="text-darkbrown-600">Total Durasi Pemakaian</div>
-                    </div>
-                </div>
-
-                @if($rental->pickup_method === 'delivery' && $rental->delivery_address)
-                    <div class="p-3 rounded-xl bg-wheat-50 border border-wheat-200 text-xs text-darkbrown-700">
-                        📍 <strong>Alamat Pengantaran:</strong> {{ $rental->delivery_address }}
-                    </div>
-                @endif
-            </div>
-
-            <!-- DAFTAR BARANG YANG DISEWA -->
-            <div class="space-y-3 pt-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-400 block">Daftar Barang yang Disewa</span>
-                    <span class="text-xs text-darkbrown-500 font-semibold">{{ $rental->details->count() }} Unit Alat</span>
-                </div>
-
-                <div class="divide-y divide-wheat-200 border border-wheat-200 rounded-2xl overflow-hidden bg-white">
-                    @foreach ($rental->details as $detail)
+                    @forelse($rentals as $r)
                         @php
-                            $mItem = $detail->masterItem;
-                            $unit = $detail->itemUnit;
+                            $isSel = $hasRental && $r->booking_code === $rental->booking_code;
+                            $rBadge = match($r->status) {
+                                'pending' => 'bg-sunglow-100 text-sunglow-900 border-sunglow-300',
+                                'confirmed' => 'bg-sky-100 text-sky-900 border-sky-300',
+                                'picked_up' => 'bg-avocado-100 text-avocado-900 border-avocado-300',
+                                'returned' => 'bg-indigo-100 text-indigo-900 border-indigo-300',
+                                'completed' => 'bg-emerald-100 text-emerald-900 border-emerald-300',
+                                'cancelled', 'expired' => 'bg-red-100 text-red-900 border-red-300',
+                                default => 'bg-wheat-100 text-darkbrown-700 border-wheat-300',
+                            };
                         @endphp
-                        <div class="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FAF6ED]/40 transition">
-                            <div class="flex items-center gap-3.5 min-w-0 flex-1">
-                                <div class="w-10 h-10 rounded-xl bg-wheat-100 border border-wheat-200 flex items-center justify-center shrink-0 text-darkbrown-800">
-                                    ⛺
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="font-bold text-darkbrown-900 text-sm truncate">
-                                            {{ $mItem?->name ?? 'Peralatan Camping' }}
-                                        </h4>
-                                        @if($unit)
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-wheat-100 text-darkbrown-700 border border-wheat-300 shrink-0">
-                                                Unit: {{ $unit->unit_code }}
-                                            </span>
-                                        @else
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-sans font-medium bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                                                Alokasi saat pickup
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <p class="text-xs text-darkbrown-500 mt-0.5">
-                                        Rp {{ number_format($detail->daily_rate_snapshot, 0, ',', '.') }}/hari × {{ $rental->rental_days }} hari
-                                        @if($detail->condition_before)
-                                            • Kondisi awal: <strong>{{ $detail->condition_before }}</strong>
-                                        @endif
-                                    </p>
-                                </div>
+                        <a href="{{ route('booking.status', $r->booking_code) }}{{ $filterStatus ? '?status=' . $filterStatus : '' }}"
+                           @if($isSel) aria-current="page" @endif
+                           class="block rounded-2xl border p-4 space-y-2.5 transition {{ $isSel ? 'bg-avocado-50 border-avocado-600 ring-2 ring-avocado-600/20' : 'bg-white border-wheat-200 hover:border-wheat-400 shadow-tendaku-sm' }}">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-mono text-sm font-extrabold text-darkbrown-900">#{{ $r->booking_code }}</span>
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border {{ $rBadge }}">{{ $statusLabels[$r->status] ?? ucfirst($r->status) }}</span>
                             </div>
-                            <div class="text-left sm:text-right shrink-0">
-                                <span class="font-extrabold text-sm sm:text-base text-darkbrown-900">
-                                    Rp {{ number_format($detail->daily_rate_snapshot * $rental->rental_days, 0, ',', '.') }}
-                                </span>
+                            <div class="text-xs text-darkbrown-500 font-medium">
+                                Dipesan pada {{ $r->created_at->translatedFormat('d M Y, H:i') }} WIB
                             </div>
-                        </div>
-                    @endforeach
+                            <div class="text-xs font-bold text-darkbrown-900">
+                                {{ $r->vendor?->name }}
+                                <span class="text-wheat-500">•</span>
+                                <span class="text-darkbrown-600 font-medium">{{ $r->vendor?->city }}</span>
+                            </div>
+                            <div class="text-xs text-darkbrown-700 space-y-1">
+                                <p class="font-medium">
+                                    Periode: <strong>{{ \Carbon\Carbon::parse($r->pickup_date)->translatedFormat('d M Y') }}</strong> s/d <strong>{{ \Carbon\Carbon::parse($r->return_date)->translatedFormat('d M Y') }}</strong> ({{ $r->rental_days }} hari)
+                                </p>
+                                <p class="text-darkbrown-600">
+                                    Barang: {{ $r->details->count() }} unit alat
+                                    @if($r->details->first()?->masterItem)
+                                        ({{ $r->details->first()->masterItem->name }}{{ $r->details->count() > 1 ? ', dll' : '' }})
+                                    @endif
+                                </p>
+                            </div>
+                            <div class="flex items-end justify-between gap-3 pt-2 border-t border-wheat-100">
+                                <div>
+                                    <span class="text-[11px] text-darkbrown-500 block">Total Tagihan</span>
+                                    <span class="text-base font-extrabold text-darkbrown-900 font-heading">Rp {{ number_format($r->final_total ?: $r->grand_total, 0, ',', '.') }}</span>
+                                </div>
+                                <span class="text-xs font-bold {{ $isSel ? 'text-avocado-800' : 'text-avocado-700' }}">{{ $isSel ? 'Sedang dilihat' : 'Lihat status →' }}</span>
+                            </div>
+                        </a>
+                    @empty
+                        <p class="rounded-2xl bg-white border border-wheat-200 p-4 text-sm text-darkbrown-600">Tidak ada transaksi untuk status ini.</p>
+                    @endforelse
+
+                    <div>
+                        {{ $rentals->links() }}
+                    </div>
                 </div>
-            </div>
+            </aside>
+            @endif
 
-            <!-- JAMINAN KTP & RINCIAN BIAYA & DENDA -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-wheat-200 items-stretch">
+            <main class="status-main space-y-6">
+                @if($hasRental)
 
-                <!-- STATUS JAMINAN KTP -->
-                <div class="p-5 rounded-2xl bg-[#FAF6ED] border border-wheat-300 flex flex-col justify-between space-y-4">
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-500">Jaminan Identitas Fisik</span>
-                            @php
-                                $ktpBadgeClass = match($rental->ktp_collateral_status) {
-                                    'held' => 'bg-goldenrod-100 text-goldenrod-900 border-goldenrod-300',
-                                    'returned' => 'bg-avocado-100 text-avocado-900 border-avocado-300',
-                                    default => 'bg-wheat-100 text-darkbrown-700 border-wheat-300',
-                                };
-                                $ktpLabel = match($rental->ktp_collateral_status) {
-                                    'held' => 'KTP Ditahan di Toko',
-                                    'returned' => 'KTP Telah Dikembalikan',
-                                    default => 'Menunggu Serah Terima',
-                                };
-                            @endphp
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border {{ $ktpBadgeClass }}">
-                                {{ $ktpLabel }}
-                            </span>
-                        </div>
+                <div class="flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading">Alur pemesanan</h2>
+                    <span class="px-3 py-1 rounded-full text-sm font-bold border"
+                          :class="current ? 'bg-sunglow-100 border-sunglow-300 text-darkbrown-900' : 'bg-red-50 border-red-200 text-red-800'"
+                          x-text="statusLabels[status]">{{ $statusLabels[$status] ?? $status }}</span>
+                </div>
 
-                        <div class="flex items-start gap-3 pt-1">
-                            <div class="w-10 h-10 rounded-xl bg-goldenrod-100 text-goldenrod-800 border border-goldenrod-300 flex items-center justify-center shrink-0 font-bold text-sm">
-                                🪪
-                            </div>
-                            <div>
-                                <h4 class="font-extrabold text-sm text-darkbrown-900">Tanda Terima Digital KTP</h4>
-                                <span class="font-mono text-xs text-darkbrown-600 font-semibold block">
-                                    No: REC-{{ $rental->booking_code }}
+                <ol class="relative">
+                    @foreach($nodes as $key => $n)
+                        <li id="node-{{ $key }}" class="relative flex gap-4 sm:gap-5">
+
+                            <!-- Bulatan & garis -->
+                            <div class="flex flex-col items-center shrink-0">
+                                <span class="relative z-10 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors duration-500"
+                                      :class="[dotCls('{{ $key }}'), justDone === '{{ $key }}' ? 'dot-pop' : '']">
+                                    <span x-show="state('{{ $key }}') === 'active'" class="absolute inset-0 rounded-full bg-sunglow-300/60 animate-ping motion-reduce:animate-none" aria-hidden="true"></span>
+                                    <svg x-show="state('{{ $key }}') === 'done'" class="relative w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                    <svg x-show="state('{{ $key }}') !== 'done'" class="relative w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $n['icon'] }}" /></svg>
                                 </span>
+                                @unless($loop->last)
+                                    <span class="relative w-0.5 flex-1 bg-wheat-200 my-1 rounded">
+                                        <span class="absolute inset-x-0 top-0 bg-avocado-500 rounded transition-[height] duration-700 ease-out"
+                                              :style="'height:' + lineFill({{ $loop->index }}) + '%'"></span>
+                                    </span>
+                                @endunless
                             </div>
-                        </div>
 
-                        <p class="text-xs text-darkbrown-600 leading-relaxed pt-1">
-                            @if($rental->ktp_collateral_status === 'held')
-                                KTP fisik asli disimpan aman oleh toko vendor sejak <strong>{{ $rental->ktp_received_at?->translatedFormat('d M Y, H:i') }} WIB</strong>. KTP dikembalikan langsung saat Anda menyerahkan kembali alat camping.
-                            @elseif($rental->ktp_collateral_status === 'returned')
-                                KTP fisik asli telah dikembalikan kepada penyewa pada <strong>{{ $rental->ktp_returned_at?->translatedFormat('d M Y, H:i') }} WIB</strong>.
-                            @else
-                                KTP fisik asli wajib diserahkan kepada kasir vendor saat serah terima barang (pickup). Tanpa deposit uang tunai.
-                            @endif
-                        </p>
+                            <!-- Kartu -->
+                            <section class="flex-1 min-w-0 mb-5 rounded-2xl border transition-colors duration-500"
+                                     :class="cardCls('{{ $key }}')"
+                                     :aria-current="current === '{{ $key }}' ? 'step' : null">
+
+                                <header class="flex items-start justify-between gap-3 p-4 sm:p-5">
+                                    <div class="min-w-0">
+                                        <h3 class="font-extrabold text-darkbrown-900 leading-snug">{{ $n['title'] }}</h3>
+                                        <p class="mt-0.5 text-sm text-darkbrown-600" x-text="descs['{{ $key }}'][state('{{ $key }}')]"></p>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0 text-right">
+                                        <span x-show="times['{{ $key }}']" class="text-xs font-semibold text-darkbrown-500" x-text="times['{{ $key }}']">{{ $times[$key] }}</span>
+                                        @unless($key === 'created')
+                                            <svg x-show="state('{{ $key }}') === 'todo'" class="w-4 h-4 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-label="Belum terbuka"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                        @endunless
+                                    </div>
+                                </header>
+
+                                @unless($key === 'created')
+                                <div class="tl-collapse" :class="{ 'is-open': isOpen('{{ $key }}') }" :inert="!isOpen('{{ $key }}')">
+                                    <div class="tl-inner">
+                                        <div class="relative border-t border-wheat-200 p-4 sm:p-5 space-y-4">
+
+                                            @switch($key)
+
+                                                {{-- ================= PEMBAYARAN ================= --}}
+                                                @case('payment')
+                                                    @if($status === 'pending')
+                                                        <!-- Animasi "pembayaran diterima" -->
+                                                        <div x-show="celebrate" x-cloak x-transition.opacity.duration.300ms
+                                                             class="absolute inset-0 z-10 bg-white/95 flex flex-col items-center justify-center gap-2" role="status">
+                                                            <svg class="w-16 h-16 text-avocado-600" viewBox="0 0 56 56" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+                                                                <circle class="pay-ring" cx="28" cy="28" r="26.5" />
+                                                                <path class="pay-tick" d="M16 29l8 8 16-17" />
+                                                            </svg>
+                                                            <span class="font-extrabold text-darkbrown-900">Pembayaran diterima</span>
+                                                        </div>
+
+                                                        <div class="flex flex-wrap items-end justify-between gap-3">
+                                                            <div>
+                                                                <div class="text-sm text-darkbrown-500">{{ $payTypeLabel }}</div>
+                                                                <div class="text-2xl font-extrabold text-darkbrown-900 font-heading tracking-tight">{{ $rupiah($payAmount) }}</div>
+                                                            </div>
+                                                            @if($onlinePayment?->order_id)
+                                                                <div class="text-right">
+                                                                    <div class="text-xs text-darkbrown-500">ID pesanan</div>
+                                                                    <div class="font-mono text-sm font-semibold text-darkbrown-800">{{ $onlinePayment->order_id }}</div>
+                                                                </div>
+                                                            @endif
+                                                        </div>
+
+                                                        <div class="flex items-center gap-2 rounded-xl bg-sunglow-100/70 border border-sunglow-300/70 px-3.5 py-2.5 text-sm text-darkbrown-800">
+                                                            <svg class="w-4 h-4 text-goldenrod-700 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                            <span x-show="!expired">
+                                                                Bayar sebelum <strong>{{ $fmtDateTime($rental->expires_at) }}</strong>
+                                                                <span x-show="remaining" x-cloak> · sisa <span class="font-mono font-bold" x-text="remaining"></span></span>
+                                                            </span>
+                                                            <span x-show="expired" x-cloak class="font-semibold text-red-700">Batas waktu pembayaran sudah lewat. Unit alat dilepas ke penyewa lain.</span>
+                                                        </div>
+
+                                                        @if($vaInfo)
+                                                            <div class="rounded-xl border-2 border-goldenrod-400 bg-white p-4 space-y-3">
+                                                                <div class="flex items-center gap-2">
+                                                                    <span class="px-2.5 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-800 border border-blue-200">{{ $vaInfo['bank'] ?? 'Bank' }}</span>
+                                                                    <span class="text-sm font-bold text-darkbrown-800">Nomor virtual account</span>
+                                                                </div>
+                                                                @if(!empty($vaInfo['biller_code']))
+                                                                    <div>
+                                                                        <div class="text-xs text-darkbrown-500">Kode perusahaan (biller code)</div>
+                                                                        <span class="mt-1 inline-block font-mono text-base font-bold text-darkbrown-900 bg-wheat-100 px-3 py-1.5 rounded-lg border border-wheat-300">{{ $vaInfo['biller_code'] }}</span>
+                                                                    </div>
+                                                                @endif
+                                                                <div class="flex flex-wrap items-center gap-2">
+                                                                    <span class="font-mono text-lg font-black text-darkbrown-900 tracking-wider bg-wheat-100 px-4 py-2 rounded-xl border border-wheat-300 select-all">{{ $vaInfo['va_number'] ?? '-' }}</span>
+                                                                    <button type="button" @click="copy(@js($vaInfo['va_number'] ?? ''))"
+                                                                            class="px-3.5 py-2 rounded-xl text-sm font-bold bg-white hover:bg-wheat-100 border border-wheat-300 transition">
+                                                                        <span x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            <p class="text-sm text-darkbrown-600 leading-relaxed">
+                                                                Pilih QRIS atau transfer bank di jendela pembayaran Midtrans setelah menekan <strong>Bayar sekarang</strong>.
+                                                            </p>
+                                                        @endif
+
+                                                        <div x-show="flash" x-cloak role="status"
+                                                             :class="flashTone === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 'bg-wheat-50 border-wheat-200 text-darkbrown-700'"
+                                                             class="rounded-xl border px-3.5 py-2.5 text-sm" x-text="flash"></div>
+
+                                                        <div class="flex flex-wrap items-center gap-2.5" x-show="!expired">
+                                                            <button type="button" @click="payNow()" :disabled="paying"
+                                                                    class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                                                                <svg x-show="!paying" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                                <svg x-show="paying" x-cloak class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
+                                                                <span x-text="paying ? 'Memproses...' : 'Bayar sekarang'">Bayar sekarang</span>
+                                                            </button>
+
+                                                            <button type="button" @click="sync()" :disabled="syncing"
+                                                                    class="py-2.5 px-4 rounded-xl text-sm font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                                                                <svg class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5.6 9A8 8 0 0119 11m-.6 4A8 8 0 015 13" /></svg>
+                                                                <span x-text="syncing ? 'Mengecek...' : 'Cek status'">Cek status</span>
+                                                            </button>
+
+                                                            @if(!config('services.midtrans.is_production'))
+                                                                <a href="https://simulator.sandbox.midtrans.com/" target="_blank" rel="noopener"
+                                                                   class="text-sm font-semibold text-darkbrown-600 hover:text-darkbrown-900 underline underline-offset-2">Simulator sandbox</a>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+                                                    @break
+
+                                                {{-- ================= SERAH TERIMA ================= --}}
+                                                @case('pickup')
+                                                    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Tanggal ambil</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $fmtDate($rental->pickup_date) }}</dd>
+                                                        </div>
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Tanggal kembali</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $fmtDate($rental->return_date) }}</dd>
+                                                        </div>
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Cara menerima</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $rental->pickup_method === 'delivery' ? 'Diantar kurir' : 'Ambil di toko' }}</dd>
+                                                        </div>
+                                                    </dl>
+
+                                                    @if($rental->pickup_method === 'delivery' && $rental->delivery_address)
+                                                        <div class="rounded-xl bg-wheat-50 border border-wheat-200 p-3.5 text-sm">
+                                                            <div class="text-xs text-darkbrown-500">Alamat pengantaran</div>
+                                                            <div class="font-semibold text-darkbrown-900">{{ $rental->delivery_address }}</div>
+                                                        </div>
+                                                    @elseif($rental->vendor)
+                                                        <div class="rounded-xl bg-wheat-50 border border-wheat-200 p-3.5 text-sm">
+                                                            <div class="text-xs text-darkbrown-500">Lokasi pengambilan</div>
+                                                            <div class="font-semibold text-darkbrown-900">{{ $rental->vendor->name }}</div>
+                                                            <div class="text-darkbrown-600">{{ $rental->vendor->address }}</div>
+                                                        </div>
+                                                    @endif
+
+                                                    <p class="text-sm text-darkbrown-600 leading-relaxed">
+                                                        Bawa <strong class="text-darkbrown-800">KTP asli</strong> dan tunjukkan kode booking <span class="font-mono font-bold text-darkbrown-900">#{{ $rental->booking_code }}</span> ke kasir vendor.
+                                                    </p>
+                                                    @break
+
+                                                {{-- ================= MASA SEWA ================= --}}
+                                                @case('rental')
+                                                    <dl class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Diserahkan</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : '-' }}</dd>
+                                                        </div>
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Wajib kembali</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $fmtDate($rental->return_date) }}</dd>
+                                                        </div>
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Jaminan</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $ktpLabel }}</dd>
+                                                        </div>
+                                                    </dl>
+                                                    @if($canPayFine)
+                                                        <button type="button" @click="payNow()" :disabled="paying"
+                                                                class="w-full py-2.5 px-4 rounded-xl font-bold text-sm bg-red-600 hover:bg-red-700 text-white shadow transition disabled:opacity-70">
+                                                            Bayar denda ({{ $rupiah($rental->total_late_fee + $rental->total_damage_fee) }})
+                                                        </button>
+                                                    @endif
+                                                    @break
+
+                                                {{-- ================= PENGEMBALIAN ================= --}}
+                                                @case('return')
+                                                    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Dikembalikan</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $rental->returned_at ? $fmtDateTime($rental->returned_at) : '-' }}</dd>
+                                                        </div>
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Jaminan</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $ktpLabel }}</dd>
+                                                        </div>
+                                                    </dl>
+                                                    @if($hasDenda)
+                                                        <div class="rounded-xl bg-red-50 border border-red-200 p-3.5 text-sm text-red-800">
+                                                            Ada denda yang perlu diselesaikan sebesar <strong>{{ $rupiah($rental->total_late_fee + $rental->total_damage_fee) }}</strong>.
+                                                        </div>
+                                                    @endif
+                                                    @if($canPayFine)
+                                                        <button type="button" @click="payNow()" :disabled="paying"
+                                                                class="w-full py-2.5 px-4 rounded-xl font-bold text-sm bg-red-600 hover:bg-red-700 text-white shadow transition disabled:opacity-70">
+                                                            Bayar denda ({{ $rupiah($rental->total_late_fee + $rental->total_damage_fee) }})
+                                                        </button>
+                                                    @endif
+                                                    @break
+
+                                                {{-- ================= SELESAI ================= --}}
+                                                @case('done')
+                                                    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Total akhir</dt>
+                                                            <dd class="font-extrabold text-darkbrown-900">{{ $rupiah($totalFinal) }}</dd>
+                                                        </div>
+                                                        <div>
+                                                            <dt class="text-xs text-darkbrown-500">Selesai pada</dt>
+                                                            <dd class="font-bold text-darkbrown-900">{{ $fmtDateTime($rental->updated_at) }}</dd>
+                                                        </div>
+                                                    </dl>
+                                                    @break
+
+                                            @endswitch
+                                        </div>
+                                    </div>
+                                </div>
+                                @endunless
+                            </section>
+                        </li>
+                    @endforeach
+                </ol>
+
+                <!-- RINCIAN PESANAN -->
+                <section class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm overflow-hidden">
+                    <div class="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 bg-wheat-100 border-b border-wheat-200">
+                        <h3 class="font-extrabold text-darkbrown-900 font-heading">Rincian pesanan</h3>
+                        <span class="text-sm text-darkbrown-600">{{ $rental->details->count() }} unit alat</span>
                     </div>
 
-                    <a href="{{ route('booking.receipt', $rental->booking_code) }}"
-                       class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-extrabold text-xs text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition">
-                        <span>Lihat Dokumen Tanda Terima KTP</span>
-                        <svg class="w-4 h-4 text-darkbrown-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                    </a>
-                </div>
+                    <ul class="divide-y divide-wheat-200">
+                        @foreach($rental->details as $detail)
+                            @php
+                                $mItem = $detail->masterItem;
+                                $unit  = $detail->itemUnit;
+                            @endphp
+                            <li class="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="flex items-center gap-3.5 min-w-0">
+                                    <div class="w-10 h-10 rounded-xl bg-wheat-100 border border-wheat-200 flex items-center justify-center shrink-0 text-avocado-700">
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20L10 4 1 20h18z" /><path d="m14 20-4-8-4 8" /></svg>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <h4 class="font-bold text-darkbrown-900 text-sm">{{ $mItem?->name ?? 'Peralatan camping' }}</h4>
+                                            @if($unit)
+                                                <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-wheat-100 text-darkbrown-700 border border-wheat-300">{{ $unit->unit_code }}</span>
+                                            @else
+                                                <span class="px-2 py-0.5 rounded text-xs font-medium bg-sunglow-100 text-darkbrown-800 border border-sunglow-300">Unit dipilih saat serah terima</span>
+                                            @endif
+                                        </div>
+                                        <p class="text-sm text-darkbrown-500 mt-0.5">
+                                            {{ $rupiah($detail->daily_rate_snapshot) }}/hari × {{ $rental->rental_days }} hari
+                                            @if($detail->condition_before)
+                                                · Kondisi awal: <strong class="text-darkbrown-700">{{ $detail->condition_before }}</strong>
+                                            @endif
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="font-extrabold text-darkbrown-900 sm:text-right shrink-0">{{ $rupiah($detail->daily_rate_snapshot * $rental->rental_days) }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
 
-                <!-- TOTAL PEMBAYARAN & DENDA -->
-                <div class="p-5 rounded-2xl bg-wheat-50/70 border border-wheat-200 flex flex-col justify-between space-y-4">
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between pb-2 border-b border-wheat-200">
-                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-500">Rincian Biaya</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold {{ $rental->status !== 'pending' ? 'bg-avocado-100 text-avocado-800 border border-avocado-300' : 'bg-sunglow-100 text-sunglow-900 border border-sunglow-300' }}">
-                                {{ $rental->status !== 'pending' ? '✓ Lunas' : 'Menunggu Bayar' }}
-                            </span>
+                    <div class="px-5 sm:px-6 py-5 bg-wheat-50/70 border-t border-wheat-200 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-bold text-darkbrown-700">Rincian biaya</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border"
+                                  :class="current === 'payment' ? 'bg-sunglow-100 text-darkbrown-900 border-sunglow-300' : (current ? 'bg-avocado-100 text-avocado-800 border-avocado-300' : 'bg-red-50 text-red-800 border-red-200')"
+                                  x-text="current === 'payment' ? 'Menunggu bayar' : (current ? 'Pembayaran diterima' : statusLabels[status])"></span>
                         </div>
 
-                        <div class="space-y-2 text-xs text-darkbrown-600">
-                            <div class="flex justify-between">
-                                <span>Subtotal Sewa</span>
-                                <span class="font-bold text-darkbrown-800">Rp {{ number_format($rental->subtotal, 0, ',', '.') }}</span>
-                            </div>
+                        <div class="space-y-2 text-sm text-darkbrown-600">
+                            <div class="flex justify-between"><span>Subtotal sewa</span><span class="font-bold text-darkbrown-800">{{ $rupiah($rental->subtotal) }}</span></div>
                             @if($rental->delivery_fee > 0)
-                                <div class="flex justify-between">
-                                    <span>Biaya Pengantaran (Delivery)</span>
-                                    <span class="font-bold text-darkbrown-800">Rp {{ number_format($rental->delivery_fee, 0, ',', '.') }}</span>
-                                </div>
+                                <div class="flex justify-between"><span>Biaya pengantaran</span><span class="font-bold text-darkbrown-800">{{ $rupiah($rental->delivery_fee) }}</span></div>
                             @endif
                             @if($rental->discount_amount > 0)
-                                <div class="flex justify-between text-emerald-700 font-semibold">
-                                    <span>Diskon</span>
-                                    <span>- Rp {{ number_format($rental->discount_amount, 0, ',', '.') }}</span>
-                                </div>
+                                <div class="flex justify-between text-avocado-700 font-semibold"><span>Diskon</span><span>- {{ $rupiah($rental->discount_amount) }}</span></div>
                             @endif
-
-                            {{-- RINCIAN DENDA JIKA ADA --}}
                             @if($hasDenda)
                                 <div class="pt-2 border-t border-red-200 text-red-700 space-y-1">
                                     @if($rental->total_late_fee > 0)
-                                        <div class="flex justify-between">
-                                            <span>Denda Keterlambatan</span>
-                                            <span class="font-bold">+ Rp {{ number_format($rental->total_late_fee, 0, ',', '.') }}</span>
-                                        </div>
+                                        <div class="flex justify-between"><span>Denda keterlambatan</span><span class="font-bold">+ {{ $rupiah($rental->total_late_fee) }}</span></div>
                                     @endif
                                     @if($rental->total_damage_fee > 0)
-                                        <div class="flex justify-between">
-                                            <span>Denda Kerusakan Unit</span>
-                                            <span class="font-bold">+ Rp {{ number_format($rental->total_damage_fee, 0, ',', '.') }}</span>
-                                        </div>
+                                        <div class="flex justify-between"><span>Denda kerusakan unit</span><span class="font-bold">+ {{ $rupiah($rental->total_damage_fee) }}</span></div>
                                     @endif
                                 </div>
                             @endif
                         </div>
+
+                        <div class="pt-3 border-t-2 border-wheat-200 flex items-baseline justify-between">
+                            <span class="text-sm font-bold text-darkbrown-700">Total akhir</span>
+                            <span class="text-2xl font-black tracking-tight font-heading {{ $hasDenda ? 'text-red-700' : 'text-darkbrown-900' }}">{{ $rupiah($totalFinal) }}</span>
+                        </div>
+                    </div>
+                </section>
+                            @else
+                <div class="card-tendaku-warm p-12 text-center rounded-2xl border border-wheat-300">
+                    <div class="w-16 h-16 bg-wheat-200 text-darkbrown-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                        ⛺
+                    </div>
+                    <h3 class="text-lg font-bold text-darkbrown-900 font-heading">Belum Ada Transaksi Sewa</h3>
+                    <p class="text-sm text-darkbrown-600 max-w-md mx-auto mt-2">
+                        Anda belum memiliki riwayat rental untuk kategori status yang dipilih. Jelajahi katalog dan sewa peralatan petualangan Anda sekarang!
+                    </p>
+                    <div class="mt-6">
+                        <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-primary py-2.5 px-6 rounded-xl text-sm font-bold inline-block">
+                            Lihat Katalog Alat Camping
+                        </a>
+                    </div>
+                </div>
+                @endif
+            </main>
+
+            @if($hasRental)
+            <aside class="status-right">
+                <section class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm overflow-hidden">
+                    <h3 class="px-5 py-4 font-extrabold text-darkbrown-900 font-heading border-b border-wheat-200">Aktivitas</h3>
+                    <ul class="divide-y divide-wheat-200 max-h-[32rem] overflow-y-auto">
+                        <template x-for="(a, i) in activities" :key="a.title + a.time + i">
+                            <li class="flex items-start gap-3 px-5 py-3.5 border-l-4"
+                                :class="[i === 0 ? 'border-avocado-500 bg-avocado-50/60' : 'border-transparent', a.fresh ? 'act-in' : '']">
+                                <svg class="w-4 h-4 mt-1 shrink-0" :class="toneCls(a.tone)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" :d="iconPath[a.type]" /></svg>
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-bold text-darkbrown-900 leading-snug" x-text="a.title"></div>
+                                    <div x-show="a.sub" class="text-sm text-darkbrown-600" x-text="a.sub"></div>
+                                    <div class="text-xs text-darkbrown-500 mt-0.5" x-text="a.time"></div>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                </section>
+
+                                <div class="space-y-5">
+
+                <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm p-5 text-center">
+                    <div class="mx-auto w-20 h-20 rounded-full bg-avocado-800 text-wheat-100 flex items-center justify-center text-3xl font-extrabold font-heading">
+                        {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($renterName, 0, 1)) }}
+                    </div>
+                    <h2 class="mt-3 font-extrabold text-darkbrown-900 leading-tight">{{ $renterName }}</h2>
+                    <p class="text-sm text-darkbrown-500">Penyewa</p>
+
+                    @if($rental->vendor?->phone)
+                        <a href="tel:{{ $rental->vendor->phone }}" class="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 border border-goldenrod-400 transition">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                            Hubungi vendor
+                        </a>
+                    @endif
+                </div>
+
+                <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm p-5 space-y-4 text-sm">
+                    @if($renterPhone)
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-darkbrown-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                            <div class="min-w-0">
+                                <div class="text-xs text-darkbrown-500">WhatsApp penyewa</div>
+                                <div class="font-semibold text-darkbrown-900">{{ $renterPhone }}</div>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-darkbrown-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                        <div class="min-w-0">
+                            <div class="text-xs text-darkbrown-500">Vendor</div>
+                            <div class="font-semibold text-darkbrown-900">{{ $rental->vendor?->name }}</div>
+                            <div class="text-darkbrown-600">{{ $rental->vendor?->address }}{{ $rental->vendor?->city ? ', ' . $rental->vendor->city : '' }}</div>
+                        </div>
                     </div>
 
-                    <div class="pt-3 border-t-2 border-wheat-200/90 flex flex-col space-y-3">
-                        <div class="flex items-baseline justify-between">
-                            <div>
-                                <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-700 block">Total Akhir</span>
-                                <span class="text-[11px] text-darkbrown-500 font-medium">Tanpa Deposit Uang Tunai</span>
-                            </div>
-                            <span class="text-2xl font-black {{ $hasDenda ? 'text-red-700' : 'text-darkbrown-900' }} tracking-tight font-heading">
-                                Rp {{ number_format($totalFinal, 0, ',', '.') }}
-                            </span>
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-darkbrown-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" /><circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" /></svg>
+                        <div>
+                            <div class="text-xs text-darkbrown-500">Cara menerima alat</div>
+                            <div class="font-semibold text-darkbrown-900">{{ $rental->pickup_method === 'delivery' ? 'Diantar kurir vendor' : 'Ambil di toko' }}</div>
                         </div>
+                    </div>
 
-                        {{-- Tombol bayar denda bila ada denda yang belum terselesaikan --}}
-                        @if($hasDenda && Auth::check() && Auth::id() === $rental->user_id)
-                            <button
-                                type="button"
-                                onclick="payPendingBooking()"
-                                class="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-red-600 hover:bg-red-700 text-white shadow transition flex items-center justify-center gap-2"
-                            >
-                                <span>Bayar Denda (Rp {{ number_format($rental->total_late_fee + $rental->total_damage_fee, 0, ',', '.') }})</span>
-                            </button>
-                        @endif
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-darkbrown-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <div>
+                            <div class="text-xs text-darkbrown-500">Durasi sewa</div>
+                            <div class="font-semibold text-darkbrown-900">{{ $rental->rental_days }} hari</div>
+                        </div>
                     </div>
                 </div>
 
-            </div>
-
+                <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm p-5 space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-sm font-bold text-darkbrown-900">Jaminan KTP</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $ktpBadge }}">{{ $ktpLabel }}</span>
+                    </div>
+                    <p class="text-sm text-darkbrown-600 leading-relaxed">
+                        @if($rental->ktp_collateral_status === 'held')
+                            KTP asli disimpan toko sejak {{ $fmtDateTime($rental->ktp_received_at) }} dan dikembalikan saat alat diserahkan kembali.
+                        @elseif($rental->ktp_collateral_status === 'returned')
+                            KTP asli dikembalikan pada {{ $fmtDateTime($rental->ktp_returned_at) }}.
+                        @else
+                            KTP asli diserahkan ke kasir vendor saat serah terima alat.
+                        @endif
+                    </p>
+                    <a href="{{ route('booking.receipt', $rental->booking_code) }}" class="inline-flex items-center gap-1.5 text-sm font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">
+                        Lihat tanda terima KTP
+                    </a>
+                </div>
+                            </div>
+<div class="mt-5 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm px-5 py-4 text-sm">
+                    <div class="font-bold text-darkbrown-900">Butuh bantuan?</div>
+                    <div class="text-darkbrown-500">Hubungi vendor untuk kendala bayar atau jadwal.</div>
+                </div>
+                        </aside>
+            @endif
         </div>
-
     </div>
 
-    {{-- Midtrans Snap SDK Sandbox & Action Scripts --}}
+    @if($hasRental)
+    {{-- Midtrans Snap SDK --}}
     @if(config('services.midtrans.client_key'))
     <script src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
             data-client-key="{{ config('services.midtrans.client_key') }}"></script>
     @endif
 
     <script>
-        function payPendingBooking() {
-            const btn = document.getElementById('btn-pay-pending');
-            if (btn) btn.disabled = true;
+        function statusPage(cfg) {
+            const wait = (ms) => new Promise(r => setTimeout(r, ms));
+            const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-            fetch('{{ route('booking.pay', $rental->booking_code) }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.snap_token) {
-                    if (typeof window.snap !== 'undefined') {
-                        window.snap.pay(data.snap_token, {
-                            onSuccess: function() { syncPaymentStatus(); },
-                            onPending: function() { syncPaymentStatus(); },
-                            onError: function(result) {
-                                alert('Pembayaran gagal: ' + (result.status_message || 'Terjadi kesalahan'));
-                            },
-                            onClose: function() { syncPaymentStatus(); }
-                        });
-                    } else {
-                        alert('Snap SDK belum siap. Silakan muat ulang halaman.');
+            return {
+                ...cfg,
+                paying: false,
+                syncing: false,
+                celebrate: false,
+                justDone: null,
+                copied: false,
+                remaining: '',
+                flash: '',
+                flashTone: 'info',
+                iconPath: {
+                    doc:    'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                    card:   'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+                    bag:    'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+                    return: 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6',
+                    id:     'M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0M9 14h.01M13 14h2',
+                    flag:   'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9',
+                },
+
+                init() {
+                    this.startCountdown();
+                    if (this.fresh) {
+                        // Booking baru: bulatan "Booking dibuat" membal, aktivitas masuk dari atas
+                        this.justDone = 'created';
+                        this.activities.forEach(a => { a.fresh = true; });
+                        setTimeout(() => { this.justDone = null; }, 900);
+                        // Hapus ?new=1 supaya refresh tidak mengulang animasi
+                        const u = new URL(window.location.href);
+                        u.searchParams.delete('new');
+                        window.history.replaceState({}, '', u.toString());
                     }
-                } else {
-                    alert(data.message || 'Gagal memproses transaksi Snap.');
-                }
-            })
-            .catch(err => {
-                alert('Terjadi kendala jaringan saat menghubungi server.');
-            })
-            .finally(() => {
-                if (btn) btn.disabled = false;
-            });
+                },
+
+                /* ---------- State timeline ---------- */
+                get current() { return this.statusToNode[this.status] ?? null; },
+                get ci() { return this.current ? this.order.indexOf(this.current) : -1; },
+
+                state(key) {
+                    if (key === 'created') return 'done';
+                    if (this.ci < 0) return 'todo';
+                    const i = this.order.indexOf(key);
+                    if (i < this.ci) return 'done';
+                    if (i === this.ci) return this.status === 'completed' ? 'done' : 'active';
+                    return 'todo';
+                },
+                // Hanya titik yang sedang berjalan yang terbuka. Yang sudah lewat atau belum sampai tetap tertutup.
+                isOpen(key) { return key !== 'created' && this.current === key; },
+                lineFill(i) { return this.ci > i ? 100 : 0; },
+
+                dotCls(key) {
+                    const s = this.state(key);
+                    if (s === 'done') return 'bg-avocado-600 border-avocado-600 text-white';
+                    if (s === 'active') return 'bg-sunglow-300 border-goldenrod-400 text-darkbrown-900';
+                    return 'bg-white border-wheat-300 text-darkbrown-400';
+                },
+                cardCls(key) {
+                    const s = this.state(key);
+                    if (s === 'active') return 'bg-white border-goldenrod-400 ring-2 ring-goldenrod-400/20 shadow-tendaku-sm';
+                    if (s === 'done') return 'bg-white border-avocado-200';
+                    return 'bg-[#FAF6ED] border-wheat-200';
+                },
+                toneCls(t) {
+                    return { green: 'text-avocado-600', amber: 'text-goldenrod-600', red: 'text-red-600' }[t] || 'text-darkbrown-500';
+                },
+
+                /* ---------- Countdown ---------- */
+                startCountdown() {
+                    if (!this.expiresAtIso) return;
+                    const tick = () => {
+                        if (this.status !== 'pending') { this.remaining = ''; return; }
+                        const ms = new Date(this.expiresAtIso) - new Date();
+                        if (isNaN(ms)) { this.remaining = ''; return; }
+                        if (ms <= 0) { this.remaining = ''; this.expired = true; return; }
+                        const h = Math.floor(ms / 3600000);
+                        const m = Math.floor((ms % 3600000) / 60000);
+                        const s = Math.floor((ms % 60000) / 1000);
+                        this.remaining = [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
+                    };
+                    tick();
+                    setInterval(tick, 1000);
+                },
+
+                /* ---------- Aksi ---------- */
+                setFlash(msg, tone = 'info') { this.flash = msg; this.flashTone = tone; },
+
+                headers() {
+                    return {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': this.csrf,
+                        'Accept': 'application/json',
+                    };
+                },
+
+                copy(text) {
+                    if (!text || !navigator.clipboard) return;
+                    navigator.clipboard.writeText(text);
+                    this.copied = true;
+                    setTimeout(() => { this.copied = false; }, 2000);
+                },
+
+                async payNow() {
+                    if (this.paying) return;
+                    this.paying = true;
+                    this.flash = '';
+                    try {
+                        const res = await fetch(this.payUrl, { method: 'POST', headers: this.headers() });
+                        const data = await res.json();
+
+                        if (data && data.snap_token) {
+                            if (typeof window.snap !== 'undefined') {
+                                window.snap.pay(data.snap_token, {
+                                    onSuccess: () => this.sync(true),
+                                    // Belum dibayar tapi tagihan/VA sudah terbit: muat ulang agar nomor VA tampil
+                                    onPending: () => window.location.reload(),
+                                    onError: (r) => this.setFlash('Pembayaran gagal: ' + ((r && r.status_message) || 'terjadi kesalahan'), 'error'),
+                                    onClose: () => this.sync(true),
+                                });
+                            } else {
+                                this.setFlash('Jendela pembayaran belum siap. Muat ulang halaman lalu coba lagi.', 'error');
+                            }
+                        } else {
+                            this.setFlash((data && data.message) || 'Gagal membuat tagihan pembayaran.', 'error');
+                        }
+                    } catch (e) {
+                        this.setFlash('Koneksi bermasalah. Periksa internet Anda lalu coba lagi.', 'error');
+                    } finally {
+                        this.paying = false;
+                    }
+                },
+
+                async sync(silent = false) {
+                    if (this.syncing) return;
+                    this.syncing = true;
+                    if (!silent) this.flash = '';
+                    try {
+                        const res = await fetch(this.syncUrl, { method: 'POST', headers: this.headers() });
+                        const data = await res.json();
+
+                        if (data && data.is_paid) {
+                            await this.handlePaid(data);
+                        } else if (!silent) {
+                            this.setFlash('Pembayaran belum terdeteksi (' + ((data && data.payment_status) || 'menunggu pembayaran') + '). Jika sudah membayar, tunggu beberapa detik lalu cek lagi.');
+                        }
+                    } catch (e) {
+                        if (!silent) this.setFlash('Gagal mengecek status pembayaran. Coba lagi sebentar.', 'error');
+                    } finally {
+                        this.syncing = false;
+                    }
+                },
+
+                // Pembayaran terdeteksi: centang -> tab bayar menutup -> tab serah terima membuka
+                async handlePaid(data) {
+                    // Pembayaran denda (bukan tagihan awal): cukup muat ulang agar angka terbaru tampil
+                    if (this.current !== 'payment') { window.location.reload(); return; }
+
+                    const slow = !reduced();
+
+                    this.celebrate = true;
+                    await wait(slow ? 1400 : 200);
+
+                    const now = new Date().toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    this.times.payment = data.paid_at_text || now;
+                    this.activities.unshift({
+                        title: 'Pembayaran diterima',
+                        sub: this.payAmountText,
+                        time: now,
+                        type: 'card',
+                        tone: 'green',
+                        fresh: true,
+                    });
+
+                    // Ubah status: bulatan bayar jadi centang, garis terisi, tab bayar menutup, tab serah terima membuka
+                    this.justDone = 'payment';
+                    this.status = (data.status && this.statusToNode[data.status]) ? data.status : 'confirmed';
+
+                    await this.$nextTick();
+                    setTimeout(() => {
+                        const el = document.getElementById('node-' + this.current);
+                        if (el) el.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'nearest' });
+                    }, 350);
+                    setTimeout(() => { this.celebrate = false; this.justDone = null; }, 900);
+                },
+            };
         }
-
-        function syncPaymentStatus() {
-            const btn = document.getElementById('btn-sync-status');
-            const icon = document.getElementById('sync-icon');
-            if (btn) btn.disabled = true;
-            if (icon) icon.classList.add('inline-block', 'animate-spin');
-
-            fetch('{{ route('booking.sync', $rental->booking_code) }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.is_paid) {
-                    alert('Pembayaran Berhasil! Pesanan Anda telah terkonfirmasi.');
-                    window.location.reload();
-                } else {
-                    alert('Status pembayaran: ' + (data.payment_status || 'Menunggu Pembayaran') + '.\nJika sudah bayar di simulator Midtrans, tunggu beberapa detik lalu klik Cek Status kembali.');
-                }
-            })
-            .catch(err => {
-                alert('Gagal menyinkronkan status pembayaran.');
-            })
-            .finally(() => {
-                if (btn) btn.disabled = false;
-                if (icon) icon.classList.remove('animate-spin');
-            });
-        }
-
-        window.payPendingBooking = payPendingBooking;
-        window.syncPaymentStatus = syncPaymentStatus;
     </script>
+    @endif
 </x-layouts.customer>

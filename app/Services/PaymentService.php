@@ -67,36 +67,28 @@ class PaymentService
             ->exists();
     }
 
-    /**
-     * Buat order_id Midtrans yang unik dengan prefix TDK- (§7.2, §0).
-     *
-     * Format: TDK-{booking_code}-{type}-{attempt}
-     * Contoh: TDK-20261023-0007-DP-1, TDK-20261023-0007-FULL-2
-     *
-     * Panjang maks order_id Midtrans: 50 karakter.
-     * Jika booking_code terlalu panjang, gunakan 8 karakter terakhirnya.
+    /**   Buat order_id Midtrans yang unik dengan prefix TDK-.
+     *     'full'      => '1', fULL
+     *     'dp'        => '2', dP
+     *     'remaining' => '3', pelunasan
+     *     'fine'      => '4', denda
      */
     public function generateOrderId(string $bookingCode, string $paymentType, int $attempt = 1): string
     {
-        // Ambil bagian unik dari booking_code (hindari duplikat jika ada prefix)
-        $code = strtoupper(str_replace('TDK-', '', $bookingCode));
+        $cleanCode = str_replace(['TDK-', 'TDK'], '', strtoupper($bookingCode));
 
-        // Singkat type ke label pendek
-        $typeLabel = match ($paymentType) {
-            'full' => 'FULL',
-            'dp' => 'DP',
-            'remaining' => 'REM',
-            'fine' => 'FINE',
-            default => strtoupper(substr($paymentType, 0, 4)),
+        $datePart = substr($cleanCode, 0, 8);
+        $seqPart = substr($cleanCode, 8);
+
+        $typeNumber = match ($paymentType) {
+            'full' => '1',
+            'dp' => '2',
+            'remaining' => '3',
+            'fine' => '4',
+            default => '9',
         };
 
-        $orderId = "TDK-{$code}-{$typeLabel}-{$attempt}";
-
-        // Jaga panjang <= 50 karakter (Midtrans best practice)
-        if (strlen($orderId) > 50) {
-            $shortCode = substr($code, -8);
-            $orderId = "TDK-{$shortCode}-{$typeLabel}-{$attempt}";
-        }
+        $orderId = "TDK{$datePart}{$typeNumber}{$seqPart}-{$attempt}";
 
         return $orderId;
     }
@@ -297,6 +289,14 @@ class PaymentService
             && $newStatus !== 'refunded') {
             return false;
         }
+
+        $payment->status = $newStatus;
+
+        if ($newStatus === 'paid') {
+            $payment->paid_at ??= now();
+        }
+
+        $payment->save();
 
         return true;
     }
