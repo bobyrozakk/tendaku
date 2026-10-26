@@ -63,12 +63,12 @@
             'picked_up' => [
                 'title' => 'Serah Terima (Pickup)',
                 'description' => 'Peralatan diserahkan dan fisik KTP ditahan sebagai jaminan.',
-                'time' => $rental->picked_up_at?->translatedFormat('d M Y, H:i') ?? \Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y'),
+                'time' => $rental->picked_up_at?->translatedFormat('d M Y, H:i') ?? (\Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y') . ($rental->pickup_time ? ' (' . substr($rental->pickup_time, 0, 5) . ' WIB)' : '')),
             ],
             'returned' => [
                 'title' => 'Pengembalian (Return)',
                 'description' => 'Unit diperiksa kondisinya dan fisik KTP dikembalikan.',
-                'time' => $rental->returned_at?->translatedFormat('d M Y, H:i') ?? 'Maks: ' . \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y'),
+                'time' => $rental->returned_at?->translatedFormat('d M Y, H:i') ?? ('Maks: ' . \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y') . ($rental->return_time ? ' (' . substr($rental->return_time, 0, 5) . ' WIB)' : '')),
             ],
             'completed' => [
                 'title' => 'Transaksi Selesai',
@@ -95,19 +95,32 @@
             @php
                 $isExpiredNow = $rental->expires_at->isPast();
             @endphp
-            <div class="p-4 sm:p-5 rounded-2xl border {{ $isExpiredNow ? 'bg-red-50 border-red-200' : 'bg-sunglow-50 border-sunglow-300' }} flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-tendaku-sm">
-                <div class="flex items-center gap-3">
-                    <span class="text-2xl">{{ $isExpiredNow ? '⚠️' : '⏳' }}</span>
+            <div id="payment-timer-box" class="p-4 sm:p-5 rounded-2xl border {{ $isExpiredNow ? 'bg-red-50 border-red-200' : 'bg-sunglow-50 border-sunglow-300' }} flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-tendaku-sm">
+                <div class="flex items-start sm:items-center gap-3">
+                    <span id="payment-timer-icon" class="text-2xl shrink-0">{{ $isExpiredNow ? '⚠️' : '⏳' }}</span>
                     <div>
-                        <h4 class="text-sm font-extrabold {{ $isExpiredNow ? 'text-red-900' : 'text-darkbrown-900' }}">
-                            {{ $isExpiredNow ? 'Batas Waktu Pembayaran Telah Habis' : 'Selesaikan Pembayaran Sebelum Batas Waktu' }}
-                        </h4>
-                        <p class="text-xs {{ $isExpiredNow ? 'text-red-700' : 'text-darkbrown-600' }} mt-0.5">
-                            Batas Waktu: <strong>{{ $rental->expires_at->translatedFormat('d M Y, H:i:s') }} WIB</strong>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h4 id="payment-timer-title" class="text-sm font-extrabold {{ $isExpiredNow ? 'text-red-900' : 'text-darkbrown-900' }}">
+                                {{ $isExpiredNow ? 'Batas Waktu Pembayaran Telah Habis' : 'Selesaikan Pembayaran Sebelum Batas Waktu' }}
+                            </h4>
                             @if(!$isExpiredNow)
-                                ({{ $rental->expires_at->diffForHumans() }})
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300">
+                                    Maksimal 5 Menit
+                                </span>
                             @endif
-                        </p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 text-xs {{ $isExpiredNow ? 'text-red-700' : 'text-darkbrown-600' }} mt-1">
+                            <span>Batas Waktu: <strong>{{ $rental->expires_at->translatedFormat('d M Y, H:i:s') }} WIB</strong></span>
+                            @if(!$isExpiredNow)
+                                <span>&bull;</span>
+                                <div class="inline-flex items-center gap-1.5 font-semibold">
+                                    <span>Sisa Waktu:</span>
+                                    <span id="countdown-timer" class="font-mono font-black text-amber-950 bg-amber-200/90 border border-amber-300 px-2 py-0.5 rounded text-xs tracking-wider">
+                                        --:--
+                                    </span>
+                                </div>
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -116,7 +129,7 @@
                         type="button"
                         onclick="payPendingBooking()"
                         id="btn-pay-pending"
-                        class="btn-tendaku-primary py-2 px-5 rounded-xl text-xs font-bold shadow-md self-start sm:self-auto"
+                        class="btn-tendaku-primary py-2.5 px-6 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition shrink-0 self-start sm:self-auto"
                     >
                         💳 Bayar Sekarang
                     </button>
@@ -211,18 +224,24 @@
                 <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-400 block">Jadwal Sewa & Pengambilan</span>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-[#FAF6ED] border border-wheat-200 text-xs">
                     <div class="space-y-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-avocado-700 block">Tanggal Ambil (Pickup)</span>
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-avocado-700 block">Waktu Ambil (Pickup)</span>
                         <div class="text-sm font-extrabold text-darkbrown-900">
                             {{ \Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y') }}
+                            @if($rental->pickup_time)
+                                <span class="text-xs font-bold text-avocado-800">({{ substr($rental->pickup_time, 0, 5) }} WIB)</span>
+                            @endif
                         </div>
                         <div class="text-darkbrown-600">
                             Metode: <strong>{{ $rental->pickup_method === 'delivery' ? 'Diantar (Delivery)' : 'Ambil di Toko (Self-Pickup)' }}</strong>
                         </div>
                     </div>
                     <div class="space-y-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-goldenrod-700 block">Tanggal Kembali (Return)</span>
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-goldenrod-700 block">Batas Pengembalian (Return)</span>
                         <div class="text-sm font-extrabold text-darkbrown-900">
                             {{ \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y') }}
+                            @if($rental->return_time)
+                                <span class="text-xs font-bold text-goldenrod-800">({{ substr($rental->return_time, 0, 5) }} WIB)</span>
+                            @endif
                         </div>
                         <div class="text-darkbrown-600">
                             Pengembalian Fisik
@@ -230,8 +249,8 @@
                     </div>
                     <div class="space-y-0.5">
                         <span class="text-[11px] font-semibold uppercase tracking-wider text-darkbrown-500 block">Durasi Sewa</span>
-                        <div class="text-sm font-extrabold text-darkbrown-900">{{ $rental->rental_days }} Hari</div>
-                        <div class="text-darkbrown-600">Total Durasi Pemakaian</div>
+                        <div class="text-sm font-extrabold text-darkbrown-900">{{ $rental->rental_days }} Hari ({{ $rental->rental_days * 24 }} Jam)</div>
+                        <div class="text-darkbrown-600">1 Hari = 24 Jam Penuh</div>
                     </div>
                 </div>
 
@@ -428,9 +447,79 @@
 
     @push('scripts')
         <script>
+            // Realtime countdown timer berdasarkan server timestamp
+            (function() {
+                const isPending = {{ $rental->status === 'pending' ? 'true' : 'false' }};
+                const expiresAtTimestamp = {{ $rental->expires_at ? $rental->expires_at->timestamp : 0 }};
+                const serverNowTimestamp = {{ now()->timestamp }};
+
+                if (isPending && expiresAtTimestamp > 0) {
+                    const clientLoadTime = Math.floor(Date.now() / 1000);
+                    // Hitung perbedaan waktu (skew) antara jam browser klien dan server
+                    const timeSkew = clientLoadTime - serverNowTimestamp;
+
+                    const timerElement = document.getElementById('countdown-timer');
+                    const payBtn = document.getElementById('btn-pay-pending');
+                    const timerBox = document.getElementById('payment-timer-box');
+                    const timerTitle = document.getElementById('payment-timer-title');
+                    const timerIcon = document.getElementById('payment-timer-icon');
+
+                    function formatRemaining(totalSeconds) {
+                        const m = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+                        const s = String(totalSeconds % 60).padStart(2, '0');
+                        return `${m}:${s}`;
+                    }
+
+                    function checkTime() {
+                        const nowClientSec = Math.floor(Date.now() / 1000);
+                        const estimatedServerSec = nowClientSec - timeSkew;
+                        const remaining = Math.max(0, expiresAtTimestamp - estimatedServerSec);
+
+                        if (timerElement) {
+                            timerElement.textContent = formatRemaining(remaining);
+                        }
+
+                        if (remaining <= 0) {
+                            clearInterval(timerInterval);
+                            if (timerElement) {
+                                timerElement.textContent = '00:00 (Kedaluwarsa)';
+                                timerElement.className = 'font-mono font-black text-red-900 bg-red-200 border border-red-300 px-2 py-0.5 rounded text-xs';
+                            }
+                            if (payBtn) {
+                                payBtn.disabled = true;
+                                payBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                            }
+                            if (timerBox) {
+                                timerBox.classList.remove('bg-sunglow-50', 'border-sunglow-300');
+                                timerBox.classList.add('bg-red-50', 'border-red-200');
+                            }
+                            if (timerTitle) {
+                                timerTitle.textContent = 'Batas Waktu Pembayaran Telah Habis';
+                                timerTitle.classList.remove('text-darkbrown-900');
+                                timerTitle.classList.add('text-red-900');
+                            }
+                            if (timerIcon) {
+                                timerIcon.textContent = '⚠️';
+                            }
+
+                            // Reload otomatis setelah 1.5 detik agar backend mengupdate status booking menjadi expired
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        }
+                    }
+
+                    checkTime();
+                    const timerInterval = setInterval(checkTime, 1000);
+                }
+            })();
+
             function payPendingBooking() {
                 const btn = document.getElementById('btn-pay-pending');
-                if (btn) btn.disabled = true;
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'Memproses...';
+                }
 
                 fetch('{{ route('rentals.pay', $rental->id) }}', {
                     method: 'POST',
@@ -440,14 +529,24 @@
                         'Accept': 'application/json'
                     }
                 })
-                .then(res => res.json())
-                .then(data => {
+                .then(res => {
+                    return res.json().then(data => ({ status: res.status, ok: res.ok, body: data }));
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        alert(res.body.message || 'Pembayaran tidak dapat diproses (waktu pembayaran mungkin telah habis).');
+                        window.location.reload();
+                        return;
+                    }
+
+                    const data = res.body;
                     if (data && data.data && data.data.snap_token) {
                         if (typeof snap !== 'undefined') {
                             snap.pay(data.data.snap_token, {
                                 onSuccess: function() { window.location.reload(); },
                                 onPending: function() { window.location.reload(); },
-                                onError: function() { alert('Pembayaran gagal atau dibatalkan.'); window.location.reload(); }
+                                onError: function() { alert('Pembayaran gagal atau dibatalkan.'); window.location.reload(); },
+                                onClose: function() { window.location.reload(); }
                             });
                         } else {
                             alert('Snap token didapat: ' + data.data.snap_token);
@@ -460,7 +559,10 @@
                     alert('Terjadi kendala jaringan.');
                 })
                 .finally(() => {
-                    if (btn) btn.disabled = false;
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '💳 Bayar Sekarang';
+                    }
                 });
             }
         </script>
