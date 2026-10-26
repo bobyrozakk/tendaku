@@ -171,7 +171,7 @@
                     <div class="mt-4 flex items-start gap-3 p-3.5 rounded-xl bg-wheat-50 border border-wheat-200/80 text-xs text-darkbrown-700 leading-relaxed">
                         <i data-lucide="info" class="w-5 h-5 text-goldenrod-600 shrink-0 mt-0.5"></i>
                         <div>
-                            Peralatan sewa telah diamankan selama <strong class="text-darkbrown-900">12 jam</strong>. Selesaikan transaksi sebelum batas waktu berakhir agar unit tidak dialihkan ke penyewa lain.
+                            Peralatan sewa telah diamankan selama <strong class="text-darkbrown-900">5 menit</strong>. Selesaikan transaksi sebelum batas waktu berakhir agar unit tidak dialihkan ke penyewa lain.
                         </div>
                     </div>
                 </div>
@@ -459,7 +459,7 @@
                     <div class="mt-4 p-3 rounded-xl bg-wheat-100/70 border border-wheat-200 flex items-center justify-between text-xs">
                         <span class="text-darkbrown-600 font-medium">Total Durasi Pemakaian:</span>
                         <span class="font-extrabold text-darkbrown-900 bg-white px-2.5 py-1 rounded-lg border border-wheat-300">
-                            {{ $booking['rental_days'] }} Hari (2 Malam Camping)
+                            {{ $booking['rental_days'] }} Hari ({{ $booking['rental_days'] * 24 }} Jam Penuh)
                         </span>
                     </div>
                 </div>

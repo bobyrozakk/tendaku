@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\MasterItem;
 use App\Models\Rental;
 use App\Models\User;
-use App\Models\Vendor;
 use App\Services\CartService;
 use App\Services\PhoneNumberNormalizer;
 use App\Services\RentalService;
@@ -26,7 +25,12 @@ class CheckoutController extends Controller
     public const DELIVERY_FEE = 25000;
 
     /**
-     * Masa berlaku pembayaran (jam) sebelum booking kedaluwarsa.
+     * Masa berlaku pembayaran (menit) sebelum booking kedaluwarsa (maksimal 5 menit).
+     */
+    public const PAYMENT_TIMEOUT_MINUTES = 5;
+
+    /**
+     * Masa berlaku pembayaran (jam) sebelum booking kedaluwarsa (kompatibilitas backward).
      */
     public const PAYMENT_WINDOW_HOURS = 12;
 
@@ -128,12 +132,15 @@ class CheckoutController extends Controller
             'guest_phone' => $isGuest ? $validated['guest_phone'] : null,
             'guest_id_number' => $isGuest ? $validated['guest_id_number'] : null,
             'pickup_date' => $cart['pickup_date'] ?? now()->addDay()->toDateString(),
+            'pickup_time' => $cart['pickup_time'] ?? '09:00',
             'return_date' => $cart['return_date'] ?? now()->addDays(2)->toDateString(),
+            'return_time' => $cart['return_time'] ?? '09:00',
+            'rental_days' => isset($cart['total_days']) ? (int) $cart['total_days'] : null,
             'pickup_method' => $pickupMethod,
             'delivery_address' => $deliveryAddress,
             'delivery_fee' => $pickupMethod === 'delivery' ? self::DELIVERY_FEE : 0,
             'discount_amount' => 0,
-            'expires_in_hours' => self::PAYMENT_WINDOW_HOURS,
+            'expires_in_minutes' => self::PAYMENT_TIMEOUT_MINUTES,
             'items' => [
                 [
                     'master_item_id' => (int) $cart['master_item_id'],
@@ -187,11 +194,18 @@ class CheckoutController extends Controller
             ->with(['vendor', 'category'])
             ->find((int) $cart['master_item_id']);
 
-        $vendor = $item?->vendor ?? Vendor::query()->find((int) ($cart['vendor_id'] ?? 0));
+        $pickupTime = $cart['pickup_time'] ?? '09:00';
+        $returnTime = $cart['return_time'] ?? '09:00';
 
-        $pickupDate = Carbon::parse($cart['pickup_date'] ?? now()->addDay()->toDateString())->startOfDay();
-        $returnDate = Carbon::parse($cart['return_date'] ?? now()->addDays(2)->toDateString())->startOfDay();
-        $rentalDays = max(1, (int) ($cart['total_days'] ?? 1));
+        $pickupDateStr = $cart['pickup_date'] ?? now()->addDay()->toDateString();
+        $returnDateStr = $cart['return_date'] ?? now()->addDays(2)->toDateString();
+
+        $pickupDateTime = Carbon::parse($pickupDateStr.' '.$pickupTime);
+        $returnDateTime = Carbon::parse($returnDateStr.' '.$returnTime);
+
+        $hours = $pickupDateTime->floatDiffInHours($returnDateTime, false);
+        $calculatedDays = max(1, (int) ceil($hours / 24));
+        $rentalDays = max(1, (int) ($cart['total_days'] ?? $calculatedDays));
         $quantity = max(1, (int) ($cart['qty'] ?? 1));
         $dailyRate = (int) ($item?->daily_rate ?? $cart['daily_rate'] ?? 0);
         $depositPerUnit = (int) ($item?->deposit_amount ?? 0);
@@ -203,7 +217,7 @@ class CheckoutController extends Controller
         $grandTotal = $subtotal + $deposit + $deliveryFee - $discount;
 
         $now = Carbon::now();
-        $expiresAt = $now->copy()->addHours(self::PAYMENT_WINDOW_HOURS);
+        $expiresAt = $now->copy()->addMinutes(self::PAYMENT_TIMEOUT_MINUTES);
 
         return [
             'booking_code' => app(RentalService::class)->generateBookingCode(),
@@ -228,10 +242,10 @@ class CheckoutController extends Controller
                 'phone' => $isLoggedIn ? ($user->phone ?? '') : '',
                 'email' => $isLoggedIn ? ($user->email ?? '') : '',
             ],
-            'pickup_date' => $this->formatTanggal($pickupDate),
-            'pickup_time' => '09:00 WIB',
-            'return_date' => $this->formatTanggal($returnDate),
-            'return_time' => '17:00 WIB',
+            'pickup_date' => $this->formatTanggal(Carbon::parse($pickupDateStr)),
+            'pickup_time' => $pickupTime.' WIB',
+            'return_date' => $this->formatTanggal(Carbon::parse($returnDateStr)),
+            'return_time' => $returnTime.' WIB',
             'rental_days' => $rentalDays,
             'pickup_method' => $pickupMethod,
             'delivery_address' => $pickupMethod === 'delivery' ? ($user?->address ?? '') : '',
