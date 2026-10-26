@@ -3,7 +3,7 @@
         <div class="p-4 rounded-2xl bg-avocado-50 border border-avocado-300 text-avocado-900 flex items-center justify-between shadow-sm animate-fade-in">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-xl bg-avocado-600 text-white flex items-center justify-center font-bold">
-                    ✓
+                    <i data-lucide="check" class="w-4 h-4 text-white"></i>
                 </div>
                 <p class="text-xs font-bold">{{ session('pos_message') }}</p>
             </div>
@@ -20,9 +20,7 @@
                 <p class="text-[11px] text-darkbrown-500">Pesanan butuh scan & pencocokan barcode</p>
             </div>
             <div class="p-3.5 rounded-2xl bg-sunglow-100 text-sunglow-700 border border-sunglow-200 shrink-0">
-                <svg class="w-7 h-7 text-sunglow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <i data-lucide="clock" class="w-7 h-7 text-sunglow-700"></i>
             </div>
         </div>
 
@@ -34,9 +32,7 @@
                 <p class="text-[11px] text-darkbrown-500">Pesanan telah divalidasi & siap disewa</p>
             </div>
             <div class="p-3.5 rounded-2xl bg-avocado-100 text-avocado-700 border border-avocado-200 shrink-0">
-                <svg class="w-7 h-7 text-avocado-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <i data-lucide="circle-check" class="w-7 h-7 text-avocado-700"></i>
             </div>
         </div>
     </div>
@@ -47,9 +43,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 pt-5 pb-4 border-b border-wheat-200">
             <div class="flex items-center gap-3">
                 <span class="p-2.5 rounded-xl bg-wheat-100 text-darkbrown-800 border border-wheat-200">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
+                    <i data-lucide="clipboard-check" class="w-4 h-4"></i>
                 </span>
                 <div>
                     <h2 class="font-extrabold text-base text-darkbrown-900">Validasi & Pencocokan Barcode</h2>
@@ -59,10 +53,8 @@
 
             <!-- Search Bar via kode_booking -->
             <div class="w-full sm:w-64 relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="w-4 h-4 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-darkbrown-400">
+                    <i data-lucide="search" class="w-4 h-4"></i>
                 </div>
                 <x-text-input 
                     wire:model.live.debounce.250ms="searchOrder" 
@@ -102,9 +94,7 @@
                     <!-- Left: Customer info -->
                     <div class="flex items-center gap-4">
                         <div class="p-2.5 rounded-xl bg-wheat-100 border border-wheat-200 text-darkbrown-700 group-hover:bg-avocado-50 group-hover:border-avocado-200 group-hover:text-avocado-700 transition-colors shrink-0">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
+                            <i data-lucide="user" class="w-5 h-5"></i>
                         </div>
                         <div>
                             <div class="flex items-center gap-2 mb-0.5">
@@ -114,9 +104,7 @@
                             <div class="flex items-center gap-3 text-[11px] text-darkbrown-500">
                                 <span class="font-mono font-bold bg-wheat-100 text-darkbrown-700 px-1.5 py-0.5 rounded border border-wheat-200">{{ $order->booking_code }}</span>
                                 <span class="flex items-center gap-1">
-                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
+                                    <i data-lucide="clock" class="w-3 h-3 text-darkbrown-400"></i>
                                     {{ $period }}
                                 </span>
                             </div>
@@ -135,17 +123,13 @@
                             <x-badge variant="avocado" size="sm" :dot="true">Completed (Disetujui)</x-badge>
                         @endif
                         <div class="text-wheat-400 group-hover:text-avocado-500 transition-colors">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-                            </svg>
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
                         </div>
                     </div>
                 </div>
             @empty
                 <div class="text-center py-16 text-xs text-darkbrown-500 space-y-2">
-                    <svg class="w-12 h-12 mx-auto text-wheat-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                    </svg>
+                    <i data-lucide="inbox" class="w-12 h-12 mx-auto text-wheat-400"></i>
                     <p class="font-bold text-darkbrown-700">Tidak ada pesanan</p>
                     <p class="text-[11px]">Belum ada data transaksi di kategori ini atau sesuai pencarian.</p>
                 </div>
@@ -192,48 +176,82 @@
                     x-transition:leave="transition ease-in duration-150"
                     x-transition:leave-start="opacity-100 scale-100"
                     x-transition:leave-end="opacity-0 scale-95"
-                    class="bg-white rounded-2xl border border-wheat-200 shadow-tendaku-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                    class="bg-white rounded-3xl border border-wheat-200/90 shadow-2xl shadow-darkbrown-950/20 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative">
+
+                    <!-- Dedicated Close (X) Button di Pojok Kanan Atas Modal (Terpisah dari Aksi) -->
+                    <button 
+                        type="button"
+                        x-on:click="showValidationModal = false" 
+                        class="absolute top-4 right-4 z-20 p-2.5 rounded-full text-darkbrown-400 hover:text-darkbrown-800 bg-wheat-100/60 hover:bg-wheat-200/80 transition-all duration-150 cursor-pointer shadow-sm group focus:outline-none focus:ring-2 focus:ring-wheat-400"
+                        title="Tutup (Esc)">
+                        <i data-lucide="x" class="w-4 h-4 transition-transform group-hover:rotate-90 duration-200"></i>
+                    </button>
 
                     <!-- Modal Header -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 pt-5 pb-4 border-b border-wheat-200 sticky top-0 bg-white z-10 rounded-t-2xl">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 pt-6 pb-4 border-b border-wheat-200/80 sticky top-0 bg-white/95 backdrop-blur-md z-10 rounded-t-3xl pr-16 sm:pr-16">
                         <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-wheat-100 text-darkbrown-900 border border-wheat-200">
+                            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-wheat-100 text-darkbrown-900 border border-wheat-200 shadow-inner">
                                     {{ $this->selectedOrder->booking_code }}
                                 </span>
                                 @if($isOrderPending)
-                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sunglow-100 text-darkbrown-900 border border-sunglow-200">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-sm">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                         Pending Validasi
                                     </span>
                                 @else
-                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-sm">
+                                        <i data-lucide="circle-check" class="w-3.5 h-3.5 text-emerald-600"></i>
                                         Completed (Disetujui)
                                     </span>
                                 @endif
                             </div>
-                            <h2 class="text-xl font-extrabold text-darkbrown-900 tracking-tight">Validasi: {{ $custModal }}</h2>
-                            <p class="text-xs text-darkbrown-600 mt-0.5">Total Bayar: <span class="text-avocado-700 font-bold">Rp {{ number_format($this->selectedOrder->grand_total, 0, ',', '.') }}</span></p>
+                            <h2 class="text-xl font-black text-darkbrown-900 tracking-tight">Validasi: {{ $custModal }}</h2>
+                            <p class="text-xs text-darkbrown-600 mt-0.5 flex items-center gap-1.5">
+                                <span>Total Tagihan:</span>
+                                <span class="text-avocado-800 font-extrabold text-sm px-2 py-0.5 rounded-md bg-avocado-50 border border-avocado-200/80">Rp {{ number_format($this->selectedOrder->grand_total, 0, ',', '.') }}</span>
+                            </p>
                         </div>
+                        
+                        <!-- Action Button Area -->
                         <div class="flex items-center gap-2">
                             @if($isOrderPending)
-                                <button
-                                    wire:click="approveOrder({{ $this->selectedOrder->id }})"
-                                    x-on:click="if ({{ $allMatched ? 'true' : 'false' }}) { showValidationModal = false }"
-                                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition duration-200 shadow-sm {{ $allMatched ? 'bg-avocado-600 hover:bg-avocado-700 text-white cursor-pointer shadow-tendaku-avocado-glow' : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300' }}"
-                                    {{ !$allMatched ? 'disabled' : '' }}>
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    <span>Setujui Pesanan (Completed)</span>
-                                </button>
+                                <div class="relative group/actionBtn">
+                                    <button
+                                        type="button"
+                                        wire:click="approveOrder({{ $this->selectedOrder->id }})"
+                                        x-on:click="if ({{ $allMatched ? 'true' : 'false' }}) { showValidationModal = false }"
+                                        class="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 select-none {{ $allMatched ? 'bg-gradient-to-r from-emerald-600 to-avocado-600 hover:from-emerald-500 hover:to-avocado-500 text-white cursor-pointer shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/50 hover:scale-[1.02] active:scale-[0.98]' : 'bg-wheat-100 text-darkbrown-400 border border-wheat-300/80 cursor-not-allowed opacity-80' }}"
+                                        {{ !$allMatched ? 'disabled' : '' }}>
+                                        @if(!$allMatched)
+                                            <!-- Gembok Ikon Saat Disabled -->
+                                            <i data-lucide="lock" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                            <span>Setujui Pesanan</span>
+                                        @else
+                                            <!-- Ikon Checklist Saat Aktif Siap Disetujui -->
+                                            <span class="p-1 rounded-md bg-white/20">
+                                                <i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>
+                                            </span>
+                                            <span>Setujui Pesanan (Completed)</span>
+                                        @endif
+                                    </button>
+
+                                    <!-- Tooltip saat disabled -->
+                                    @if(!$allMatched)
+                                        <div class="pointer-events-none absolute right-0 -bottom-9 whitespace-nowrap z-30 opacity-0 group-hover/actionBtn:opacity-100 transition-all duration-150 transform translate-y-1 group-hover/actionBtn:translate-y-0">
+                                            <span class="bg-darkbrown-900 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-md border border-darkbrown-700 flex items-center gap-1.5">
+                                                <i data-lucide="alert-triangle" class="w-3 h-3 text-amber-400"></i>
+                                                Scan semua item terlebih dahulu untuk menyetujui
+                                            </span>
+                                        </div>
+                                    @endif
+                                </div>
                             @else
-                                <x-badge variant="avocado" size="lg" :dot="true">Pesanan Disetujui</x-badge>
+                                <span class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+                                    <i data-lucide="check-check" class="w-4 h-4 text-emerald-600"></i>
+                                    Pesanan Disetujui
+                                </span>
                             @endif
-                            <button x-on:click="showValidationModal = false" class="p-2 rounded-xl text-darkbrown-400 hover:text-darkbrown-700 hover:bg-wheat-100 transition border border-transparent hover:border-wheat-200 cursor-pointer">
-                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
                         </div>
                     </div>
 
@@ -242,9 +260,7 @@
                         <div class="space-y-3">
                             <div class="flex justify-between items-center">
                                 <h3 class="font-bold text-sm text-darkbrown-900 flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
+                                    <i data-lucide="box" class="w-4 h-4 text-avocado-600"></i>
                                     Item Pesanan & Pencocokan Barcode Unit
                                 </h3>
                                 <span class="text-xs font-semibold text-darkbrown-600">Total: {{ $totalItems }} Item</span>
@@ -276,36 +292,37 @@
                                                 <td class="py-3.5 px-4">
                                                     @if($unit)
                                                         @if($isItemScanned)
-                                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-avocado-100 text-avocado-900 border border-avocado-300 shadow-sm">
+                                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-sm">
                                                                 <span>{{ $unit->unit_code }}</span>
-                                                                <span class="bg-white/90 px-1.5 py-0.5 rounded text-avocado-800 border border-avocado-200">{{ $unit->barcode }}</span>
-                                                                <svg class="w-3.5 h-3.5 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                                                </svg>
+                                                                <span class="bg-white/95 px-1.5 py-0.5 rounded text-emerald-800 border border-emerald-200 shadow-inner">{{ $unit->barcode }}</span>
+                                                                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i>
                                                             </span>
                                                         @else
                                                             <div class="inline-flex items-center gap-2">
-                                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-wheat-100 text-darkbrown-800 border border-wheat-300">
+                                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-amber-50/70 text-amber-900 border border-dashed border-amber-300">
                                                                     <span>{{ $unit->unit_code }}</span>
-                                                                    <span class="bg-white px-1.5 py-0.5 rounded text-darkbrown-700 border border-wheat-300">{{ $unit->barcode }}</span>
-                                                                </span>
-                                                                <span class="text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 font-semibold text-[10px]">
-                                                                    Belum Cocok Fisik
+                                                                    <span class="bg-white px-1.5 py-0.5 rounded text-darkbrown-800 border border-wheat-300">{{ $unit->barcode }}</span>
                                                                 </span>
                                                             </div>
                                                         @endif
                                                     @else
-                                                        <span class="text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 font-semibold text-[11px] inline-flex items-center gap-1">
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                        <span class="text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 font-semibold text-[11px] inline-flex items-center gap-1.5">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
                                                             Belum dialokasikan unit
                                                         </span>
                                                     @endif
                                                 </td>
                                                 <td class="py-3.5 px-4 text-center">
                                                     @if($isItemScanned)
-                                                        <x-badge variant="avocado" size="sm">✓ Cocok</x-badge>
+                                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+                                                            <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                            Cocok
+                                                        </span>
                                                     @else
-                                                        <x-badge variant="sunglow" size="sm">Menunggu Scan</x-badge>
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-500/15 text-amber-900 border border-amber-400 shadow-sm animate-pulse">
+                                                            <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
+                                                            Menunggu Scan
+                                                        </span>
                                                     @endif
                                                 </td>
                                             </tr>
@@ -332,16 +349,12 @@
                                     <div class="shrink-0">
                                         @if(!$allMatched)
                                             <button wire:click="openScanModal" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-avocado-600 hover:bg-avocado-700 active:bg-avocado-800 shadow-sm transition duration-200 cursor-pointer">
-                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                                </svg>
+                                                <i data-lucide="scan-barcode" class="w-4 h-4"></i>
                                                 <span>Scan / Input Barcode</span>
                                             </button>
                                         @else
                                             <div class="text-avocado-700 font-extrabold text-xs flex items-center gap-1.5 bg-white px-4 py-2.5 rounded-xl border border-avocado-300 shadow-sm">
-                                                <svg class="w-4 h-4 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                                </svg>
+                                                <i data-lucide="check-check" class="w-4 h-4 text-avocado-600"></i>
                                                 <span>Semua Unit Cocok! Siap Disetujui</span>
                                             </div>
                                         @endif
@@ -358,61 +371,90 @@
     <!-- Modern Scan Barcode Modal (Teleported to Body) DENGAN DAFTAR BARCODE UNTUK DICOCOKKAN -->
     @if($showScanModal)
     <template x-teleport="body">
-        <div class="fixed inset-0 z-[110] flex items-center justify-center bg-darkbrown-950/60 p-4 animate-fade-in">
-            <x-card class="w-full max-w-lg shadow-tendaku-lg border-wheat-300 relative bg-white overflow-hidden">
-                <div class="flex justify-between items-center border-b border-wheat-200 pb-3 mb-4">
-                    <div class="flex items-center gap-2">
-                        <span class="p-2 rounded-xl bg-avocado-100 text-avocado-700">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                            </svg>
-                        </span>
-                        <div>
-                            <h3 class="text-base font-extrabold text-darkbrown-900">Scan & Cocokkan Barcode</h3>
-                            <p class="text-[11px] text-darkbrown-500">Scan unit fisik atau klik barcode unit di bawah untuk mencocokkan</p>
-                        </div>
+        <div class="fixed inset-0 z-[110] flex items-center justify-center bg-darkbrown-950/65 backdrop-blur-sm p-4 animate-fade-in"
+             x-on:click.self="$wire.set('showScanModal', false)">
+            <div class="w-full max-w-lg bg-white rounded-3xl border border-wheat-200/90 shadow-2xl shadow-darkbrown-950/25 relative overflow-hidden">
+                <!-- Dedicated Close (X) Button di Pojok Kanan Atas Modal (Terpisah dari Aksi Utama) -->
+                <button 
+                    type="button"
+                    wire:click="$set('showScanModal', false)" 
+                    class="absolute top-4 right-4 z-20 p-2.5 rounded-full text-darkbrown-400 hover:text-darkbrown-800 bg-wheat-100/70 hover:bg-wheat-200/90 transition-all duration-150 cursor-pointer shadow-sm group focus:outline-none focus:ring-2 focus:ring-wheat-400"
+                    title="Tutup (Esc)">
+                    <i data-lucide="x" class="w-4 h-4 transition-transform group-hover:rotate-90 duration-200"></i>
+                </button>
+
+                <!-- Modal Header -->
+                <div class="flex items-center gap-3 px-6 pt-6 pb-4 border-b border-wheat-200/80 pr-16 bg-white">
+                    <span class="p-2.5 rounded-2xl bg-gradient-to-br from-avocado-100 to-avocado-200/60 text-avocado-800 border border-avocado-300/80 shadow-sm shrink-0">
+                        <i data-lucide="scan-barcode" class="w-5 h-5"></i>
+                    </span>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-black text-darkbrown-900 tracking-tight leading-tight">Scan & Cocokkan Barcode</h3>
+                        <p class="text-xs text-darkbrown-500 mt-0.5 truncate">Scan barcode atau klik unit di bawah untuk verifikasi</p>
                     </div>
-                    <button wire:click="$set('showScanModal', false)" class="text-darkbrown-400 hover:text-darkbrown-700 p-1.5 rounded-lg hover:bg-wheat-100 transition cursor-pointer">
-                        ✕
-                    </button>
                 </div>
 
-                <div class="space-y-4">
+                <div class="p-6 space-y-4">
                     <!-- Form Input Barcode Scanner -->
-                    <form wire:submit.prevent="processScan" class="space-y-3">
+                    <form wire:submit.prevent="processScan" class="space-y-2.5">
                         <div>
                             <x-input-label value="Input / Gunakan Scanner Barcode" class="font-bold text-xs text-darkbrown-800" />
                             <div class="flex gap-2 mt-1.5">
-                                <x-text-input wire:model="modalBarcode" class="flex-1 font-mono uppercase text-xs tracking-wider" placeholder="Scan barcode disini (contoh: BC-100002 atau TEND-002)..." autofocus />
-                                <button type="submit" class="px-4 py-2 rounded-xl font-bold text-xs text-white bg-avocado-600 hover:bg-avocado-700 active:bg-avocado-800 shadow-sm transition shrink-0 cursor-pointer">
+                                <div class="relative flex-1">
+                                    <input 
+                                        type="text"
+                                        wire:model="modalBarcode" 
+                                        class="w-full font-mono uppercase text-xs tracking-wider rounded-xl transition duration-150 py-2.5 px-3.5 bg-wheat-50/40 focus:bg-white focus:outline-none focus:ring-2 {{ $scanError ? 'border-rose-500 text-rose-900 focus:ring-rose-400 focus:border-rose-500 bg-rose-50/30' : 'border-wheat-300 text-darkbrown-900 focus:ring-avocado-500 focus:border-avocado-500' }}" 
+                                        placeholder="Scan barcode atau ketik kode unit..." 
+                                        autofocus 
+                                    />
+                                    @if($scanError)
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-rose-500">
+                                            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                        </div>
+                                    @endif
+                                </div>
+                                <button type="submit" class="px-5 py-2.5 rounded-xl font-extrabold text-xs text-white bg-gradient-to-r from-emerald-600 to-avocado-600 hover:from-emerald-500 hover:to-avocado-500 active:scale-95 shadow-md shadow-avocado-600/25 transition shrink-0 cursor-pointer">
                                     Cocokkan
                                 </button>
                             </div>
                         </div>
 
+                        <!-- Error Feedback Box -->
                         @if($scanError)
-                            <div class="text-xs text-red-700 font-semibold bg-red-50 p-3 rounded-xl border border-red-200 flex items-center gap-2">
-                                <span>{{ $scanError }}</span>
+                            <div class="text-xs text-rose-800 font-bold bg-rose-50/90 p-3 rounded-xl border border-rose-200/90 flex items-center gap-2.5 shadow-sm animate-fade-in">
+                                <div class="w-5 h-5 rounded-full bg-rose-200 text-rose-800 flex items-center justify-center font-bold text-[11px] shrink-0">
+                                    <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="leading-tight">{{ $scanError }}</p>
+                                </div>
                             </div>
                         @endif
 
+                        <!-- Success Feedback Box -->
                         @if($scanSuccessMessage)
-                            <div class="text-xs text-avocado-800 font-semibold bg-avocado-50 p-3 rounded-xl border border-avocado-200 flex items-center gap-2">
-                                <span>{{ $scanSuccessMessage }}</span>
+                            <div class="text-xs text-emerald-900 font-bold bg-emerald-50/90 p-3 rounded-xl border border-emerald-200/90 flex items-center gap-2.5 shadow-sm animate-fade-in">
+                                <div class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-bold text-[11px] shrink-0">
+                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="leading-tight">{{ $scanSuccessMessage }}</p>
+                                </div>
                             </div>
                         @endif
                     </form>
 
                     <!-- DAFTAR UNIT & BARCODE YANG HARUS DICOCOKKAN DARI PESANAN INI -->
-                    <div class="pt-2 border-t border-wheat-200 space-y-2">
+                    <div class="pt-3 border-t border-wheat-200/80 space-y-2">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold text-darkbrown-800 uppercase tracking-wider block">
-                                Unit Yang Perlu Dicocokkan Pada Booking Ini:
+                                Unit Yang Perlu Dicocokkan:
                             </span>
-                            <span class="text-[10px] text-darkbrown-500 font-semibold">Klik barcode untuk langsung verifikasi</span>
+                            <span class="text-[10px] text-darkbrown-500 font-medium">Klik badge untuk cocokan</span>
                         </div>
 
-                        <div class="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                        <div class="max-h-56 overflow-y-auto space-y-2 pr-1">
                             @php
                                 $currentOrderDetails = $this->selectedOrder ? $this->selectedOrder->details : collect();
                                 $currentScanned = $scannedUnits[$this->selectedOrder->id ?? 0] ?? [];
@@ -424,33 +466,37 @@
                                 @endphp
                                 @if($allocatedUnit)
                                     <div wire:click="quickFillBarcode('{{ $allocatedUnit->barcode }}')"
-                                         class="p-2.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer group {{ $isDone ? 'bg-avocado-50/70 border-avocado-300' : 'bg-wheat-50/70 border-wheat-200 hover:bg-avocado-50 hover:border-avocado-300' }}">
-                                        <div class="min-w-0">
+                                         class="p-3 rounded-2xl border transition-all duration-150 flex items-center justify-between cursor-pointer group {{ $isDone ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' : 'bg-wheat-50/50 border-wheat-300/80 hover:bg-avocado-50/60 hover:border-avocado-400 hover:shadow-sm' }}">
+                                        <div class="min-w-0 pr-2">
                                             <div class="flex items-center gap-2">
-                                                <p class="font-bold text-xs {{ $isDone ? 'text-avocado-900' : 'text-darkbrown-900 group-hover:text-avocado-800' }} truncate">
+                                                <p class="font-extrabold text-xs {{ $isDone ? 'text-emerald-950' : 'text-darkbrown-900 group-hover:text-avocado-900' }} truncate">
                                                     {{ $dItem->masterItem?->name }}
                                                 </p>
                                                 @if($isDone)
-                                                    <span class="text-[10px] font-bold text-avocado-700 bg-avocado-100 px-1.5 py-0.2 rounded">✓ Sudah Cocok</span>
+                                                    <span class="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/90 border border-emerald-300/80 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                                        <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                        Cocok
+                                                    </span>
                                                 @endif
                                             </div>
-                                            <p class="text-[10px] text-darkbrown-500 font-mono">
-                                                Unit: {{ $allocatedUnit->unit_code }} • Kondisi: {{ $allocatedUnit->condition }}
+                                            <p class="text-[11px] text-darkbrown-500 font-mono mt-0.5">
+                                                Unit: <span class="font-bold text-darkbrown-700">{{ $allocatedUnit->unit_code }}</span> • Kondisi: {{ $allocatedUnit->condition }}
                                             </p>
                                         </div>
                                         <div class="flex items-center gap-2 shrink-0">
-                                            <span class="px-2.5 py-1 rounded-lg font-mono font-bold text-xs bg-white border {{ $isDone ? 'border-avocado-300 text-avocado-900' : 'border-wheat-300 text-darkbrown-900 group-hover:border-avocado-400 group-hover:text-avocado-900' }}">
-                                                {{ $allocatedUnit->barcode }}
-                                            </span>
-                                            @if(!$isDone)
-                                                <span class="text-[10px] font-bold text-avocado-700 bg-avocado-100 px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    Scan Ini ↗
-                                                </span>
-                                            @endif
+                                            <!-- Tombol Interaktif / Badge Barcode Yang Jelas Bisa Diklik -->
+                                            <button 
+                                                type="button"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono font-black text-xs transition-all duration-150 shadow-sm {{ $isDone ? 'bg-white text-emerald-800 border-2 border-emerald-300' : 'bg-white text-darkbrown-900 border-2 border-wheat-300 group-hover:border-avocado-500 group-hover:bg-avocado-600 group-hover:text-white group-hover:shadow-md group-hover:scale-105 active:scale-95' }}">
+                                                @if(!$isDone)
+                                                    <i data-lucide="scan-barcode" class="w-3.5 h-3.5 text-avocado-600 group-hover:text-white transition-colors"></i>
+                                                @endif
+                                                <span>{{ $allocatedUnit->barcode }}</span>
+                                            </button>
                                         </div>
                                     </div>
                                 @else
-                                    <div class="p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 flex items-center justify-between">
+                                    <div class="p-3 rounded-2xl border border-amber-200 bg-amber-50/50 flex items-center justify-between">
                                         <p class="text-xs text-amber-800 font-medium">{{ $dItem->masterItem?->name }} (Belum ada unit teralokasi)</p>
                                     </div>
                                 @endif
@@ -462,8 +508,9 @@
                         </div>
                     </div>
                 </div>
-            </x-card>
+            </div>
         </div>
     </template>
     @endif
 </div>
+

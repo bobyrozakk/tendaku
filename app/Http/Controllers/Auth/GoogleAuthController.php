@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\CartService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -93,6 +94,7 @@ class GoogleAuthController extends Controller
 
         Auth::login($user);
         $request->session()->regenerate();
+        app(CartService::class)->syncOnLogin($user);
 
         $destination = match (true) {
             $user->isVendorStaff() => route('dashboard'),

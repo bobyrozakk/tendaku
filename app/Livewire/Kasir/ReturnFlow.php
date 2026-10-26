@@ -125,16 +125,34 @@ class ReturnFlow extends Component
             ->find($this->activeOrderId);
     }
 
+    public function setCondition($detailId, $condition)
+    {
+        $this->inspectionNotes[$detailId] = $condition;
+        $this->resetErrorBag("damageFees.{$detailId}");
+
+        if ($condition === 'good') {
+            $this->damageFees[$detailId] = 0;
+        }
+    }
+
     public function markItemReturned($detailId)
     {
+        $condition = $this->inspectionNotes[$detailId] ?? 'good';
+        $fee = (float) ($this->damageFees[$detailId] ?? 0);
+
+        // Validasi: jika kondisi rusak atau hilang, denda wajib diisi > 0 agar tidak kecolongan
+        if (in_array($condition, ['damaged', 'lost']) && $fee <= 0) {
+            $this->addError("damageFees.{$detailId}", 'Denda wajib diisi minimal Rp 1 bila kondisi barang '.($condition === 'damaged' ? 'Rusak' : 'Hilang').'.');
+
+            return;
+        }
+
+        $this->resetErrorBag("damageFees.{$detailId}");
         $this->returnedItems[$detailId] = true;
 
         // Auto update individual detail in DB
         $detail = RentalDetail::find($detailId);
         if ($detail) {
-            $condition = $this->inspectionNotes[$detailId] ?? 'good';
-            $fee = (float) ($this->damageFees[$detailId] ?? 0);
-
             $detail->update([
                 'condition_after' => $condition,
                 'damage_fee' => $fee,

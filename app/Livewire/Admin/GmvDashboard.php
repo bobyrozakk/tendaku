@@ -6,6 +6,7 @@ use App\Models\Vendor;
 use App\Services\GmvService;
 use Carbon\Carbon;
 use Illuminate\View\View;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class GmvDashboard extends Component
@@ -20,12 +21,22 @@ class GmvDashboard extends Component
 
     public function mount(): void
     {
+        $this->ensureSuperAdmin();
         $this->applyPeriodDates();
     }
 
     public function updatedPeriod(): void
     {
         $this->applyPeriodDates();
+    }
+
+    /**
+     * Segarkan metrik segera setelah vendor diubah dari komponen lain di halaman.
+     */
+    #[On('vendor-updated')]
+    public function refreshMetrics(): void
+    {
+        // Re-render happens automatically after the event handler runs.
     }
 
     protected function applyPeriodDates(): void
@@ -67,11 +78,18 @@ class GmvDashboard extends Component
 
     public function render(GmvService $gmvService): View
     {
+        $this->ensureSuperAdmin();
+
         $start = $this->startDate ? Carbon::parse($this->startDate) : null;
         $end = $this->endDate ? Carbon::parse($this->endDate) : null;
 
         $gmvToday = $gmvService->calculateToday($this->selectedVendorId);
         $dailyGrowth = $gmvService->calculateDailyGrowth($this->selectedVendorId);
+        $todayTransactionCount = $gmvService->countTransactions(
+            $this->selectedVendorId,
+            Carbon::today(),
+            Carbon::today()
+        );
 
         $gmvThisMonth = $gmvService->calculateThisMonth($this->selectedVendorId);
         $monthlyGrowth = $gmvService->calculateMonthlyGrowth($this->selectedVendorId);
@@ -91,6 +109,7 @@ class GmvDashboard extends Component
         return view('livewire.admin.gmv-dashboard', [
             'gmvToday' => $gmvToday,
             'dailyGrowth' => $dailyGrowth,
+            'todayTransactionCount' => $todayTransactionCount,
             'gmvThisMonth' => $gmvThisMonth,
             'monthlyGrowth' => $monthlyGrowth,
             'filteredGmv' => $filteredGmv,
@@ -102,5 +121,10 @@ class GmvDashboard extends Component
             'activeVendorsCount' => $activeVendorsCount,
             'allVendors' => $allVendors,
         ]);
+    }
+
+    protected function ensureSuperAdmin(): void
+    {
+        abort_unless(auth()->user()?->isSuperAdmin(), 403);
     }
 }

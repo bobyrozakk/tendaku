@@ -17,9 +17,7 @@
             <button wire:click="$set('activeTab', 'return')"
                 class="flex items-center gap-2.5 py-2 px-5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer {{ $activeTab === 'return' ? 'text-white shadow-md' : 'text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100/70 font-semibold' }}"
                 style="{{ $activeTab === 'return' ? 'background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 14px rgba(78,101,6,0.3);' : '' }}">
-                <svg class="w-4 h-4 {{ $activeTab === 'return' ? 'text-white' : 'text-darkbrown-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
+                <i data-lucide="clipboard-check" class="w-4 h-4 {{ $activeTab === 'return' ? 'text-white' : 'text-darkbrown-400' }}"></i>
                 <span>Inspeksi & Retur</span>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-black {{ $activeTab === 'return' ? 'bg-white/20 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
                     {{ $activeRentalsList->count() }}
@@ -29,9 +27,7 @@
             <button wire:click="$set('activeTab', 'history')"
                 class="flex items-center gap-2.5 py-2 px-5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer {{ $activeTab === 'history' ? 'text-white shadow-md' : 'text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100/70 font-semibold' }}"
                 style="{{ $activeTab === 'history' ? 'background: linear-gradient(135deg, #2b2202 0%, #3d3000 60%, #4a3c00 100%); box-shadow: 0 4px 14px rgba(43,34,2,0.3);' : '' }}">
-                <svg class="w-4 h-4 {{ $activeTab === 'history' ? 'text-white' : 'text-darkbrown-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
+                <i data-lucide="history" class="w-4 h-4 {{ $activeTab === 'history' ? 'text-white' : 'text-darkbrown-400' }}"></i>
                 <span>Riwayat Transaksi</span>
             </button>
         </div>
@@ -52,9 +48,7 @@
                     <div class="flex justify-between items-center">
                         <div class="flex items-center gap-2">
                             <div class="w-7 h-7 rounded-lg bg-avocado-100 text-avocado-800 flex items-center justify-center">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                                </svg>
+                                <i data-lucide="list" class="w-4 h-4"></i>
                             </div>
                             <div>
                                 <h3 class="font-extrabold text-xs text-darkbrown-900 uppercase tracking-wider">Antrean Retur</h3>
@@ -68,10 +62,8 @@
 
                     {{-- Search Input by booking_code / customer --}}
                     <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                            <svg class="w-4 h-4 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-darkbrown-400">
+                            <i data-lucide="search" class="w-4 h-4"></i>
                         </div>
                         <input type="text"
                                wire:model.live.debounce.250ms="searchOrder"
@@ -110,16 +102,15 @@
 
                                     @if($rental->ktp_collateral_status === 'held')
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 shrink-0">
-                                            🪪 KTP Ditahan
+                                            <i data-lucide="id-card" class="w-3 h-3 text-amber-700"></i>
+                                            KTP Ditahan
                                         </span>
                                     @endif
                                 </div>
 
                                 <div class="flex items-center justify-between text-xs pt-1 border-t border-wheat-100">
                                     <div class="flex items-center gap-1.5 text-darkbrown-600 text-[11px]">
-                                        <svg class="w-3.5 h-3.5 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
+                                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-darkbrown-400"></i>
                                         <span>Jatuh Tempo: <strong class="text-darkbrown-800">{{ $rental->return_date->format('d M Y') }}</strong></span>
                                     </div>
                                     <span class="text-[11px] font-bold text-darkbrown-500 bg-wheat-100 px-2 py-0.5 rounded-md">
@@ -142,19 +133,15 @@
 
                                     <span class="text-xs font-bold flex items-center gap-1 {{ $isSelected ? 'text-avocado-700' : 'text-darkbrown-400 group-hover:text-darkbrown-700' }}">
                                         <span>Inspeksi</span>
-                                        <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-                                        </svg>
+                                        <i data-lucide="chevron-right" class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"></i>
                                     </span>
                                 </div>
                             </div>
                         </div>
                     @empty
                         <div class="p-8 text-center bg-white rounded-2xl border border-wheat-200 space-y-2">
-                            <div class="w-12 h-12 mx-auto rounded-full bg-wheat-100 flex items-center justify-center text-darkbrown-400">
-                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                            <div class="w-12 h-12 mx-auto rounded-2xl bg-wheat-100 flex items-center justify-center text-darkbrown-400">
+                                <i data-lucide="check-circle-2" class="w-6 h-6"></i>
                             </div>
                             <p class="font-bold text-xs text-darkbrown-800">Tidak ada sewa aktif (Picked Up)</p>
                             <p class="text-[11px] text-darkbrown-500">Semua pesanan sewa telah dikembalikan atau belum ada transaksi yang diserahterimakan.</p>
@@ -206,9 +193,7 @@
                             <div class="flex items-center justify-between">
                                 <h4 class="text-xs font-black uppercase tracking-wider text-darkbrown-700 flex items-center gap-2">
                                     <div class="w-6 h-6 rounded-lg bg-avocado-100 text-avocado-800 flex items-center justify-center">
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                        </svg>
+                                        <i data-lucide="scan-barcode" class="w-3.5 h-3.5"></i>
                                     </div>
                                     <span>Pencocokan & Kondisi Unit Fisik (Database)</span>
                                 </h4>
@@ -235,9 +220,7 @@
                                                     </h5>
                                                     <div class="flex items-center gap-2 mt-1">
                                                         <span class="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-darkbrown-700 bg-white px-2 py-0.5 rounded-md border border-wheat-200">
-                                                            <svg class="w-3 h-3 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                                            </svg>
+                                                            <i data-lucide="scan-barcode" class="w-3 h-3 text-darkbrown-400"></i>
                                                             {{ $unit?->barcode ?? 'Belum ada barcode' }}
                                                         </span>
                                                         @if($unit)
@@ -250,9 +233,7 @@
                                             <div class="self-end sm:self-center">
                                                 @if($isDetailReturned)
                                                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-300">
-                                                        <svg class="w-3.5 h-3.5 text-avocado-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                                        </svg>
+                                                        <i data-lucide="check" class="w-3.5 h-3.5 text-avocado-700"></i>
                                                         <span>Selesai Diinspeksi ({{ $inspectionNotes[$detail->id] ?? 'good' }})</span>
                                                     </span>
                                                 @else
@@ -267,41 +248,98 @@
                                         @if(!$isDetailReturned)
                                             <div class="p-4 space-y-4 bg-white">
                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    {{-- Radio Badge / Pill Tombol Pilihan Kondisi --}}
                                                     <div>
-                                                        <label class="text-xs font-bold text-darkbrown-800 block mb-1.5">
-                                                            Kondisi Fisik Saat Kembali (condition_after)
+                                                        <label class="text-xs font-bold text-darkbrown-800 block mb-2">
+                                                            Kondisi Fisik Saat Kembali
                                                         </label>
-                                                        <select wire:model="inspectionNotes.{{ $detail->id }}"
-                                                                class="w-full text-xs font-semibold bg-wheat-50/50 border border-wheat-300 rounded-xl py-2.5 px-3 pr-8 focus:bg-white focus:outline-none focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-500 text-darkbrown-900 shadow-sm cursor-pointer">
-                                                            <option value="good">✓ Baik / Normal (Lengkap)</option>
-                                                            <option value="damaged">⚠️ Rusak / Lecet / Sobek</option>
-                                                            <option value="lost">❌ Hilang / Hancur Total</option>
-                                                        </select>
+                                                        @php
+                                                            $currentCondition = $inspectionNotes[$detail->id] ?? 'good';
+                                                        @endphp
+                                                        <div class="grid grid-cols-3 gap-2">
+                                                            {{-- Tombol Pill: Baik --}}
+                                                            <button type="button"
+                                                                    wire:click="setCondition({{ $detail->id }}, 'good')"
+                                                                    class="py-2 px-2.5 rounded-xl text-xs font-bold transition-all duration-150 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none {{ $currentCondition === 'good' ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm shadow-emerald-500/25 ring-2 ring-emerald-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800' }}">
+                                                                <i data-lucide="check" class="w-4 h-4"></i>
+                                                                <span class="text-[11px] leading-tight">Baik</span>
+                                                            </button>
+
+                                                            {{-- Tombol Pill: Rusak --}}
+                                                            <button type="button"
+                                                                    wire:click="setCondition({{ $detail->id }}, 'damaged')"
+                                                                    class="py-2 px-2.5 rounded-xl text-xs font-bold transition-all duration-150 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none {{ $currentCondition === 'damaged' ? 'bg-amber-500 text-white border-amber-600 shadow-sm shadow-amber-500/25 ring-2 ring-amber-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800' }}">
+                                                                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                                                <span class="text-[11px] leading-tight">Rusak</span>
+                                                            </button>
+
+                                                            {{-- Tombol Pill: Hilang --}}
+                                                            <button type="button"
+                                                                    wire:click="setCondition({{ $detail->id }}, 'lost')"
+                                                                    class="py-2 px-2.5 rounded-xl text-xs font-bold transition-all duration-150 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none {{ $currentCondition === 'lost' ? 'bg-rose-600 text-white border-rose-700 shadow-sm shadow-rose-600/25 ring-2 ring-rose-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800' }}">
+                                                                <i data-lucide="x-circle" class="w-4 h-4"></i>
+                                                                <span class="text-[11px] leading-tight">Hilang</span>
+                                                            </button>
+                                                        </div>
                                                     </div>
 
+                                                    {{-- Denda Kerusakan Input --}}
+                                                    @php
+                                                        $isFeeRequired = in_array($currentCondition, ['damaged', 'lost']);
+                                                        $currentFee = (float)($damageFees[$detail->id] ?? 0);
+                                                        $isFeeInvalid = $isFeeRequired && $currentFee <= 0;
+                                                    @endphp
                                                     <div>
-                                                        <label class="text-xs font-bold text-darkbrown-800 block mb-1.5">
-                                                            Denda Kerusakan / Ganti Rugi (damage_fee)
-                                                        </label>
+                                                        <div class="flex items-center justify-between mb-2">
+                                                            <label class="text-xs font-bold text-darkbrown-800 flex items-center gap-1.5">
+                                                                <span>Denda Kerusakan / Ganti Rugi</span>
+                                                                @if($isFeeRequired)
+                                                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-700 border border-rose-300 animate-pulse">
+                                                                        Wajib Diisi
+                                                                    </span>
+                                                                @endif
+                                                            </label>
+                                                        </div>
                                                         <div class="relative">
-                                                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-xs font-bold text-darkbrown-400">
+                                                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-xs font-bold {{ $isFeeInvalid ? 'text-rose-600' : 'text-darkbrown-400' }}">
                                                                 Rp
                                                             </span>
                                                             <input type="number"
+                                                                   min="0"
                                                                    wire:model.live="damageFees.{{ $detail->id }}"
-                                                                   placeholder="0"
-                                                                   class="w-full text-xs font-semibold pl-9 pr-3 py-2.5 bg-wheat-50/50 border border-wheat-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-500 text-darkbrown-900 shadow-sm" />
+                                                                   placeholder="{{ $isFeeRequired ? 'Masukkan nominal denda...' : '0' }}"
+                                                                   class="w-full text-xs font-bold pl-10 pr-3.5 py-2.5 rounded-xl transition duration-150 shadow-sm {{ $isFeeInvalid ? 'bg-rose-50/70 border-rose-400 text-rose-900 focus:ring-2 focus:ring-rose-500/30 focus:border-rose-600 ring-1 ring-rose-400' : 'bg-wheat-50/50 border-wheat-300 text-darkbrown-900 focus:bg-white focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-500' }}" />
                                                         </div>
+
+                                                        @error('damageFees.' . $detail->id)
+                                                            <p class="text-[11px] font-bold text-rose-600 mt-1.5 flex items-center gap-1">
+                                                                <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i>
+                                                                <span>{{ $message }}</span>
+                                                            </p>
+                                                        @elseif($isFeeInvalid)
+                                                            <p class="text-[10px] font-medium text-rose-600 mt-1.5 flex items-center gap-1">
+                                                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0"></i>
+                                                                <span>Wajib mengisi denda agar tidak terjadi kerugian.</span>
+                                                            </p>
+                                                        @endif
                                                     </div>
                                                 </div>
 
-                                                <div class="flex justify-end pt-2 border-t border-wheat-100">
+                                                <div class="flex items-center justify-between pt-2 border-t border-wheat-100">
+                                                    <div>
+                                                        @if($isFeeInvalid)
+                                                            <span class="text-[11px] font-bold text-rose-600 flex items-center gap-1">
+                                                                <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                                                                <span>Isi nominal denda untuk melanjutkan</span>
+                                                            </span>
+                                                        @endif
+                                                    </div>
+
                                                     <button wire:click="markItemReturned({{ $detail->id }})"
-                                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition-all duration-200 cursor-pointer active:scale-95"
-                                                            style="background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 12px rgba(78,101,6,0.25);">
-                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                                        </svg>
+                                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 {{ $isFeeInvalid ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-80' : 'text-white shadow-sm cursor-pointer active:scale-95 hover:brightness-105' }}"
+                                                            style="{{ !$isFeeInvalid ? 'background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 12px rgba(78,101,6,0.25);' : '' }}"
+                                                            {{ $isFeeInvalid ? 'disabled' : '' }}>
+                                                        <i data-lucide="check" class="w-4 h-4"></i>
                                                         <span>Konfirmasi Fisik Item</span>
                                                     </button>
                                                 </div>
@@ -311,28 +349,34 @@
                                 @endforeach
                             </div>
 
-                            {{-- Ringkasan Biaya Denda & Total --}}
-                            <div class="rounded-2xl p-5 border border-wheat-200 space-y-3 bg-gradient-to-br from-wheat-50/80 via-white to-wheat-100/40">
+                            {{-- Ringkasan Biaya Denda & Total (Teks Bersih & Angka Positif) --}}
+                            @php
+                                $totalItemsInOrder = $this->activeOrder->details->count();
+                                $confirmedItemsCount = count(array_filter($returnedItems));
+                                $isAllItemsInspected = ($totalItemsInOrder > 0 && $confirmedItemsCount >= $totalItemsInOrder);
+                            @endphp
+
+                            <div class="rounded-2xl p-5 border border-wheat-200 space-y-3 bg-gradient-to-br from-wheat-50/80 via-white to-wheat-100/40 shadow-sm">
                                 <div class="flex items-center justify-between pb-2 border-b border-wheat-200">
                                     <span class="text-xs font-bold text-darkbrown-700 uppercase tracking-wider">
                                         Ringkasan Biaya Akhir & Denda
                                     </span>
                                     <span class="text-[11px] font-semibold text-darkbrown-500">
-                                        Perhitungan otomatis dari database
+                                        Perhitungan otomatis
                                     </span>
                                 </div>
 
                                 <div class="space-y-2 text-xs">
-                                    <div class="flex justify-between text-darkbrown-700">
-                                        <span class="font-medium">Denda Keterlambatan (total_late_fee):</span>
-                                        <span class="font-bold {{ $this->calculatedLateFee > 0 ? 'text-red-700' : 'text-darkbrown-900' }}">
-                                            Rp {{ number_format($this->calculatedLateFee, 0, ',', '.') }}
+                                    <div class="flex justify-between items-center text-darkbrown-700">
+                                        <span class="font-medium">Denda Keterlambatan:</span>
+                                        <span class="font-bold {{ (float)$this->calculatedLateFee > 0 ? 'text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200' : 'text-darkbrown-900' }}">
+                                            Rp {{ number_format(abs((float)$this->calculatedLateFee), 0, ',', '.') }}
                                         </span>
                                     </div>
-                                    <div class="flex justify-between text-darkbrown-700">
-                                        <span class="font-medium">Total Denda Kerusakan (total_damage_fee):</span>
-                                        <span class="font-bold {{ $this->totalDamageFee > 0 ? 'text-red-700' : 'text-darkbrown-900' }}">
-                                            Rp {{ number_format($this->totalDamageFee, 0, ',', '.') }}
+                                    <div class="flex justify-between items-center text-darkbrown-700">
+                                        <span class="font-medium">Total Denda Kerusakan:</span>
+                                        <span class="font-bold {{ (float)$this->totalDamageFee > 0 ? 'text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200' : 'text-darkbrown-900' }}">
+                                            Rp {{ number_format(abs((float)$this->totalDamageFee), 0, ',', '.') }}
                                         </span>
                                     </div>
                                 </div>
@@ -346,29 +390,46 @@
                                             Wajib dilunasi sebelum status selesai & pengembalian KTP
                                         </span>
                                     </div>
-                                    <span class="text-xl font-black {{ $this->totalCharge > 0 ? 'text-red-700' : 'text-avocado-800' }}">
-                                        Rp {{ number_format($this->totalCharge, 0, ',', '.') }}
+                                    <span class="text-xl font-black {{ (float)$this->totalCharge > 0 ? 'text-rose-600' : 'text-emerald-700' }}">
+                                        Rp {{ number_format(abs((float)$this->totalCharge), 0, ',', '.') }}
                                     </span>
                                 </div>
                             </div>
 
                             @error('general')
                                 <div class="p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-bold flex items-center gap-3">
-                                    <svg class="w-4 h-4 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
+                                    <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 shrink-0"></i>
                                     <span>{{ $message }}</span>
                                 </div>
                             @enderror
 
-                            <div class="flex justify-end pt-2">
+                            {{-- Tombol SELESAI RETUR Terkunci (Disabled) sampai semua item diinspeksi --}}
+                            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                                <div class="text-[11px] text-darkbrown-500 font-medium">
+                                    @if(!$isAllItemsInspected)
+                                        <span class="inline-flex items-center gap-1.5 text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
+                                            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                            Konfirmasi semua fisik item di atas ({{ $confirmedItemsCount }}/{{ $totalItemsInOrder }}) untuk mengaktifkan tombol retur.
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-300 font-bold">
+                                            <i data-lucide="check-check" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                                            Semua item fisik telah diinspeksi. Siap menyelesaikan retur!
+                                        </span>
+                                    @endif
+                                </div>
+
                                 <button wire:click="completeReturn"
-                                        class="w-full sm:w-auto py-3.5 px-8 rounded-xl font-black text-xs tracking-wider uppercase text-white shadow-lg transition-all duration-200 flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
-                                        style="background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 18px rgba(78,101,6,0.35);">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    <span>Selesai Retur & Serahkan KTP (Completed)</span>
+                                        class="w-full sm:w-auto py-3.5 px-8 rounded-xl font-black text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2.5 {{ $isAllItemsInspected ? 'text-white cursor-pointer shadow-lg active:scale-95' : 'bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-80' }}"
+                                        style="{{ $isAllItemsInspected ? 'background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 18px rgba(78,101,6,0.35);' : '' }}"
+                                        {{ !$isAllItemsInspected ? 'disabled' : '' }}>
+                                    @if(!$isAllItemsInspected)
+                                        <i data-lucide="lock" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                        <span>Selesai Retur & Serahkan KTP</span>
+                                    @else
+                                        <i data-lucide="check" class="w-4 h-4"></i>
+                                        <span>Selesai Retur & Serahkan KTP (Completed)</span>
+                                    @endif
                                 </button>
                             </div>
                         </div>
@@ -376,9 +437,7 @@
                 @else
                     <div class="bg-white rounded-2xl border border-wheat-200 shadow-sm flex flex-col items-center justify-center p-12 text-center text-darkbrown-500 min-h-[460px]">
                         <div class="w-16 h-16 rounded-2xl bg-wheat-100 flex items-center justify-center mb-4 border border-wheat-200">
-                            <svg class="w-8 h-8 text-wheat-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                            </svg>
+                            <i data-lucide="clipboard-list" class="w-8 h-8 text-wheat-600"></i>
                         </div>
                         <h4 class="text-base font-extrabold text-darkbrown-900">Pilih Transaksi di Antrean Kiri</h4>
                         <p class="text-xs text-darkbrown-500 max-w-sm mt-1.5 leading-relaxed">
@@ -396,9 +455,7 @@
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div class="relative w-full sm:w-1/2">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                            <svg class="w-4 h-4 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                            <i data-lucide="search" class="w-4 h-4 text-darkbrown-400"></i>
                         </div>
                         <input type="text"
                                wire:model.live.debounce.250ms="searchHistory"
@@ -484,10 +541,7 @@
                                     <td class="py-4 px-5 text-right">
                                         <button @click="selectedHistory = {{ json_encode($histArray) }}; showHistoryModal = true"
                                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-avocado-800 bg-avocado-100 hover:bg-avocado-200 border border-avocado-300 transition cursor-pointer">
-                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
+                                            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                                             <span>Detail</span>
                                         </button>
                                     </td>
@@ -497,9 +551,7 @@
                                     <td colspan="7" class="py-12 text-center text-darkbrown-500">
                                         <div class="flex flex-col items-center justify-center space-y-2">
                                             <div class="w-12 h-12 rounded-full bg-wheat-100 flex items-center justify-center text-wheat-500">
-                                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
+                                                <i data-lucide="clock" class="w-6 h-6"></i>
                                             </div>
                                             <p class="font-bold text-sm text-darkbrown-700">Tidak ada riwayat transaksi</p>
                                             <p class="text-xs text-darkbrown-400">Belum ada transaksi rental yang berstatus selesai.</p>
@@ -698,9 +750,7 @@
                      style="background: linear-gradient(135deg, #2b2202 0%, #3d3000 60%, #4a3c00 100%);">
                     <div class="flex items-center gap-2.5">
                         <div class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-emerald-300">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
                         </div>
                         <div>
                             <h3 class="text-sm font-black tracking-tight" style="color: #f5e9c8;">Detail Transaksi Selesai</h3>

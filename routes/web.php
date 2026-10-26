@@ -1,13 +1,14 @@
 <?php
 
-use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\BookingVaController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PaymentRetryController;
+use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
+use App\Http\Controllers\Customer\PackageCheckoutController;
+use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
 use App\Http\Controllers\Vendor\CashierPaymentController;
 use App\Http\Controllers\Vendor\CategoryController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Vendor\OwnerDashboardController;
 use App\Http\Controllers\Vendor\ProductController;
 use App\Http\Controllers\Vendor\UnitController;
 use App\Http\Controllers\Webhook\MidtransWebhookController;
+use App\Livewire\Kasir\ProfileKasir;
 use Illuminate\Support\Facades\Route;
 
 // 1. Beranda (Home)
@@ -44,6 +46,22 @@ Route::get('/katalog', [CatalogController::class, 'index'])->name('customer.cata
 Route::get('/katalog/{id}', [CatalogController::class, 'show'])
     ->whereNumber('id')
     ->name('customer.product.show');
+
+// Paket Camping (publik)
+Route::get('/paket-camping', [CustomerCampingPackageController::class, 'index'])
+    ->name('customer.packages.index');
+Route::get('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'index'])
+    ->whereNumber('id')
+    ->name('customer.packages.checkout');
+Route::post('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'store'])
+    ->whereNumber('id')
+    ->name('customer.packages.checkout.store');
+Route::get('/paket-camping/{id}', [CustomerCampingPackageController::class, 'show'])
+    ->whereNumber('id')
+    ->name('customer.packages.show');
+
+// Prakiraan Cuaca Spot Camping (publik)
+Route::view('/cuaca', 'customer.weather.index')->name('customer.weather.index');
 
 // Alias Route URL langsung (untuk backward compatibility & kemudahan akses)
 Route::get('checkout', fn () => redirect()->route('checkout.index'));
@@ -99,30 +117,6 @@ Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
-// Rute Panel Khusus Super Admin
-Route::middleware(['super_admin', 'verified'])
-    ->prefix('admin')
-    ->name('admin.')
-    ->group(function () {
-        Route::get('dashboard', [AdminDashboardController::class, 'index'])
-            ->name('dashboard');
-
-        Route::get('vendors', [AdminVendorController::class, 'index'])
-            ->name('vendors.index');
-
-        Route::patch('vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])
-            ->name('vendors.approve');
-
-        Route::patch('vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])
-            ->name('vendors.reject');
-
-        Route::patch('vendors/{vendor}/suspend', [AdminVendorController::class, 'suspend'])
-            ->name('vendors.suspend');
-
-        Route::delete('vendors/{vendor}', [AdminVendorController::class, 'destroy'])
-            ->name('vendors.destroy');
-    });
-
 // Rute Modul KASIR & POS Toko (Role: vendor_admin / Kasir)
 Route::middleware(['auth', 'verified', 'role:vendor_admin', 'vendor.active'])
     ->prefix('kasir')
@@ -132,6 +126,7 @@ Route::middleware(['auth', 'verified', 'role:vendor_admin', 'vendor.active'])
         Route::view('units', 'kasir.units.index')->name('units');
         Route::view('pickup', 'kasir.pickup.index')->name('pickup');
         Route::view('return', 'kasir.return.index')->name('return');
+        Route::get('profile', ProfileKasir::class)->name('profile');
     });
 
 // Rute khusus Owner Vendor
@@ -142,7 +137,12 @@ Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
         Route::get('owner/dashboard', [OwnerDashboardController::class, 'index'])
             ->name('owner.dashboard');
 
+        Route::get('owner/dashboard/export', [OwnerDashboardController::class, 'exportDailyRevenue'])
+            ->name('owner.dashboard.export');
+
         Route::resource('products', ProductController::class);
+        Route::resource('packages', CampingPackageController::class)
+            ->except(['show']);
         Route::resource('categories', CategoryController::class)
             ->except(['show']);
 

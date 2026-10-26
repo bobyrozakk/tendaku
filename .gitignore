@@ -14,6 +14,7 @@ PRD.md
 /.vscode
 /.zed
 /auth.json
+/excel
 /node_modules
 /public/build
 /public/fonts-manifest.dev.json

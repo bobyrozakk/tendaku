@@ -94,11 +94,78 @@
             <!-- Tren Pendapatan Harian (8 Kolom) -->
             <div class="lg:col-span-8 flex flex-col">
                 <x-card title="Tren Pendapatan Harian" subtitle="Performa omzet harian pada periode {{ $metrics['start_date'] }} hingga {{ $metrics['end_date'] }}" class="flex-1 flex flex-col justify-between">
+                    <x-slot name="action">
+                        <a href="{{ route('vendor.owner.dashboard.export', ['period' => $selectedPeriod]) }}"
+                           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-avocado-700 bg-avocado-50 border border-avocado-200 hover:bg-avocado-100 transition duration-150 whitespace-nowrap"
+                           title="Unduh rincian omzet harian (Excel)">
+                            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                            Export Excel
+                        </a>
+                    </x-slot>
+
                     @php
-                        $maxTotal = $metrics['revenue_trend']->max('total') ?: 1;
+                        $trend = $metrics['revenue_trend'];
+                        $maxTotal = (float) ($trend->max('total') ?? 0);
+                        $periodTotal = (float) $trend->sum('total');
+                        $daysWithRevenue = $trend->filter(fn (array $point) => $point['total'] > 0)->count();
+                        $averagePerDay = $trend->count() > 0 ? $periodTotal / $trend->count() : 0;
+                        $peakPoint = $trend->sortByDesc('total')->first();
+                        // Label nilai ditampilkan untuk semua bar pada periode pendek;
+                        // pada periode panjang hanya bar tertinggi agar tidak bertumpuk.
+                        $showAllValueLabels = $trend->count() <= 14;
+
+                        // Skala sumbu Y dibulatkan ke angka "cantik" (mis. 100 rb, 200 rb)
+                        // agar garis bantu tidak menampilkan pecahan seperti 52,5 rb.
+                        $scaleStep = 100000.0;
+
+                        if ($maxTotal > 0) {
+                            for ($exponent = 0; $exponent <= 12; $exponent++) {
+                                $magnitude = 10 ** $exponent;
+                                $found = null;
+
+                                foreach ([1, 2, 5] as $multiplier) {
+                                    $candidate = $multiplier * $magnitude;
+                                    $intervals = (int) ceil($maxTotal / $candidate);
+
+                                    // 2-4 interval menghasilkan 3-5 garis bantu yang mudah dibaca.
+                                    if ($intervals >= 2 && $intervals <= 4) {
+                                        $found = $candidate;
+
+                                        break;
+                                    }
+                                }
+
+                                if ($found !== null) {
+                                    $scaleStep = (float) $found;
+
+                                    break;
+                                }
+                            }
+                        }
+
+                        $scaleMax = $maxTotal > 0
+                            ? ceil($maxTotal / $scaleStep) * $scaleStep
+                            : $scaleStep;
+                        $scaleIntervals = (int) round($scaleMax / $scaleStep);
+
+                        // Tick dari nilai tertinggi turun ke 0.
+                        $scaleTicks = collect(range($scaleIntervals, 0))
+                            ->map(fn (int $step) => $step * $scaleStep);
+
+                        $formatCompact = function (float $value): string {
+                            if ($value >= 1000000) {
+                                return 'Rp '.rtrim(rtrim(number_format($value / 1000000, 1, ',', '.'), '0'), ',').' jt';
+                            }
+
+                            if ($value >= 1000) {
+                                return 'Rp '.rtrim(rtrim(number_format($value / 1000, 1, ',', '.'), '0'), ',').' rb';
+                            }
+
+                            return 'Rp '.number_format($value, 0, ',', '.');
+                        };
                     @endphp
 
-                    @if ($metrics['revenue_trend']->isEmpty() || $metrics['revenue_trend']->sum('total') == 0)
+                    @if ($trend->isEmpty() || $periodTotal == 0)
                         <div class="py-12 text-center text-darkbrown-400 my-auto">
                             <svg class="w-12 h-12 mx-auto text-wheat-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
@@ -107,31 +174,95 @@
                             <p class="text-xs text-darkbrown-500">Transaksi rental yang lunas/selesai akan otomatis divisualisasikan di sini.</p>
                         </div>
                     @else
-                        <!-- Mini Bar Chart HTML murni -->
-                        <div class="pt-4 pb-2 my-auto">
-                            <div class="h-48 flex items-end gap-1.5 sm:gap-2 overflow-x-auto pb-4 scrollbar-none">
-                                @foreach ($metrics['revenue_trend'] as $point)
-                                    @php
-                                        $heightPercent = $point['total'] > 0 ? max(8, round(($point['total'] / $maxTotal) * 100)) : 4;
-                                    @endphp
-                                    <div class="flex-1 min-w-[28px] sm:min-w-[36px] flex flex-col items-center group relative">
-                                        <!-- Tooltip -->
-                                        <div class="opacity-0 group-hover:opacity-100 transition duration-150 absolute -top-12 z-20 pointer-events-none bg-darkbrown-900 text-white text-[10px] font-semibold py-1 px-2 rounded-lg whitespace-nowrap shadow-lg">
-                                            {{ $point['label'] }}: Rp {{ number_format($point['total'], 0, ',', '.') }}
-                                        </div>
+                        <!-- Ringkasan Periode -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="rounded-xl bg-avocado-50 border border-avocado-100 px-3 py-2">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-avocado-700">Total Periode</p>
+                                <p class="text-sm font-extrabold text-darkbrown-900">{{ $formatCompact($periodTotal) }}</p>
+                            </div>
+                            <div class="rounded-xl bg-wheat-100/70 border border-wheat-200 px-3 py-2">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-darkbrown-500">Rata-rata / Hari</p>
+                                <p class="text-sm font-extrabold text-darkbrown-900">{{ $formatCompact($averagePerDay) }}</p>
+                            </div>
+                            <div class="rounded-xl bg-sunglow-100/70 border border-sunglow-200 px-3 py-2">
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-goldenrod-700">Hari Tertinggi</p>
+                                <p class="text-sm font-extrabold text-darkbrown-900">
+                                    {{ $formatCompact((float) ($peakPoint['total'] ?? 0)) }}
+                                    <span class="text-[10px] font-semibold text-darkbrown-500">({{ $peakPoint['label'] ?? '-' }})</span>
+                                </p>
+                            </div>
+                        </div>
 
-                                        <!-- Bar -->
-                                        <div class="w-full rounded-t-lg transition-all duration-300 {{ $point['total'] > 0 ? 'bg-gradient-to-t from-avocado-600 to-avocado-400 group-hover:from-avocado-700 group-hover:to-avocado-500 shadow-sm' : 'bg-wheat-200' }}"
-                                             style="height: {{ $heightPercent }}%;">
-                                        </div>
-
-                                        <!-- Date Label -->
-                                        <span class="text-[9px] font-semibold text-darkbrown-400 mt-1.5 truncate max-w-full">
-                                            {{ $point['label'] }}
-                                        </span>
-                                    </div>
+                        <!-- Histogram Omzet Harian -->
+                        <div class="mt-5 flex gap-2">
+                            <!-- Sumbu Y -->
+                            <div class="h-44 w-16 shrink-0 pt-5 flex flex-col justify-between items-end text-[9px] font-semibold text-darkbrown-400">
+                                @foreach ($scaleTicks as $tick)
+                                    <span class="leading-none">{{ $tick > 0 ? $formatCompact((float) $tick) : '0' }}</span>
                                 @endforeach
                             </div>
+
+                            <!-- Area Chart (scroll horizontal untuk periode panjang) -->
+                            <div class="flex-1 min-w-0 overflow-x-auto scrollbar-none">
+                                <div class="min-w-full w-max">
+                                    <!-- Gridline + Bar -->
+                                    <div class="relative h-44">
+                                        <div class="absolute inset-x-0 top-5 bottom-0 flex flex-col justify-between pointer-events-none">
+                                            @foreach (range(1, $scaleIntervals + 1) as $line)
+                                                <div class="border-t {{ $line === $scaleIntervals + 1 ? 'border-wheat-300' : 'border-dashed border-wheat-200/80' }}"></div>
+                                            @endforeach
+                                        </div>
+
+                                        <div class="relative h-full flex items-end gap-1.5 sm:gap-2">
+                                            @foreach ($trend as $point)
+                                                @php
+                                                    $barPercent = $point['total'] > 0
+                                                        ? max(6, round(($point['total'] / $scaleMax) * 100, 2))
+                                                        : 2;
+                                                    $isPeak = $point['total'] > 0 && $point['total'] == $maxTotal;
+                                                @endphp
+
+                                                <div class="flex-1 min-w-[24px] sm:min-w-[32px] h-full pt-5 flex flex-col justify-end items-center group relative">
+                                                    <!-- Bar + Label Nilai -->
+                                                    <div class="w-full max-w-[42px] relative" style="height: {{ $barPercent }}%;"
+                                                         title="{{ $point['label'] }}: Rp {{ number_format($point['total'], 0, ',', '.') }}">
+                                                        @if ($point['total'] > 0 && ($showAllValueLabels || $isPeak))
+                                                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap text-[10px] font-extrabold leading-none {{ $isPeak ? 'text-goldenrod-700' : 'text-darkbrown-700' }}">
+                                                                {{ $formatCompact((float) $point['total']) }}
+                                                            </span>
+                                                        @endif
+
+                                                        <div class="w-full h-full rounded-t-md transition-all duration-300 {{ $point['total'] > 0 ? ($isPeak ? 'bg-gradient-to-t from-goldenrod-600 to-sunglow-400 group-hover:from-goldenrod-700 group-hover:to-sunglow-300 shadow-sm' : 'bg-gradient-to-t from-avocado-600 to-avocado-400 group-hover:from-avocado-700 group-hover:to-avocado-500 shadow-sm') : 'bg-wheat-300/70' }}">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
+                                    <!-- Label Tanggal -->
+                                    <div class="mt-2 flex gap-1.5 sm:gap-2">
+                                        @foreach ($trend as $point)
+                                            <span class="flex-1 min-w-[24px] sm:min-w-[32px] text-center text-[9px] font-semibold text-darkbrown-400 truncate">
+                                                {{ $point['label'] }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Keterangan -->
+                        <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-darkbrown-500">
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-t from-avocado-600 to-avocado-400"></span>
+                                Omzet harian
+                            </span>
+                            <span class="inline-flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-sm bg-gradient-to-t from-goldenrod-600 to-sunglow-400"></span>
+                                Hari tertinggi
+                            </span>
+                            <span class="ml-auto">{{ $daysWithRevenue }} dari {{ $trend->count() }} hari memiliki transaksi</span>
                         </div>
                     @endif
                 </x-card>

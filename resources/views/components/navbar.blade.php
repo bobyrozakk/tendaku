@@ -28,48 +28,24 @@
             <p class="px-2 text-[10px] font-bold uppercase tracking-widest mb-3 transition-all duration-200 whitespace-nowrap"
                :class="open ? 'opacity-60' : 'opacity-0 h-0 mb-0 overflow-hidden'" style="color: rgba(245,233,200,0.5);">Menu Utama</p>
 
-            @php
-                $user = auth()->user();
-
-                $isOwner = $user && $user->isVendorOwner();
-
-                $dashboardUrl = $isOwner
-                    ? route('vendor.owner.dashboard')
-                    : route('kasir.dashboard');
-
-                $isDashboardActive = request()->routeIs(
-                    'vendor.dashboard',
-                    'vendor.owner.dashboard',
-                    'kasir.dashboard'
-                );
-            @endphp
-
-            {{-- Dashboard sesuai role --}}
-            <a href="{{ $dashboardUrl }}"
-               class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
-               :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-               style="{{ $isDashboardActive
-                   ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                   : 'color: rgba(245,233,200,0.65);' }}">
-                <svg class="w-5 h-5 shrink-0" fill="none"
-                     viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                </svg>
-
-                <span class="whitespace-nowrap transition-all duration-200"
-                      :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">
-                    {{ $isOwner ? 'Dashboard Owner' : 'Dashboard Kasir' }}
-                </span>
-            </a>
-
-            @if ($isOwner)
-                {{-- Menu khusus Vendor Owner --}}
-                {{-- Pertahankan menu Produk Owner, Kategori Owner, dan Unit Owner --}}
+            @if (auth()->check() && auth()->user()->isVendorOwner())
+                <!-- Dashboard Owner -->
+                <a href="{{ route('vendor.owner.dashboard') }}"
+                   wire:navigate
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.owner.dashboard')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.owner.dashboard') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.owner.dashboard') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <i data-lucide="house" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Dashboard Owner</span>
+                </a>
 
                 <!-- Produk Owner -->
                 <a href="{{ route('vendor.products.index') }}"
+                   wire:navigate
                    class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
                    :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                    style="{{ request()->routeIs('vendor.products.*')
@@ -77,14 +53,27 @@
                        : 'color: rgba(245,233,200,0.65);' }}"
                    onmouseover="if (!{{ request()->routeIs('vendor.products.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
                    onmouseout="if (!{{ request()->routeIs('vendor.products.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
+                    <i data-lucide="package" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Produk Owner</span>
+                </a>
+
+                <!-- Paket Camping Owner -->
+                <a href="{{ route('vendor.packages.index') }}"
+                   wire:navigate
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.packages.*')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.packages.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.packages.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <i data-lucide="tent-tree" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Paket Camping</span>
                 </a>
 
                 <!-- Kategori Owner -->
                 <a href="{{ route('vendor.categories.index') }}"
+                   wire:navigate
                    class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
                    :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                    style="{{ request()->routeIs('vendor.categories.*')
@@ -92,14 +81,13 @@
                        : 'color: rgba(245,233,200,0.65);' }}"
                    onmouseover="if (!{{ request()->routeIs('vendor.categories.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
                    onmouseout="if (!{{ request()->routeIs('vendor.categories.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                    </svg>
+                    <i data-lucide="layers" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Kategori Owner</span>
                 </a>
 
                 <!-- Unit Owner -->
                 <a href="{{ route('vendor.units') }}"
+                   wire:navigate
                    class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
                    :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                    style="{{ request()->routeIs('vendor.units')
@@ -107,14 +95,13 @@
                        : 'color: rgba(245,233,200,0.65);' }}"
                    onmouseover="if (!{{ request()->routeIs('vendor.units') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
                    onmouseout="if (!{{ request()->routeIs('vendor.units') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                    </svg>
+                    <i data-lucide="tag" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Unit Owner</span>
                 </a>
 
                 <!-- Manajemen Kasir -->
                 <a href="{{ route('vendor.cashiers.index') }}"
+                   wire:navigate
                    class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
                    :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                    style="{{ request()->routeIs('vendor.cashiers.*')
@@ -122,14 +109,13 @@
                        : 'color: rgba(245,233,200,0.65);' }}"
                    onmouseover="if (!{{ request()->routeIs('vendor.cashiers.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
                    onmouseout="if (!{{ request()->routeIs('vendor.cashiers.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
+                    <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Manajemen Kasir</span>
                 </a>
             @else
-                <!-- Dashboard & POS -->
+                <!-- Dashboard Kasir -->
                 <a href="{{ route('kasir.dashboard') }}"
+                   wire:navigate
                    class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
                    :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                    style="{{ request()->routeIs('kasir.dashboard')
@@ -137,14 +123,13 @@
                        : 'color: rgba(245,233,200,0.65);' }}"
                    onmouseover="if (!{{ request()->routeIs('kasir.dashboard') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
                    onmouseout="if (!{{ request()->routeIs('kasir.dashboard') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                    </svg>
-                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Dashboard & POS</span>
+                    <i data-lucide="house" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Dashboard Kasir</span>
                 </a>
 
                 <!-- Status Unit Alat (Kasir View) -->
                 <a href="{{ route('kasir.units') }}"
+                   wire:navigate
                    class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
                    :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                    style="{{ request()->routeIs('kasir.units')
@@ -152,14 +137,13 @@
                        : 'color: rgba(245,233,200,0.65);' }}"
                    onmouseover="if (!{{ request()->routeIs('kasir.units') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
                    onmouseout="if (!{{ request()->routeIs('kasir.units') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
+                    <i data-lucide="boxes" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Status Unit Alat</span>
                 </a>
 
                 <!-- Pickup / Serah Terima -->
                 <a href="{{ route('kasir.pickup') }}"
+                   wire:navigate
                    class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
                    :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                    style="{{ request()->routeIs('kasir.pickup')
@@ -167,14 +151,13 @@
                        : 'color: rgba(245,233,200,0.65);' }}"
                    onmouseover="if (!{{ request()->routeIs('kasir.pickup') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
                    onmouseout="if (!{{ request()->routeIs('kasir.pickup') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                    </svg>
+                    <i data-lucide="arrow-left-right" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Pickup / Serah Terima</span>
                 </a>
 
                 <!-- Inspeksi & Retur -->
                 <a href="{{ route('kasir.return') }}"
+                   wire:navigate
                    class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
                    :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
                    style="{{ request()->routeIs('kasir.return')
@@ -182,9 +165,7 @@
                        : 'color: rgba(245,233,200,0.65);' }}"
                    onmouseover="if (!{{ request()->routeIs('kasir.return') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
                    onmouseout="if (!{{ request()->routeIs('kasir.return') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                    </svg>
+                    <i data-lucide="clipboard-check" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Inspeksi & Retur</span>
                 </a>
             @endif
@@ -233,8 +214,15 @@
                               {{ request()->is('katalog*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                         Katalog Alat
                     </a>
-                    <a href="#" class="px-3.5 py-2 rounded-xl text-sm font-medium text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 transition-all duration-150">
+                    <a href="{{ route('customer.packages.index') }}"
+                       class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
+                              {{ request()->is('paket-camping*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                         Paket Camping
+                    </a>
+                    <a href="{{ route('customer.weather.index') }}"
+                       class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
+                              {{ request()->routeIs('customer.weather.index') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
+                        Cuaca
                     </a>
                     @auth
                         <a href="{{ route('customer.booking.index') }}"
@@ -264,14 +252,22 @@
                 </button>
 
                 <!-- Cart -->
-                <a href="#" class="relative p-2 text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150" title="Keranjang Sewa">
+                @php
+                    $activeCart = app(\App\Services\CartService::class)->get(auth()->user());
+                    $cartQty = is_array($activeCart) && ! empty($activeCart['master_item_id'])
+                        ? (int) ($activeCart['qty'] ?? $activeCart['quantity'] ?? 1)
+                        : 0;
+                @endphp
+                <a href="{{ route('checkout.index') }}" class="relative p-2 text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150" title="Keranjang Sewa">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
-                    <span class="absolute top-1 right-1 w-4 h-4 rounded-full font-bold text-[10px] flex items-center justify-center text-white"
-                          style="background: linear-gradient(135deg, #d5a007, #fbce6b); box-shadow: 0 1px 6px rgba(213,160,7,0.5);">
-                        2
-                    </span>
+                    @if($cartQty > 0)
+                        <span class="absolute top-1 right-1 w-4 h-4 rounded-full font-bold text-[10px] flex items-center justify-center text-white"
+                              style="background: linear-gradient(135deg, #d5a007, #fbce6b); box-shadow: 0 1px 6px rgba(213,160,7,0.5);">
+                            {{ $cartQty }}
+                        </span>
+                    @endif
                 </a>
 
                 <!-- Auth -->

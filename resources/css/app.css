@@ -36,6 +36,10 @@
         background-color: #FBCE6B;
         color: #2B2202;
     }
+
+    [x-cloak] {
+        display: none !important;
+    }
 }
 
 @layer components {
@@ -119,6 +123,16 @@
 
 .bg-gradient-gold {
     background: linear-gradient(135deg, #FBCE6B 0%, #D5A007 100%);
+}
+
+/* Sembunyikan scrollbar horizontal pada area chart/filter */
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
 }
 
 /* Camping Pattern Subtle Texture */

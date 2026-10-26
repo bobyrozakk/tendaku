@@ -54,4 +54,14 @@ return [
         'is_3ds' => true,
     ],
 
+    'fonnte' => [
+        // Token API Fonnte (WhatsApp API). Ambil dari dashboard Fonnte.
+        // Paket gratis Fonnte: text-only, kuota per device, tanpa batas waktu.
+        'token' => env('FONNTE_TOKEN'),
+        'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
+        'timeout' => (int) env('FONNTE_TIMEOUT', 10),
+        'retry_times' => (int) env('FONNTE_RETRY_TIMES', 2),
+        'retry_sleep_ms' => (int) env('FONNTE_RETRY_SLEEP_MS', 300),
+    ],
+
 ];

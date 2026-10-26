@@ -134,10 +134,7 @@
         .co-preview.is-open { grid-template-rows: 1fr; opacity: 1; }
         .co-preview > .co-inner { overflow: hidden; min-height: 0; }
 
-        .co-tick { stroke-dasharray: 24; stroke-dashoffset: 24; animation: co-draw .45s cubic-bezier(.65, 0, .35, 1) forwards; }
         @@keyframes co-draw { to { stroke-dashoffset: 0; } }
-        .co-pop { animation: co-pop .55s cubic-bezier(.34, 1.56, .64, 1); }
-        @@keyframes co-pop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
 
         .co-ring { stroke-dasharray: 166; stroke-dashoffset: 166; animation: co-draw .7s cubic-bezier(.65, 0, .45, 1) .25s forwards; }
         .co-bigtick { stroke-dasharray: 48; stroke-dashoffset: 48; animation: co-draw .4s cubic-bezier(.65, 0, .45, 1) .85s forwards; }
@@ -148,10 +145,9 @@
 
         @@media (prefers-reduced-motion: reduce) {
             .co-collapse, .co-preview { transition: none; }
-            .co-tick, .co-ring, .co-bigtick { animation-duration: .01s; animation-delay: 0s; }
+            .co-ring, .co-bigtick { animation-duration: .01s; animation-delay: 0s; }
             .co-halo { animation: none; opacity: 0; }
             .co-copy { animation: none; }
-            .co-pop { animation: none; }
         }
     </style>
 
@@ -229,7 +225,12 @@
                     </div>
                     <div class="mt-0.5 font-bold">{{ $booking['expires_at'] }}</div>
                     <div x-show="remaining" x-cloak class="mt-1 text-sm text-sunglow-200">
-                        Sisa waktu <span class="font-mono font-bold" x-text="remaining"></span>
+                        <template x-if="!expired">
+                            <span>Sisa waktu <span class="font-mono font-bold" x-text="remaining"></span></span>
+                        </template>
+                        <template x-if="expired">
+                            <span class="font-bold text-red-200">Waktu penahanan alat habis</span>
+                        </template>
                     </div>
                     <p class="mt-1 text-xs text-avocado-200 leading-relaxed">Alat ditahan 12 jam.</p>
                 </div>
@@ -328,6 +329,21 @@
                             <svg class="w-5 h-5 text-goldenrod-700 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0M9 14h.01M13 14h2" /></svg>
                             <span>Bawa <strong>KTP asli</strong> dan nomor booking saat mengambil alat. KTP ditahan toko selama masa sewa dan dikembalikan setelah alat diperiksa.</span>
                         </div>
+
+                        @if ($isGuest || $needsPhone)
+                            <div class="flex items-start gap-2.5 rounded-xl bg-avocado-50 border border-avocado-200 px-3.5 py-3 text-sm text-avocado-950">
+                                <svg class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0" /></svg>
+                                <span>Pengingat pengembalian (H-1 &amp; hari pengembalian) dikirim ke nomor WhatsApp yang Anda isi di atas.</span>
+                            </div>
+                        @else
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-avocado-50 border border-avocado-200 px-3.5 py-3 text-sm text-avocado-950">
+                                <span>
+                                    Pengingat pengembalian (H-1 &amp; hari pengembalian) dikirim ke
+                                    <span class="font-mono font-bold text-avocado-700">{{ $user->phone }}</span>.
+                                </span>
+                                <a href="{{ route('profile') }}" class="shrink-0 font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">Ubah di profil</a>
+                            </div>
+                        @endif
                     </div>
                 </section>
 
@@ -399,7 +415,7 @@
                         </div>
 
                         <!-- Detail: ambil di toko -->
-                        <div x-show="pickupMethod === 'self_pickup'" class="flex items-start gap-3 rounded-xl bg-wheat-50 border border-wheat-200 p-4 text-sm">
+                        <div x-show="pickupMethod === 'self_pickup'" x-cloak class="flex items-start gap-3 rounded-xl bg-wheat-50 border border-wheat-200 p-4 text-sm">
                             <svg class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                             <div class="space-y-0.5">
                                 <div class="font-bold text-darkbrown-900">{{ $booking['vendor']['pickup_location'] }}</div>
@@ -595,7 +611,11 @@
                         </div>
 
                         <p x-show="touched" x-cloak class="text-xs text-darkbrown-500 leading-relaxed">
-                            Total dihitung ulang dari perubahan jadwal atau jumlah unit. Ketersediaan dan harga final dicek saat Anda menekan Bayar.
+                            Total dihitung ulang dari perubahan jadwal atau jumlah unit.
+                        </p>
+
+                        <p x-show="deposit > 0" x-cloak class="text-xs text-darkbrown-500 leading-relaxed">
+                            Sudah termasuk deposit <strong class="text-darkbrown-800" x-text="formatRupiah(deposit)"></strong> yang dikembalikan penuh setelah alat diperiksa dan diterima kembali oleh vendor.
                         </p>
 
                         <!-- Opsi Pembayaran-->
@@ -625,8 +645,8 @@
                         </div>
 
                         <div>
-                            <button type="button" x-on:click="submitBooking()" :disabled="isProcessing"
-                                    :class="isProcessing ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
+                            <button type="button" x-on:click="submitBooking()" :disabled="isProcessing || expired"
+                                :class="(isProcessing || expired) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
                                     class="w-full py-3.5 px-5 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
                                 <template x-if="!isProcessing">
                                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -672,6 +692,8 @@
                 editAddress: false,
                 touched: false,
                 remaining: '',
+                expired: false,
+                countdownTimer: null,
 
                 // Serah terima setelah booking dibuat: form -> handoff
                 phase: 'form',
@@ -760,14 +782,19 @@
                     const tick = () => {
                         const ms = new Date(this.expiresAtIso) - new Date();
                         if (isNaN(ms)) { this.remaining = ''; return; }
-                        if (ms <= 0) { this.remaining = 'habis'; return; }
+                        if (ms <= 0) {
+                            this.remaining = 'habis';
+                            this.expired = true;
+                            clearInterval(this.countdownTimer);
+                            return;
+                        }
                         const h = Math.floor(ms / 3600000);
                         const m = Math.floor((ms % 3600000) / 60000);
                         const s = Math.floor((ms % 60000) / 1000);
                         this.remaining = [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
                     };
                     tick();
-                    setInterval(tick, 1000);
+                    if (!this.expired) this.countdownTimer = setInterval(tick, 1000);
                 },
 
                 validate() {
@@ -813,6 +840,11 @@
                         return;
                     }
                     if (this.isProcessing) return;
+
+                    if (this.expired) {
+                        this.formError = 'Waktu penahanan alat sudah habis. Muat ulang halaman untuk memulai lagi.';
+                        return;
+                    }
 
                     this.formError = '';
                     if (!this.validate()) return;

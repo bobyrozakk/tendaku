@@ -4,9 +4,10 @@ namespace App\Livewire\Customer;
 
 use App\Models\MasterItem;
 use App\Services\AvailabilityService;
+use App\Services\CartService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
@@ -195,7 +196,7 @@ class ProductBooking extends Component
             return null;
         }
 
-        Session::put('booking_cart', [
+        $cartData = [
             'master_item_id' => $this->product->id,
             'product_id' => $this->product->id,
             'product_name' => $this->product->name,
@@ -209,13 +210,15 @@ class ProductBooking extends Component
             'total_price' => $this->totalPrice,
             'vendor_id' => $this->product->vendor_id,
             'category_name' => $this->product->category?->name,
-        ]);
+        ];
+
+        app(CartService::class)->set($cartData, Auth::user());
 
         return redirect()->route('checkout.index');
     }
 
     public function render(): View
     {
-        return view('livewire.product-booking');
+        return view('livewire.customer.product-booking');
     }
 }

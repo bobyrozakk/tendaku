@@ -35,6 +35,7 @@ class RentalService
      *     delivery_address?: string|null,
      *     delivery_fee?: float|int,
      *     discount_amount?: float|int,
+     *     subtotal_override?: float|int|null,
      *     expires_in_hours?: int,
      *     notes?: string|null,
      *     items: array<int, array{master_item_id: int, quantity?: int, qty?: int}>
@@ -156,6 +157,11 @@ class RentalService
             }
 
             // Hitung grand total (subtotal + delivery_fee - discount_amount)
+            // subtotal_override dipakai saat harga sudah ditetapkan di muka,
+            // contohnya paket camping yang harganya bukan akumulasi tarif harian alat.
+            $subtotal = isset($data['subtotal_override'])
+                ? max(0.0, (float) $data['subtotal_override'])
+                : $subtotal;
             $deliveryFee = (float) ($data['delivery_fee'] ?? 0.0);
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
             $grandTotal = max(0.0, $subtotal + $deliveryFee - $discountAmount);

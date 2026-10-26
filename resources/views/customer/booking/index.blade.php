@@ -11,15 +11,17 @@
                     <span class="text-wheat-400">/</span>
                     <span class="text-darkbrown-800 font-semibold">Riwayat Sewa</span>
                 </nav>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
-                    📦 Riwayat Transaksi Sewa
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading flex items-center gap-2.5">
+                    <i data-lucide="package" class="w-7 h-7 text-darkbrown-800"></i>
+                    <span>Riwayat Transaksi Sewa</span>
                 </h1>
                 <p class="text-xs text-darkbrown-600 mt-1">
                     Daftar seluruh pesanan peralatan camping dan status sewa Anda di Tendaku.
                 </p>
             </div>
-            <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-primary py-2.5 px-4 rounded-xl text-xs font-bold self-start sm:self-auto">
-                + Sewa Alat Baru
+            <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-primary py-2.5 px-4 rounded-xl text-xs font-bold self-start sm:self-auto inline-flex items-center gap-1.5">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Sewa Alat Baru</span>
             </a>
         </div>
     </x-slot>
@@ -92,20 +94,24 @@
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
                             <div class="md:col-span-8 space-y-2">
                                 <div class="text-xs font-bold text-darkbrown-900 flex items-center gap-1.5">
-                                    <span>🏬 {{ $rental->vendor?->name }}</span>
+                                    <i data-lucide="store" class="w-3.5 h-3.5 text-sunglow-700"></i>
+                                    <span>{{ $rental->vendor?->name }}</span>
                                     <span class="text-wheat-500">•</span>
                                     <span class="text-darkbrown-600 font-medium">{{ $rental->vendor?->city }}</span>
                                 </div>
                                 
                                 <div class="text-xs text-darkbrown-700 space-y-1">
-                                    <p class="font-medium">
-                                        📅 Periode: <strong>{{ \Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y') }}</strong> s/d <strong>{{ \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y') }}</strong> ({{ $rental->rental_days }} hari)
+                                    <p class="font-medium flex items-center gap-1.5">
+                                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-avocado-600 shrink-0"></i>
+                                        <span>Periode: <strong>{{ \Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y') }}</strong> s/d <strong>{{ \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y') }}</strong> ({{ $rental->rental_days }} hari)</span>
                                     </p>
-                                    <p class="text-darkbrown-600">
-                                        📦 Barang: {{ $rental->details->count() }} unit alat
+                                    <p class="text-darkbrown-600 flex items-center gap-1.5">
+                                        <i data-lucide="package" class="w-3.5 h-3.5 text-darkbrown-400 shrink-0"></i>
+                                        <span>Barang: {{ $rental->details->count() }} unit alat
                                         @if($rental->details->first()?->masterItem)
                                             ({{ $rental->details->first()->masterItem->name }}{{ $rental->details->count() > 1 ? ', dll' : '' }})
                                         @endif
+                                        </span>
                                     </p>
                                 </div>
                             </div>
@@ -120,8 +126,9 @@
 
                                 <div class="flex items-center gap-2">
                                     <a href="{{ route('booking.status', $rental->booking_code) }}"
-                                       class="btn-tendaku-primary py-2 px-4 rounded-xl text-xs font-bold shadow-sm">
-                                        Detail Booking & Status →
+                                       class="btn-tendaku-primary py-2 px-4 rounded-xl text-xs font-bold shadow-sm inline-flex items-center gap-1.5">
+                                        <span>Detail Booking & Status</span>
+                                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                                     </a>
                                 </div>
                             </div>
@@ -135,16 +142,17 @@
             </div>
         @else
             <div class="card-tendaku-warm p-12 text-center rounded-2xl border border-wheat-300">
-                <div class="w-16 h-16 bg-wheat-200 text-darkbrown-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                    ⛺
+                <div class="w-16 h-16 bg-wheat-200 text-darkbrown-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="tent" class="w-8 h-8 text-darkbrown-700"></i>
                 </div>
                 <h3 class="text-lg font-bold text-darkbrown-900 font-heading">Belum Ada Transaksi Sewa</h3>
                 <p class="text-sm text-darkbrown-600 max-w-md mx-auto mt-2">
                     Anda belum memiliki riwayat rental untuk kategori status yang dipilih. Jelajahi katalog dan sewa peralatan petualangan Anda sekarang!
                 </p>
                 <div class="mt-6">
-                    <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-primary py-2.5 px-6 rounded-xl text-sm font-bold inline-block">
-                        Lihat Katalog Alat Camping
+                    <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-primary py-2.5 px-6 rounded-xl text-sm font-bold inline-flex items-center gap-2">
+                        <i data-lucide="compass" class="w-4 h-4"></i>
+                        <span>Lihat Katalog Alat Camping</span>
                     </a>
                 </div>
             </div>
