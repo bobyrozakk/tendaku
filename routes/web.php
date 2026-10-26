@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\RevenueExportController;
+use App\Http\Controllers\Admin\SettlementInvoiceController;
 use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
@@ -102,6 +103,10 @@ Route::middleware(['super_admin', 'verified'])
         Route::view('pendapatan', 'admin.revenue.index')->name('pendapatan');
         Route::get('pendapatan/export', [RevenueExportController::class, 'csv'])
             ->name('pendapatan.export');
+
+        Route::view('settlements', 'admin.settlements.index')->name('settlements');
+        Route::get('settlements/{settlement}/invoice', [SettlementInvoiceController::class, 'print'])
+            ->name('settlements.invoice');
     });
 
 // Rute Modul KASIR & POS Toko (Role: vendor_admin / Kasir)

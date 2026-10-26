@@ -44,4 +44,9 @@ class Payment extends Model
     {
         return $this->hasOne(PlatformCommission::class);
     }
+
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(Settlement::class);
+    }
 }

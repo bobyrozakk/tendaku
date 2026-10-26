@@ -72,4 +72,14 @@ class Vendor extends Model
     {
         return $this->hasMany(PlatformCommission::class);
     }
+
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(Settlement::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(VendorInvoice::class);
+    }
 }

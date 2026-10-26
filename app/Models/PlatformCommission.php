@@ -40,4 +40,9 @@ class PlatformCommission extends Model
     {
         return $this->belongsTo(Vendor::class);
     }
+
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(Settlement::class);
+    }
 }
