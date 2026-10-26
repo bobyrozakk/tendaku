@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Payment;
 use App\Models\Rental;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,16 +31,40 @@ class ExpirePendingRentals implements ShouldQueue
     {
         $now = Carbon::now();
 
-        // Update rental berstatus 'pending' yang telah melewati 'expires_at'
+        // Cari rental pending yang melewati 'expires_at' dan belum memiliki pembayaran 'paid'
         $affectedRows = DB::transaction(function () use ($now) {
-            return Rental::query()
+            $expiredRentals = Rental::query()
                 ->where('status', 'pending')
                 ->whereNotNull('expires_at')
                 ->where('expires_at', '<', $now)
+                ->whereDoesntHave('payments', function ($query) {
+                    $query->where('status', 'paid');
+                })
+                ->lockForUpdate()
+                ->get();
+
+            if ($expiredRentals->isEmpty()) {
+                return 0;
+            }
+
+            $rentalIds = $expiredRentals->pluck('id')->all();
+
+            Rental::query()
+                ->whereIn('id', $rentalIds)
                 ->update([
                     'status' => 'expired',
                     'updated_at' => $now,
                 ]);
+
+            Payment::query()
+                ->whereIn('rental_id', $rentalIds)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'failed',
+                    'updated_at' => $now,
+                ]);
+
+            return count($rentalIds);
         });
 
         if ($affectedRows > 0) {
