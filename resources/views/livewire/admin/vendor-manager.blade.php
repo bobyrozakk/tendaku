@@ -17,17 +17,6 @@
         </div>
     </div>
 
-    <!-- Feedback -->
-    @if ($feedbackMessage)
-        <x-alert :type="$feedbackType" :title="$feedbackType === 'success' ? 'Berhasil' : ($feedbackType === 'warning' ? 'Perhatian' : ($feedbackType === 'danger' ? 'Gagal' : 'Informasi'))">
-            <div class="flex items-start justify-between gap-3">
-                <span>{{ $feedbackMessage }}</span>
-                <button wire:click="$set('feedbackMessage', null)" class="shrink-0 font-bold text-darkbrown-400 transition hover:text-darkbrown-700" title="Tutup">
-                    &times;
-                </button>
-            </div>
-        </x-alert>
-    @endif
 
     <!-- Filter & Search -->
     <div class="card-tendaku p-4">

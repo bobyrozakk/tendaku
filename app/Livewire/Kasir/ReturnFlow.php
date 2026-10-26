@@ -250,7 +250,13 @@ class ReturnFlow extends Component
         // Siapkan struk untuk dicetak
         $this->prepareReceipt($order);
 
-        session()->flash('message', "Pengembalian {$order->booking_code} selesai! KTP telah diserahkan kembali & status transaksi 'completed'.");
+        $msg = "Pengembalian {$order->booking_code} selesai! KTP telah diserahkan kembali & status transaksi 'completed'.";
+        session()->flash('message', $msg);
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $msg,
+        ]);
 
         $this->activeOrderId = null;
         $this->showFineModal = false;

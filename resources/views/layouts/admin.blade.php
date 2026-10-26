@@ -38,8 +38,33 @@
                     </span>
                 </div>
 
+                <!-- Admin Navigation Menu -->
+                <nav class="hidden md:flex items-center gap-1 rounded-2xl border border-wheat-200 bg-wheat-50/80 p-1">
+                    <a href="{{ route('dashboard') }}"
+                       class="inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs transition {{ request()->routeIs('dashboard') ? 'bg-white font-bold text-darkbrown-900 shadow-sm border border-wheat-300/70' : 'font-medium text-darkbrown-600 hover:bg-white/60 hover:text-darkbrown-900' }}">
+                        <svg class="h-3.5 w-3.5 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="{{ route('admin.pendapatan') }}"
+                       class="inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs transition {{ request()->routeIs('admin.pendapatan*') ? 'bg-white font-bold text-darkbrown-900 shadow-sm border border-wheat-300/70' : 'font-medium text-darkbrown-600 hover:bg-white/60 hover:text-darkbrown-900' }}">
+                        <svg class="h-3.5 w-3.5 text-goldenrod-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Pendapatan
+                    </a>
+                    <a href="{{ route('admin.settlements') }}"
+                       class="inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs transition {{ request()->routeIs('admin.settlements*') ? 'bg-white font-bold text-darkbrown-900 shadow-sm border border-wheat-300/70' : 'font-medium text-darkbrown-600 hover:bg-white/60 hover:text-darkbrown-900' }}">
+                        <svg class="h-3.5 w-3.5 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Settlement Vendor
+                    </a>
+                </nav>
+
                 <div class="flex items-center gap-2">
-                    <div class="hidden text-right md:block">
+                    <div class="hidden text-right lg:block">
                         <p class="text-xs font-bold leading-none text-darkbrown-800">{{ auth()->user()->name ?? 'Super Administrator' }}</p>
                         <p class="mt-1 text-[10px] font-medium text-darkbrown-400">Super Administrator</p>
                     </div>
@@ -60,27 +85,27 @@
                     </form>
                 </div>
             </div>
+
+            <!-- Mobile sub-navigation bar -->
+            <div class="border-t border-wheat-200 bg-wheat-50/70 px-4 py-2 md:hidden">
+                <nav class="flex items-center gap-1 overflow-x-auto">
+                    <a href="{{ route('dashboard') }}"
+                       class="shrink-0 rounded-xl px-3 py-1 text-xs transition {{ request()->routeIs('dashboard') ? 'bg-white font-bold text-darkbrown-900 border border-wheat-300/80 shadow-sm' : 'font-medium text-darkbrown-600' }}">
+                        Dashboard
+                    </a>
+                    <a href="{{ route('admin.pendapatan') }}"
+                       class="shrink-0 rounded-xl px-3 py-1 text-xs transition {{ request()->routeIs('admin.pendapatan*') ? 'bg-white font-bold text-darkbrown-900 border border-wheat-300/80 shadow-sm' : 'font-medium text-darkbrown-600' }}">
+                        Pendapatan
+                    </a>
+                    <a href="{{ route('admin.settlements') }}"
+                       class="shrink-0 rounded-xl px-3 py-1 text-xs transition {{ request()->routeIs('admin.settlements*') ? 'bg-white font-bold text-darkbrown-900 border border-wheat-300/80 shadow-sm' : 'font-medium text-darkbrown-600' }}">
+                        Settlement Vendor
+                    </a>
+                </nav>
+            </div>
         </header>
 
-        <div class="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-            @if (session()->has('success'))
-                <x-alert type="success" :title="'Berhasil!'">
-                    {{ session('success') }}
-                </x-alert>
-            @endif
-
-            @if (session()->has('error'))
-                <x-alert type="danger" :title="'Perhatian'" class="mt-3">
-                    {{ session('error') }}
-                </x-alert>
-            @endif
-
-            @if (session()->has('warning'))
-                <x-alert type="warning" :title="'Info Penting'" class="mt-3">
-                    {{ session('warning') }}
-                </x-alert>
-            @endif
-        </div>
+        <x-toast />
 
         <main class="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
             {{ $slot }}

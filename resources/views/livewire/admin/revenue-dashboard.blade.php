@@ -246,7 +246,7 @@
         <x-stat-card
             title="Batch Menunggu Approval"
             :value="$kpis['pending_batches'] . ' Batch'"
-            description="Payout bulan ini Rp 0 · modul batch settlement NTN-67"
+            :description="'Payout bulan ini Rp ' . number_format($kpis['payout_this_month'], 0, ',', '.')"
             color="dark"
         >
             <x-slot name="icon">
@@ -298,7 +298,7 @@
         </div>
 
         <p class="mt-3 text-[11px] text-darkbrown-400">
-            Laba platform = komisi - MDR standar - (biaya transfer {{ 'Rp ' . number_format($current['transfer_fee'], 0, ',', '.') }} × {{ $current['vendor_count'] }} vendor). Batch settlement final mengikuti NTN-67.
+            Laba platform = komisi - MDR standar - (biaya transfer {{ 'Rp ' . number_format($current['transfer_fee'], 0, ',', '.') }} × {{ $current['vendor_count'] }} vendor). Angka batch final tersedia di halaman settlement.
         </p>
     </x-card>
 
@@ -493,16 +493,21 @@
         </div>
     </x-card>
 
-    <!-- Placeholder batch -->
-    <x-card title="Batch Settlement" subtitle="Batch mingguan, approval, dan bukti transfer dikerjakan pada tiket NTN-67.">
-        <div class="flex flex-col gap-3 rounded-2xl border border-dashed border-wheat-300 bg-wheat-50/60 p-5 sm:flex-row sm:items-center sm:justify-between">
+    <!-- Batch settlement -->
+    <x-card title="Batch Settlement" subtitle="Draft mingguan, approval, bukti transfer, dan invoice dikelola dari halaman settlement.">
+        <div class="flex flex-col gap-3 rounded-2xl border border-avocado-200 bg-avocado-50/60 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p class="text-sm font-bold text-darkbrown-800">Belum ada batch settlement pada fase ini.</p>
+                <p class="text-sm font-bold text-darkbrown-800">
+                    {{ $kpis['pending_batches'] }} draft menunggu approval · payout bulan ini
+                    Rp {{ number_format($kpis['payout_this_month'], 0, ',', '.') }}
+                </p>
                 <p class="mt-1 text-xs text-darkbrown-500">
-                    KPI payout dan batch sengaja ditampilkan nol agar dashboard tidak mengklaim data yang belum tersedia.
+                    Setujui batch untuk mengunci pembayaran, lalu catat bukti transfer agar escrow dilepas dan invoice terbit.
                 </p>
             </div>
-            <x-badge variant="wheat">Menunggu NTN-67</x-badge>
+            <a href="{{ route('admin.settlements') }}" class="btn-tendaku-primary shrink-0 !px-3.5 !py-2 text-xs">
+                Buka Settlement
+            </a>
         </div>
     </x-card>
 </div>

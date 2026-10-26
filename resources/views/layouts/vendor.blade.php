@@ -141,19 +141,8 @@
                 </header>
             @endif
 
-            <!-- Global Alert Slot -->
-            <div class="px-4 sm:px-6 lg:px-8 pt-4">
-                @if (session()->has('success'))
-                    <x-alert type="success" :title="'Berhasil!'">
-                        {{ session('success') }}
-                    </x-alert>
-                @endif
-                @if (session()->has('error'))
-                    <x-alert type="danger" :title="'Perhatian'">
-                        {{ session('error') }}
-                    </x-alert>
-                @endif
-            </div>
+            <!-- Global Toast Notification -->
+            <x-toast />
 
             <!-- Main Content -->
             <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full">

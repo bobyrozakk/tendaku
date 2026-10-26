@@ -46,7 +46,13 @@ class ItemUnitList extends Component
             'condition' => in_array($unit->condition, ['damaged', 'lost']) ? 'good' : $unit->condition,
         ]);
 
-        session()->flash('success', "Unit {$unit->unit_code} selesai diperbaiki dan siap disewakan kembali (Tersedia).");
+        $msg = "Unit {$unit->unit_code} selesai diperbaiki dan siap disewakan kembali (Tersedia).";
+        session()->flash('success', $msg);
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $msg,
+        ]);
     }
 
     public function moveToMaintenance(int $unitId): void
@@ -58,7 +64,13 @@ class ItemUnitList extends Component
             ->findOrFail($unitId);
 
         if ($unit->status === 'rented') {
-            session()->flash('error', "Unit {$unit->unit_code} sedang disewa pelanggan dan tidak bisa langsung dipindahkan ke perbaikan.");
+            $msg = "Unit {$unit->unit_code} sedang disewa pelanggan dan tidak bisa langsung dipindahkan ke perbaikan.";
+            session()->flash('error', $msg);
+            $this->dispatch('toast', [
+                'type' => 'danger',
+                'title' => 'Gagal',
+                'message' => $msg,
+            ]);
 
             return;
         }
@@ -67,7 +79,13 @@ class ItemUnitList extends Component
             'status' => 'maintenance',
         ]);
 
-        session()->flash('success', "Unit {$unit->unit_code} berhasil dipindahkan ke status Perbaikan/Servis.");
+        $msg = "Unit {$unit->unit_code} berhasil dipindahkan ke status Perbaikan/Servis.";
+        session()->flash('success', $msg);
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $msg,
+        ]);
     }
 
     public function render()

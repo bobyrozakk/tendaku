@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Payment;
 use App\Models\PlatformCommission;
 use App\Models\Rental;
+use App\Models\Settlement;
 use App\Models\Vendor;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -178,11 +179,19 @@ class RevenueReportService
             ->where('platform_commissions.status', 'accrued')
             ->sum('platform_commissions.amount');
 
-        // Batch settlement belum dibuat pada NTN-64. Nilai ini sengaja nol
-        // sampai tabel settlements tersedia di NTN-67.
-        $kpis['pending_batches'] = 0;
-        $kpis['payout_this_month'] = 0.0;
-        $kpis['settlements_available'] = false;
+        $kpis['pending_batches'] = Settlement::withoutGlobalScope('vendor')
+            ->where('status', 'draft')
+            ->count();
+
+        $monthStart = $today->copy()->startOfMonth()->startOfDay();
+        $monthEnd = $today->copy()->endOfMonth()->endOfDay();
+
+        $kpis['payout_this_month'] = (float) Settlement::withoutGlobalScope('vendor')
+            ->where('status', 'paid')
+            ->whereBetween('paid_at', [$monthStart, $monthEnd])
+            ->sum('net_payout');
+
+        $kpis['settlements_available'] = true;
 
         return $kpis;
     }

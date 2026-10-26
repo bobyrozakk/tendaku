@@ -226,7 +226,13 @@ class Pos extends Component
             'status' => 'confirmed',
         ]);
 
-        session()->flash('pos_message', "Pesanan {$order->booking_code} telah tervalidasi via barcode & siap diserahkan (Siap Pickup)!");
+        $msg = "Pesanan {$order->booking_code} telah tervalidasi via barcode & siap diserahkan (Siap Pickup)!";
+        session()->flash('pos_message', $msg);
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $msg,
+        ]);
     }
 
     private function filteredOrdersQuery()

@@ -51,6 +51,7 @@
     </style>
 </head>
 <body class="min-h-screen overflow-x-hidden bg-[#FAF6ED] font-sans text-tendaku-brown antialiased">
+    <x-toast />
 
 {{-- bentuk lengkung pemisah panel gambar dan form --}}
 <svg width="0" height="0" class="absolute" aria-hidden="true" focusable="false">

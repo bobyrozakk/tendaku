@@ -15,9 +15,14 @@
                 </p>
             </div>
 
-            <a href="{{ route('dashboard') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
-                Kembali ke Dashboard
-            </a>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.settlements') }}" class="btn-tendaku-primary !px-3.5 !py-2 text-xs">
+                    Kelola Settlement
+                </a>
+                <a href="{{ route('dashboard') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
+                    Kembali ke Dashboard
+                </a>
+            </div>
         </div>
 
         <livewire:admin.revenue-dashboard />
