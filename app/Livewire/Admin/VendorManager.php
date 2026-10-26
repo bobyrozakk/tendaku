@@ -92,6 +92,11 @@ class VendorManager extends Component
 
         $this->feedbackMessage = "Vendor '{$vendor->name}' berhasil disetujui (Approved). Toko kini aktif dan dapat beroperasi.";
         $this->feedbackType = 'success';
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $this->feedbackMessage,
+        ]);
     }
 
     protected function suspendVendor(Vendor $vendor): void
@@ -103,6 +108,11 @@ class VendorManager extends Component
 
         $this->feedbackMessage = "Operasional Vendor '{$vendor->name}' berhasil ditangguhkan (Suspended).";
         $this->feedbackType = 'warning';
+        $this->dispatch('toast', [
+            'type' => 'warning',
+            'title' => 'Perhatian',
+            'message' => $this->feedbackMessage,
+        ]);
     }
 
     protected function deleteVendor(Vendor $vendor): void
@@ -112,6 +122,11 @@ class VendorManager extends Component
 
         $this->feedbackMessage = "Data Vendor '{$vendorName}' berhasil dihapus.";
         $this->feedbackType = 'info';
+        $this->dispatch('toast', [
+            'type' => 'info',
+            'title' => 'Informasi',
+            'message' => $this->feedbackMessage,
+        ]);
     }
 
     public function render(): View

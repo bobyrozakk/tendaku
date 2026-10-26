@@ -6,6 +6,7 @@ use App\Models\ItemCategory;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Models\NotificationLog;
+use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
@@ -107,6 +108,30 @@ class CheckoutTest extends TestCase
         $this->assertSame(1, $rental->details()->count());
 
         $this->assertNull(session('booking_cart'), 'Keranjang harus dikosongkan setelah checkout berhasil.');
+    }
+
+    public function test_logged_in_checkout_creates_a_pending_payment_for_the_grand_total(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+
+        $this->actingAs($customer)
+            ->withSession($this->cartSession())
+            ->post(route('checkout.store'), [
+                'pickup_method' => 'self_pickup',
+                'payment_channel' => 'qris',
+            ])
+            ->assertRedirect();
+
+        $rental = Rental::withoutGlobalScopes()->sole();
+        $payment = Payment::withoutGlobalScope('vendor')->sole();
+
+        $this->assertSame($rental->id, $payment->rental_id);
+        $this->assertSame($rental->vendor_id, $payment->vendor_id);
+        $this->assertSame('settlement', $payment->payment_type);
+        $this->assertSame('midtrans_snap', $payment->payment_method);
+        $this->assertSame('qris', $payment->payment_channel);
+        $this->assertSame('pending', $payment->status);
+        $this->assertSame((float) $rental->grand_total, (float) $payment->amount);
     }
 
     public function test_guest_checkout_page_shows_whatsapp_input(): void

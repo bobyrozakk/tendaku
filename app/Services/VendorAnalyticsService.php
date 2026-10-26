@@ -58,10 +58,10 @@ class VendorAnalyticsService
     {
         $targetDate = $date ?? Carbon::today();
 
-        // Cek pembayaran settled hari ini
+        // Cek pembayaran paid hari ini
         $paymentRevenue = (float) Payment::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
-            ->whereIn('status', ['paid', 'settled'])
+            ->where('status', 'paid')
             ->whereDate('paid_at', $targetDate)
             ->sum('amount');
 
@@ -86,7 +86,7 @@ class VendorAnalyticsService
 
         $paymentRevenue = (float) Payment::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
-            ->whereIn('status', ['paid', 'settled'])
+            ->where('status', 'paid')
             ->whereYear('paid_at', $targetMonth->year)
             ->whereMonth('paid_at', $targetMonth->month)
             ->sum('amount');
@@ -110,7 +110,7 @@ class VendorAnalyticsService
     {
         $paymentRevenue = (float) Payment::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
-            ->whereIn('status', ['paid', 'settled'])
+            ->where('status', 'paid')
             ->whereBetween('paid_at', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
             ->sum('amount');
 
@@ -131,10 +131,10 @@ class VendorAnalyticsService
      */
     public function getRevenueTrend(int $vendorId, Carbon $startDate, Carbon $endDate): Collection
     {
-        // Ambil data pembayaran settled per hari jika ada
+        // Ambil data pembayaran paid per hari jika ada
         $payments = Payment::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
-            ->whereIn('status', ['paid', 'settled'])
+            ->where('status', 'paid')
             ->whereBetween('paid_at', [$startDate->copy()->startOfDay(), $endDate->copy()->endOfDay()])
             ->selectRaw('DATE(paid_at) as date, SUM(amount) as total')
             ->groupBy('date')

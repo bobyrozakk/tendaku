@@ -58,7 +58,7 @@
             'confirmed' => [
                 'title' => 'Pembayaran Lunas',
                 'description' => 'Pembayaran terverifikasi, barang disiapkan oleh staf vendor.',
-                'time' => $rental->payments->where('status', 'settled')->first()?->paid_at?->translatedFormat('d M Y, H:i') ?? 'Menunggu pelunasan',
+                'time' => $rental->payments->where('status', 'paid')->first()?->paid_at?->translatedFormat('d M Y, H:i') ?? 'Menunggu pelunasan',
             ],
             'picked_up' => [
                 'title' => 'Serah Terima (Pickup)',

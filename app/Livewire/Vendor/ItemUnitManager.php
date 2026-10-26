@@ -216,6 +216,11 @@ class ItemUnitManager extends Component
 
         $this->feedbackMessage = 'Unit fisik baru berhasil ditambahkan!';
         $this->feedbackType = 'success';
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $this->feedbackMessage,
+        ]);
         $this->resetForm();
         $this->showAddModal = false;
     }
@@ -270,6 +275,11 @@ class ItemUnitManager extends Component
             if ($isStillRented) {
                 $this->feedbackMessage = 'Unit sedang dalam masa sewa aktif pelanggan. Status harus diselesaikan melalui alur Pengembalian (Return) kasir.';
                 $this->feedbackType = 'error';
+                $this->dispatch('toast', [
+                    'type' => 'danger',
+                    'title' => 'Gagal',
+                    'message' => $this->feedbackMessage,
+                ]);
 
                 return;
             }
@@ -288,6 +298,11 @@ class ItemUnitManager extends Component
 
         $this->feedbackMessage = 'Data unit fisik berhasil diperbarui.';
         $this->feedbackType = 'success';
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $this->feedbackMessage,
+        ]);
         $this->showEditModal = false;
     }
 
@@ -306,6 +321,11 @@ class ItemUnitManager extends Component
         if ($unit->status === 'rented') {
             $this->feedbackMessage = 'Unit tidak dapat dihapus karena saat ini berstatus sedang disewa (rented).';
             $this->feedbackType = 'error';
+            $this->dispatch('toast', [
+                'type' => 'danger',
+                'title' => 'Gagal',
+                'message' => $this->feedbackMessage,
+            ]);
             $this->showDeleteModal = false;
 
             return;
@@ -319,6 +339,11 @@ class ItemUnitManager extends Component
         if ($hasActiveRental) {
             $this->feedbackMessage = 'Unit tidak dapat dihapus karena terikat pada transaksi sewa aktif.';
             $this->feedbackType = 'error';
+            $this->dispatch('toast', [
+                'type' => 'danger',
+                'title' => 'Gagal',
+                'message' => $this->feedbackMessage,
+            ]);
             $this->showDeleteModal = false;
 
             return;
@@ -328,6 +353,11 @@ class ItemUnitManager extends Component
 
         $this->feedbackMessage = 'Unit fisik berhasil dihapus.';
         $this->feedbackType = 'success';
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $this->feedbackMessage,
+        ]);
         $this->showDeleteModal = false;
         $this->selectedUnitId = null;
     }
