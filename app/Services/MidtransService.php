@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\PaymentStatus;
 use App\Exceptions\InvalidMidtransSignatureException;
 use App\Models\Payment;
 use App\Models\Rental;
@@ -11,11 +12,13 @@ use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use LogicException;
 use Midtrans\Config;
+use Midtrans\CoreApi;
 use Midtrans\Snap;
 use Midtrans\Transaction;
 
 /**
- * Integrasi Midtrans: Snap token, validasi signature webhook, dan pemrosesan notifikasi.
+ * Integrasi Midtrans: Snap token, charge VA, validasi signature webhook,
+ * dan pemrosesan notifikasi.
  *
  * @see docs/TENDAKU_payment_spec.md §7.2, §7.3
  */
@@ -40,23 +43,26 @@ class MidtransService
         Config::$is3ds = config('services.midtrans.is_3ds');
     }
 
+    // ── Snap ──────────────────────────────────────────────────────────────────
+
     /**
-     * Buat Snap token untuk payment yang diberikan.
+     * Buat Snap token untuk payment dan simpan ke payments.snap_token (untuk retry).
      *
      * @throws InvalidArgumentException
      */
     public function createTransaction(Payment $payment): string
     {
+        $amount = (int) $payment->amount;
+        $orderId = $payment->order_id;
+
         if (! $payment->exists || ! $payment->getKey()) {
             throw new InvalidArgumentException('A saved payment is required to create a Midtrans transaction.');
         }
 
-        $amount = (int) $payment->amount;
         if ($amount <= 0) {
             throw new InvalidArgumentException('The payment amount must be a positive whole number.');
         }
 
-        $orderId = $payment->order_id;
         if (empty($orderId)) {
             throw new InvalidArgumentException('Payment belum memiliki order_id. Panggil PaymentService::createOnlinePayment terlebih dahulu.');
         }
@@ -65,10 +71,7 @@ class MidtransService
             throw new InvalidArgumentException('Invalid order ID format. Expected prefix: '.self::ORDER_ID_PREFIX);
         }
 
-        $payment->loadMissing(['rental.details.masterItem', 'rental.customer']);
-
-        $rental = $payment->rental;
-
+        $rental = $this->rentalFor($payment);
         $statusUrl = route('booking.status', $rental->booking_code);
 
         $params = [
@@ -86,30 +89,100 @@ class MidtransService
             ],
         ];
 
-        // Sesuaikan expiry dengan rentals.expires_at
-        if ($rental?->expires_at) {
-            $expiryDuration = now()->diffInMinutes($rental->expires_at, false);
-            if ($expiryDuration > 0) {
-                $params['expiry'] = [
-                    'start_time' => now()->format('Y-m-d H:i:s O'),
-                    'unit' => 'minutes',
-                    'duration' => (int) $expiryDuration,
-                ];
-            }
+        // Samakan masa berlaku dengan rentals.expires_at
+        if ($expiry = $this->snapExpiry($rental)) {
+            $params['expiry'] = $expiry;
         }
 
         $snapToken = Snap::getSnapToken($params);
 
-        // Simpan snap_token untuk retry tanpa memanggil Midtrans lagi
         $payment->update(['snap_token' => $snapToken]);
 
         return $snapToken;
     }
 
+    // ── Core API: Virtual Account ─────────────────────────────────────────────
+
     /**
-     * Sinkronisasi status pembayaran langsung dari API Midtrans (§0, §7.1).
+     * Generate nomor VA via Core API (tanpa Snap pop-up).
      *
-     * Digunakan untuk mengecek status secara aktif saat polling di halaman status
+     * @param  string  $bank  bca|bni|bri|mandiri|permata|cimb
+     * @return array{bank: string, va_number: string, biller_code: ?string, qr_code_url: ?string}|null
+     */
+    public function chargeBankTransfer(Payment $payment, string $bank = 'bca'): ?array
+    {
+        $bank = strtolower(trim($bank ?: 'bca'));
+
+        // Sudah punya VA untuk bank yang sama → pakai lagi
+        if ($payment->raw_notification && ! empty($payment->va_details)) {
+            if (strtolower($payment->va_details['bank'] ?? '') === $bank) {
+                return $payment->va_details;
+            }
+
+            // Midtrans menolak charge ulang dengan order_id yang sama untuk bank berbeda,
+            // jadi order_id diganti dengan suffix baru.
+            // NOTE: suffix acak 3 digit (504 kemungkinan) bisa bentrok dengan unique index order_id.
+            $baseOrderId = explode('-', $payment->order_id)[0];
+            $payment->order_id = $baseOrderId.'-'.substr(str_shuffle('123456789'), 0, 3);
+            $payment->save();
+        }
+
+        $rental = $this->rentalFor($payment);
+
+        $params = [
+            'transaction_details' => [
+                'order_id' => $payment->order_id,
+                'gross_amount' => (int) $payment->amount,
+            ],
+            'customer_details' => $this->buildCustomerDetails($rental),
+            'item_details' => $this->buildItemDetails($payment, $rental),
+        ];
+
+        if ($bank === 'mandiri') {
+            $params['payment_type'] = 'echannel';
+            $params['echannel'] = [
+                'bill_info1' => 'Pembayaran Sewa',
+                'bill_info2' => 'Tendaku #'.$rental->booking_code,
+            ];
+        } else {
+            $params['payment_type'] = 'bank_transfer';
+            $params['bank_transfer'] = ['bank' => $bank];
+        }
+
+        // Samakan masa berlaku VA dengan batas bayar
+        if ($payment->expires_at && $payment->expires_at->isFuture()) {
+            $params['custom_expiry'] = [
+                'expiry_duration' => max(1, (int) floor(now()->diffInMinutes($payment->expires_at))),
+                'unit' => 'minute',
+            ];
+        }
+
+        try {
+            $raw = json_decode(json_encode(CoreApi::charge($params)), true);
+        } catch (\Throwable $e) {
+            Log::error('Midtrans CoreApi Charge error: '.$e->getMessage(), [
+                'order_id' => $payment->order_id,
+                'bank' => $bank,
+            ]);
+
+            throw $e;
+        }
+
+        $payment->update([
+            'midtrans_transaction_id' => $raw['transaction_id'] ?? $payment->midtrans_transaction_id,
+            'midtrans_status' => $raw['transaction_status'] ?? 'pending',
+            'method' => $bank === 'mandiri' ? 'echannel' : 'va_'.$bank,
+            'raw_notification' => $raw,
+        ]);
+
+        return $payment->fresh()->va_details;
+    }
+
+    // ── Status dari Midtrans: polling & webhook ───────────────────────────────
+
+    /**
+     * Sinkronisasi status langsung dari API Midtrans (§0, §7.1).
+     * Dipakai polling di halaman status. Gagal hubungi Midtrans → payment dikembalikan apa adanya.
      *
      * @throws InvalidArgumentException
      */
@@ -120,8 +193,7 @@ class MidtransService
         }
 
         try {
-            $response = Transaction::status($payment->order_id);
-            $statusData = json_decode(json_encode($response), true);
+            $statusData = json_decode(json_encode(Transaction::status($payment->order_id)), true);
         } catch (\Throwable $e) {
             Log::info('Gagal sinkronisasi status transaksi dari Midtrans: '.$e->getMessage(), [
                 'order_id' => $payment->order_id,
@@ -134,44 +206,14 @@ class MidtransService
             return $payment;
         }
 
-        return DB::transaction(function () use ($payment, $statusData): Payment {
-            /** @var Payment $locked */
-            $locked = Payment::query()
-                ->where('id', $payment->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            $transactionStatus = (string) $statusData['transaction_status'];
-            $internalStatus = $this->mapMidtransStatus(
-                $transactionStatus,
-                isset($statusData['fraud_status']) ? (string) $statusData['fraud_status'] : null
-            );
-
-            $statusChanged = false;
-            if ($internalStatus !== null) {
-                $statusChanged = $this->applyStatusTransition($locked, $internalStatus, $statusData);
-            }
-
-            $locked->midtrans_transaction_id = $statusData['transaction_id'] ?? $locked->midtrans_transaction_id;
-            $locked->midtrans_status = $transactionStatus;
-
-            if (empty($locked->method) && isset($statusData['payment_type'])) {
-                $locked->method = (string) $statusData['payment_type'];
-            }
-
-            $locked->raw_notification = $statusData;
-            $locked->save();
-
-            if ($locked->status === 'paid' && $statusChanged) {
-                $this->confirmRentalIfFirstPayment($locked);
-            }
-
-            return $locked;
-        });
+        return DB::transaction(fn (): Payment => $this->applyGatewayUpdate(
+            Payment::query()->lockForUpdate()->findOrFail($payment->id),
+            $statusData,
+        ));
     }
 
     /**
-     * Validasi dan proses notifikasi webhook Midtrans
+     * Validasi dan proses notifikasi webhook Midtrans.
      *
      * @param  array<string, string>  $notification
      *
@@ -184,82 +226,20 @@ class MidtransService
         $this->verifySignature($notification);
 
         return DB::transaction(function () use ($notification): Payment {
-            /** @var Payment $payment */
             $payment = Payment::query()
                 ->where('order_id', $notification['order_id'])
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            // Validasi nominal (§7.3 langkah 5)
-            $paymentAmount = self::normalizeAmount((string) $payment->amount);
-            $notificationAmount = self::normalizeAmount((string) $notification['gross_amount']);
+            $this->assertAmountMatches($payment, $notification);
 
-            if ($paymentAmount === null || $notificationAmount === null || $paymentAmount !== $notificationAmount) {
-                Log::warning('Midtrans webhook: nominal tidak cocok.', [
-                    'order_id' => $notification['order_id'],
-                    'payment_amount' => $payment->amount,
-                    'notification_amount' => $notification['gross_amount'],
-                ]);
-                throw new InvalidArgumentException('The notification amount does not match the payment amount.');
-            }
-
-            // Simpan raw_notification
-            $payment->raw_notification = array_merge($payment->raw_notification ?? [], $notification);
-
-            // Petakan status Midtrans ke status internal (§5.2)
-            $internalStatus = $this->mapMidtransStatus(
-                $notification['transaction_status'],
-                $notification['fraud_status'] ?? null
-            );
-
-            $statusChanged = false;
-
-            if ($internalStatus !== null) {
-                $statusChanged = $this->applyStatusTransition($payment, $internalStatus, $notification);
-            }
-
-            $payment->midtrans_transaction_id = $notification['transaction_id'] ?? $payment->midtrans_transaction_id;
-            $payment->midtrans_status = $notification['transaction_status'];
-
-            // Isi method dari payment_type Midtrans (§6.1)
-            if (empty($payment->method) && isset($notification['payment_type'])) {
-                $payment->method = $notification['payment_type'];
-            }
-
-            $payment->save();
-
-            // Jika pertama kali paid: rental → confirmed (§7.3 langkah 7, §5.4)
-            if ($payment->status === 'paid' && $statusChanged) {
-                $this->confirmRentalIfFirstPayment($payment);
-            }
-
-            return $payment;
+            return $this->applyGatewayUpdate($payment, $notification);
         });
     }
 
-    public function createTransactionWithBank(Payment $payment, ?string $bank = null): string
-    {
-        $channelMap = [
-            'bca' => ['bca_va'],
-            'bni' => ['bni_va'],
-            'bri' => ['bri_va'],
-            'mandiri' => ['echannel'],
-            'permata' => ['permata_va'],
-            'cimb' => ['cimb_va'],
-        ];
-
-        $enabledPayments = ($bank && isset($channelMap[strtolower($bank)]))
-            ? $channelMap[strtolower($bank)]
-            : null;
-
-        return $this->createTransaction($payment, $enabledPayments);
-    }
-
     /**
-     * Verifikasi signature webhook (§7.3 langkah 2).
-     *
-     * SHA512(order_id + status_code + gross_amount + ServerKey)
-     * Gunakan hash_equals (constant-time) untuk mencegah timing attack (§11).
+     * Verifikasi signature webhook (§7.3 langkah 2):
+     * SHA512(order_id + status_code + gross_amount + ServerKey), dibandingkan constant-time (§11).
      *
      * @param  array<string, string>  $notification
      *
@@ -267,111 +247,87 @@ class MidtransService
      */
     public function verifySignature(array $notification): void
     {
-        $serverKey = config('services.midtrans.server_key');
-        $expectedSignature = hash(
-            'sha512',
-            $notification['order_id'].$notification['status_code'].$notification['gross_amount'].$serverKey,
-        );
+        $expectedSignature = hash('sha512', implode('', [
+            $notification['order_id'] ?? '',
+            $notification['status_code'] ?? '',
+            $notification['gross_amount'] ?? '',
+            config('services.midtrans.server_key'),
+        ]));
 
-        if (! hash_equals($expectedSignature, $notification['signature_key'])) {
+        if (! hash_equals($expectedSignature, (string) ($notification['signature_key'] ?? ''))) {
             throw new InvalidMidtransSignatureException;
         }
     }
 
+    // ── Internal: status ──────────────────────────────────────────────────────
+
     /**
-     * Pemetaan transaction_status Midtrans → status internal (§5.2).
+     * Terapkan data status dari Midtrans (webhook atau polling) ke payment yang sudah di-lock.
+     * Transisi idempotent; rental dikonfirmasi hanya saat payment baru saja menjadi paid.
      *
-     * Mengembalikan null jika status tidak memerlukan perubahan (mis. pending).
+     * @param  array<string, mixed>  $data
      */
-    private function mapMidtransStatus(string $transactionStatus, ?string $fraudStatus): ?string
+    private function applyGatewayUpdate(Payment $payment, array $data): Payment
     {
-        return match (true) {
-            // settlement = sukses; capture + accept = sukses (§5.2)
-            $transactionStatus === 'settlement' => 'paid',
-            $transactionStatus === 'capture' && $fraudStatus === 'accept' => 'paid',
+        $transactionStatus = (string) $data['transaction_status'];
+        $newStatus = $this->mapMidtransStatus($transactionStatus, $data['fraud_status'] ?? null);
 
-            // capture + challenge → tetap pending (tidak ubah status)
-            $transactionStatus === 'capture' && $fraudStatus === 'challenge' => null,
+        $statusChanged = $newStatus !== null && $payment->transitionTo($newStatus);
 
-            // capture + deny = failed
-            $transactionStatus === 'capture' && $fraudStatus === 'deny' => 'failed',
+        $payment->midtrans_transaction_id = $data['transaction_id'] ?? $payment->midtrans_transaction_id;
+        $payment->midtrans_status = $transactionStatus;
 
-            // expire = expired (§5.2)
-            $transactionStatus === 'expire' => 'expired',
+        if (blank($payment->method) && isset($data['payment_type'])) {
+            $payment->method = (string) $data['payment_type'];
+        }
 
-            // cancel = cancelled
-            $transactionStatus === 'cancel' => 'cancelled',
+        $payment->raw_notification = array_merge($payment->raw_notification ?? [], $data);
+        $payment->save();
 
-            // deny, failure = failed
-            in_array($transactionStatus, ['deny', 'failure'], true) => 'failed',
+        if ($statusChanged && $newStatus === PaymentStatus::Paid) {
+            $this->confirmRentalIfFirstPayment($payment);
+        }
 
-            // refund, partial_refund = refunded (§5.2)
-            in_array($transactionStatus, ['refund', 'partial_refund'], true) => 'refunded',
+        return $payment;
+    }
 
-            // pending → tidak ada perubahan internal (§5.1)
+    /**
+     * transaction_status Midtrans → status internal (§5.2).
+     * null = tidak ada perubahan (pending, atau capture+challenge).
+     */
+    private function mapMidtransStatus(string $transactionStatus, ?string $fraudStatus): ?PaymentStatus
+    {
+        return match ($transactionStatus) {
+            'settlement' => PaymentStatus::Paid,
+            'capture' => match ($fraudStatus) {
+                'accept' => PaymentStatus::Paid,
+                'deny' => PaymentStatus::Failed,
+                default => null, // challenge → tetap pending
+            },
+            'expire' => PaymentStatus::Expired,
+            'cancel' => PaymentStatus::Cancelled,
+            'deny', 'failure' => PaymentStatus::Failed,
+            'refund', 'partial_refund' => PaymentStatus::Refunded,
             default => null,
         };
     }
 
     /**
-     * Terapkan transisi status (hanya maju, idempotent) (§5.1).
-     *
-     * Mengembalikan true jika status benar-benar berubah.
-     */
-    private function applyStatusTransition(Payment $payment, string $newStatus, array $notification): bool
-    {
-        // Urutan kemajuan status
-        $statusOrder = ['pending' => 0, 'paid' => 1, 'expired' => 2, 'cancelled' => 2, 'failed' => 2, 'refunded' => 3];
-        $currentRank = $statusOrder[$payment->status] ?? -1;
-        $newRank = $statusOrder[$newStatus] ?? -1;
-
-        // Status sudah sama atau lebih maju → idempotent, abaikan (§7.3 langkah 6)
-        if ($newRank <= $currentRank && $payment->status !== 'pending') {
-            return false;
-        }
-
-        // Status sudah final (bukan pending) → jangan turunkan (§5.1)
-        if (in_array($payment->status, ['paid', 'expired', 'cancelled', 'failed'], true)
-            && $newStatus !== 'refunded') {
-            return false;
-        }
-
-        $payment->status = $newStatus;
-
-        if ($newStatus === 'paid') {
-            $payment->paid_at ??= now();
-        }
-
-        return true;
-    }
-
-    /**
-     * Konfirmasi rental menjadi 'confirmed' saat pembayaran pertama berhasil (§5.4, §7.3).
-     *
-     * Rental hanya perlu dikonfirmasi sekali (dari status pending_payment / pending).
-     * Menggunakan lockForUpdate agar tidak ada race condition saat webhook diterima ganda.
+     * Rental → 'confirmed' saat pembayaran paid pertama (§5.4, §7.3).
+     * Rental di-lock agar webhook ganda tidak race.
      */
     private function confirmRentalIfFirstPayment(Payment $payment): void
     {
         /** @var Rental|null $rental */
-        $rental = Rental::query()
-            ->where('id', $payment->rental_id)
-            ->lockForUpdate()
-            ->first();
+        $rental = Rental::query()->lockForUpdate()->find($payment->rental_id);
 
-        if ($rental === null) {
+        if ($rental?->status !== 'pending') {
             return;
         }
 
-        // Hanya konfirmasi jika rental masih pending (belum dikonfirmasi oleh webhook sebelumnya)
-        if ($rental->status !== 'pending') {
-            return;
-        }
-
-        // Konfirmasi jika ini pembayaran paid pertama (count setelah save = 1)
         $paidCount = Payment::query()
             ->where('rental_id', $rental->id)
-            ->where('status', 'paid')
+            ->where('status', PaymentStatus::Paid->value)
             ->count();
 
         if ($paidCount === 1) {
@@ -380,75 +336,144 @@ class MidtransService
     }
 
     /**
-     * Bangun item_details untuk Snap (§7.2).
+     * Nominal notifikasi harus sama dengan nominal payment (§7.3 langkah 5).
      *
-     * Total item_details HARUS sama dengan gross_amount (validasi Midtrans).
+     * @param  array<string, string>  $notification
+     *
+     * @throws InvalidArgumentException
      */
-    private function buildItemDetails(Payment $payment, ?Rental $rental): array
+    private function assertAmountMatches(Payment $payment, array $notification): void
+    {
+        $paymentAmount = self::normalizeAmount((string) $payment->amount);
+        $notificationAmount = self::normalizeAmount((string) $notification['gross_amount']);
+
+        if ($paymentAmount !== null && $paymentAmount === $notificationAmount) {
+            return;
+        }
+
+        Log::warning('Midtrans webhook: nominal tidak cocok.', [
+            'order_id' => $notification['order_id'],
+            'payment_amount' => $payment->amount,
+            'notification_amount' => $notification['gross_amount'],
+        ]);
+
+        throw new InvalidArgumentException('The notification amount does not match the payment amount.');
+    }
+
+    /**
+     * Normalisasi nominal untuk perbandingan (mencegah mismatch float).
+     */
+    private static function normalizeAmount(string $amount): ?string
+    {
+        if (! preg_match('/\A\d+(?:\.\d{1,2})?\z/', $amount)) {
+            return null;
+        }
+
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
+
+        return (ltrim($whole, '0') ?: '0').'.'.str_pad($fraction, 2, '0');
+    }
+
+    // ── Internal: payload Midtrans ────────────────────────────────────────────
+
+    private function rentalFor(Payment $payment): Rental
+    {
+        $payment->loadMissing(['rental.details.masterItem', 'rental.customer']);
+
+        return $payment->rental;
+    }
+
+    /**
+     * Blok 'expiry' Snap dari sisa waktu rental; null jika tidak ada/sudah lewat.
+     *
+     * @return array{start_time: string, unit: string, duration: int}|null
+     */
+    private function snapExpiry(Rental $rental): ?array
+    {
+        if (! $rental->expires_at) {
+            return null;
+        }
+
+        $minutes = (int) now()->diffInMinutes($rental->expires_at, false);
+
+        if ($minutes <= 0) {
+            return null;
+        }
+
+        return [
+            'start_time' => now()->format('Y-m-d H:i:s O'),
+            'unit' => 'minutes',
+            'duration' => $minutes,
+        ];
+    }
+
+    /**
+     * item_details Snap (§7.2). Total HARUS sama dengan gross_amount (validasi Midtrans).
+     */
+    private function buildItemDetails(Payment $payment, Rental $rental): array
     {
         $amount = (int) $payment->amount;
+        $code = $rental->booking_code;
 
-        // DP: cukup satu baris ringkas (§7.2)
         if ($payment->payment_type === 'dp') {
             $dpPct = (int) config('payment.dp_percentage', 50);
 
             return [[
-                'id' => "DP-{$rental?->booking_code}",
+                'id' => "DP-{$code}",
                 'price' => $amount,
                 'quantity' => 1,
-                'name' => "DP {$dpPct}% Sewa {$rental?->booking_code}",
+                'name' => "DP {$dpPct}% Sewa {$code}",
             ]];
         }
 
-        // Full / remaining / fine: rincian per item (jika relasi tersedia)
-        if ($rental?->details && $rental->details->isNotEmpty() && $payment->payment_type === 'full') {
-            $items = $rental->details->map(fn ($detail) => [
-                'id' => "ITEM-{$detail->master_item_id}",
-                'price' => (int) $detail->daily_rate_snapshot,
-                'quantity' => $rental->rental_days,
-                'name' => $detail->masterItem?->name ?? "Item #{$detail->master_item_id}",
-            ])->toArray();
-
-            // Rekonsiliasi total agar selalu sama dengan gross_amount
-            $itemTotal = array_sum(array_map(
-                fn ($item) => $item['price'] * $item['quantity'],
-                $items
-            ));
-            $diff = $amount - $itemTotal;
-            if ($diff !== 0 && ! empty($items)) {
-                $items[] = [
-                    'id' => 'ADJ',
-                    'price' => $diff,
-                    'quantity' => 1,
-                    'name' => 'Penyesuaian Harga',
-                ];
-            }
-
-            return $items;
+        if ($payment->payment_type === 'full' && $rental->details->isNotEmpty()) {
+            return $this->itemizedDetails($rental, $amount);
         }
 
-        // Fallback: satu baris
         return [[
             'id' => "PAY-{$payment->getKey()}",
             'price' => $amount,
             'quantity' => 1,
             'name' => match ($payment->payment_type) {
-                'remaining' => "Pelunasan Sewa {$rental?->booking_code}",
-                'fine' => "Denda Sewa {$rental?->booking_code}",
-                default => "Pembayaran Sewa {$rental?->booking_code}",
+                'remaining' => "Pelunasan Sewa {$code}",
+                'fine' => "Denda Sewa {$code}",
+                default => "Pembayaran Sewa {$code}",
             },
         ]];
     }
 
     /**
-     * Bangun customer_details untuk Snap (§7.2).
+     * Rincian per item + baris penyesuaian agar total = gross_amount.
      */
-    private function buildCustomerDetails(?Rental $rental): array
+    private function itemizedDetails(Rental $rental, int $amount): array
     {
-        if ($rental === null) {
-            return [];
+        $items = $rental->details->map(fn ($detail) => [
+            'id' => "ITEM-{$detail->master_item_id}",
+            'price' => (int) $detail->daily_rate_snapshot,
+            'quantity' => $rental->rental_days,
+            'name' => $detail->masterItem?->name ?? "Item #{$detail->master_item_id}",
+        ])->all();
+
+        $itemTotal = array_sum(array_map(fn ($item) => $item['price'] * $item['quantity'], $items));
+        $diff = $amount - $itemTotal;
+
+        if ($diff !== 0) {
+            $items[] = [
+                'id' => 'ADJ',
+                'price' => $diff,
+                'quantity' => 1,
+                'name' => 'Penyesuaian Harga',
+            ];
         }
 
+        return $items;
+    }
+
+    /**
+     * customer_details Snap/Core API (§7.2).
+     */
+    private function buildCustomerDetails(Rental $rental): array
+    {
         if ($rental->isGuest()) {
             return [
                 'first_name' => $rental->guest_name ?? 'Tamu',
@@ -463,97 +488,5 @@ class MidtransService
             'email' => $customer?->email ?? '',
             'phone' => $customer?->phone ?? '',
         ];
-    }
-
-        /**
-     * Generate nomor Virtual Account resmi dari Midtrans Sandbox via Core API (tanpa Snap pop-up).
-     *
-     * @param Payment $payment
-     * @param string $bank 'bca', 'bni', 'bri', 'mandiri', 'permata'
-     * @return array{bank: string, va_number: string, biller_code: ?string, qr_code_url: ?string}|null
-     */
-    public function chargeBankTransfer(Payment $payment, string $bank = 'bca'): ?array
-    {
-        $bank = strtolower(trim($bank ?: 'bca'));
-        $amount = (int) $payment->amount;
-        $rental = $payment->rental;
-
-        // Jika transaksi ini sudah memiliki nomor VA untuk bank yang sama dan masih pending, langsung kembalikan
-        if ($payment->raw_notification && ! empty($payment->va_details)) {
-            $existingBank = strtolower($payment->va_details['bank'] ?? '');
-            if ($existingBank === $bank) {
-                return $payment->va_details;
-            }
-
-            // Jika user memilih bank berbeda di dropdown, Midtrans tidak membolehkan charge ulang dengan order_id yang sama.
-            // Buat order_id baru dengan suffix unik agar Midtrans Sandbox menerima charge bank baru:
-            $baseOrderId = explode('-', $payment->order_id)[0];
-            $payment->order_id = $baseOrderId . '-' . substr(str_shuffle('123456789'), 0, 3);
-            $payment->save();
-        }
-
-        $params = [
-            'transaction_details' => [
-                'order_id' => $payment->order_id,
-                'gross_amount' => $amount,
-            ],
-            'customer_details' => $this->buildCustomerDetails($rental),
-            'item_details' => $this->buildItemDetails($payment, $rental),
-        ];
-
-        if ($bank === 'mandiri') {
-            $params['payment_type'] = 'echannel';
-            $params['echannel'] = [
-                'bill_info1' => 'Pembayaran Sewa',
-                'bill_info2' => 'Tendaku #' . ($rental?->booking_code ?? ''),
-            ];
-        } else {
-            $params['payment_type'] = 'bank_transfer';
-            $params['bank_transfer'] = [
-                'bank' => $bank,
-            ];
-        }
-
-        // Samakan masa berlaku VA dengan batas bayar rental
-        if ($payment->expires_at && $payment->expires_at->isFuture()) {
-            $params['custom_expiry'] = [
-                'expiry_duration' => max(1, (int) floor(now()->diffInMinutes($payment->expires_at))),
-                'unit' => 'minute',
-            ];
-        }
-
-        try {
-            $response = \Midtrans\CoreApi::charge($params);
-            $raw = json_decode(json_encode($response), true);
-
-            $payment->update([
-                'midtrans_transaction_id' => $raw['transaction_id'] ?? $payment->midtrans_transaction_id,
-                'midtrans_status' => $raw['transaction_status'] ?? 'pending',
-                'method' => $bank === 'mandiri' ? 'echannel' : 'va_' . $bank,
-                'raw_notification' => $raw,
-            ]);
-
-            return $payment->fresh()->va_details;
-        } catch (\Throwable $e) {
-            Log::error('Midtrans CoreApi Charge error: ' . $e->getMessage(), [
-                'order_id' => $payment->order_id,
-                'bank' => $bank,
-            ]);
-            throw $e;
-        }
-    }
-
-    /**
-     * Normalisasi nominal ke format standar untuk perbandingan (mencegah mismatch float).
-     */
-    private static function normalizeAmount(string $amount): ?string
-    {
-        if (! preg_match('/\A\d+(?:\.\d{1,2})?\z/', $amount)) {
-            return null;
-        }
-
-        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
-
-        return (ltrim($whole, '0') ?: '0').'.'.str_pad($fraction, 2, '0');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentStatus;
 use App\Traits\BelongsToVendor;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -101,6 +102,29 @@ class Payment extends Model
         }
 
         return null;
+    }
+
+    // ── Status ────────────────────────────────────────────────────────────────
+
+    /**
+     * Pindah ke status baru jika transisinya valid (lihat PaymentStatus).
+     * Tidak menyimpan ke DB; caller yang memanggil save().
+     *
+     * @return bool true jika status berubah, false jika diabaikan (idempotent)
+     */
+    public function transitionTo(PaymentStatus $next): bool
+    {
+        if (! PaymentStatus::from($this->status)->canTransitionTo($next)) {
+            return false;
+        }
+
+        $this->status = $next->value;
+
+        if ($next === PaymentStatus::Paid) {
+            $this->paid_at ??= now();
+        }
+
+        return true;
     }
 
     // ── Scopes ───────────────────────────────────────────────────────────────

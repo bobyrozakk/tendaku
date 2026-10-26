@@ -2,77 +2,41 @@
 
 namespace App\Services;
 
+use App\Enums\PaymentStatus;
 use App\Models\Payment;
 use App\Models\Rental;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
 
-/**
- * Menangani logika pembayaran: kalkulasi nominal, pembuatan payment record,
- * pembuatan order_id, dan transisi status (hanya maju, tidak mundur).
- *
- * @see docs/TENDAKU_payment_spec.md §7.1, §4.3, §5.1, §7.2
- */
 class PaymentService
 {
-    /**
-     * Persen DP default (D4 — belum final, diatur dari config agar mudah diubah).
-     * Gunakan config('payment.dp_percentage', 50) di produksi.
-     */
+    //  persen DP dari grand_total.
     public function defaultDpPercentage(): int
     {
         return (int) config('payment.dp_percentage', 50);
     }
 
-    /**
-     * Hitung nominal DP berdasarkan grand_total rental.
-     * Dibulatkan ke atas agar selalu bilangan bulat (rupiah).
-     */
+    //  Nominal DP, dibulatkan ke atas agar selalu bilangan bulat rupiah.
     public function calculateDpAmount(int $grandTotal): int
     {
-        $percentage = $this->defaultDpPercentage();
-
-        return (int) ceil($grandTotal * $percentage / 100);
+        return (int) ceil($grandTotal * $this->defaultDpPercentage() / 100);
     }
 
-    /**
-     * Kalkulasi biaya admin (platform_fee) per pembayaran online.
-     *
-     * Rumus: rate% dari amount, minimum Rp1.000, maks tidak melebihi amount (§4.10, D1).
-     * Fee hanya dikenakan pada pembayaran online PERTAMA per rental (D3).
-     */
+    //  Biaya admin (platform_fee) per pembayaran online.
     public function calculatePlatformFee(int $amount): int
     {
         $feeRate = (float) config('payment.platform_fee_rate', 0.02);
         $feeMin = (int) config('payment.platform_fee_min', 1000);
 
-        $fee = (int) ceil($amount * $feeRate);
-        $fee = max($fee, $feeMin);
+        $fee = max((int) ceil($amount * $feeRate), $feeMin);
 
         return min($fee, $amount);
     }
 
-    /**
-     * Apakah rental sudah pernah punya pembayaran online yang berhasil (paid)?
-     * Digunakan untuk fee sekali per rental (D3).
-     */
-    private function rentalHasFirstOnlinePayment(Rental $rental): bool
-    {
-        return $rental->payments()
-            ->where('status', 'paid')
-            ->where('channel', 'midtrans')
-            ->exists();
-    }
-
-    /**   Buat order_id Midtrans yang unik dengan prefix TDK-.
-     *     'full'      => '1', fULL
-     *     'dp'        => '2', dP
-     *     'remaining' => '3', pelunasan
-     *     'fine'      => '4', denda
-     */
+    //  order_id Midtrans unik berprefix TDK.
+    //  Digit tipe: full=1, dp=2, remaining=3, fine=4, lainnya=9.
     public function generateOrderId(string $bookingCode, string $paymentType, int $attempt = 1): string
     {
         $cleanCode = str_replace(['TDK-', 'TDK'], '', strtoupper($bookingCode));
@@ -88,17 +52,14 @@ class PaymentService
             default => '9',
         };
 
-        $orderId = "TDK{$datePart}{$typeNumber}{$seqPart}-{$attempt}";
-
-        return $orderId;
+        return "TDK{$datePart}{$typeNumber}{$seqPart}-{$attempt}";
     }
 
+    // ── Pembayaran online (Midtrans) ──────────────────────────────────────────
+
     /**
-     * Buat payment record baru untuk pembayaran via Midtrans (full atau DP).
-     *
-     * Nominal dihitung di sini (server-side), tidak dari input browser (§0).
-     * Status awal selalu 'pending' (§5.1).
-     *
+     * Payment pending untuk bayar penuh atau DP.
+     * Nominal dihitung di server, tidak dari input browser.
      * @param  'full'|'dp'  $paymentType
      */
     public function createOnlinePayment(
@@ -112,188 +73,78 @@ class PaymentService
         }
 
         $grandTotal = (int) $rental->grand_total;
-
-        if ($paymentType === 'dp') {
-            $amount = $this->calculateDpAmount($grandTotal);
-            // Simpan DP amount ke rental
-            $rental->update(['dp_amount' => $amount]);
-        } else {
-            $amount = $grandTotal;
-        }
+        $amount = $paymentType === 'dp' ? $this->calculateDpAmount($grandTotal) : $grandTotal;
 
         if ($amount <= 0) {
             throw new RuntimeException('Nominal pembayaran harus lebih dari 0.');
         }
 
-        $orderId = $this->generateOrderId($rental->booking_code, $paymentType, $attempt);
+        if ($paymentType === 'dp') {
+            $rental->update(['dp_amount' => $amount]);
+        }
 
-        // Fee hanya dari pembayaran online pertama per rental (D3 - contract.md §4.10)
-        $platformFee = $this->rentalHasFirstOnlinePayment($rental)
-            ? 0
-            : $this->calculatePlatformFee($amount);
-
-        return $rental->payments()->create([
-            'vendor_id' => $rental->vendor_id,
-            'payment_type' => $paymentType,
-            'channel' => 'midtrans',
+        return $this->createMidtransPayment($rental, $paymentType, $amount, $attempt, [
             'method' => $method,
-            'amount' => $amount,
-            'order_id' => $orderId,
-            'platform_fee' => $platformFee,
-            'status' => 'pending',
             'expires_at' => $rental->expires_at,
         ]);
     }
 
-    /**
-     * Hitung sisa tagihan yang belum dibayar untuk rental (grand_total - total paid).
-     */
-    public function calculateRemainingAmount(Rental $rental): int
-    {
-        $grandTotal = (int) $rental->grand_total;
-        $paidSoFar = (int) $rental->payments()
-            ->where('status', 'paid')
-            ->whereIn('payment_type', ['dp', 'full'])
-            ->sum('amount');
-
-        return max(0, $grandTotal - $paidSoFar);
-    }
-
-    /**
-     * Buat payment record untuk pelunasan sisa (remaining) di kasir via QRIS.
-     * Digunakan oleh FinePaymentController / kasir endpoint.
-     */
+    //  Payment pending untuk pelunasan sisa via Midtrans.
     public function createRemainingPayment(Rental $rental, int $attempt = 1): Payment
     {
-        $remaining = $this->calculateRemainingAmount($rental);
-
-        if ($remaining <= 0) {
-            throw new RuntimeException('Tidak ada sisa yang perlu dilunasi.');
-        }
-
-        $orderId = $this->generateOrderId($rental->booking_code, 'remaining', $attempt);
-        $platformFee = $this->rentalHasFirstOnlinePayment($rental)
-            ? 0
-            : $this->calculatePlatformFee($remaining);
-
-        return $rental->payments()->create([
-            'vendor_id' => $rental->vendor_id,
-            'payment_type' => 'remaining',
-            'channel' => 'midtrans',
-            'amount' => $remaining,
-            'order_id' => $orderId,
-            'platform_fee' => $platformFee,
-            'status' => 'pending',
-        ]);
+        return $this->createMidtransPayment(
+            $rental, 'remaining', $this->remainingAmountOrFail($rental), $attempt
+        );
     }
 
-    /**
-     * Buat payment record untuk pelunasan sisa secara tunai (kasir).
-     *
-     * Tunai → langsung ke vendor, tidak masuk payout platform (§4.2).
-     */
+    //  Payment pending untuk denda via Midtrans.
+    public function createOnlineFinePayment(Rental $rental, int $fineAmount, int $attempt = 1): Payment
+    {
+        $this->assertFineAmount($fineAmount);
+
+        return $this->createMidtransPayment($rental, 'fine', $fineAmount, $attempt);
+    }
+
+    // ── Pembayaran tunai (kasir)
+
     public function createCashRemainingPayment(Rental $rental, int $receivedBy): Payment
     {
-        $remaining = $this->calculateRemainingAmount($rental);
-
-        if ($remaining <= 0) {
-            throw new RuntimeException('Tidak ada sisa yang perlu dilunasi.');
-        }
-
-        return $rental->payments()->create([
-            'vendor_id' => $rental->vendor_id,
-            'payment_type' => 'remaining',
-            'channel' => 'cash',
-            'method' => 'cash',
-            'amount' => $remaining,
-            'platform_fee' => 0,           // tunai tidak masuk platform (§4.2)
-            'status' => 'paid',      // tunai langsung lunas setelah kasir konfirmasi
-            'paid_at' => now(),
-            'received_by' => $receivedBy,
-        ]);
+        return $this->createCashPayment(
+            $rental, 'remaining', $this->remainingAmountOrFail($rental), $receivedBy
+        );
     }
 
     /**
-     * Buat payment record denda tunai (kasir).
-     * Fine tunai → langsung ke vendor, tidak ikut payout (§4.2).
+     * Denda tunai. Langsung ke vendor, tidak ikut payout.
      */
     public function createCashFinePayment(Rental $rental, int $fineAmount, int $receivedBy): Payment
     {
-        if ($fineAmount <= 0) {
-            throw new InvalidArgumentException('Nominal denda harus lebih dari 0.');
-        }
+        $this->assertFineAmount($fineAmount);
 
-        return $rental->payments()->create([
-            'vendor_id' => $rental->vendor_id,
-            'payment_type' => 'fine',
-            'channel' => 'cash',
-            'method' => 'cash',
-            'amount' => $fineAmount,
-            'platform_fee' => 0,
-            'status' => 'paid',
-            'paid_at' => now(),
-            'received_by' => $receivedBy,
-        ]);
+        return $this->createCashPayment($rental, 'fine', $fineAmount, $receivedBy);
     }
 
     /**
-     * Buat payment record denda via QRIS (kasir).
-     * Fine QRIS → masuk platform, ikut payout (§4.2).
-     *
-     * @param  'fine'  $type
+     * Sisa tagihan = grand_total - total dp/full yang sudah paid.
      */
-    public function createOnlineFinePayment(Rental $rental, int $fineAmount, int $attempt = 1): Payment
+    public function calculateRemainingAmount(Rental $rental): int
     {
-        if ($fineAmount <= 0) {
-            throw new InvalidArgumentException('Nominal denda harus lebih dari 0.');
-        }
+        $paidSoFar = (int) $rental->payments()
+            ->where('status', PaymentStatus::Paid->value)
+            ->whereIn('payment_type', ['dp', 'full'])
+            ->sum('amount');
 
-        $orderId = $this->generateOrderId($rental->booking_code, 'fine', $attempt);
-        $platformFee = $this->rentalHasFirstOnlinePayment($rental)
-            ? 0
-            : $this->calculatePlatformFee($fineAmount);
-
-        return $rental->payments()->create([
-            'vendor_id' => $rental->vendor_id,
-            'payment_type' => 'fine',
-            'channel' => 'midtrans',
-            'amount' => $fineAmount,
-            'order_id' => $orderId,
-            'platform_fee' => $platformFee,
-            'status' => 'pending',
-        ]);
+        return max(0, (int) $rental->grand_total - $paidSoFar);
     }
 
     /**
-     * Transisi status payment (hanya maju, tidak bisa mundur) (§5.1).
-     *
-     * Urutan maju: pending → paid → refunded
-     *              pending → expired / cancelled / failed (final)
-     *
-     * Mengembalikan true jika status berubah, false jika sudah lebih maju (idempotent).
+     * Transisi status payment dan simpan (lihat PaymentStatus).
+     * @return bool true jika status berubah, false jika diabaikan (idempotent)
      */
     public function advanceStatus(Payment $payment, string $newStatus): bool
     {
-        $order = ['pending' => 0, 'paid' => 1, 'expired' => 2, 'cancelled' => 2, 'failed' => 2, 'refunded' => 3];
-
-        $currentRank = $order[$payment->status] ?? 0;
-        $newRank = $order[$newStatus] ?? 0;
-
-        // Tidak boleh mundur; jika sama, idempotent (tidak ubah, kembalikan false)
-        if ($newRank <= $currentRank && $payment->status !== 'pending') {
+        if (! $payment->transitionTo(PaymentStatus::from($newStatus))) {
             return false;
-        }
-
-        // Bila status sudah final (bukan pending), tolak perubahan
-        if (in_array($payment->status, ['paid', 'expired', 'cancelled', 'failed', 'refunded'], true)
-            && $newStatus !== 'refunded') {
-            return false;
-        }
-
-        $payment->status = $newStatus;
-
-        if ($newStatus === 'paid') {
-            $payment->paid_at ??= now();
         }
 
         $payment->save();
@@ -301,38 +152,17 @@ class PaymentService
         return true;
     }
 
-    /**
-     * Sumber data untuk payoutEligible (kontrak ke Boby, §9).
-     *
-     * Kriteria:
-     * - status = paid
-     * - channel = midtrans
-     * - vendor_payout_id IS NULL (belum dicairkan)
-     * - rental.status = picked_up (layak cair)
-     *
-     * Dipakai Boby untuk menghitung dana yang siap dicairkan.
-     */
-    public function payoutEligibleQuery(): Builder
-    {
-        return Payment::query()
-            ->where('payments.status', 'paid')
-            ->where('payments.channel', 'midtrans')
-            ->whereNull('payments.vendor_payout_id')
-            ->whereHas('rental', fn ($q) => $q->where('status', 'picked_up'));
-    }
+    // ── Payout ────────────────────────────────────────────────────────────────
 
     /**
-     * Hitung ringkasan dana layak cair per vendor.
-     *
-     * Mengembalikan array ['vendor_id', 'dana_vendor', 'biaya_admin', 'net_payout'].
-     *
+     * Ringkasan dana layak cair per vendor.
      * @return Collection<int, object{vendor_id: int, dana_vendor: int, biaya_admin: int, net_payout: int}>
      */
     public function payoutEligibleSummary(): Collection
     {
         return DB::table('payments')
             ->join('rentals', 'payments.rental_id', '=', 'rentals.id')
-            ->where('payments.status', 'paid')
+            ->where('payments.status', PaymentStatus::Paid->value)
             ->where('payments.channel', 'midtrans')
             ->whereNull('payments.vendor_payout_id')
             ->where('rentals.status', 'picked_up')
@@ -347,10 +177,8 @@ class PaymentService
     }
 
     /**
-     * Tandai payments sebagai bagian dari payout (dalam transaksi DB, §9).
-     *
-     * Harus dipanggil dalam DB::transaction() oleh kode pencairan Boby.
-     *
+     * Tandai payments sebagai bagian dari payout.
+     * Harus dipanggil di dalam DB::transaction() oleh kode pencairan.
      * @param  array<int>  $paymentIds
      */
     public function markPaymentsAsPaidOut(array $paymentIds, int $vendorPayoutId): void
@@ -363,5 +191,71 @@ class PaymentService
             ->whereIn('id', $paymentIds)
             ->whereNull('vendor_payout_id')
             ->update(['vendor_payout_id' => $vendorPayoutId]);
+    }
+
+    // ── Internal ──────────────────────────────────────────────────────────────
+
+    /**
+     * @param  array<string, mixed>  $extra  atribut tambahan (mis. method, expires_at)
+     */
+    private function createMidtransPayment(
+        Rental $rental,
+        string $paymentType,
+        int $amount,
+        int $attempt,
+        array $extra = []
+    ): Payment {
+        return $rental->payments()->create([
+            'vendor_id' => $rental->vendor_id,
+            'payment_type' => $paymentType,
+            'channel' => 'midtrans',
+            'amount' => $amount,
+            'order_id' => $this->generateOrderId($rental->booking_code, $paymentType, $attempt),
+            'platform_fee' => $this->rentalHasFirstOnlinePayment($rental) ? 0 : $this->calculatePlatformFee($amount),
+            'status' => PaymentStatus::Pending->value,
+        ] + $extra);
+    }
+
+    //  Tunai langsung lunas setelah kasir konfirmasi; tidak kena platform fee
+    private function createCashPayment(Rental $rental, string $paymentType, int $amount, int $receivedBy): Payment
+    {
+        return $rental->payments()->create([
+            'vendor_id' => $rental->vendor_id,
+            'payment_type' => $paymentType,
+            'channel' => 'cash',
+            'method' => 'cash',
+            'amount' => $amount,
+            'platform_fee' => 0,
+            'status' => PaymentStatus::Paid->value,
+            'paid_at' => now(),
+            'received_by' => $receivedBy,
+        ]);
+    }
+
+    //  Fee hanya untuk pembayaran online pertama yang berhasil per rental
+    private function rentalHasFirstOnlinePayment(Rental $rental): bool
+    {
+        return $rental->payments()
+            ->where('status', PaymentStatus::Paid->value)
+            ->where('channel', 'midtrans')
+            ->exists();
+    }
+
+    private function remainingAmountOrFail(Rental $rental): int
+    {
+        $remaining = $this->calculateRemainingAmount($rental);
+
+        if ($remaining <= 0) {
+            throw new RuntimeException('Tidak ada sisa yang perlu dilunasi.');
+        }
+
+        return $remaining;
+    }
+
+    private function assertFineAmount(int $fineAmount): void
+    {
+        if ($fineAmount <= 0) {
+            throw new InvalidArgumentException('Nominal denda harus lebih dari 0.');
+        }
     }
 }

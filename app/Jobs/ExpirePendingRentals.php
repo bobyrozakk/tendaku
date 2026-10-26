@@ -55,8 +55,10 @@ class ExpirePendingRentals implements ShouldQueue
                 ]);
 
             // Expire rental
+            // Guard status: rental yang baru dikonfirmasi webhook di antara SELECT dan UPDATE tidak boleh ditimpa
             $count = Rental::query()
                 ->whereIn('id', $expiredRentalIds)
+                ->where('status', 'pending')
                 ->update([
                     'status' => 'expired',
                     'updated_at' => $now,
