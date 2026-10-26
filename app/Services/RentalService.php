@@ -75,8 +75,24 @@ class RentalService
             }
         }
 
-        [$pickupDate, $returnDate] = $this->parseRentalDates($data['pickup_date'], $data['return_date']);
-        $rentalDays = max(1, (int) $pickupDate->diffInDays($returnDate) + 1);
+        [$pickupDate, $returnDate] = $this->parseRentalDateTime(
+            $data['pickup_date'],
+            $data['return_date'],
+            $data['pickup_time'] ?? null,
+            $data['return_time'] ?? null
+        );
+
+        $hours = $pickupDate->floatDiffInHours($returnDate, false);
+        if ($hours < 0) {
+            throw new InvalidArgumentException("Tanggal pengembalian ({$returnDate->format('Y-m-d H:i')}) tidak boleh lebih awal dari tanggal pengambilan ({$pickupDate->format('Y-m-d H:i')}).");
+        }
+
+        // Durasi sewa 1 hari = 24 jam penuh sejak waktu pengambilan barang.
+        // Jika <= 24 jam (misal 24 jam pas atau kurang), dihitung 1 hari.
+        // Jika > 24 jam, dihitung pembulatan ke atas (ceil) per 24 jam.
+        $rentalDays = isset($data['rental_days']) && (int) $data['rental_days'] > 0
+            ? (int) $data['rental_days']
+            : max(1, (int) ceil($hours / 24));
 
         // Normalize dan ekstrak item list
         $itemRequirements = [];
@@ -132,7 +148,7 @@ class RentalService
             foreach ($itemRequirements as $masterItemId => $quantity) {
                 $masterItem = $masterItems->get($masterItemId);
 
-                if (! $this->availabilityService->isAvailable($masterItemId, $quantity, $pickupDate, $returnDate)) {
+                if (! $this->availabilityService->isAvailable($masterItemId, $quantity, $pickupDate->toDateString(), $returnDate->toDateString())) {
                     throw new InsufficientStockException(
                         $masterItem,
                         "Stok alat camping '{$masterItem->name}' tidak mencukupi untuk tanggal {$pickupDate->format('d M Y')} s/d {$returnDate->format('d M Y')}."
@@ -167,7 +183,16 @@ class RentalService
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
             $grandTotal = max(0.0, $subtotal + $deliveryFee - $discountAmount);
 
-            $expiresInHours = (int) ($data['expires_in_hours'] ?? 2);
+            if (isset($data['expires_at'])) {
+                $expiresAt = Carbon::parse($data['expires_at']);
+            } elseif (isset($data['expires_in_minutes'])) {
+                $expiresAt = Carbon::now()->addMinutes((int) $data['expires_in_minutes']);
+            } elseif (isset($data['expires_in_hours'])) {
+                $expiresAt = Carbon::now()->addHours((int) $data['expires_in_hours']);
+            } else {
+                $expiresAt = Carbon::now()->addMinutes(5); // Default 5 menit
+            }
+
             $bookingCode = $this->generateBookingCode();
 
             $rental = Rental::query()->create([
@@ -179,7 +204,9 @@ class RentalService
                 'guest_phone' => $isGuest ? ($data['guest_phone'] ?? null) : null,
                 'guest_id_number' => $isGuest ? ($data['guest_id_number'] ?? null) : null,
                 'pickup_date' => $pickupDate->format('Y-m-d'),
+                'pickup_time' => $pickupDate->format('H:i:s'),
                 'return_date' => $returnDate->format('Y-m-d'),
+                'return_time' => $returnDate->format('H:i:s'),
                 'pickup_method' => $pickupMethod,
                 'delivery_address' => $pickupMethod === 'delivery' ? ($data['delivery_address'] ?? null) : null,
                 'rental_days' => $rentalDays,
@@ -191,7 +218,7 @@ class RentalService
                 'grand_total' => $grandTotal,
                 'ktp_collateral_status' => 'pending',
                 'status' => 'pending',
-                'expires_at' => Carbon::now()->addHours($expiresInHours),
+                'expires_at' => $expiresAt,
                 'notes' => $data['notes'] ?? null,
             ]);
 
@@ -427,19 +454,56 @@ class RentalService
     }
 
     /**
-     * Parse dan validasi rentang tanggal sewa.
+     * Parse dan validasi rentang tanggal dan waktu sewa lengkap.
      *
      * @return array{0: Carbon, 1: Carbon}
      */
-    private function parseRentalDates(string|DateTimeInterface $pickupDate, string|DateTimeInterface $returnDate): array
-    {
-        $start = Carbon::parse($pickupDate)->startOfDay();
-        $end = Carbon::parse($returnDate)->startOfDay();
+    public function parseRentalDateTime(
+        string|DateTimeInterface $pickupDate,
+        string|DateTimeInterface $returnDate,
+        ?string $pickupTime = null,
+        ?string $returnTime = null
+    ): array {
+        $pickupStr = $pickupDate instanceof DateTimeInterface ? $pickupDate->format('Y-m-d H:i:s') : (string) $pickupDate;
+        $returnStr = $returnDate instanceof DateTimeInterface ? $returnDate->format('Y-m-d H:i:s') : (string) $returnDate;
+
+        $hasPickupTimeInStr = preg_match('/\d{1,2}:\d{2}/', $pickupStr) === 1;
+        $hasReturnTimeInStr = preg_match('/\d{1,2}:\d{2}/', $returnStr) === 1;
+
+        if ($hasPickupTimeInStr) {
+            $start = Carbon::parse($pickupStr);
+        } elseif ($pickupTime !== null && trim($pickupTime) !== '') {
+            $start = Carbon::parse(explode(' ', $pickupStr)[0].' '.trim($pickupTime));
+        } else {
+            $start = Carbon::parse($pickupStr)->startOfDay();
+        }
+
+        if ($hasReturnTimeInStr) {
+            $end = Carbon::parse($returnStr);
+        } elseif ($returnTime !== null && trim($returnTime) !== '') {
+            $end = Carbon::parse(explode(' ', $returnStr)[0].' '.trim($returnTime));
+        } else {
+            if ($hasPickupTimeInStr || ($pickupTime !== null && trim($pickupTime) !== '')) {
+                $end = Carbon::parse(explode(' ', $returnStr)[0].' '.$start->format('H:i:s'));
+            } else {
+                $end = Carbon::parse($returnStr)->startOfDay();
+            }
+        }
 
         if ($end->lt($start)) {
-            throw new InvalidArgumentException("Tanggal pengembalian ({$end->format('Y-m-d')}) tidak boleh lebih awal dari tanggal pengambilan ({$start->format('Y-m-d')}).");
+            throw new InvalidArgumentException("Tanggal pengembalian ({$end->format('Y-m-d H:i')}) tidak boleh lebih awal dari tanggal pengambilan ({$start->format('Y-m-d H:i')}).");
         }
 
         return [$start, $end];
+    }
+
+    /**
+     * Parse dan validasi rentang tanggal sewa (kompatibilitas backward).
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    public function parseRentalDates(string|DateTimeInterface $pickupDate, string|DateTimeInterface $returnDate): array
+    {
+        return $this->parseRentalDateTime($pickupDate, $returnDate);
     }
 }

@@ -141,7 +141,7 @@ class PackageCheckoutTest extends TestCase
         $this->assertSame('Budi Santoso', $rental->guest_name);
         $this->assertSame($this->vendor->id, $rental->vendor_id);
         $this->assertSame($pickupDate->toDateString(), $rental->pickup_date->toDateString());
-        $this->assertSame($pickupDate->copy()->addDay()->toDateString(), $rental->return_date->toDateString());
+        $this->assertSame($pickupDate->copy()->addDays(2)->toDateString(), $rental->return_date->toDateString());
         $this->assertCount(3, $rental->details);
         $this->assertDatabaseHas('rental_details', [
             'rental_id' => $rental->id,

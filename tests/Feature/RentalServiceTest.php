@@ -98,7 +98,7 @@ class RentalServiceTest extends TestCase
             'vendor_id' => $this->vendor->id,
             'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
-            'return_date' => '2026-10-12', // 3 hari sewa
+            'return_date' => '2026-10-13', // 3 hari sewa (3 x 24 jam)
             'pickup_method' => 'self_pickup',
             'items' => [
                 ['master_item_id' => $this->item1->id, 'quantity' => 2],
@@ -123,7 +123,7 @@ class RentalServiceTest extends TestCase
         $this->assertEquals(345000, (float) $rental->grand_total);
         $this->assertCount(3, $rental->details);
         $this->assertTrue($rental->relationLoaded('details'));
-        $this->assertEquals(Carbon::now()->addHours(2), $rental->expires_at);
+        $this->assertEquals(Carbon::now()->addMinutes(5), $rental->expires_at);
 
         // Pastikan format kode booking TDK-YYYY-XXXXX (<= 20 karakter)
         $this->assertMatchesRegularExpression('/^TDK-\d{4}-[A-Z0-9]{5}$/', $rental->booking_code);
@@ -135,12 +135,12 @@ class RentalServiceTest extends TestCase
         $this->createUnit($this->item1, 'TD-001');
         $this->createUnit($this->item1, 'TD-002');
 
-        // 1 hari sewa (10 s/d 10)
+        // 1 hari sewa (24 jam: 10 s/d 11)
         $rental1Day = $this->service->createBooking([
             'vendor_id' => $this->vendor->id,
             'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
-            'return_date' => '2026-10-10',
+            'return_date' => '2026-10-11',
             'items' => [
                 ['master_item_id' => $this->item1->id, 'quantity' => 1],
             ],
@@ -149,12 +149,12 @@ class RentalServiceTest extends TestCase
         $this->assertEquals(50000, (float) $rental1Day->subtotal);
         $this->assertEquals(50000, (float) $rental1Day->grand_total);
 
-        // Multi hari sewa (10 s/d 14 = 5 hari)
+        // Multi hari sewa (5 x 24 jam: 10 s/d 15 = 5 hari)
         $rental5Days = $this->service->createBooking([
             'vendor_id' => $this->vendor->id,
             'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
-            'return_date' => '2026-10-14',
+            'return_date' => '2026-10-15',
             'items' => [
                 ['master_item_id' => $this->item1->id, 'quantity' => 1],
             ],

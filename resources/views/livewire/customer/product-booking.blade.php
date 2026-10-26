@@ -63,46 +63,135 @@
                 @endif
             </div>
 
-            {{-- Tanggal Mulai (Pickup) --}}
-            <div>
-                <label for="pickup_date" class="block text-xs font-semibold text-darkbrown-700 mb-1.5">
-                    📅 Tanggal Mulai (Pickup)
+            {{-- Tanggal & Jam Pengambilan (Pickup) --}}
+            <div class="space-y-1.5">
+                <label class="block text-xs font-semibold text-darkbrown-700">
+                    📅 Tanggal & Jam Pengambilan (Pickup)
                 </label>
-                <input
-                    type="date"
-                    id="pickup_date"
-                    wire:model.live="pickup_date"
-                    min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                    class="input-tendaku w-full text-sm py-2.5 px-3 rounded-xl transition-all
-                        @error('pickup_date') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
-                    required
-                />
-                @error('pickup_date')
-                    <p class="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <input
+                            type="date"
+                            id="pickup_date"
+                            wire:model.live="pickup_date"
+                            min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
+                            class="input-tendaku w-full text-xs py-2 px-3 rounded-xl transition-all
+                                @error('pickup_date') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
+                            required
+                        />
+                        @error('pickup_date')
+                            <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+                    <div>
+                        <input
+                            type="time"
+                            id="pickup_time"
+                            wire:model.live="pickup_time"
+                            class="input-tendaku w-full text-xs py-2 px-3 rounded-xl transition-all
+                                @error('pickup_time') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
+                            required
+                        />
+                        @error('pickup_time')
+                            <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
+            {{-- Durasi Sewa (24 Jam Penuh per Hari) --}}
+            <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold text-darkbrown-700">
+                        ⏳ Durasi Sewa
+                    </label>
+                    <span class="text-[10px] font-bold text-avocado-700 bg-avocado-50 border border-avocado-200 px-2 py-0.5 rounded-full">
+                        1 Hari = 24 Jam Penuh
+                    </span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        wire:click="$set('duration_days', {{ max(1, $duration_days - 1) }})"
+                        class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
+                    >
+                        -
+                    </button>
+                    <div class="flex-1 relative">
+                        <input
+                            type="number"
+                            id="duration_days"
+                            wire:model.live="duration_days"
+                            min="1"
+                            class="input-tendaku w-full text-center font-bold text-sm py-2 px-3 rounded-xl border-wheat-300"
+                            required
+                        />
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-500 pointer-events-none">
+                            Hari
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        wire:click="$set('duration_days', {{ $duration_days + 1 }})"
+                        class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
+                    >
+                        +
+                    </button>
+                </div>
+                @error('duration_days')
+                    <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
                         {{ $message }}
                     </p>
                 @enderror
             </div>
 
-            {{-- Tanggal Selesai (Return) --}}
-            <div>
-                <label for="return_date" class="block text-xs font-semibold text-darkbrown-700 mb-1.5">
-                    🏁 Tanggal Selesai (Return)
-                </label>
-                <input
-                    type="date"
-                    id="return_date"
-                    wire:model.live="return_date"
-                    min="{{ $pickup_date ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
-                    class="input-tendaku w-full text-sm py-2.5 px-3 rounded-xl transition-all
-                        @error('return_date') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
-                    required
-                />
-                @error('return_date')
-                    <p class="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-red-600">
-                        {{ $message }}
-                    </p>
-                @enderror
+            {{-- Tanggal & Waktu Selesai (Return Deadline) --}}
+            <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-semibold text-darkbrown-700">
+                        🏁 Batas Waktu Pengembalian (Return)
+                    </label>
+                    <span class="text-[10px] text-darkbrown-500 font-medium">
+                        Maks. {{ $duration_days * 24 }} Jam
+                    </span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <input
+                            type="date"
+                            id="return_date"
+                            wire:model.live="return_date"
+                            min="{{ $pickup_date ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
+                            class="input-tendaku w-full text-xs py-2 px-3 rounded-xl transition-all
+                                @error('return_date') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
+                            required
+                        />
+                        @error('return_date')
+                            <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+                    <div>
+                        <input
+                            type="time"
+                            id="return_time"
+                            wire:model.live="return_time"
+                            class="input-tendaku w-full text-xs py-2 px-3 rounded-xl transition-all
+                                @error('return_time') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
+                            required
+                        />
+                        @error('return_time')
+                            <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+                </div>
             </div>
 
             {{-- Jumlah Unit (Quantity) --}}
@@ -183,9 +272,9 @@
                         <div class="flex justify-between items-center text-xs">
                             <span class="text-darkbrown-600 font-medium">Periode Sewa</span>
                             <span class="font-bold text-darkbrown-900 text-right">
-                                {{ \Carbon\Carbon::parse($pickup_date)->translatedFormat('d M Y') }}
+                                {{ \Carbon\Carbon::parse($pickup_date)->translatedFormat('d M Y') }} {{ $pickup_time }}
                                 →
-                                {{ \Carbon\Carbon::parse($return_date)->translatedFormat('d M Y') }}
+                                {{ \Carbon\Carbon::parse($return_date)->translatedFormat('d M Y') }} {{ $return_time }}
                             </span>
                         </div>
 
@@ -193,13 +282,13 @@
                         <div class="flex justify-between items-center text-xs">
                             <span class="text-darkbrown-600 font-medium">Rincian Sewa</span>
                             <span class="font-extrabold text-darkbrown-900">
-                                {{ $this->quantity }} Unit × {{ $this->totalDays }} Hari
+                                {{ $this->quantity }} Unit × {{ $this->totalDays }} Hari ({{ $this->totalDays * 24 }} Jam)
                             </span>
                         </div>
 
                         {{-- Tarif Harian --}}
                         <div class="flex justify-between items-center text-xs">
-                            <span class="text-darkbrown-600 font-medium">Tarif / Hari</span>
+                            <span class="text-darkbrown-600 font-medium">Tarif / Hari (24 Jam)</span>
                             <span class="font-semibold text-darkbrown-900">
                                 Rp {{ number_format($this->product->daily_rate, 0, ',', '.') }}
                             </span>
@@ -222,7 +311,7 @@
             @endif
 
             {{-- Loading Feedback --}}
-            <div wire:loading wire:target="pickup_date,return_date,quantity" class="flex items-center gap-2 text-xs text-darkbrown-500 font-medium justify-center py-1">
+            <div wire:loading wire:target="pickup_date,pickup_time,duration_days,return_date,return_time,quantity" class="flex items-center gap-2 text-xs text-darkbrown-500 font-medium justify-center py-1">
                 <svg class="animate-spin h-3.5 w-3.5 text-avocado-600" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>

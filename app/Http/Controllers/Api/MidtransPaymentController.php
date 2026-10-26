@@ -18,6 +18,14 @@ class MidtransPaymentController extends Controller
             404,
         );
 
+        $rental->expireIfPastDue();
+
+        if ($rental->status !== 'pending') {
+            return response()->json([
+                'message' => 'Batas waktu pembayaran telah habis. Booking telah kedaluwarsa dan tidak dapat dilanjutkan.',
+            ], 422);
+        }
+
         // TODO(Role 1): Create this pending settlement Payment when saving the booking, using the server-calculated grand total.
         $payment = $rental->payments()
             ->where('status', 'pending')
