@@ -28,7 +28,7 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 class BookingVaController extends Controller
 {
     /** Harus sama dengan $vaBanks di status.blade.php */
-    public const BANKS = ['bca', 'bni', 'bri', 'permata', 'cimb', 'mandiri'];
+    public const BANKS = ['bca', 'bni', 'bri', 'permata', 'cimb'];
 
     public function __construct(private readonly RentalAccessGuard $accessGuard) {}
 

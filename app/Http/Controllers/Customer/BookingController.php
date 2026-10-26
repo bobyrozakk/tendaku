@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Rental;
 use App\Services\MidtransService;
 use App\Services\RentalAccessGuard;
+use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
@@ -36,12 +37,24 @@ class BookingController extends Controller
      */
     public function index(Request $request): View
     {
-        $status = $request->query('status');
+        $allowedStatuses = array_keys(config('booking.statuses', []));
+
+        $validated = $request->validate([
+            'status' => ['nullable', 'string', Rule::in($allowedStatuses)],
+        ]);
+
+        $status = $validated['status'] ?? '';
 
         $rentals = Rental::query()
             ->where('user_id', Auth::id())
-            ->when(filled($status), fn ($query) => $query->where('status', $status))
-            ->with(['vendor:id,name,phone,city', 'details.masterItem'])
+            ->when(
+                $status !== '',
+                fn ($query) => $query->where('status', $status)
+            )
+            ->with([
+                'vendor:id,name,phone,city',
+                'details.masterItem',
+            ])
             ->latest('id')
             ->paginate(self::PER_PAGE)
             ->withQueryString();

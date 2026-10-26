@@ -104,9 +104,8 @@ class MidtransService
     // ── Core API: Virtual Account ─────────────────────────────────────────────
 
     /**
-     * Generate nomor VA via Core API (tanpa Snap pop-up).
-     *
-     * @param  string  $bank  bca|bni|bri|mandiri|permata|cimb
+     * Generate nomor VA via Core API
+     * @param  string  $bank
      * @return array{bank: string, va_number: string, biller_code: ?string, qr_code_url: ?string}|null
      */
     public function chargeBankTransfer(Payment $payment, string $bank = 'bca'): ?array
@@ -119,9 +118,6 @@ class MidtransService
                 return $payment->va_details;
             }
 
-            // Midtrans menolak charge ulang dengan order_id yang sama untuk bank berbeda,
-            // jadi order_id diganti dengan suffix baru.
-            // NOTE: suffix acak 3 digit (504 kemungkinan) bisa bentrok dengan unique index order_id.
             $baseOrderId = explode('-', $payment->order_id)[0];
             $payment->order_id = $baseOrderId.'-'.substr(str_shuffle('123456789'), 0, 3);
             $payment->save();
@@ -139,15 +135,11 @@ class MidtransService
         ];
 
         if ($bank === 'mandiri') {
-            $params['payment_type'] = 'echannel';
-            $params['echannel'] = [
-                'bill_info1' => 'Pembayaran Sewa',
-                'bill_info2' => 'Tendaku #'.$rental->booking_code,
-            ];
-        } else {
-            $params['payment_type'] = 'bank_transfer';
-            $params['bank_transfer'] = ['bank' => $bank];
+            throw new \InvalidArgumentException('Metode pembayaran Mandiri tidak tersedia.');
         }
+
+        $params['payment_type'] = 'bank_transfer';
+        $params['bank_transfer'] = ['bank' => $bank];
 
         // Samakan masa berlaku VA dengan batas bayar
         if ($payment->expires_at && $payment->expires_at->isFuture()) {
@@ -171,7 +163,7 @@ class MidtransService
         $payment->update([
             'midtrans_transaction_id' => $raw['transaction_id'] ?? $payment->midtrans_transaction_id,
             'midtrans_status' => $raw['transaction_status'] ?? 'pending',
-            'method' => $bank === 'mandiri' ? 'echannel' : 'va_'.$bank,
+            'method' => 'va_'.$bank,
             'raw_notification' => $raw,
         ]);
 
@@ -183,7 +175,6 @@ class MidtransService
     /**
      * Sinkronisasi status langsung dari API Midtrans (§0, §7.1).
      * Dipakai polling di halaman status. Gagal hubungi Midtrans → payment dikembalikan apa adanya.
-     *
      * @throws InvalidArgumentException
      */
     public function syncStatus(Payment $payment): Payment

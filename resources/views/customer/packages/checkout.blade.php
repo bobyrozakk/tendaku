@@ -180,9 +180,7 @@
                     </label>
                     <select id="payment_channel" name="payment_channel"
                             class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                        <option value="qris" @selected(old('payment_channel', 'qris') === 'qris')>QRIS Realtime</option>
                         <option value="bca_va" @selected(old('payment_channel') === 'bca_va')>BCA Virtual Account</option>
-                        <option value="mandiri_va" @selected(old('payment_channel') === 'mandiri_va')>Mandiri Bill Payment</option>
                         <option value="bri_va" @selected(old('payment_channel') === 'bri_va')>BRI Virtual Account (BRIVA)</option>
                     </select>
                     <p class="text-[11px] text-darkbrown-400 mt-1">

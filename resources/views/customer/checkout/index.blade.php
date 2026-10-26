@@ -1,5 +1,5 @@
 <x-layouts.customer>
-    <title>Checkout Sewa Alat Camping - Tendaku</title>
+    <x-slot name="title">Checkout Sewa Alat Camping - Tendaku</x-slot>
     <x-slot name="header">
         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
@@ -106,10 +106,6 @@
     @endphp
 
     <style>
-        [x-cloak] {
-            display: none !important;
-        }
-
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none !important;
@@ -153,7 +149,7 @@
 
     <div x-data="checkoutPage({{ \Illuminate\Support\Js::from($checkoutConfig) }})" class="py-2 sm:py-4">
 
-        <!-- ============ ANIMASI "BOOKING DIBUAT" (menggantikan form, header & footer tetap) ============ -->
+        <!-- booking dibuat -->
         <div class="co-preview" :class="{ 'is-open': phase !== 'form' }" :inert="phase === 'form'" :aria-hidden="phase === 'form' ? 'true' : 'false'">
             <div class="co-inner">
                 <div class="flex flex-col items-center justify-center text-center gap-5 px-4" style="min-height: 62vh;" role="status" aria-live="polite">
@@ -559,7 +555,7 @@
                                                 <button type="button" @click="changeQty(i, -1)" :disabled="item.qty <= 1" aria-label="Kurangi unit"
                                                         class="w-9 h-9 flex items-center justify-center text-lg font-bold text-darkbrown-800 rounded-l-xl hover:bg-wheat-100 disabled:opacity-40 disabled:cursor-not-allowed transition">−</button>
                                                 <input type="number" min="1" :max="item.max_qty" x-model.number="item.qty" @change="clampQty(i)" aria-label="Jumlah unit"
-                                                       class="w-12 h-9 border-0 border-x border-wheat-200 p-0 text-center text-sm font-bold text-darkbrown-900 focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
+                                                       class="w-12 h-9 border-0 border-x border-wheat-200 p-0 text-center text-sm font-bold text-darkbrown-900 focus:ring-0">
                                                 <button type="button" @click="changeQty(i, 1)" :disabled="item.qty >= item.max_qty" aria-label="Tambah unit"
                                                         class="w-9 h-9 flex items-center justify-center text-lg font-bold text-darkbrown-800 rounded-r-xl hover:bg-wheat-100 disabled:opacity-40 disabled:cursor-not-allowed transition">+</button>
                                             </div>
@@ -646,7 +642,7 @@
 
                         <div>
                             <button type="button" x-on:click="submitBooking()" :disabled="isProcessing || expired"
-                                :class="(isProcessing || expired) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
+                                    :class="(isProcessing || expired) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
                                     class="w-full py-3.5 px-5 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
                                 <template x-if="!isProcessing">
                                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -730,8 +726,7 @@
                     return (this.paymentOption === 'dp') ? this.dpAmount : this.grandTotal;
                 },
 
-                // Form menyusut ke atas, animasi "Booking dibuat" tampil di area konten, lalu ke halaman status.
-                // Animasi "booking dibuat" yang sebenarnya dimainkan di halaman status (param ?new=1).
+                // Form menyusut ke atas, animasi "Booking dibuat" tampil di area konten, lalu pindah ke halaman status (?new=1).
                 async playHandoff(data) {
                     const wait = (ms) => new Promise(r => setTimeout(r, ms));
                     const full = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;

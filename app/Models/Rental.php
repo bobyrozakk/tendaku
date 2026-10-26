@@ -12,41 +12,73 @@ class Rental extends Model
     use BelongsToVendor;
 
     protected $fillable = [
-        'vendor_id', 'user_id', 'created_by', 'picked_up_by', 'returned_by',
-        'booking_code', 'guest_name', 'guest_phone', 'guest_id_number',
-        'pickup_date', 'return_date', 'actual_return_date', 'picked_up_at', 'returned_at',
-        'pickup_method', 'delivery_address', 'rental_days',
-        'subtotal', 'delivery_fee', 'discount_amount', 'total_deposit', 'dp_amount', 'harga_dp', 'grand_total',
-        'ktp_collateral_photo_url', 'ktp_collateral_status', 'ktp_received_at', 'ktp_returned_at', 'ktp_collateral_notes',
-        'total_late_fee', 'total_damage_fee', 'final_total',
-        'status', 'expires_at', 'notes',
+        'vendor_id',
+        'user_id',
+        'created_by',
+        'picked_up_by',
+        'returned_by',
+        'booking_code',
+        'guest_name',
+        'guest_phone',
+        'guest_id_number',
+        'pickup_date',
+        'return_date',
+        'actual_return_date',
+        'picked_up_at',
+        'returned_at',
+        'pickup_method',
+        'delivery_address',
+        'rental_days',
+        'subtotal',
+        'delivery_fee',
+        'discount_amount',
+        'total_deposit',
+        'dp_amount',
+        'harga_dp',
+        'grand_total',
+        'ktp_collateral_photo_url',
+        'ktp_collateral_status',
+        'ktp_received_at',
+        'ktp_returned_at',
+        'ktp_collateral_notes',
+        'total_late_fee',
+        'total_damage_fee',
+        'final_total',
+        'status',
+        'expires_at',
+        'notes',
     ];
 
     protected $hidden = [
         'guest_id_number',
     ];
 
-    protected $casts = [
-        'guest_id_number' => 'encrypted',
-        'pickup_date' => 'date',
-        'return_date' => 'date',
-        'actual_return_date' => 'date',
-        'picked_up_at' => 'datetime',
-        'returned_at' => 'datetime',
-        'ktp_received_at' => 'datetime',
-        'ktp_returned_at' => 'datetime',
-        'expires_at' => 'datetime',
-        'subtotal' => 'decimal:2',
-        'delivery_fee' => 'decimal:2',
-        'discount_amount' => 'decimal:2',
-        'total_deposit' => 'decimal:2',
-        'dp_amount' => 'decimal:2',
-        'harga_dp' => 'decimal:2',
-        'grand_total' => 'decimal:2',
-        'total_late_fee' => 'decimal:2',
-        'total_damage_fee' => 'decimal:2',
-        'final_total' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'guest_id_number' => 'encrypted',
+
+            'pickup_date' => 'date',
+            'return_date' => 'date',
+            'actual_return_date' => 'date',
+
+            'picked_up_at' => 'datetime',
+            'returned_at' => 'datetime',
+            'ktp_received_at' => 'datetime',
+            'ktp_returned_at' => 'datetime',
+            'expires_at' => 'datetime',
+
+            'subtotal' => 'decimal:2',
+            'delivery_fee' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
+            'total_deposit' => 'decimal:2',
+            'dp_amount' => 'decimal:2',
+            'grand_total' => 'decimal:2',
+            'total_late_fee' => 'decimal:2',
+            'total_damage_fee' => 'decimal:2',
+            'final_total' => 'decimal:2',
+        ];
+    }
 
     public function vendor(): BelongsTo
     {
@@ -93,9 +125,10 @@ class Rental extends Model
         return $this->user_id === null;
     }
 
+    //  Alias kompatibilitas untuk dp_amount.
     public function getHargaDpAttribute(): mixed
     {
-        return $this->attributes['dp_amount'] ?? 0;
+        return $this->dp_amount ?? '0.00';
     }
 
     public function setHargaDpAttribute($value): void

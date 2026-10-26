@@ -30,9 +30,7 @@ class PackageCheckoutController extends Controller
      * Nama channel pembayaran untuk pesan sukses.
      */
     private const CHANNEL_LABELS = [
-        'qris' => 'QRIS Realtime',
         'bca_va' => 'BCA Virtual Account',
-        'mandiri_va' => 'Mandiri Bill Payment',
         'bri_va' => 'BRI Virtual Account (BRIVA)',
     ];
 

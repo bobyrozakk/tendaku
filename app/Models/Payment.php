@@ -69,7 +69,7 @@ class Payment extends Model
             return null;
         }
 
-        // 1. Bank BCA, BNI, BRI, CIMB, dll
+        // Bank
         if (! empty($raw['va_numbers']) && is_array($raw['va_numbers'])) {
             $first = $raw['va_numbers'][0];
 
@@ -81,17 +81,6 @@ class Payment extends Model
             ];
         }
 
-        // 2. Mandiri Bill Payment
-        if (! empty($raw['bill_key'])) {
-            return [
-                'bank' => 'MANDIRI',
-                'va_number' => $raw['bill_key'],
-                'biller_code' => $raw['biller_code'] ?? null,
-                'qr_code_url' => null,
-            ];
-        }
-
-        // 3. Permata Bank
         if (! empty($raw['permata_va_number'])) {
             return [
                 'bank' => 'PERMATA',
@@ -109,7 +98,6 @@ class Payment extends Model
     /**
      * Pindah ke status baru jika transisinya valid (lihat PaymentStatus).
      * Tidak menyimpan ke DB; caller yang memanggil save().
-     *
      * @return bool true jika status berubah, false jika diabaikan (idempotent)
      */
     public function transitionTo(PaymentStatus $next): bool
