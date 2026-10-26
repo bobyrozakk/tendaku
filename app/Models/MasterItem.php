@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MasterItem extends Model
@@ -26,6 +27,13 @@ class MasterItem extends Model
         'late_fee_per_day' => 'decimal:2',
         'is_active' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::forceDeleting(function (MasterItem $item) {
+            $item->images()->get()->each->delete();
+        });
+    }
 
     /**
      * Scope untuk katalog publik customer:
@@ -52,6 +60,20 @@ class MasterItem extends Model
     public function units(): HasMany
     {
         return $this->hasMany(ItemUnit::class);
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(MasterItemImage::class, 'master_item_id')
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('id', 'asc');
+    }
+
+    public function primaryImage(): HasOne
+    {
+        return $this->hasOne(MasterItemImage::class, 'master_item_id')
+            ->where('is_primary', true)
+            ->latestOfMany();
     }
 
     public function rentalDetails(): HasMany

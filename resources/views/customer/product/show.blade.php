@@ -17,13 +17,13 @@
         $vendorName = $item->vendor?->name ?? 'Tendaku Vendor';
         $categoryName = $item->category?->name ?? 'Alat Outdoor';
         
-        $mainImage = $item->image_url ?: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1000&q=80';
-        $galleryImages = [
-            $mainImage,
-            'https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1526772662000-3f88f10405ff?auto=format&fit=crop&w=800&q=80',
-            'https://images.unsplash.com/photo-1517824806704-9040b037703b?auto=format&fit=crop&w=800&q=80',
-        ];
+        $itemImages = $item->images->pluck('image_url')->filter()->values();
+        if ($itemImages->isEmpty() && $item->image_url) {
+            $itemImages = collect([$item->image_url]);
+        }
+        $fallbackPlaceholder = 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1000&q=80';
+        $mainImage = $itemImages->first() ?: $fallbackPlaceholder;
+        $galleryImages = $itemImages->isNotEmpty() ? $itemImages->all() : [$fallbackPlaceholder];
 
         $bookedDatesJson = json_encode($bookedDates ?? []);
     @endphp
@@ -56,16 +56,18 @@
                     </div>
 
                     <!-- Thumbnail Switcher -->
-                    <div class="grid grid-cols-4 gap-3 mt-4">
-                        @foreach($galleryImages as $index => $imgUrl)
-                            <button type="button" 
-                                    @click="setActiveImage('{{ $imgUrl }}')" 
-                                    :class="activeImage === '{{ $imgUrl }}' ? 'ring-2 ring-avocado-500 border-transparent scale-[1.02]' : 'opacity-70 hover:opacity-100 border-wheat-200'"
-                                    class="relative aspect-[4/3] rounded-lg overflow-hidden border bg-wheat-50 transition-all">
-                                <img src="{{ $imgUrl }}" alt="Thumbnail {{ $index + 1 }}" class="w-full h-full object-cover"/>
-                            </button>
-                        @endforeach
-                    </div>
+                    @if (count($galleryImages) > 1)
+                        <div class="grid grid-cols-4 sm:grid-cols-5 gap-3 mt-4">
+                            @foreach($galleryImages as $index => $imgUrl)
+                                <button type="button" 
+                                        @click="setActiveImage('{{ $imgUrl }}')" 
+                                        :class="activeImage === '{{ $imgUrl }}' ? 'ring-2 ring-avocado-500 border-transparent scale-[1.02]' : 'opacity-70 hover:opacity-100 border-wheat-200'"
+                                        class="relative aspect-[4/3] rounded-lg overflow-hidden border bg-wheat-50 transition-all">
+                                    <img src="{{ $imgUrl }}" alt="Thumbnail {{ $index + 1 }}" class="w-full h-full object-cover"/>
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Deskripsi & Fitur Utama -->

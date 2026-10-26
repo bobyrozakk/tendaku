@@ -28,6 +28,8 @@ class StoreProductRequest extends FormRequest
             'daily_rate' => ['required', 'numeric', 'min:0'],
             'late_fee_per_day' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
+            'images' => ['nullable', 'array', 'max:5'],
+            'images.*' => ['image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'is_active' => ['nullable', 'boolean'],
         ];
@@ -45,8 +47,13 @@ class StoreProductRequest extends FormRequest
             'late_fee_per_day.required' => 'Denda keterlambatan per hari wajib diisi.',
             'late_fee_per_day.numeric' => 'Denda keterlambatan harus berupa angka.',
             'late_fee_per_day.min' => 'Denda keterlambatan tidak boleh bernilai negatif.',
+            'images.array' => 'Daftar foto produk harus berupa array file.',
+            'images.max' => 'Maksimal 5 foto produk yang dapat diunggah.',
+            'images.*.image' => 'File yang diunggah harus berupa gambar.',
+            'images.*.mimes' => 'Format setiap foto harus JPG, JPEG, PNG, atau WEBP.',
+            'images.*.max' => 'Ukuran setiap foto maksimal adalah 2MB.',
             'image.image' => 'File harus berupa gambar.',
-            'image.mimes' => 'Format gambar harus jpeg, png, jpg, atau webp.',
+            'image.mimes' => 'Format gambar harus JPG, JPEG, PNG, atau WEBP.',
             'image.max' => 'Ukuran gambar maksimal adalah 2MB.',
         ];
     }

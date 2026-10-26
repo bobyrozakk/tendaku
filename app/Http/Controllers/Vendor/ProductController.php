@@ -7,8 +7,10 @@ use App\Http\Requests\Vendor\StoreProductRequest;
 use App\Http\Requests\Vendor\UpdateProductRequest;
 use App\Models\ItemCategory;
 use App\Models\MasterItem;
+use App\Models\MasterItemImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -35,6 +37,7 @@ class ProductController extends Controller
                 'units as rented_units_count' => function ($q) {
                     $q->where('status', 'rented');
                 },
+                'images as images_count',
             ])
             ->where('vendor_id', $vendorId);
 
@@ -99,24 +102,67 @@ class ProductController extends Controller
             $count++;
         }
 
-        $imageUrl = null;
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'public');
-            $imageUrl = Storage::url($path);
+        // Kumpulkan file foto: utamakan array 'images', atau fallback 'image'
+        $files = [];
+        if ($request->hasFile('images')) {
+            $files = array_slice($request->file('images'), 0, 5);
+        } elseif ($request->hasFile('image')) {
+            $files = [$request->file('image')];
         }
 
-        MasterItem::create([
-            'vendor_id' => $vendorId,
-            'category_id' => $request->category_id,
-            'name' => $request->name,
-            'slug' => $slug,
-            'description' => $request->description,
-            'daily_rate' => $request->daily_rate,
-            'deposit_amount' => 0, // Tanpa deposit moneter sesuai revisi bisnis
-            'late_fee_per_day' => $request->late_fee_per_day,
-            'image_url' => $imageUrl,
-            'is_active' => $request->boolean('is_active', true),
-        ]);
+        $storedPaths = [];
+
+        try {
+            DB::beginTransaction();
+
+            $product = MasterItem::create([
+                'vendor_id' => $vendorId,
+                'category_id' => $request->category_id,
+                'name' => $request->name,
+                'slug' => $slug,
+                'description' => $request->description,
+                'daily_rate' => $request->daily_rate,
+                'deposit_amount' => 0, // Tanpa deposit moneter sesuai revisi bisnis
+                'late_fee_per_day' => $request->late_fee_per_day,
+                'image_url' => null,
+                'is_active' => $request->boolean('is_active', true),
+            ]);
+
+            $primaryImageUrl = null;
+
+            foreach ($files as $index => $file) {
+                $path = $file->store('products', 'public');
+                $storedPaths[] = $path;
+                $imageUrl = Storage::url($path);
+
+                $isPrimary = ($index === 0);
+                if ($isPrimary) {
+                    $primaryImageUrl = $imageUrl;
+                }
+
+                $product->images()->create([
+                    'image_path' => $path,
+                    'image_url' => $imageUrl,
+                    'is_primary' => $isPrimary,
+                    'sort_order' => $index + 1,
+                ]);
+            }
+
+            if ($primaryImageUrl) {
+                $product->update(['image_url' => $primaryImageUrl]);
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            // Bersihkan file yang sudah terlanjur diunggah agar tidak menjadi orphan file
+            foreach ($storedPaths as $path) {
+                Storage::disk('public')->delete($path);
+            }
+
+            throw $e;
+        }
 
         return redirect()->route('vendor.products.index')
             ->with('success', 'Produk berhasil ditambahkan.');
@@ -129,7 +175,7 @@ class ProductController extends Controller
     {
         $this->authorizeProductOwnership($request, $product);
 
-        $product->load(['category', 'units' => function ($q) {
+        $product->load(['category', 'images', 'units' => function ($q) {
             $q->orderBy('unit_code');
         }]);
 
@@ -147,6 +193,7 @@ class ProductController extends Controller
 
         $vendorId = (int) $request->user()->vendor_id;
         $categories = ItemCategory::where('vendor_id', $vendorId)->orderBy('name')->get();
+        $product->load('images');
 
         return view('vendor.products.edit', [
             'product' => $product,
@@ -179,28 +226,74 @@ class ProductController extends Controller
             }
         }
 
-        $imageUrl = $product->image_url;
-        if ($request->hasFile('image')) {
-            // Hapus foto lama bila tersimpan lokal
-            if ($product->image_url && Str::contains($product->image_url, '/storage/products/')) {
-                $oldPath = Str::after($product->image_url, '/storage/');
-                Storage::disk('public')->delete($oldPath);
+        $storedPaths = [];
+
+        try {
+            DB::beginTransaction();
+
+            // 1. Hapus foto lama yang ditandai untuk dihapus
+            if ($request->filled('deleted_images')) {
+                $deletedIds = (array) $request->input('deleted_images');
+                $product->images()->whereIn('id', $deletedIds)->get()->each(function (MasterItemImage $image) {
+                    $image->delete();
+                });
             }
 
-            $path = $request->file('image')->store('products', 'public');
-            $imageUrl = Storage::url($path);
-        }
+            // 2. Kumpulkan foto baru yang diunggah
+            $newFiles = [];
+            if ($request->hasFile('images')) {
+                $newFiles = $request->file('images');
+            } elseif ($request->hasFile('image')) {
+                $newFiles = [$request->file('image')];
+            }
 
-        $product->update([
-            'category_id' => $request->category_id,
-            'name' => $request->name,
-            'slug' => $slug,
-            'description' => $request->description,
-            'daily_rate' => $request->daily_rate,
-            'late_fee_per_day' => $request->late_fee_per_day,
-            'image_url' => $imageUrl,
-            'is_active' => $request->boolean('is_active', true),
-        ]);
+            $currentMaxOrder = $product->images()->max('sort_order') ?? 0;
+
+            foreach ($newFiles as $index => $file) {
+                $path = $file->store('products', 'public');
+                $storedPaths[] = $path;
+                $imageUrl = Storage::url($path);
+
+                $product->images()->create([
+                    'image_path' => $path,
+                    'image_url' => $imageUrl,
+                    'is_primary' => false,
+                    'sort_order' => $currentMaxOrder + $index + 1,
+                ]);
+            }
+
+            // 3. Pastikan ada tepat 1 foto utama jika produk memiliki foto
+            $allImages = $product->images()->orderBy('sort_order')->orderBy('id')->get();
+            $primaryImage = $allImages->firstWhere('is_primary', true);
+
+            if (! $primaryImage && $allImages->isNotEmpty()) {
+                $primaryImage = $allImages->first();
+                $primaryImage->update(['is_primary' => true]);
+            }
+
+            $imageUrl = $primaryImage?->image_url;
+
+            $product->update([
+                'category_id' => $request->category_id,
+                'name' => $request->name,
+                'slug' => $slug,
+                'description' => $request->description,
+                'daily_rate' => $request->daily_rate,
+                'late_fee_per_day' => $request->late_fee_per_day,
+                'image_url' => $imageUrl,
+                'is_active' => $request->boolean('is_active', true),
+            ]);
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            foreach ($storedPaths as $path) {
+                Storage::disk('public')->delete($path);
+            }
+
+            throw $e;
+        }
 
         return redirect()->route('vendor.products.index')
             ->with('success', 'Produk berhasil diperbarui.');
@@ -233,8 +326,9 @@ class ProductController extends Controller
                 ->with('error', 'Produk tidak dapat dihapus karena terikat pada transaksi sewa aktif yang belum selesai.');
         }
 
-        // Hapus soft delete produk beserta unit fisiknya
+        // Hapus soft delete produk beserta unit fisiknya dan bersihkan foto
         $product->units()->delete();
+        $product->images->each->delete();
         $product->delete();
 
         return redirect()->route('vendor.products.index')
