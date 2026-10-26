@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
+use App\Http\Controllers\Customer\BookingVaController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PaymentRetryController;
@@ -26,6 +27,9 @@ Route::prefix('katalog/booking')->group(function () {
     Route::get('status/{code}', [BookingController::class, 'status'])->name('booking.status');
     Route::post('status/{code}/sync', [BookingController::class, 'syncPayment'])->name('booking.sync');
     Route::post('status/{code}/pay', [BookingController::class, 'pay'])->name('booking.pay');
+    Route::post('status/{code}/va', [BookingVaController::class, 'switch'])
+        ->middleware('throttle:10,1')
+        ->name('booking.va');
     Route::get('receipt/{code}', [BookingController::class, 'receipt'])->name('booking.receipt');
     Route::get('receipt/{code}/photo', [BookingController::class, 'collateralPhoto'])->name('booking.receipt.photo');
 });

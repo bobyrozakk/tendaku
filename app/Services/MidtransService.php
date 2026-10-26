@@ -203,8 +203,8 @@ class MidtransService
                 throw new InvalidArgumentException('The notification amount does not match the payment amount.');
             }
 
-            // Simpan raw_notification untuk audit (§7.3 langkah 7)
-            $payment->raw_notification = $notification;
+            // Simpan raw_notification
+            $payment->raw_notification = array_merge($payment->raw_notification ?? [], $notification);
 
             // Petakan status Midtrans ke status internal (§5.2)
             $internalStatus = $this->mapMidtransStatus(
@@ -507,13 +507,18 @@ class MidtransService
                 'bill_info1' => 'Pembayaran Sewa',
                 'bill_info2' => 'Tendaku #' . ($rental?->booking_code ?? ''),
             ];
-        } elseif ($bank === 'permata') {
-            $params['payment_type'] = 'permata';
         } else {
-            // bca, bni, bri, dll
             $params['payment_type'] = 'bank_transfer';
             $params['bank_transfer'] = [
                 'bank' => $bank,
+            ];
+        }
+
+        // Samakan masa berlaku VA dengan batas bayar rental
+        if ($payment->expires_at && $payment->expires_at->isFuture()) {
+            $params['custom_expiry'] = [
+                'expiry_duration' => max(1, (int) floor(now()->diffInMinutes($payment->expires_at))),
+                'unit' => 'minute',
             ];
         }
 

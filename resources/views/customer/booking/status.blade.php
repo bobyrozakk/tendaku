@@ -93,9 +93,18 @@
         $isExpiredOrCancelled = in_array($status, ['cancelled', 'expired'], true);
         $isExpiredNow = $status === 'pending' && $rental->expires_at && $rental->expires_at->isPast();
 
-        $onlinePayment = $latestPayment ?? $rental->payments->where('channel', 'midtrans')->first();
+        // Utamakan tagihan online yang masih menunggu (terbaru). Setelah ganti bank ada beberapa payment per rental.
+        $onlinePayment = $rental->payments->where('channel', 'midtrans')->whereIn('payment_type', ['full', 'dp'])->where('status', 'pending')->sortByDesc('id')->first()
+            ?? $latestPayment
+            ?? $rental->payments->where('channel', 'midtrans')->sortByDesc('id')->first();
         $paidPayment   = $rental->payments->where('status', 'paid')->sortByDesc('paid_at')->first();
         $vaInfo        = $onlinePayment?->va_details;
+
+        // Bank VA yang ditawarkan di pill. Kunci = kode bank di Midtrans (mandiri = Mandiri Bill / echannel).
+        // Harus sama dengan daftar di controller (BookingVaController::BANKS)
+        $vaBanks   = ['bca' => 'BCA', 'bni' => 'BNI', 'bri' => 'BRI', 'permata' => 'Permata', 'cimb' => 'CIMB Niaga', 'mandiri' => 'Mandiri'];
+        $vaBankKey = strtolower((string) ($vaInfo['bank'] ?? ''));
+        $vaBankKey = array_key_exists($vaBankKey, $vaBanks) ? $vaBankKey : 'bca';
 
         $hasDenda   = ($rental->total_late_fee > 0 || $rental->total_damage_fee > 0);
         $totalFinal = $rental->final_total ?: ($rental->grand_total + $rental->total_late_fee + $rental->total_damage_fee);
@@ -191,6 +200,14 @@
             'payUrl'        => route('booking.pay', $rental->booking_code),
             'syncUrl'       => route('booking.sync', $rental->booking_code),
             'csrf'          => csrf_token(),
+            'vaUrl'         => route('booking.va', $rental->booking_code),
+            'vaBanks'       => $vaBanks,
+            'orderId'       => $onlinePayment?->order_id,
+            'va'            => $vaInfo ? [
+                'bank'   => $vaBankKey,
+                'number' => $vaInfo['va_number'] ?? '',
+                'biller' => $vaInfo['biller_code'] ?? '',
+            ] : null,
             // Baru dibuat dari checkout (?new=1): mainkan animasi masuk sekali saja
             'fresh'         => $status === 'pending' && request()->boolean('new'),
         ];
@@ -228,6 +245,26 @@
             .status-list .bk-toggle { display: none; }
             .status-list .bk-body { display: block; margin-top: 0; }
         }
+
+        /* Pill VA (kecil): kiri 30% dropdown bank, kanan 70% nomor VA. Ditulis manual, bukan utility Tailwind */
+        .va-pill { display: flex; align-items: center; width: 100%; min-height: 2.25rem; }
+        .va-pill:focus-within { box-shadow: 0 0 0 3px rgba(212, 160, 23, .3); }
+        .va-pill-bank { flex: 0 0 30%; min-width: 5.25rem; align-self: stretch; border-right-width: 1px; border-right-style: solid; border-radius: 9999px 0 0 9999px; }
+        .va-bank-btn { display: flex; align-items: center; justify-content: space-between; gap: .25rem; width: 100%; height: 100%; min-height: 2.25rem;
+                       padding: .25rem .55rem .25rem .85rem; font-size: .8rem; font-weight: 800; background: transparent; border: 0; outline: 0;
+                       cursor: pointer; border-radius: 9999px 0 0 9999px; text-align: left; }
+        .va-bank-btn:disabled { cursor: wait; opacity: .6; }
+        .va-chev { width: .85rem; height: .85rem; flex-shrink: 0; transition: transform .2s ease; }
+        .va-rot { transform: rotate(180deg); }
+        .va-pill-num { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: .4rem; padding: .2rem .3rem .2rem .75rem; }
+        .va-num { flex: 1 1 0; min-width: 0; overflow-x: auto; white-space: nowrap; letter-spacing: .04em; font-size: clamp(.8rem, 3.2vw, 1rem); }
+        /* Daftar bank: fixed supaya tidak terpotong overflow panel timeline */
+        .va-menu { position: fixed; z-index: 60; min-width: 9.5rem; max-height: 16rem; overflow-y: auto; padding: .3rem; }
+        .va-opt { display: flex; align-items: center; justify-content: space-between; gap: .75rem; width: 100%; padding: .45rem .7rem;
+                  border: 0; border-radius: .65rem; font-size: .82rem; text-align: left; background: transparent; cursor: pointer; }
+        .va-loading { animation: va-blink 1s ease-in-out infinite; }
+        @@keyframes va-blink { 50% { opacity: .35; } }
+        @@media (prefers-reduced-motion: reduce) { .va-loading { animation: none; } .va-chev { transition: none; } }
 
         /* Tab timeline: hanya satu yang terbuka, buka-tutup mulus tanpa hitung tinggi */
         .tl-collapse { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .6s cubic-bezier(.4, 0, .2, 1); }
@@ -431,7 +468,7 @@
                                                             @if($onlinePayment?->order_id)
                                                                 <div class="text-right">
                                                                     <div class="text-xs text-darkbrown-500">ID pesanan</div>
-                                                                    <div class="font-mono text-sm font-semibold text-darkbrown-800">{{ $onlinePayment->order_id }}</div>
+                                                                    <div class="font-mono text-sm font-semibold text-darkbrown-800" x-text="orderId">{{ $onlinePayment->order_id }}</div>
                                                                 </div>
                                                             @endif
                                                         </div>
@@ -446,24 +483,49 @@
                                                         </div>
 
                                                         @if($vaInfo)
-                                                            <div class="rounded-xl border-2 border-goldenrod-400 bg-white p-4 space-y-3">
-                                                                <div class="flex items-center gap-2">
-                                                                    <span class="px-2.5 py-1 rounded-lg text-xs font-black bg-blue-50 text-blue-800 border border-blue-200">{{ $vaInfo['bank'] ?? 'Bank' }}</span>
-                                                                    <span class="text-sm font-bold text-darkbrown-800">Nomor virtual account</span>
+                                                            <div class="rounded-xl border-2 border-goldenrod-400 bg-white p-3 space-y-2">
+                                                                <span class="text-xs font-bold text-darkbrown-800"
+                                                                      x-text="vaBank === 'mandiri' ? 'Nomor bill key Mandiri' : 'Nomor virtual account'">Nomor virtual account</span>
+
+                                                                <div x-show="vaBiller" x-cloak>
+                                                                    <div class="text-xs text-darkbrown-500">Kode perusahaan (biller code)</div>
+                                                                    <span class="mt-1 inline-block font-mono text-sm font-bold text-darkbrown-900 bg-wheat-100 px-2.5 py-1 rounded-lg border border-wheat-300 select-all" x-text="vaBiller">{{ $vaInfo['biller_code'] ?? '' }}</span>
                                                                 </div>
-                                                                @if(!empty($vaInfo['biller_code']))
-                                                                    <div>
-                                                                        <div class="text-xs text-darkbrown-500">Kode perusahaan (biller code)</div>
-                                                                        <span class="mt-1 inline-block font-mono text-base font-bold text-darkbrown-900 bg-wheat-100 px-3 py-1.5 rounded-lg border border-wheat-300">{{ $vaInfo['biller_code'] }}</span>
+
+                                                                <div class="va-pill rounded-full border border-goldenrod-400 bg-white" :aria-busy="vaLoading.toString()">
+                                                                    <div class="va-pill-bank bg-wheat-100 border-goldenrod-400" @click.outside="vaOpen = false" @keydown.escape="vaOpen = false">
+                                                                        <button type="button" x-ref="vaBtn" class="va-bank-btn text-darkbrown-900"
+                                                                                @click="toggleBank()" :disabled="vaLoading || expired"
+                                                                                aria-haspopup="listbox" :aria-expanded="vaOpen.toString()" aria-label="Pilih bank virtual account">
+                                                                            <span x-text="vaBanks[vaBank] || vaBank.toUpperCase()">{{ $vaBanks[$vaBankKey] }}</span>
+                                                                            <svg class="va-chev" :class="{ 'va-rot': vaOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                                                                        </button>
+
+                                                                        <div x-ref="vaMenu" x-show="vaOpen" x-cloak x-transition.opacity.duration.150ms role="listbox"
+                                                                             class="va-menu rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm" style="top:-9999px;left:0">
+                                                                            @foreach($vaBanks as $bankKey => $bankLabel)
+                                                                                <button type="button" role="option" :aria-selected="(vaBank === '{{ $bankKey }}').toString()"
+                                                                                        class="va-opt hover:bg-wheat-100"
+                                                                                        :class="vaBank === '{{ $bankKey }}' ? 'font-extrabold text-darkbrown-900 bg-wheat-100' : 'font-semibold text-darkbrown-700'"
+                                                                                        @click="pickBank('{{ $bankKey }}')">
+                                                                                    <span>{{ $bankLabel }}</span>
+                                                                                    <svg x-show="vaBank === '{{ $bankKey }}'" class="w-4 h-4 text-avocado-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                                                                                </button>
+                                                                            @endforeach
+                                                                        </div>
                                                                     </div>
-                                                                @endif
-                                                                <div class="flex flex-wrap items-center gap-2">
-                                                                    <span class="font-mono text-lg font-black text-darkbrown-900 tracking-wider bg-wheat-100 px-4 py-2 rounded-xl border border-wheat-300 select-all">{{ $vaInfo['va_number'] ?? '-' }}</span>
-                                                                    <button type="button" @click="copy(@js($vaInfo['va_number'] ?? ''))"
-                                                                            class="px-3.5 py-2 rounded-xl text-sm font-bold bg-white hover:bg-wheat-100 border border-wheat-300 transition">
-                                                                        <span x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
-                                                                    </button>
+
+                                                                    <div class="va-pill-num">
+                                                                        <span x-show="vaLoading" x-cloak class="va-loading text-xs font-semibold text-darkbrown-600">Membuat nomor VA...</span>
+                                                                        <span x-show="!vaLoading" class="va-num font-mono font-black text-darkbrown-900 select-all" x-text="vaNumber || '-'">{{ $vaInfo['va_number'] ?? '-' }}</span>
+                                                                        <button type="button" @click="copy(vaNumber)" :disabled="vaLoading || !vaNumber"
+                                                                                class="shrink-0 px-2.5 py-1 rounded-full text-xs font-bold bg-white hover:bg-wheat-100 border border-wheat-300 transition disabled:opacity-60">
+                                                                            <span x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
+
+                                                                <p class="text-xs text-darkbrown-500">Nomor dibuat langsung oleh Midtrans. Ganti bank = nomor sebelumnya dibatalkan.</p>
                                                             </div>
                                                         @endif
 
@@ -476,7 +538,7 @@
                                                             @if($vaInfo && !config('services.midtrans.is_production'))
                                                                 {{-- Sandbox: VA otomatis tersalin, lalu simulator Midtrans terbuka di tab baru --}}
                                                                 <a href="https://simulator.sandbox.midtrans.com/" target="_blank" rel="noopener"
-                                                                   @click="copy(@js($vaInfo['va_number'] ?? ''))"
+                                                                   @click="copy(vaNumber)"
                                                                    class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2">
                                                                     <span>Bayar sekarang</span>
                                                                 </a>
@@ -820,6 +882,11 @@
                 justDone: null,
                 copied: false,
                 remaining: '',
+                vaBank: cfg.va?.bank ?? 'bca',
+                vaNumber: cfg.va?.number ?? '',
+                vaBiller: cfg.va?.biller ?? '',
+                vaLoading: false,
+                vaOpen: false,
                 flash: '',
                 flashTone: 'info',
                 iconPath: {
@@ -833,6 +900,10 @@
 
                 init() {
                     this.startCountdown();
+                    // Daftar bank ditutup saat layar digulir/diubah ukurannya (posisinya fixed)
+                    const closeBank = () => { if (this.vaOpen) this.vaOpen = false; };
+                    window.addEventListener('scroll', closeBank, true);
+                    window.addEventListener('resize', closeBank);
                     if (this.fresh) {
                         // Booking baru: bulatan "Booking dibuat" membal, aktivitas masuk dari atas
                         this.justDone = 'created';
@@ -910,6 +981,54 @@
                     navigator.clipboard.writeText(text);
                     this.copied = true;
                     setTimeout(() => { this.copied = false; }, 2000);
+                },
+
+                toggleBank() {
+                    if (this.vaLoading || this.expired) return;
+                    if (this.vaOpen) { this.vaOpen = false; return; }
+                    this.vaOpen = true;
+                    this.$nextTick(() => this.placeBankMenu());
+                },
+                placeBankMenu() {
+                    const btn = this.$refs.vaBtn, menu = this.$refs.vaMenu;
+                    if (!btn || !menu) return;
+                    const r = btn.getBoundingClientRect();
+                    const h = menu.offsetHeight, w = menu.offsetWidth;
+                    const spaceBelow = window.innerHeight - r.bottom;
+                    const top = (spaceBelow < h + 12 && r.top > h + 12) ? r.top - h - 6 : r.bottom + 6;
+                    menu.style.top = top + 'px';
+                    menu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8)) + 'px';
+                },
+                pickBank(key) {
+                    this.vaOpen = false;
+                    this.changeBank(key);
+                },
+
+                // Ganti bank VA: minta server membuat tagihan baru ke Midtrans. Nomor tidak pernah dibuat di browser.
+                async changeBank(next) {
+                    const prev = this.vaBank;
+                    if (this.vaLoading || next === prev) return;
+                    const prevNumber = this.vaNumber, prevBiller = this.vaBiller;
+                    this.flash = '';
+                    this.vaLoading = true;
+                    this.vaNumber = '';
+                    try {
+                        const res = await fetch(this.vaUrl, { method: 'POST', headers: this.headers(), body: JSON.stringify({ bank: next }) });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok || !data.va_number) throw new Error(data.message || 'Gagal membuat nomor VA. Coba lagi.');
+                        this.vaBank = next;
+                        this.vaNumber = data.va_number;
+                        this.vaBiller = data.biller_code || '';
+                        if (data.order_id) this.orderId = data.order_id;
+                    } catch (e) {
+                        // Gagal: kembali ke bank & nomor sebelumnya (nomor lama masih aktif di Midtrans)
+                        this.vaBank = prev;
+                        this.vaNumber = prevNumber;
+                        this.vaBiller = prevBiller;
+                        this.setFlash(e.message || 'Koneksi bermasalah. Coba lagi.', 'error');
+                    } finally {
+                        this.vaLoading = false;
+                    }
                 },
 
                 async payNow() {
