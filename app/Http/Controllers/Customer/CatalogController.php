@@ -122,7 +122,7 @@ class CatalogController extends Controller
     {
         /** @var MasterItem $item */
         $item = MasterItem::publicCatalog()
-            ->with(['category', 'vendor', 'units'])
+            ->with(['category', 'vendor', 'units', 'images'])
             ->findOrFail($id);
 
         $bookedDates = $this->availabilityService->bookedDates(
