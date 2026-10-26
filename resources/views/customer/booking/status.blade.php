@@ -442,7 +442,7 @@
                                                                 Bayar sebelum <strong>{{ $fmtDateTime($rental->expires_at) }}</strong>
                                                                 <span x-show="remaining" x-cloak> · sisa <span class="font-mono font-bold" x-text="remaining"></span></span>
                                                             </span>
-                                                            <span x-show="expired" x-cloak class="font-semibold text-red-700">Batas waktu pembayaran sudah lewat. Unit alat dilepas ke penyewa lain.</span>
+                                                            <span x-show="expired" x-cloak class="font-semibold text-red-700">Batas waktu pembayaran sudah terlewat.</span>
                                                         </div>
 
                                                         @if($vaInfo)
@@ -465,10 +465,6 @@
                                                                     </button>
                                                                 </div>
                                                             </div>
-                                                        @else
-                                                            <p class="text-sm text-darkbrown-600 leading-relaxed">
-                                                                Pilih QRIS atau transfer bank di jendela pembayaran Midtrans setelah menekan <strong>Bayar sekarang</strong>.
-                                                            </p>
                                                         @endif
 
                                                         <div x-show="flash" x-cloak role="status"
@@ -476,23 +472,29 @@
                                                              class="rounded-xl border px-3.5 py-2.5 text-sm" x-text="flash"></div>
 
                                                         <div class="flex flex-wrap items-center gap-2.5" x-show="!expired">
-                                                            <button type="button" @click="payNow()" :disabled="paying"
-                                                                    class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                                                                <svg x-show="!paying" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                                                <svg x-show="paying" x-cloak class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
-                                                                <span x-text="paying ? 'Memproses...' : 'Bayar sekarang'">Bayar sekarang</span>
-                                                            </button>
+
+                                                            @if($vaInfo && !config('services.midtrans.is_production'))
+                                                                {{-- Sandbox: VA otomatis tersalin, lalu simulator Midtrans terbuka di tab baru --}}
+                                                                <a href="https://simulator.sandbox.midtrans.com/" target="_blank" rel="noopener"
+                                                                   @click="copy(@js($vaInfo['va_number'] ?? ''))"
+                                                                   class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2">
+                                                                    <span>Bayar sekarang</span>
+                                                                </a>
+                                                            @else
+                                                                {{-- Production / tanpa VA: pakai alur payNow() yang lama --}}
+                                                                <button type="button" @click="payNow()" :disabled="paying"
+                                                                        class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                                                                    <svg x-show="!paying" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                                    <svg x-show="paying" x-cloak class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
+                                                                    <span x-text="paying ? 'Memproses...' : 'Bayar sekarang'">Bayar sekarang</span>
+                                                                </button>
+                                                            @endif
 
                                                             <button type="button" @click="sync()" :disabled="syncing"
                                                                     class="py-2.5 px-4 rounded-xl text-sm font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
                                                                 <svg class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5.6 9A8 8 0 0119 11m-.6 4A8 8 0 015 13" /></svg>
                                                                 <span x-text="syncing ? 'Mengecek...' : 'Cek status'">Cek status</span>
                                                             </button>
-
-                                                            @if(!config('services.midtrans.is_production'))
-                                                                <a href="https://simulator.sandbox.midtrans.com/" target="_blank" rel="noopener"
-                                                                   class="text-sm font-semibold text-darkbrown-600 hover:text-darkbrown-900 underline underline-offset-2">Simulator sandbox</a>
-                                                            @endif
                                                         </div>
                                                     @endif
                                                     @break
@@ -951,7 +953,7 @@
                         if (data && data.is_paid) {
                             await this.handlePaid(data);
                         } else if (!silent) {
-                            this.setFlash('Pembayaran belum terdeteksi (' + ((data && data.payment_status) || 'menunggu pembayaran') + '). Jika sudah membayar, tunggu beberapa detik lalu cek lagi.');
+                            this.setFlash('Pembayaran belum terdeteksi' || 'menunggu pembayaran');
                         }
                     } catch (e) {
                         if (!silent) this.setFlash('Gagal mengecek status pembayaran. Coba lagi sebentar.', 'error');

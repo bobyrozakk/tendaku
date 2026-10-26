@@ -62,7 +62,7 @@ class CheckoutSummaryBuilder
             'status' => 'pending',
             'status_label' => 'Menunggu Pembayaran',
             'created_at' => now()->format('d F Y, H:i T'),
-            'expires_at' => now()->addHours((int) $vendor->booking_expiry_hours)->format('d F Y, H:i T'),
+            'expires_at' => now()->addHours((int) config('rental.payment_expiry_hours'))->format('d F Y, H:i T'),
             'is_guest' => ! $isLoggedIn,
             'vendor' => $this->vendorData($vendor),
             'customer' => [

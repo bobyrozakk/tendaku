@@ -231,7 +231,7 @@
                     <div x-show="remaining" x-cloak class="mt-1 text-sm text-sunglow-200">
                         Sisa waktu <span class="font-mono font-bold" x-text="remaining"></span>
                     </div>
-                    <p class="mt-1 text-xs text-avocado-200 leading-relaxed">Alat ditahan 12 jam. Lewat dari itu, unit dilepas ke penyewa lain.</p>
+                    <p class="mt-1 text-xs text-avocado-200 leading-relaxed">Alat ditahan 12 jam.</p>
                 </div>
             </div>
         </div>

@@ -160,7 +160,7 @@ class RentalService
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
             $grandTotal = max(0.0, $subtotal + $deliveryFee - $discountAmount);
 
-            $expiresInHours = (int) ($data['expires_in_hours'] ?? 2);
+            $expiresInHours = (int) ($data['expires_in_hours'] ?? config('rental.payment_expiry_hours'));
             $bookingCode = $this->generateBookingCode();
 
             $rental = Rental::query()->create([
