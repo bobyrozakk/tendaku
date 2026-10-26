@@ -68,19 +68,23 @@ Route::get('checkout', fn () => redirect()->route('checkout.index'));
 Route::get('booking/status/{code}', fn ($code) => redirect()->route('booking.status', ['code' => $code]));
 Route::get('booking/receipt/{code}', fn ($code) => redirect()->route('booking.receipt', ['code' => $code]));
 
-Route::post('rentals/{rental}/pay', [MidtransPaymentController::class, 'store'])
-    ->middleware('auth')
-    ->name('rentals.pay');
-Route::post('rentals/{rental}/pay-fine', [MidtransPaymentController::class, 'storeFine'])
-    ->middleware('auth')
-    ->name('rentals.pay-fine');
-Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
-    ->name('webhook.midtrans');
+// Pembayaran customer (Snap token pokok & denda), wajib login
+Route::middleware('auth')
+    ->prefix('rentals/{rental}')
+    ->name('rentals.')
+    ->group(function () {
+        Route::post('pay', [MidtransPaymentController::class, 'store'])->name('pay');
+        Route::post('pay-fine', [MidtransPaymentController::class, 'storeFine'])->name('pay-fine');
+    });
 
 // Retry tagihan baru jika lama expired/failed; throttle mencegah abuse
 Route::post('payments/{order_id}/retry', [PaymentRetryController::class, 'store'])
     ->middleware(['auth', 'throttle:5,1'])
     ->name('payments.retry');
+
+// Webhook Midtrans: tanpa auth/sesi, dikecualikan dari CSRF di bootstrap/app.php (signature SHA512 yang memvalidasi)
+Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
+    ->name('webhook.midtrans');
 
 // Endpoint kasir vendor: pelunasan sisa & denda (§7.4, §4.2)
 Route::middleware(['auth', 'verified', 'role:vendor_admin,vendor_owner', 'vendor.active'])

@@ -27,6 +27,16 @@ class PackageCheckoutController extends Controller
     public const DELIVERY_FEE = 25000;
 
     /**
+     * Nama channel pembayaran untuk pesan sukses.
+     */
+    private const CHANNEL_LABELS = [
+        'qris' => 'QRIS Realtime',
+        'bca_va' => 'BCA Virtual Account',
+        'mandiri_va' => 'Mandiri Bill Payment',
+        'bri_va' => 'BRI Virtual Account (BRIVA)',
+    ];
+
+    /**
      * Halaman konfirmasi sewa paket camping.
      */
     public function index(Request $request, int $id): View
@@ -68,24 +78,7 @@ class PackageCheckoutController extends Controller
 
         $isGuest = ! Auth::check();
 
-        $validated = $request->validate([
-            'pickup_date' => ['required', 'date', 'after_or_equal:today'],
-            'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:255'],
-            'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
-            'guest_id_number' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
-        ], [
-            'pickup_date.required' => 'Tanggal mulai sewa wajib dipilih.',
-            'pickup_date.after_or_equal' => 'Tanggal mulai sewa tidak boleh di masa lalu.',
-            'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
-            'guest_phone.required' => 'Nomor WhatsApp wajib diisi agar pengingat pengembalian dapat dikirim.',
-            'guest_id_number.required' => 'NIK wajib diisi untuk pemesanan tanpa akun.',
-        ]);
-
-        if ($isGuest && PhoneNumberNormalizer::normalize($validated['guest_phone']) === null) {
-            throw ValidationException::withMessages([
-                'guest_phone' => 'Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx.',
-            ]);
-        }
+        $validated = $this->validatedInput($request, $isGuest);
 
         $deliveryAddress = $pickupMethod === 'delivery' ? Auth::user()?->address : null;
 
@@ -129,16 +122,39 @@ class PackageCheckoutController extends Controller
                 ->with('error', $exception->getMessage());
         }
 
-        $channelNames = [
-            'qris' => 'QRIS Realtime',
-            'bca_va' => 'BCA Virtual Account',
-            'mandiri_va' => 'Mandiri Bill Payment',
-            'bri_va' => 'BRI Virtual Account (BRIVA)',
-        ];
-        $channelLabel = $channelNames[$paymentChannel] ?? 'Midtrans Sandbox';
+        $channelLabel = self::CHANNEL_LABELS[$paymentChannel] ?? 'Midtrans Sandbox';
 
         return redirect()->route('booking.status', $rental->booking_code)
             ->with('success', "Paket camping \"{$package->name}\" berhasil dipesan dengan kode #{$rental->booking_code} via {$channelLabel}.");
+    }
+
+    /**
+     * Validasi input checkout paket. Guest wajib mengisi identitas dan nomor WhatsApp yang valid.
+     *
+     * @return array<string, mixed>
+     */
+    private function validatedInput(Request $request, bool $isGuest): array
+    {
+        $validated = $request->validate([
+            'pickup_date' => ['required', 'date', 'after_or_equal:today'],
+            'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:255'],
+            'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
+            'guest_id_number' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
+        ], [
+            'pickup_date.required' => 'Tanggal mulai sewa wajib dipilih.',
+            'pickup_date.after_or_equal' => 'Tanggal mulai sewa tidak boleh di masa lalu.',
+            'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
+            'guest_phone.required' => 'Nomor WhatsApp wajib diisi agar pengingat pengembalian dapat dikirim.',
+            'guest_id_number.required' => 'NIK wajib diisi untuk pemesanan tanpa akun.',
+        ]);
+
+        if ($isGuest && PhoneNumberNormalizer::normalize($validated['guest_phone']) === null) {
+            throw ValidationException::withMessages([
+                'guest_phone' => 'Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx.',
+            ]);
+        }
+
+        return $validated;
     }
 
     /**

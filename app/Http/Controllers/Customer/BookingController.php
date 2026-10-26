@@ -120,7 +120,7 @@ class BookingController extends Controller
     /**
      * Ambil (atau buat) Snap token untuk rental yang masih menunggu pembayaran.
      */
-        public function pay(Request $request, string $code, MidtransService $midtrans): JsonResponse
+    public function pay(Request $request, string $code, MidtransService $midtrans): JsonResponse
     {
         $rental = $this->findAuthorizedRental($request, $code);
 

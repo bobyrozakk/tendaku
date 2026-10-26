@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Webhook;
 
 use App\Exceptions\InvalidMidtransSignatureException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Webhook\MidtransNotificationRequest;
 use App\Services\MidtransService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
@@ -21,18 +21,9 @@ use InvalidArgumentException;
  */
 class MidtransWebhookController extends Controller
 {
-    public function handle(Request $request, MidtransService $midtrans): JsonResponse
+    public function handle(MidtransNotificationRequest $request, MidtransService $midtrans): JsonResponse
     {
-        $notification = $request->validate([
-            'order_id' => ['required', 'string', 'max:100'],
-            'status_code' => ['required', 'string', 'max:10'],
-            'gross_amount' => ['required', 'numeric', 'gt:0'],
-            'signature_key' => ['required', 'string', 'size:128'],
-            'transaction_status' => ['required', 'string', 'max:50'],
-            'transaction_id' => ['nullable', 'string', 'max:100'],
-            'fraud_status' => ['nullable', 'string', 'max:50'],
-            'payment_type' => ['nullable', 'string', 'max:50'],
-        ]);
+        $notification = $request->validated();
 
         try {
             $payment = $midtrans->handleNotification($notification);

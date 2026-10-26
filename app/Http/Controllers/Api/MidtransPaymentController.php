@@ -18,10 +18,7 @@ class MidtransPaymentController extends Controller
      */
     public function store(Request $request, Rental $rental, MidtransService $midtrans): JsonResponse
     {
-        abort_unless(
-            $request->user()?->role === 'customer' && $rental->user_id === Auth::id(),
-            404,
-        );
+        $this->authorizeCustomerOwnership($request, $rental);
 
         abort_unless(
             $rental->status === 'pending',
@@ -53,12 +50,14 @@ class MidtransPaymentController extends Controller
      * Endpoint ini dipanggil setelah proses pengembalian barang selesai dan
      * terdapat denda yang belum dibayar pada rental tersebut.
      */
-    public function storeFine(Request $request, Rental $rental, PaymentService $paymentService, MidtransService $midtrans): JsonResponse
+    public function storeFine(
+        Request $request,
+        Rental $rental,
+        PaymentService $paymentService,
+        MidtransService $midtrans,
+    ): JsonResponse
     {
-        abort_unless(
-            $request->user()?->role === 'customer' && $rental->user_id === Auth::id(),
-            404,
-        );
+        $this->authorizeCustomerOwnership($request, $rental);
 
         // Rental harus sudah dalam status returned atau completed agar ada denda
         abort_unless(
@@ -110,5 +109,16 @@ class MidtransPaymentController extends Controller
                 ],
             ]);
         });
+    }
+
+    /**
+     * Hanya customer pemilik rental yang boleh membayar; selain itu 404 agar rental tidak terekspos.
+     */
+    private function authorizeCustomerOwnership(Request $request, Rental $rental): void
+    {
+        abort_unless(
+            $request->user()?->role === 'customer' && $rental->user_id === Auth::id(),
+            404,
+        );
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Customer;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Auth;
 
 /**
  * Validasi payload POST /katalog/booking dari form checkout.
@@ -25,7 +24,7 @@ class StoreCheckoutRequest extends FormRequest
      */
     public function rules(): array
     {
-        $isGuest = Auth::guest();
+        $isGuest = $this->user() === null;
 
         return [
             'pickup_method' => ['required', 'string', 'in:self_pickup,delivery'],

@@ -6,6 +6,7 @@ use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\StoreCheckoutRequest;
 use App\Models\MasterItem;
+use App\Models\Rental;
 use App\Services\CheckoutSummaryBuilder;
 use App\Services\GuestRentalAccess;
 use App\Services\MidtransService;
@@ -15,8 +16,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CheckoutController extends Controller
@@ -88,15 +87,10 @@ class CheckoutController extends Controller
 
             session()->forget(self::CART_SESSION_KEY);
 
-            $redirectUrl = route('booking.status', $rental->booking_code, false);
-            if ($request->user() === null && ! empty($rental->guest_phone)) {
-                $redirectUrl .= '?phone='.urlencode($rental->guest_phone);
-            }
-
             return response()->json([
                 'snap_token' => $snapToken,
                 'booking_code' => $rental->booking_code,
-                'redirect_url' => $redirectUrl,
+                'redirect_url' => $this->statusUrl($request, $rental),
                 'payment_type' => $payment->payment_type,
                 'payment_amount' => (int) $payment->amount,
             ]);
@@ -150,6 +144,20 @@ class CheckoutController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * URL halaman status booking. Guest membawa nomor teleponnya sebagai bukti akses.
+     */
+    private function statusUrl(Request $request, Rental $rental): string
+    {
+        $url = route('booking.status', $rental->booking_code, false);
+
+        if ($request->user() === null && ! empty($rental->guest_phone)) {
+            $url .= '?phone='.urlencode($rental->guest_phone);
+        }
+
+        return $url;
     }
 
     /**
