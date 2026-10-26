@@ -93,8 +93,13 @@ class ProductBookingTest extends TestCase
 
         Livewire::test(ProductBooking::class, ['product' => $product])
             ->set('pickup_date', '2026-10-10')
-            ->set('return_date', '2026-10-12')
-            // 10, 11, 12 = 3 hari inklusif
+            ->set('pickup_time', '09:00')
+            ->set('return_date', '2026-10-11')
+            ->set('return_time', '09:00')
+            // 24 jam penuh = 1 hari
+            ->assertSet('totalDays', 1)
+            ->set('return_date', '2026-10-13')
+            // 3 x 24 jam = 3 hari
             ->assertSet('totalDays', 3);
     }
 
@@ -104,7 +109,9 @@ class ProductBookingTest extends TestCase
 
         Livewire::test(ProductBooking::class, ['product' => $product])
             ->set('pickup_date', '2026-10-10')
-            ->set('return_date', '2026-10-12') // 3 hari
+            ->set('pickup_time', '09:00')
+            ->set('return_date', '2026-10-13') // 3 hari (72 jam)
+            ->set('return_time', '09:00')
             ->set('quantity', 2) // 2 unit
             ->assertSet('totalPrice', 45000 * 2 * 3);
     }
@@ -125,9 +132,10 @@ class ProductBookingTest extends TestCase
         $product = $this->createProduct();
 
         Livewire::test(ProductBooking::class, ['product' => $product])
+            ->set('duration_days', 1)
             ->set('return_date', '2026-10-10')
             ->set('pickup_date', '2026-10-15') // pickup diset setelah return
-            ->assertSet('return_date', '2026-10-15'); // return harus ikut naik
+            ->assertSet('return_date', '2026-10-16'); // return harus ikut naik (24 jam = keesokan harinya)
     }
 
     public function test_it_shows_real_time_available_stock_via_availability_service(): void
@@ -174,6 +182,7 @@ class ProductBookingTest extends TestCase
         $this->createUnit($product, 'TD-001'); // Hanya ada 1 unit
 
         Livewire::test(ProductBooking::class, ['product' => $product])
+            ->set('duration_days', 2)
             ->set('pickup_date', '2026-10-10')
             ->set('return_date', '2026-10-12')
             ->set('quantity', 2) // Minta 2 unit padahal stok 1
@@ -199,9 +208,10 @@ class ProductBookingTest extends TestCase
         $this->createUnit($product, 'TD-002');
 
         $pickup = '2026-10-10';
-        $return = '2026-10-12'; // 3 hari
+        $return = '2026-10-13'; // 3 hari (72 jam)
 
         Livewire::test(ProductBooking::class, ['product' => $product])
+            ->set('duration_days', 3)
             ->set('pickup_date', $pickup)
             ->set('return_date', $return)
             ->set('quantity', 2)
