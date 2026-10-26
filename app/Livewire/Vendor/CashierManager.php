@@ -127,6 +127,11 @@ class CashierManager extends Component
 
         $this->feedbackMessage = "Akun kasir '{$cashier->name}' berhasil ditambahkan ke toko Anda!";
         $this->feedbackType = 'success';
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $this->feedbackMessage,
+        ]);
     }
 
     public function openEditModal(int $id): void
@@ -197,6 +202,11 @@ class CashierManager extends Component
 
         $this->feedbackMessage = "Data kasir '{$cashier->name}' berhasil diperbarui!";
         $this->feedbackType = 'success';
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $this->feedbackMessage,
+        ]);
     }
 
     public function toggleStatus(int $id): void
@@ -209,6 +219,11 @@ class CashierManager extends Component
         $statusLabel = $newStatus ? 'diaktifkan' : 'dinonaktifkan';
         $this->feedbackMessage = "Status kasir '{$cashier->name}' berhasil {$statusLabel}.";
         $this->feedbackType = 'success';
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $this->feedbackMessage,
+        ]);
     }
 
     public function confirmDelete(int $id): void
@@ -248,6 +263,11 @@ class CashierManager extends Component
 
         $this->feedbackMessage = "Akun kasir '{$name}' berhasil dihapus dari toko Anda.";
         $this->feedbackType = 'success';
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Berhasil!',
+            'message' => $this->feedbackMessage,
+        ]);
     }
 
     protected function resetForm(): void

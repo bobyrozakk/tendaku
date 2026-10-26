@@ -35,36 +35,44 @@
     $theme = $colorThemes[$color] ?? $colorThemes['avocado'];
 @endphp
 
-<div {{ $attributes->merge(['class' => "bg-white p-5 rounded-2xl border border-wheat-200 shadow-tendaku-sm transition duration-200 {$theme['border']}"]) }}>
-    <div class="flex items-center justify-between gap-4">
-        <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-darkbrown-500">{{ $title }}</p>
-            <div class="mt-1 flex items-baseline gap-2">
-                <span class="text-2xl sm:text-3xl font-extrabold tracking-tight text-darkbrown-800">{{ $value }}</span>
-                @if ($trend)
-                    <span class="inline-flex items-center text-xs font-bold {{ $trendUp ? 'text-avocado-600' : 'text-red-500' }}">
-                        @if ($trendUp)
-                            <svg class="w-3.5 h-3.5 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                            </svg>
-                        @else
-                            <svg class="w-3.5 h-3.5 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" />
-                            </svg>
-                        @endif
-                        {{ $trend }}
-                    </span>
-                @endif
-            </div>
-            @if ($description)
-                <p class="mt-1 text-xs text-darkbrown-400">{{ $description }}</p>
-            @endif
-        </div>
-
+<div {{ $attributes->merge(['class' => "bg-white p-5 rounded-2xl border border-wheat-200 shadow-tendaku-sm transition duration-200 hover:shadow-tendaku-md flex flex-col justify-between {$theme['border']}"]) }}>
+    {{-- Header: Judul di kiri, Icon di kanan --}}
+    <div class="flex items-start justify-between gap-3">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-darkbrown-500 leading-tight">{{ $title }}</p>
         @if ($icon)
-            <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 {{ $theme['iconBg'] }}">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 {{ $theme['iconBg'] }}">
                 {{ $icon }}
             </div>
         @endif
     </div>
+
+    {{-- Value: Angka utama berukuran besar, ruang penuh tanpa terhimpit icon --}}
+    <div class="mt-2.5">
+        <div class="text-2xl sm:text-[28px] font-extrabold tracking-tight text-darkbrown-900 whitespace-nowrap overflow-hidden text-ellipsis">
+            {{ $value }}
+        </div>
+    </div>
+
+    {{-- Footer: Trend Badge & Deskripsi --}}
+    @if ($trend || $description)
+        <div class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
+            @if ($trend)
+                <span class="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-bold border {{ $trendUp ? 'bg-avocado-50 text-avocado-700 border-avocado-200' : 'bg-red-50 text-red-700 border-red-200' }}">
+                    @if ($trendUp)
+                        <svg class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                    @else
+                        <svg class="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" />
+                        </svg>
+                    @endif
+                    <span class="whitespace-nowrap">{{ $trend }}</span>
+                </span>
+            @endif
+            @if ($description)
+                <span class="text-xs text-darkbrown-400 font-medium leading-tight truncate">{{ $description }}</span>
+            @endif
+        </div>
+    @endif
 </div>

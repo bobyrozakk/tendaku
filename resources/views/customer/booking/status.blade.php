@@ -80,8 +80,9 @@
     @php
         $status = $rental->status;
 
-        // Urutan titik di timeline & pemetaan status rental -> titik yang sedang terbuka
-        $nodeOrder    = ['created', 'payment', 'pickup', 'rental', 'return', 'done'];
+        // Urutan titik timeline dan pemetaan status rental ke titik aktif.
+        $nodeOrder = ['created', 'payment', 'pickup', 'rental', 'return', 'done'];
+
         $statusToNode = [
             'pending'   => 'payment',
             'confirmed' => 'pickup',

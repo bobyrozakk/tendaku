@@ -1,6 +1,7 @@
 <?php
 
 use App\Jobs\ExpirePendingRentals;
+use Carbon\Carbon;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -24,3 +25,11 @@ Schedule::job(new ExpirePendingRentals)->everyMinute();
 Schedule::command('rentals:send-return-reminders')
     ->dailyAt(sprintf('%02d:00', (int) config('notifications.reminder.hour', 9)))
     ->timezone((string) config('notifications.reminder.timezone', 'Asia/Jakarta'));
+
+/*
+ * Draft batch settlement mingguan untuk vendor (komisi, escrow, piutang tunai).
+ * Dijalankan Senin dini hari sesuai config/monetization.php.
+ */
+Schedule::command('monetization:generate-settlements')
+    ->weeklyOn(Carbon::MONDAY, (string) config('monetization.settlement.time', '01:00'))
+    ->timezone((string) config('monetization.settlement.timezone', 'Asia/Jakarta'));

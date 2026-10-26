@@ -28,7 +28,8 @@ class CheckoutController extends Controller
     ) {}
 
     /**
-     * Halaman checkout. Data keranjang dibaca dari session('booking_cart').
+     * Halaman checkout.
+     * Data keranjang dibaca dari session('booking_cart').
      */
     public function index(Request $request): View|RedirectResponse
     {
@@ -37,18 +38,29 @@ class CheckoutController extends Controller
         if ($cart === null) {
             return redirect()
                 ->route('customer.catalog.index')
-                ->with('warning', 'Silakan pilih alat camping yang ingin disewa terlebih dahulu.');
+                ->with(
+                    'warning',
+                    'Silakan pilih alat camping yang ingin disewa terlebih dahulu.'
+                );
         }
 
-        $booking = $this->summary->build($cart, Auth::user(), $request->query('pickup_method'));
+        $booking = $this->summary->build(
+            $cart,
+            Auth::user(),
+            $request->query('pickup_method')
+        );
+
         $isLoggedIn = Auth::check();
 
-        return view('customer.checkout.index', compact('booking', 'isLoggedIn'));
+        return view(
+            'customer.checkout.index',
+            compact('booking', 'isLoggedIn')
+        );
     }
 
     /**
-     * Buat rental + tagihan Midtrans, lalu kembalikan Snap token.
-     * Nominal selalu dihitung di server (§0); order_id berawalan TDK- (§0, §7.2).
+     * Membuat rental dan pembayaran Midtrans Snap.
+     * Nilai transaksi harus dihitung dan divalidasi di server.
      */
     public function store(
         StoreCheckoutRequest $request,
@@ -67,24 +79,61 @@ class CheckoutController extends Controller
             );
         }
 
+        $pickupMethod = $request->validated('pickup_method');
+
+        // Pertahankan aturan dari versi anggota tim:
+        // delivery hanya diperbolehkan bagi pengguna yang login.
+        if (
+            $pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY
+            && ! Auth::check()
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Layanan delivery mengharuskan Anda masuk atau mendaftar akun terlebih dahulu.',
+                    'redirect_url' => route('login'),
+                ], 403);
+            }
+
+            return redirect()
+                ->route('login')
+                ->with(
+                    'warning',
+                    'Layanan pengantaran (delivery) mengharuskan Anda memiliki akun terverifikasi. Silakan masuk atau daftar akun terlebih dahulu.'
+                );
+        }
+
         try {
-            $masterItem = MasterItem::with('vendor')->findOrFail($cart['master_item_id']);
+            $masterItem = MasterItem::with('vendor')
+                ->findOrFail($cart['master_item_id']);
 
-            $rental = $rentalService->createBooking($this->bookingData($request, $cart, $masterItem));
+            $bookingData = $this->bookingData(
+                $request,
+                $cart,
+                $masterItem
+            );
 
+            $rental = $rentalService->createBooking($bookingData);
+
+            // Hanya satu mekanisme pembuatan payment.
+            // Jangan membuat payment kedua secara manual.
             $payment = $paymentService->createOnlinePayment(
                 $rental,
                 $request->validated('payment_option'),
                 1,
-                $request->validated('payment_channel'),
+                $this->paymentChannel(
+                    $request->validated('payment_channel')
+                ),
             );
 
             $snapToken = $midtrans->createTransaction($payment);
 
+            // Pertahankan akses status booking untuk guest.
             if ($request->user() === null) {
                 $this->guestAccess->grant($rental);
             }
 
+            // Keranjang dibersihkan setelah proses pembayaran berhasil
+            // menghasilkan Snap token.
             session()->forget(self::CART_SESSION_KEY);
 
             return response()->json([
@@ -95,7 +144,10 @@ class CheckoutController extends Controller
                 'payment_amount' => (int) $payment->amount,
             ]);
         } catch (InsufficientStockException $e) {
-            return $this->failure($request, 'Stok tidak tersedia: '.$e->getMessage());
+            return $this->failure(
+                $request,
+                'Stok tidak tersedia: ' . $e->getMessage()
+            );
         } catch (\InvalidArgumentException $e) {
             return $this->failure($request, $e->getMessage());
         } catch (\Throwable $e) {
@@ -110,22 +162,34 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Susun data yang dibutuhkan RentalService.
+     * Menyusun data yang dibutuhkan RentalService.
      */
-    private function bookingData(StoreCheckoutRequest $request, array $cart, MasterItem $masterItem): array
-    {
+    private function bookingData(
+        StoreCheckoutRequest $request,
+        array $cart,
+        MasterItem $masterItem,
+    ): array {
         $user = $request->user();
         $pickupMethod = $request->validated('pickup_method');
 
         $data = [
             'vendor_id' => $masterItem->vendor_id,
-            'pickup_date' => $request->validated('pickup_date') ?: $cart['pickup_date'],
-            'return_date' => $request->validated('return_date') ?: $cart['return_date'],
+            'pickup_date' => $request->validated('pickup_date')
+                ?: ($cart['pickup_date'] ?? null),
+            'return_date' => $request->validated('return_date')
+                ?: ($cart['return_date'] ?? null),
             'pickup_method' => $pickupMethod,
-            'delivery_fee' => $this->summary->deliveryFee($masterItem->vendor, $pickupMethod, $user !== null),
+            'delivery_fee' => $this->summary->deliveryFee(
+                $masterItem->vendor,
+                $pickupMethod,
+                $user !== null
+            ),
             'notes' => $request->validated('notes'),
             'items' => [
-                ['master_item_id' => $masterItem->id, 'qty' => $this->summary->quantityOf($cart)],
+                [
+                    'master_item_id' => $masterItem->id,
+                    'qty' => $this->summary->quantityOf($cart),
+                ],
             ],
         ];
 
@@ -133,45 +197,109 @@ class CheckoutController extends Controller
             return $data + [
                 'guest_name' => $request->validated('guest_name'),
                 'guest_phone' => $request->validated('guest_phone'),
-                'guest_id_number' => $request->validated('guest_id_number') ?? '',
+                'guest_id_number' =>
+                    $request->validated('guest_id_number') ?? '',
             ];
         }
 
         $data['user_id'] = $user->id;
 
-        if ($pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY) {
-            $data['delivery_address'] = $request->validated('delivery_address') ?: ($user->address ?? '');
+        if (
+            $pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY
+        ) {
+            $data['delivery_address'] =
+                $request->validated('delivery_address')
+                ?: ($user->address ?? '');
         }
 
         return $data;
     }
 
     /**
-     * URL halaman status booking. Guest membawa nomor teleponnya sebagai bukti akses.
+     * Kanal pembayaran yang didukung halaman checkout.
+     */
+    protected function paymentChannel(?string $channel): string
+    {
+        return in_array(
+            $channel,
+            ['qris', 'bca_va', 'mandiri_va', 'bri_va'],
+            true
+        ) ? $channel : 'qris';
+    }
+
+    /**
+     * Metode pembayaran untuk ditampilkan di halaman checkout.
+     *
+     * @return array<int, array<string, string>>
+     */
+    protected function paymentMethods(): array
+    {
+        return [
+            [
+                'id' => 'qris',
+                'name' => 'QRIS Realtime',
+                'desc' => 'GoPay, OVO, Dana, ShopeePay, BCA Mobile, & Livin Mandiri',
+                'badge' => 'Verifikasi Otomatis',
+            ],
+            [
+                'id' => 'bca_va',
+                'name' => 'BCA Virtual Account',
+                'desc' => 'Konfirmasi pembayaran instan 24 jam',
+                'badge' => 'Otomatis',
+            ],
+            [
+                'id' => 'mandiri_va',
+                'name' => 'Mandiri Bill Payment',
+                'desc' => 'Transfer via Livin by Mandiri / ATM',
+                'badge' => 'Otomatis',
+            ],
+            [
+                'id' => 'bri_va',
+                'name' => 'BRI Virtual Account (BRIVA)',
+                'desc' => 'Transfer via BRImo / ATM',
+                'badge' => 'Otomatis',
+            ],
+        ];
+    }
+
+    /**
+     * URL halaman status booking.
+     * Guest membawa nomor telepon sebagai bukti akses sesuai
+     * mekanisme status yang sudah digunakan aplikasi.
      */
     private function statusUrl(Request $request, Rental $rental): string
     {
-        $url = route('booking.status', $rental->booking_code, false);
+        $url = route(
+            'booking.status',
+            $rental->booking_code,
+            false
+        );
 
-        if ($request->user() === null && ! empty($rental->guest_phone)) {
-            $url .= '?phone='.urlencode($rental->guest_phone);
+        if (
+            $request->user() === null
+            && ! empty($rental->guest_phone)
+        ) {
+            $url .= '?phone=' . urlencode($rental->guest_phone);
         }
 
         return $url;
     }
 
     /**
-     * Keranjang booking dari session, atau null kalau kosong/tidak valid.
+     * Membaca keranjang booking dari session.
      */
     private function cart(): ?array
     {
         $cart = session(self::CART_SESSION_KEY);
 
-        return (empty($cart) || empty($cart['master_item_id'])) ? null : $cart;
+        return (
+            empty($cart)
+            || empty($cart['master_item_id'])
+        ) ? null : $cart;
     }
 
     /**
-     * Respons error yang sesuai: JSON untuk AJAX, redirect untuk form biasa.
+     * JSON untuk AJAX, redirect untuk form biasa.
      */
     private function failure(
         Request $request,
@@ -180,11 +308,17 @@ class CheckoutController extends Controller
         ?string $redirectRoute = null,
     ): JsonResponse|RedirectResponse {
         if ($request->expectsJson()) {
-            return response()->json(['message' => $message], $status);
+            return response()->json([
+                'message' => $message,
+            ], $status);
         }
 
         return $redirectRoute
-            ? redirect()->route($redirectRoute)->with('warning', $message)
-            : redirect()->back()->with('error', $message);
+            ? redirect()
+                ->route($redirectRoute)
+                ->with('warning', $message)
+            : redirect()
+                ->back()
+                ->with('error', $message);
     }
 }

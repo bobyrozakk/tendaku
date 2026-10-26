@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\RevenueExportController;
+use App\Http\Controllers\Admin\SettlementInvoiceController;
 use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\BookingVaController;
@@ -120,6 +122,20 @@ Route::get('dashboard', function () {
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
+
+// Rute Super Admin — laporan pendapatan platform (monetisasi).
+Route::middleware(['super_admin', 'verified'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::view('pendapatan', 'admin.revenue.index')->name('pendapatan');
+        Route::get('pendapatan/export', [RevenueExportController::class, 'csv'])
+            ->name('pendapatan.export');
+
+        Route::view('settlements', 'admin.settlements.index')->name('settlements');
+        Route::get('settlements/{settlement}/invoice', [SettlementInvoiceController::class, 'print'])
+            ->name('settlements.invoice');
+    });
 
 // Rute Modul KASIR & POS Toko (Role: vendor_admin / Kasir)
 Route::middleware(['auth', 'verified', 'role:vendor_admin', 'vendor.active'])
