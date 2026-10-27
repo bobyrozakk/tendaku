@@ -70,25 +70,6 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm p-5 space-y-3">
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-sm font-bold text-darkbrown-900">Jaminan KTP</span>
-                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $ktpBadge }}">{{ $ktpLabel }}</span>
-                    </div>
-                    <p class="text-sm text-darkbrown-600 leading-relaxed">
-                        @if($rental->ktp_collateral_status === 'held')
-                            KTP asli disimpan toko sejak {{ $fmtDateTime($rental->ktp_received_at) }} dan dikembalikan saat alat diserahkan kembali.
-                        @elseif($rental->ktp_collateral_status === 'returned')
-                            KTP asli dikembalikan pada {{ $fmtDateTime($rental->ktp_returned_at) }}.
-                        @else
-                            KTP asli diserahkan ke kasir vendor saat serah terima alat.
-                        @endif
-                    </p>
-                    <a href="{{ route('booking.receipt', $rental->booking_code) }}" class="inline-flex items-center gap-1.5 text-sm font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">
-                        Lihat tanda terima KTP
-                    </a>
-                </div>
                 </div>
                 <div class="mt-5 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm px-5 py-4 text-sm">
                     <div class="font-bold text-darkbrown-900">Butuh bantuan?</div>

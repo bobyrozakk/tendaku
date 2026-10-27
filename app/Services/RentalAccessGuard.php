@@ -23,7 +23,7 @@ class RentalAccessGuard
             abort_unless(
                 $this->guestAccess->allows($request, $rental),
                 403,
-                'Anda tidak memiliki akses ke pesanan ini.'
+                'NOT FOUND'
             );
 
             return;
@@ -32,7 +32,7 @@ class RentalAccessGuard
         abort_unless(
             Auth::check() && $rental->user_id === Auth::id(),
             403,
-            'Anda tidak memiliki akses ke pesanan ini.'
+            'NOT FOUND'
         );
     }
 }

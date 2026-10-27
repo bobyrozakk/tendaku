@@ -32,6 +32,9 @@ class StoreCheckoutRequest extends FormRequest
             'payment_channel' => ['nullable', 'string', 'max:50'],
             'pickup_date' => ['nullable', 'date', 'after_or_equal:today'],
             'return_date' => ['nullable', 'date', 'after_or_equal:pickup_date'],
+            'items' => ['nullable', 'array'],
+            'items.*.id' => ['nullable'],
+            'items.*.qty' => ['nullable', 'integer', 'min:1'],
 
             // Wajib untuk guest
             'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:100'],

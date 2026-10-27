@@ -40,11 +40,6 @@
             <div class="flex flex-wrap items-center gap-3 self-start sm:self-auto">
                 @if(isset($rental) && $rental)
                     <div class="flex items-center gap-2.5 px-4 py-2.5 bg-wheat-100 rounded-2xl border border-wheat-300 shadow-tendaku-sm">
-                        <div class="w-8 h-8 rounded-xl bg-darkbrown-800 text-wheat-200 flex items-center justify-center shrink-0">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                        </div>
                         <div>
                             <span class="text-xs font-semibold text-darkbrown-500 block leading-none mb-0.5">Kode booking</span>
                             <span class="font-mono text-sm sm:text-base font-extrabold text-darkbrown-900">#{{ $rental->booking_code }}</span>

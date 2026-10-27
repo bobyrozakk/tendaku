@@ -180,7 +180,8 @@ class RentalService
                 : $subtotal;
             $deliveryFee = (float) ($data['delivery_fee'] ?? 0.0);
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
-            $grandTotal = max(0.0, $subtotal + $deliveryFee - $discountAmount);
+            $adminFee = (float) round($subtotal * 0.05); // Tambahkan biaya admin 5%
+            $grandTotal = max(0.0, $subtotal + $deliveryFee + $adminFee - $discountAmount);
 
             if (isset($data['expires_at'])) {
                 $expiresAt = Carbon::parse($data['expires_at']);
@@ -197,7 +198,8 @@ class RentalService
                 $expiresAt = Carbon::now()->addHours($expiresInHours);
             }
 
-            $bookingCode = $this->generateBookingCode();
+            $firstMasterItemId = (int) (array_key_first($itemRequirements) ?? 1);
+            $bookingCode = $this->generateBookingCode($vendorId, $firstMasterItemId);
 
             $rental = Rental::query()->create([
                 'vendor_id' => $vendorId,
@@ -234,23 +236,26 @@ class RentalService
         });
     }
 
-    /**
-     * Generate kode booking unik format TDK-YYYY-XXXXX (<= 20 karakter, retry jika bentrok).
-     */
-    public function generateBookingCode(): string
+    //  Generate kode booking: TDK + Ymd + [ID Toko 2 digit] + [ID Barang 2 digit] + [No Urut 3 digit]
+    public function generateBookingCode(int $vendorId = 1, int $masterItemId = 1): string
     {
-        $datePrefix = 'TDK'.date('Ymd');
-        $lastBooking = Rental::query()
-            ->where('booking_code', 'like', "{$datePrefix}%")
+        $date = date('Ymd');
+        $vendorPart = str_pad((string) $vendorId, 2, '0', STR_PAD_LEFT);
+        $itemPart   = str_pad((string) $masterItemId, 2, '0', STR_PAD_LEFT);
+
+        $prefix = "TDK{$date}{$vendorPart}{$itemPart}";
+
+        $lastBooking = Rental::withoutGlobalScopes()
+            ->where('booking_code', 'like', "{$prefix}%")
             ->orderBy('booking_code', 'desc')
             ->value('booking_code');
 
-        $nextNumber = $lastBooking ? ((int) substr($lastBooking, -4) + 1) : 1;
+        $nextNumber = $lastBooking ? ((int) substr($lastBooking, -3) + 1) : 1;
 
         do {
-            $code = $datePrefix.str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+            $code = $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
             $nextNumber++;
-        } while (Rental::query()->where('booking_code', $code)->exists());
+        } while (Rental::withoutGlobalScopes()->where('booking_code', $code)->exists());
 
         return $code;
     }

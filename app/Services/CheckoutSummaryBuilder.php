@@ -46,16 +46,17 @@ class CheckoutSummaryBuilder
         $rentalDays = max(1, (int) ($cart['total_days'] ?? 1));
 
         $dailyRate = (int) $masterItem->daily_rate;
-        $depositPerUnit = (int) $masterItem->deposit_amount;
-        $discount = 0; // belum ada fitur diskon
+        $depositPerUnit = 0;
+        $discount = 0;
 
         $itemSubtotal = $dailyRate * $quantity * $rentalDays;
-        $totalDeposit = $depositPerUnit * $quantity;
+        $adminFee = (int) round($itemSubtotal * 0.05);
+        $totalDeposit = 0;
         $deliveryFee = $this->deliveryFee($vendor, $pickupMethod, $isLoggedIn);
-        $grandTotal = $itemSubtotal + $totalDeposit + $deliveryFee - $discount;
+        $grandTotal = $itemSubtotal + $adminFee + $deliveryFee - $discount;
 
         $dpPercentage = (int) ($vendor->dp_percentage ?: config('payment.dp_percentage', 50));
-        $dpAmount = (int) ceil($grandTotal * $dpPercentage / 100);
+        $dpAmount = (int) ceil(($itemSubtotal * $dpPercentage / 100) + $adminFee);
 
         return [
             'booking_code' => 'TDK-PENDING',
@@ -80,6 +81,7 @@ class CheckoutSummaryBuilder
             'delivery_notes' => '',
             'items' => [$this->itemData($masterItem, $quantity, $dailyRate, $depositPerUnit, $itemSubtotal)],
             'subtotal' => $itemSubtotal,
+            'admin_fee' => $adminFee,
             'deposit' => $totalDeposit,
             'delivery_fee' => $deliveryFee,
             'discount' => $discount,

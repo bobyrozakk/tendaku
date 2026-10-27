@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,11 +6,11 @@
 
 :root {
     /* Tendaku Brand Palette (User Specified) */
-    --color-wheat: #F9E3B6;
-    --color-sunglow: #FBCE6B;
-    --color-goldenrod: #D5A007;
-    --color-avocado: #6C8B08;
-    --color-dark-brown: #2B2202;
+    --color-wheat: #f9e3b6;
+    --color-sunglow: #fbce6b;
+    --color-goldenrod: #d5a007;
+    --color-avocado: #6c8b08;
+    --color-dark-brown: #2b2202;
 
     /* Semantic Mappings */
     --brand-primary: var(--color-avocado);
@@ -22,19 +22,30 @@
 
 @layer base {
     body {
-        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        color: #2B2202;
-        background-color: #FDFBF7;
+        font-family:
+            "Plus Jakarta Sans",
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            Roboto,
+            sans-serif;
+        color: #2b2202;
+        background-color: #fdfbf7;
     }
 
-    h1, h2, h3, h4, h5, h6 {
-        font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
-        color: #2B2202;
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+        color: #2b2202;
     }
 
     ::selection {
-        background-color: #FBCE6B;
-        color: #2B2202;
+        background-color: #fbce6b;
+        color: #2b2202;
     }
 
     [x-cloak] {
@@ -110,19 +121,19 @@
 
 /* Custom Nature/Camping Accent Gradient */
 .bg-gradient-tendaku {
-    background: linear-gradient(135deg, #F9E3B6 0%, #FBCE6B 40%, #E8BE65 100%);
+    background: linear-gradient(135deg, #f9e3b6 0%, #fbce6b 40%, #e8be65 100%);
 }
 
 .bg-gradient-outdoor {
-    background: linear-gradient(135deg, #2B2202 0%, #3C311B 60%, #546E06 100%);
+    background: linear-gradient(135deg, #2b2202 0%, #3c311b 60%, #546e06 100%);
 }
 
 .bg-gradient-avocado {
-    background: linear-gradient(135deg, #6C8B08 0%, #546E06 100%);
+    background: linear-gradient(135deg, #6c8b08 0%, #546e06 100%);
 }
 
 .bg-gradient-gold {
-    background: linear-gradient(135deg, #FBCE6B 0%, #D5A007 100%);
+    background: linear-gradient(135deg, #fbce6b 0%, #d5a007 100%);
 }
 
 /* Sembunyikan scrollbar horizontal pada area chart/filter */
@@ -137,8 +148,12 @@
 
 /* Camping Pattern Subtle Texture */
 .bg-camping-pattern {
-    background-color: #FDFBF7;
-    background-image: radial-gradient(#F9E3B6 0.75px, transparent 0.75px), radial-gradient(#F9E3B6 0.75px, #FDFBF7 0.75px);
+    background-color: #fdfbf7;
+    background-image:
+        radial-gradient(#f9e3b6 0.75px, transparent 0.75px),
+        radial-gradient(#f9e3b6 0.75px, #fdfbf7 0.75px);
     background-size: 30px 30px;
-    background-position: 0 0, 15px 15px;
+    background-position:
+        0 0,
+        15px 15px;
 }
