@@ -142,7 +142,7 @@ new class extends Component
 
     @if (session('status') === 'profile-updated')
         <div class="mt-4 p-4 rounded-xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm font-semibold text-avocado-900 flex items-center gap-2">
-            <span class="text-base">✅</span>
+            <i data-lucide="check-circle" class="w-4 h-4 text-avocado-600 shrink-0"></i>
             <span>Biodata profil berhasil diperbarui!</span>
         </div>
     @endif
@@ -173,7 +173,8 @@ new class extends Component
                             {{ ucfirst($currentUser->role ?? 'Customer') }}
                         </span>
                         @if($currentUser->hasVerifiedEmail())
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200 inline-flex items-center gap-1">
+                                <i data-lucide="badge-check" class="w-3 h-3 text-green-700"></i>
                                 Email Terverifikasi
                             </span>
                         @endif
@@ -188,8 +189,9 @@ new class extends Component
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Nama Lengkap -->
                 <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider block">
-                        👤 Nama Lengkap
+                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="user" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                        Nama Lengkap
                     </span>
                     <p class="text-sm font-bold text-darkbrown-900">
                         {{ $currentUser->name ?: '-' }}
@@ -198,8 +200,9 @@ new class extends Component
 
                 <!-- Email -->
                 <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider block">
-                        ✉️ Alamat Email
+                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="mail" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                        Alamat Email
                     </span>
                     <p class="text-sm font-bold text-darkbrown-900">
                         {{ $currentUser->email ?: '-' }}
@@ -208,8 +211,9 @@ new class extends Component
 
                 <!-- Nomor Telepon / WA -->
                 <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider block">
-                        📱 Nomor WhatsApp / Telepon
+                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="phone" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                        Nomor WhatsApp / Telepon
                     </span>
                     <p class="text-sm font-bold text-darkbrown-900">
                         {{ $currentUser->phone ?: '-' }}
@@ -219,8 +223,9 @@ new class extends Component
 
                 <!-- NIK / No. KTP -->
                 <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider block">
-                        🪪 NIK (Nomor Induk Kependudukan)
+                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="credit-card" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                        NIK (Nomor Induk Kependudukan)
                     </span>
                     <p class="text-sm font-bold text-darkbrown-900 font-mono">
                         {{ $maskedNik ?: 'Belum diisi' }}
@@ -230,8 +235,9 @@ new class extends Component
 
                 <!-- Alamat Domisili -->
                 <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1 md:col-span-2">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider block">
-                        🏠 Alamat Lengkap
+                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                        Alamat Lengkap
                     </span>
                     <p class="text-sm font-semibold text-darkbrown-800 leading-relaxed">
                         {{ $currentUser->address ?: 'Alamat belum dilengkapi.' }}
@@ -258,7 +264,7 @@ new class extends Component
     @else
         <form wire:submit="updateProfileInformation" class="mt-6 space-y-5">
             <div class="p-4 rounded-xl bg-sunglow-50 border border-sunglow-200 text-xs font-medium text-darkbrown-800 flex items-center gap-2">
-                <span>✏️</span>
+                <i data-lucide="edit-2" class="w-4 h-4 text-goldenrod-700 shrink-0"></i>
                 <span>Silakan ubah data biodata di bawah ini lalu tekan <strong>Simpan Perubahan</strong>.</span>
             </div>
 
@@ -361,17 +367,19 @@ new class extends Component
             <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
                 <button 
                     type="submit" 
-                    class="btn-tendaku-primary py-2.5 px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                    class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
                 >
-                    {{ __('Simpan Perubahan') }}
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>{{ __('Simpan Perubahan') }}</span>
                 </button>
 
                 <button 
                     type="button" 
                     wire:click="cancelEditing"
-                    class="btn-tendaku-secondary py-2.5 px-5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
+                    class="btn-tendaku-secondary inline-flex items-center gap-2 py-2.5 px-5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
                 >
-                    {{ __('Batal') }}
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                    <span>{{ __('Batal') }}</span>
                 </button>
             </div>
         </form>
