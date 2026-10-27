@@ -4,10 +4,12 @@ use App\Http\Controllers\Admin\RevenueExportController;
 use App\Http\Controllers\Admin\SettlementInvoiceController;
 use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
+use App\Http\Controllers\Customer\BookingVaController;
 use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PackageCheckoutController;
+use App\Http\Controllers\Customer\PaymentRetryController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
 use App\Http\Controllers\Vendor\CategoryController;
@@ -26,6 +28,11 @@ Route::prefix('katalog/booking')->group(function () {
     Route::get('/', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::get('status/{code}', [BookingController::class, 'status'])->name('booking.status');
+    Route::post('status/{code}/sync', [BookingController::class, 'syncPayment'])->name('booking.sync');
+    Route::post('status/{code}/pay', [BookingController::class, 'pay'])->name('booking.pay');
+    Route::post('status/{code}/va', [BookingVaController::class, 'switch'])
+        ->middleware('throttle:10,1')
+        ->name('booking.va');
     Route::get('receipt/{code}', [BookingController::class, 'receipt'])->name('booking.receipt');
     Route::get('receipt/{code}/photo', [BookingController::class, 'collateralPhoto'])->name('booking.receipt.photo');
 });
@@ -62,12 +69,21 @@ Route::get('checkout', fn () => redirect()->route('checkout.index'));
 Route::get('booking/status/{code}', fn ($code) => redirect()->route('booking.status', ['code' => $code]));
 Route::get('booking/receipt/{code}', fn ($code) => redirect()->route('booking.receipt', ['code' => $code]));
 
-// Rute Pembayaran Midtrans SNAP
-// TODO: Add guest payment only after defining a secure way to prove rental ownership without login.
-Route::post('rentals/{rental}/pay', [MidtransPaymentController::class, 'store'])
-    ->middleware('auth')
-    ->name('rentals.pay');
+// Pembayaran customer (Snap token pokok & denda), wajib login
+Route::middleware('auth')
+    ->prefix('rentals/{rental}')
+    ->name('rentals.')
+    ->group(function () {
+        Route::post('pay', [MidtransPaymentController::class, 'store'])->name('pay');
+        Route::post('pay-fine', [MidtransPaymentController::class, 'storeFine'])->name('pay-fine');
+    });
 
+// Retry tagihan baru jika lama expired/failed; throttle mencegah abuse
+Route::post('payments/{order_id}/retry', [PaymentRetryController::class, 'store'])
+    ->middleware(['auth', 'throttle:5,1'])
+    ->name('payments.retry');
+
+// Webhook Midtrans: tanpa auth/sesi, dikecualikan dari CSRF di bootstrap/app.php (signature SHA512 yang memvalidasi)
 Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
     ->name('webhook.midtrans');
 

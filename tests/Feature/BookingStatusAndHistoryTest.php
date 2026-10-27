@@ -255,6 +255,55 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertDontSee('Budi Santoso'); // Bukan data dummy
     }
 
+    public function test_get_snap_token_for_pending_rental(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-SNAP01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-SNAP01-FULL-1',
+            'amount' => 150000,
+            'snap_token' => 'snap-token-test-12345',
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->postJson(route('booking.pay', $rental->booking_code));
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'order_id' => 'TDK-2026-SNAP01-FULL-1',
+                'snap_token' => 'snap-token-test-12345',
+                'amount' => 150000,
+            ]);
+    }
+
+    public function test_sync_payment_status_endpoint_returns_payment_status(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-SYNC01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-SYNC01-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->postJson(route('booking.sync', $rental->booking_code));
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'order_id' => 'TDK-2026-SYNC01-FULL-1',
+                'payment_status' => 'pending',
+                'is_paid' => false,
+            ]);
+    }
+
     private function createRental(int $userId, string $bookingCode, string $status): Rental
     {
         $rental = Rental::create([

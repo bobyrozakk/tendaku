@@ -1,6 +1,10 @@
 <x-layouts.customer>
     <x-slot name="title">
-        Status Booking #{{ $rental->booking_code }} - Tendaku
+        @if(isset($rental) && $rental)
+            Status Booking #{{ $rental->booking_code }} - Tendaku
+        @else
+            Riwayat Sewa Saya - Tendaku
+        @endif
     </x-slot>
 
     <x-slot name="header">
@@ -9,562 +13,255 @@
                 <nav class="flex items-center gap-2 text-xs text-darkbrown-500 mb-1.5">
                     <a href="{{ route('home') }}" class="hover:text-avocado-600 transition">Beranda</a>
                     <span class="text-wheat-400">/</span>
-                    <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-600 transition">Katalog</a>
-                    <span class="text-wheat-400">/</span>
                     @auth
-                        <a href="{{ route('customer.booking.index') }}" class="hover:text-avocado-600 transition">Riwayat</a>
+                        @if(isset($rental) && $rental)
+                            <a href="{{ route('customer.booking.index') }}" class="hover:text-avocado-600 transition">Riwayat Sewa</a>
+                            <span class="text-wheat-400">/</span>
+                            <span class="text-darkbrown-800 font-semibold">Status #{{ $rental->booking_code }}</span>
+                        @else
+                            <span class="text-darkbrown-800 font-semibold">Riwayat Sewa</span>
+                        @endif
+                    @else
+                        <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-600 transition">Katalog</a>
                         <span class="text-wheat-400">/</span>
+                        <span class="text-darkbrown-800 font-semibold">Status #{{ $rental->booking_code }}</span>
                     @endauth
-                    <span class="text-darkbrown-800 font-semibold">Status #{{ $rental->booking_code }}</span>
                 </nav>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-800 tracking-tight font-heading">
-                        Status Booking & Rental
-                    </h1>
-                </div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
+                    @auth Riwayat & Status Sewa @else Status Booking & Rental @endauth
+                </h1>
+                @auth
+                    <p class="text-xs text-darkbrown-600 mt-1">
+                        Daftar seluruh pesanan peralatan camping dan status sewa Anda di Tendaku.
+                    </p>
+                @endauth
             </div>
 
-            <!-- Booking Code Monospace Tag -->
-            <div class="flex items-center gap-2.5 px-4 py-2.5 bg-wheat-100 rounded-2xl border border-wheat-300 shadow-tendaku-sm self-start sm:self-auto">
-                <div class="w-8 h-8 rounded-xl bg-darkbrown-800 text-wheat-200 flex items-center justify-center shrink-0">
-                    <i data-lucide="file-text" class="w-4 h-4"></i>
-                </div>
-                <div>
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500 block leading-none">Kode Booking</span>
-                    <span class="font-mono text-sm sm:text-base font-extrabold text-darkbrown-900">#{{ $rental->booking_code }}</span>
-                </div>
+            <div class="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+                @if(isset($rental) && $rental)
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-wheat-100 rounded-2xl border border-wheat-300 shadow-tendaku-sm">
+                        <div class="w-8 h-8 rounded-xl bg-darkbrown-800 text-wheat-200 flex items-center justify-center shrink-0">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="text-xs font-semibold text-darkbrown-500 block leading-none mb-0.5">Kode booking</span>
+                            <span class="font-mono text-sm sm:text-base font-extrabold text-darkbrown-900">#{{ $rental->booking_code }}</span>
+                        </div>
+                    </div>
+                @endif
+                <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-primary py-2.5 px-4 rounded-xl text-xs font-bold">
+                    + Sewa Alat Baru
+                </a>
             </div>
         </div>
     </x-slot>
 
     @php
+        $filterStatus = request('status', '');
+        $hasRental    = isset($rental) && $rental;
+        $hasList      = auth()->check() && isset($rentals);
+
         $statusLabels = [
-            'pending' => 'Menunggu Pembayaran',
+            'pending'   => 'Menunggu Pembayaran',
             'confirmed' => 'Dikonfirmasi (Siap Pickup)',
             'picked_up' => 'Sedang Dipakai (Disewa)',
-            'returned' => 'Telah Dikembalikan',
+            'returned'  => 'Telah Dikembalikan',
             'completed' => 'Selesai',
             'cancelled' => 'Dibatalkan',
-            'expired' => 'Kedaluwarsa',
+            'expired'   => 'Kedaluwarsa',
         ];
 
-        // Definisi alur timeline standar: pending -> confirmed -> picked_up -> returned -> completed
-        $allSteps = [
-            'pending' => [
-                'title' => 'Booking Dibuat',
-                'description' => 'Pesanan berhasil dibuat, menunggu pelunasan tagihan sewa.',
-                'time' => $rental->created_at->translatedFormat('d M Y, H:i') . ' WIB',
-            ],
-            'confirmed' => [
-                'title' => 'Pembayaran Lunas',
-                'description' => 'Pembayaran terverifikasi, barang disiapkan oleh staf vendor.',
-                'time' => $rental->payments->where('status', 'paid')->first()?->paid_at?->translatedFormat('d M Y, H:i') ?? 'Menunggu pelunasan',
-            ],
-            'picked_up' => [
-                'title' => 'Serah Terima (Pickup)',
-                'description' => 'Peralatan diserahkan dan fisik KTP ditahan sebagai jaminan.',
-                'time' => $rental->picked_up_at?->translatedFormat('d M Y, H:i') ?? (\Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y') . ($rental->pickup_time ? ' (' . substr($rental->pickup_time, 0, 5) . ' WIB)' : '')),
-            ],
-            'returned' => [
-                'title' => 'Pengembalian (Return)',
-                'description' => 'Unit diperiksa kondisinya dan fisik KTP dikembalikan.',
-                'time' => $rental->returned_at?->translatedFormat('d M Y, H:i') ?? ('Maks: ' . \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y') . ($rental->return_time ? ' (' . substr($rental->return_time, 0, 5) . ' WIB)' : '')),
-            ],
-            'completed' => [
-                'title' => 'Transaksi Selesai',
-                'description' => 'Seluruh kewajiban sewa dan inspeksi telah rampung.',
-                'time' => $rental->status === 'completed' ? ($rental->updated_at->translatedFormat('d M Y, H:i') . ' WIB') : 'Menunggu selesai',
-            ],
-        ];
-
-        $stepOrder = ['pending', 'confirmed', 'picked_up', 'returned', 'completed'];
-        $currentIdx = array_search($rental->status, $stepOrder, true);
-        if ($currentIdx === false) {
-            $currentIdx = -1; // untuk cancelled/expired
-        }
-
-        $isExpiredOrCancelled = in_array($rental->status, ['cancelled', 'expired'], true);
-        $hasDenda = ($rental->total_late_fee > 0 || $rental->total_damage_fee > 0);
-        $totalFinal = $rental->final_total ?: ($rental->grand_total + $rental->total_late_fee + $rental->total_damage_fee);
+        $statusTabs = ['' => 'Semua Transaksi'] + $statusLabels;
     @endphp
 
-    <div class="py-4 sm:py-6 space-y-6">
+    @if($hasRental)
+    @php
+        $status = $rental->status;
 
-        <!-- ALERT KHUSUS JIKA STATUS PENDING & COUNTDOWN EXPIRES_AT -->
-        @if($rental->status === 'pending' && $rental->expires_at)
-            @php
-                $isExpiredNow = $rental->expires_at->isPast();
-            @endphp
-            <div id="payment-timer-box" class="p-4 sm:p-5 rounded-2xl border {{ $isExpiredNow ? 'bg-red-50 border-red-200' : 'bg-sunglow-50 border-sunglow-300' }} flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-tendaku-sm">
-                <div class="flex items-start sm:items-center gap-3">
-                    <span id="payment-timer-icon" class="text-2xl shrink-0">{{ $isExpiredNow ? '⚠️' : '⏳' }}</span>
-                    <div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h4 id="payment-timer-title" class="text-sm font-extrabold {{ $isExpiredNow ? 'text-red-900' : 'text-darkbrown-900' }}">
-                                {{ $isExpiredNow ? 'Batas Waktu Pembayaran Telah Habis' : 'Selesaikan Pembayaran Sebelum Batas Waktu' }}
-                            </h4>
-                            @if(!$isExpiredNow)
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300">
-                                    Maksimal 5 Menit
-                                </span>
-                            @endif
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2 text-xs {{ $isExpiredNow ? 'text-red-700' : 'text-darkbrown-600' }} mt-1">
-                            <span>Batas Waktu: <strong>{{ $rental->expires_at->translatedFormat('d M Y, H:i:s') }} WIB</strong></span>
-                            @if(!$isExpiredNow)
-                                <span>&bull;</span>
-                                <div class="inline-flex items-center gap-1.5 font-semibold">
-                                    <span>Sisa Waktu:</span>
-                                    <span id="countdown-timer" class="font-mono font-black text-amber-950 bg-amber-200/90 border border-amber-300 px-2 py-0.5 rounded text-xs tracking-wider">
-                                        --:--
-                                    </span>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
+        // Urutan titik timeline dan pemetaan status rental ke titik aktif.
+        $nodeOrder = ['created', 'payment', 'pickup', 'rental', 'return', 'done'];
 
-                @if(!$isExpiredNow && Auth::check() && Auth::id() === $rental->user_id)
-                    <button 
-                        type="button"
-                        onclick="payPendingBooking()"
-                        id="btn-pay-pending"
-                        class="btn-tendaku-primary py-2.5 px-6 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition shrink-0 self-start sm:self-auto"
-                    >
-                        💳 Bayar Sekarang
-                    </button>
+        $statusToNode = [
+            'pending'   => 'payment',
+            'confirmed' => 'pickup',
+            'picked_up' => 'rental',
+            'returned'  => 'return',
+            'completed' => 'done',
+        ];
+
+        $isExpiredOrCancelled = in_array($status, ['cancelled', 'expired'], true);
+        $isExpiredNow = $status === 'pending' && $rental->expires_at && $rental->expires_at->isPast();
+
+        // Utamakan tagihan online yang masih menunggu (terbaru). Setelah ganti bank ada beberapa payment per rental.
+        $onlinePayment = $rental->payments->where('channel', 'midtrans')->whereIn('payment_type', ['full', 'dp'])->where('status', 'pending')->sortByDesc('id')->first()
+            ?? $latestPayment
+            ?? $rental->payments->where('channel', 'midtrans')->sortByDesc('id')->first();
+        $paidPayment   = $rental->payments->where('status', 'paid')->sortByDesc('paid_at')->first();
+        $vaInfo        = $onlinePayment?->va_details;
+
+        $vaBanks = [
+            'bca'     => 'BCA',
+            'bni'     => 'BNI',
+            'bri'     => 'BRI',
+            'permata' => 'Permata',
+            'cimb'    => 'CIMB Niaga',
+        ];
+        $vaBankKey = strtolower((string) ($vaInfo['bank'] ?? ''));
+        $vaBankKey = array_key_exists($vaBankKey, $vaBanks) ? $vaBankKey : 'bca';
+
+        $fineAmount = $rental->total_late_fee + $rental->total_damage_fee;
+        $hasDenda   = ($rental->total_late_fee > 0 || $rental->total_damage_fee > 0);
+        $totalFinal = $rental->final_total ?: ($rental->grand_total + $rental->total_late_fee + $rental->total_damage_fee);
+        $canPayFine = $hasDenda && Auth::check() && Auth::id() === $rental->user_id;
+
+        $payAmount     = $onlinePayment?->amount ?? $totalFinal;
+        $payTypeLabel  = $onlinePayment?->payment_type === 'dp' ? 'Uang muka (DP)' : 'Pelunasan penuh';
+        $rupiah        = fn ($n) => 'Rp ' . number_format((int) $n, 0, ',', '.');
+        $fmtDateTime   = fn ($d) => $d ? \Carbon\Carbon::parse($d)->translatedFormat('d M Y, H:i') : '';
+        $fmtDate       = fn ($d) => $d ? \Carbon\Carbon::parse($d)->translatedFormat('d M Y') : '';
+
+        // Data penyewa (member atau tamu)
+        $renterName  = $rental->isGuest() ? ($rental->guest_name ?? 'Penyewa Tamu') : ($rental->customer?->name ?? 'Pelanggan');
+        $renterPhone = $rental->isGuest() ? ($rental->guest_phone ?? null) : ($rental->customer?->phone ?? null);
+
+        // Meta tiap titik timeline
+        $nodes = [
+            'created' => ['title' => 'Booking dibuat',        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+            'payment' => ['title' => 'Pembayaran',            'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
+            'pickup'  => ['title' => 'Serah terima alat',     'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'],
+            'rental'  => ['title' => 'Masa sewa',             'icon' => 'M19 20L10 4 1 20h18z'],
+            'return'  => ['title' => 'Pengembalian',          'icon' => 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6'],
+            'done'    => ['title' => 'Transaksi selesai',     'icon' => 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9'],
+        ];
+
+        $descs = [
+            'created' => ['todo' => 'Pesanan tercatat', 'active' => 'Pesanan tercatat', 'done' => 'Pesanan tercatat dengan kode #' . $rental->booking_code],
+            'payment' => ['todo' => 'Menunggu tagihan', 'active' => 'Menunggu pembayaran', 'done' => 'Pembayaran terverifikasi'],
+            'pickup'  => ['todo' => 'Disiapkan setelah pembayaran', 'active' => 'Alat siap diserahkan', 'done' => 'Alat telah diserahkan'],
+            'rental'  => ['todo' => 'Dimulai setelah serah terima', 'active' => 'Alat sedang dipakai', 'done' => 'Masa sewa selesai'],
+            'return'  => ['todo' => 'Setelah alat dikembalikan', 'active' => 'Alat diperiksa vendor', 'done' => 'Alat dikembalikan dan diperiksa'],
+            'done'    => ['todo' => 'Setelah semua kewajiban selesai', 'active' => 'Menyelesaikan transaksi', 'done' => 'Seluruh kewajiban sewa selesai'],
+        ];
+
+        $times = [
+            'created' => $fmtDateTime($rental->created_at),
+            'payment' => $paidPayment?->paid_at
+                ? $fmtDateTime($paidPayment->paid_at)
+                : ($status === 'pending' && $rental->expires_at ? 'Batas ' . $fmtDateTime($rental->expires_at) : ''),
+            'pickup'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : $fmtDate($rental->pickup_date),
+            'rental'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : '',
+            'return'  => $rental->returned_at ? $fmtDateTime($rental->returned_at) : 'Maks ' . $fmtDate($rental->return_date),
+            'done'    => $status === 'completed' ? $fmtDateTime($rental->updated_at) : '',
+        ];
+
+        // Riwayat aktivitas, semua dari data nyata
+        $acts = collect();
+        $acts->push(['title' => 'Booking dibuat', 'sub' => '#' . $rental->booking_code, 'at' => $rental->created_at, 'type' => 'doc', 'tone' => 'plain']);
+        foreach ($rental->payments as $p) {
+            $isPaid = $p->status === 'paid';
+            $label = $isPaid ? 'Pembayaran diterima' : match ($p->status) {
+                'pending'                  => 'Tagihan dibuat',
+                'expire', 'expired'        => 'Tagihan kedaluwarsa',
+                'failed', 'deny', 'cancel' => 'Pembayaran gagal',
+                default                    => 'Tagihan ' . $p->status,
+            };
+            $acts->push([
+                'title' => $label,
+                'sub'   => $rupiah($p->amount),
+                'at'    => $isPaid ? ($p->paid_at ?? $p->created_at) : $p->created_at,
+                'type'  => 'card',
+                'tone'  => $isPaid ? 'green' : ($p->status === 'pending' ? 'amber' : 'red'),
+            ]);
+        }
+        if ($rental->picked_up_at)   $acts->push(['title' => 'Alat diserahkan',      'sub' => '', 'at' => $rental->picked_up_at,   'type' => 'bag',    'tone' => 'green']);
+        if ($rental->ktp_received_at) $acts->push(['title' => 'KTP diterima toko',    'sub' => '', 'at' => $rental->ktp_received_at, 'type' => 'id',     'tone' => 'plain']);
+        if ($rental->returned_at)    $acts->push(['title' => 'Alat dikembalikan',    'sub' => '', 'at' => $rental->returned_at,    'type' => 'return', 'tone' => 'green']);
+        if ($rental->ktp_returned_at) $acts->push(['title' => 'KTP dikembalikan',     'sub' => '', 'at' => $rental->ktp_returned_at, 'type' => 'id',     'tone' => 'plain']);
+        if ($status === 'completed') $acts->push(['title' => 'Transaksi selesai',    'sub' => '', 'at' => $rental->updated_at,     'type' => 'flag',   'tone' => 'green']);
+
+        $activities = $acts
+            ->sortByDesc(fn ($a) => \Carbon\Carbon::parse($a['at'])->timestamp)
+            ->map(fn ($a) => [
+                'title' => $a['title'],
+                'sub'   => $a['sub'],
+                'time'  => \Carbon\Carbon::parse($a['at'])->translatedFormat('d M, H:i'),
+                'type'  => $a['type'],
+                'tone'  => $a['tone'],
+                'fresh' => false,
+            ])->values()->all();
+
+        $pageConfig = [
+            'status'        => $status,
+            'statusLabels'  => $statusLabels,
+            'order'         => $nodeOrder,
+            'statusToNode'  => $statusToNode,
+            'descs'         => $descs,
+            'times'         => $times,
+            'activities'    => $activities,
+            'expired'       => (bool) $isExpiredNow,
+            'expiresAtIso'  => $status === 'pending' ? $rental->expires_at?->toIso8601String() : null,
+            'payAmountText' => $rupiah($payAmount),
+            'payUrl'        => route('booking.pay', $rental->booking_code),
+            'syncUrl'       => route('booking.sync', $rental->booking_code),
+            'csrf'          => csrf_token(),
+            'vaUrl'         => route('booking.va', $rental->booking_code),
+            'vaBanks'       => $vaBanks,
+            'orderId'       => $onlinePayment?->order_id,
+            'va'            => $vaInfo ? [
+                'bank'   => $vaBankKey,
+                'number' => $vaInfo['va_number'] ?? '',
+                'biller' => $vaInfo['biller_code'] ?? '',
+            ] : null,
+            // Baru dibuat dari checkout (?new=1): mainkan animasi masuk sekali saja
+            'fresh'         => $status === 'pending' && request()->boolean('new'),
+        ];
+
+        $ktpLabel = match ($rental->ktp_collateral_status) {
+            'held'     => 'KTP ditahan di toko',
+            'returned' => 'KTP sudah dikembalikan',
+            default    => 'Menunggu serah terima',
+        };
+        $ktpBadge = match ($rental->ktp_collateral_status) {
+            'held'     => 'bg-goldenrod-100 text-goldenrod-900 border-goldenrod-300',
+            'returned' => 'bg-avocado-100 text-avocado-900 border-avocado-300',
+            default    => 'bg-wheat-100 text-darkbrown-700 border-wheat-300',
+        };
+    @endphp
+    @endif
+
+    <div @if($hasRental) x-data="statusPage({{ \Illuminate\Support\Js::from($pageConfig) }})" @endif class="py-4 sm:py-6">
+
+        @include('customer.booking.status.sections.expired-notice')
+
+        <div class="status-grid {{ $hasList ? '' : 'no-list' }} {{ $hasRental ? '' : 'no-right' }}">
+            @include('customer.booking.status.sections.history')
+
+            <main class="status-main space-y-6">
+                @if($hasRental)
+
+                @include('customer.booking.status.sections.timeline')
+
+                @include('customer.booking.status.sections.details')
+                @else
+                @include('customer.booking.status.sections.empty-state')
+
                 @endif
-            </div>
-        @elseif($isExpiredOrCancelled)
-            <div class="p-4 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
-                <span class="text-lg">❌</span>
-                <span>Transaksi ini telah <strong>{{ $statusLabels[$rental->status] }}</strong>. Unit perlengkapan camping telah dilepaskan kembali ke katalog.</span>
-            </div>
-        @endif
+            </main>
 
-        <!-- 1. RENTAL TIMELINE TRACKER -->
-        <div class="bg-white rounded-2xl border border-wheat-200 p-5 sm:p-6 shadow-tendaku-sm">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-darkbrown-500 mb-4">
-                Alur Tahapan Rental & Verifikasi
-            </h3>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-                @foreach ($stepOrder as $idx => $stepKey)
-                    @php
-                        $step = $allSteps[$stepKey];
-                        $isCompleted = ($currentIdx !== -1 && $idx < $currentIdx) || ($rental->status === 'completed');
-                        $isActive = ($currentIdx !== -1 && $idx === $currentIdx && $rental->status !== 'completed');
-                    @endphp
-                    <div class="p-3.5 rounded-xl border flex flex-col justify-between space-y-2 {{ $isActive ? 'bg-sunglow-50 border-goldenrod-400 ring-2 ring-goldenrod-400/30' : ($isCompleted ? 'bg-avocado-50/60 border-avocado-200' : 'bg-[#FAF6ED] border-wheat-200') }}">
-                        <div>
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold {{ $isActive ? 'bg-goldenrod-500 text-white' : ($isCompleted ? 'bg-avocado-500 text-white' : 'bg-wheat-200 text-darkbrown-600') }}">
-                                    @if ($isCompleted)
-                                        ✓
-                                    @elseif ($isActive)
-                                        ●
-                                    @else
-                                        {{ $idx + 1 }}
-                                    @endif
-                                </span>
-                                <span class="text-[10px] font-bold uppercase tracking-wider {{ $isActive ? 'text-goldenrod-800' : ($isCompleted ? 'text-avocado-800' : 'text-darkbrown-400') }}">
-                                    {{ $isActive ? 'Sedang Berjalan' : ($isCompleted ? 'Selesai' : 'Menunggu') }}
-                                </span>
-                            </div>
-                            <h4 class="font-extrabold text-xs text-darkbrown-900 leading-snug">
-                                {{ $step['title'] }}
-                            </h4>
-                            <p class="text-[11px] text-darkbrown-600 mt-0.5 leading-relaxed line-clamp-2">
-                                {{ $step['description'] }}
-                            </p>
-                        </div>
-                        <div class="pt-1.5 border-t {{ $isActive ? 'border-goldenrod-300' : ($isCompleted ? 'border-avocado-200' : 'border-wheat-200') }} text-[10px] font-semibold text-darkbrown-500">
-                            {{ $step['time'] }}
-                        </div>
-                    </div>
-                @endforeach
-            </div>
+            @if($hasRental)
+            @include('customer.booking.status.sections.sidebar')
+            @endif
         </div>
-
-        <!-- 2. CARD UTAMA RINCIAN TRANSAKSI -->
-        <div class="bg-white rounded-3xl border border-wheat-300 p-6 sm:p-8 shadow-tendaku-sm space-y-6">
-
-            <!-- HEADER CARD: VENDOR TOKO -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-wheat-200">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-xl bg-darkbrown-800 text-wheat-200 flex items-center justify-center font-black text-lg shrink-0">
-                        🏬
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-base sm:text-lg font-extrabold text-darkbrown-900 leading-tight">
-                                {{ $rental->vendor?->name }}
-                            </h3>
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-300">
-                                Verified Vendor
-                            </span>
-                        </div>
-                        <p class="text-xs text-darkbrown-500 mt-0.5">
-                            {{ $rental->vendor?->address }} • {{ $rental->vendor?->city }}
-                        </p>
-                    </div>
-                </div>
-
-                @if($rental->vendor?->phone)
-                    <a href="tel:{{ $rental->vendor->phone }}"
-                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-darkbrown-800 bg-[#FAF6ED] border border-wheat-300 hover:bg-wheat-100 transition shadow-sm self-start sm:self-center">
-                        <i data-lucide="phone" class="w-3.5 h-3.5 text-avocado-600"></i>
-                        <span>{{ $rental->vendor->phone }}</span>
-                    </a>
-                @endif
-            </div>
-
-            <!-- JADWAL SEWA & METODE -->
-            <div class="space-y-2.5">
-                <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-400 block">Jadwal Sewa & Pengambilan</span>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-[#FAF6ED] border border-wheat-200 text-xs">
-                    <div class="space-y-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-avocado-700 block">Waktu Ambil (Pickup)</span>
-                        <div class="text-sm font-extrabold text-darkbrown-900">
-                            {{ \Carbon\Carbon::parse($rental->pickup_date)->translatedFormat('d M Y') }}
-                            @if($rental->pickup_time)
-                                <span class="text-xs font-bold text-avocado-800">({{ substr($rental->pickup_time, 0, 5) }} WIB)</span>
-                            @endif
-                        </div>
-                        <div class="text-darkbrown-600">
-                            Metode: <strong>{{ $rental->pickup_method === 'delivery' ? 'Diantar (Delivery)' : 'Ambil di Toko (Self-Pickup)' }}</strong>
-                        </div>
-                    </div>
-                    <div class="space-y-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-goldenrod-700 block">Batas Pengembalian (Return)</span>
-                        <div class="text-sm font-extrabold text-darkbrown-900">
-                            {{ \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y') }}
-                            @if($rental->return_time)
-                                <span class="text-xs font-bold text-goldenrod-800">({{ substr($rental->return_time, 0, 5) }} WIB)</span>
-                            @endif
-                        </div>
-                        <div class="text-darkbrown-600">
-                            Pengembalian Fisik
-                        </div>
-                    </div>
-                    <div class="space-y-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-darkbrown-500 block">Durasi Sewa</span>
-                        <div class="text-sm font-extrabold text-darkbrown-900">{{ $rental->rental_days }} Hari ({{ $rental->rental_days * 24 }} Jam)</div>
-                        <div class="text-darkbrown-600">1 Hari = 24 Jam Penuh</div>
-                    </div>
-                </div>
-
-                @if($rental->pickup_method === 'delivery' && $rental->delivery_address)
-                    <div class="p-3 rounded-xl bg-wheat-50 border border-wheat-200 text-xs text-darkbrown-700">
-                        📍 <strong>Alamat Pengantaran:</strong> {{ $rental->delivery_address }}
-                    </div>
-                @endif
-            </div>
-
-            <!-- DAFTAR BARANG YANG DISEWA -->
-            <div class="space-y-3 pt-2">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-400 block">Daftar Barang yang Disewa</span>
-                    <span class="text-xs text-darkbrown-500 font-semibold">{{ $rental->details->count() }} Unit Alat</span>
-                </div>
-
-                <div class="divide-y divide-wheat-200 border border-wheat-200 rounded-2xl overflow-hidden bg-white">
-                    @foreach ($rental->details as $detail)
-                        @php
-                            $mItem = $detail->masterItem;
-                            $unit = $detail->itemUnit;
-                        @endphp
-                        <div class="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FAF6ED]/40 transition">
-                            <div class="flex items-center gap-3.5 min-w-0 flex-1">
-                                <div class="w-10 h-10 rounded-xl bg-wheat-100 border border-wheat-200 flex items-center justify-center shrink-0 text-darkbrown-800">
-                                    ⛺
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="font-bold text-darkbrown-900 text-sm truncate">
-                                            {{ $mItem?->name ?? 'Peralatan Camping' }}
-                                        </h4>
-                                        @if($unit)
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-wheat-100 text-darkbrown-700 border border-wheat-300 shrink-0">
-                                                Unit: {{ $unit->unit_code }}
-                                            </span>
-                                        @else
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-sans font-medium bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                                                Alokasi saat pickup
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <p class="text-xs text-darkbrown-500 mt-0.5">
-                                        Rp {{ number_format($detail->daily_rate_snapshot, 0, ',', '.') }}/hari × {{ $rental->rental_days }} hari
-                                        @if($detail->condition_before)
-                                            • Kondisi awal: <strong>{{ $detail->condition_before }}</strong>
-                                        @endif
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="text-left sm:text-right shrink-0">
-                                <span class="font-extrabold text-sm sm:text-base text-darkbrown-900">
-                                    Rp {{ number_format($detail->daily_rate_snapshot * $rental->rental_days, 0, ',', '.') }}
-                                </span>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-
-            <!-- JAMINAN KTP & RINCIAN BIAYA & DENDA -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4 border-t border-wheat-200 items-stretch">
-
-                <!-- STATUS JAMINAN KTP -->
-                <div class="p-5 rounded-2xl bg-[#FAF6ED] border border-wheat-300 flex flex-col justify-between space-y-4">
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-500">Jaminan Identitas Fisik</span>
-                            @php
-                                $ktpBadgeClass = match($rental->ktp_collateral_status) {
-                                    'held' => 'bg-goldenrod-100 text-goldenrod-900 border-goldenrod-300',
-                                    'returned' => 'bg-avocado-100 text-avocado-900 border-avocado-300',
-                                    default => 'bg-wheat-100 text-darkbrown-700 border-wheat-300',
-                                };
-                                $ktpLabel = match($rental->ktp_collateral_status) {
-                                    'held' => 'KTP Ditahan di Toko',
-                                    'returned' => 'KTP Telah Dikembalikan',
-                                    default => 'Menunggu Serah Terima',
-                                };
-                            @endphp
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border {{ $ktpBadgeClass }}">
-                                {{ $ktpLabel }}
-                            </span>
-                        </div>
-
-                        <div class="flex items-start gap-3 pt-1">
-                            <div class="w-10 h-10 rounded-xl bg-goldenrod-100 text-goldenrod-800 border border-goldenrod-300 flex items-center justify-center shrink-0 font-bold text-sm">
-                                🪪
-                            </div>
-                            <div>
-                                <h4 class="font-extrabold text-sm text-darkbrown-900">Tanda Terima Digital KTP</h4>
-                                <span class="font-mono text-xs text-darkbrown-600 font-semibold block">
-                                    No: REC-{{ $rental->booking_code }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <p class="text-xs text-darkbrown-600 leading-relaxed pt-1">
-                            @if($rental->ktp_collateral_status === 'held')
-                                KTP fisik asli disimpan aman oleh toko vendor sejak <strong>{{ $rental->ktp_received_at?->translatedFormat('d M Y, H:i') }} WIB</strong>. KTP dikembalikan langsung saat Anda menyerahkan kembali alat camping.
-                            @elseif($rental->ktp_collateral_status === 'returned')
-                                KTP fisik asli telah dikembalikan kepada penyewa pada <strong>{{ $rental->ktp_returned_at?->translatedFormat('d M Y, H:i') }} WIB</strong>.
-                            @else
-                                KTP fisik asli wajib diserahkan kepada kasir vendor saat serah terima barang (pickup). Tanpa deposit uang tunai.
-                            @endif
-                        </p>
-                    </div>
-
-                    <a href="{{ route('booking.receipt', $rental->booking_code) }}"
-                       class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-extrabold text-xs text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition">
-                        <span>Lihat Dokumen Tanda Terima KTP</span>
-                        <i data-lucide="arrow-right" class="w-4 h-4 text-darkbrown-700"></i>
-                    </a>
-                </div>
-
-                <!-- TOTAL PEMBAYARAN & DENDA -->
-                <div class="p-5 rounded-2xl bg-wheat-50/70 border border-wheat-200 flex flex-col justify-between space-y-4">
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between pb-2 border-b border-wheat-200">
-                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-500">Rincian Biaya</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold {{ $rental->status !== 'pending' ? 'bg-avocado-100 text-avocado-800 border border-avocado-300' : 'bg-sunglow-100 text-sunglow-900 border border-sunglow-300' }}">
-                                {{ $rental->status !== 'pending' ? '✓ Lunas' : 'Menunggu Bayar' }}
-                            </span>
-                        </div>
-
-                        <div class="space-y-2 text-xs text-darkbrown-600">
-                            <div class="flex justify-between">
-                                <span>Subtotal Sewa</span>
-                                <span class="font-bold text-darkbrown-800">Rp {{ number_format($rental->subtotal, 0, ',', '.') }}</span>
-                            </div>
-                            @if($rental->delivery_fee > 0)
-                                <div class="flex justify-between">
-                                    <span>Biaya Pengantaran (Delivery)</span>
-                                    <span class="font-bold text-darkbrown-800">Rp {{ number_format($rental->delivery_fee, 0, ',', '.') }}</span>
-                                </div>
-                            @endif
-                            @if($rental->discount_amount > 0)
-                                <div class="flex justify-between text-emerald-700 font-semibold">
-                                    <span>Diskon</span>
-                                    <span>- Rp {{ number_format($rental->discount_amount, 0, ',', '.') }}</span>
-                                </div>
-                            @endif
-
-                            {{-- RINCIAN DENDA JIKA ADA --}}
-                            @if($hasDenda)
-                                <div class="pt-2 border-t border-red-200 text-red-700 space-y-1">
-                                    @if($rental->total_late_fee > 0)
-                                        <div class="flex justify-between">
-                                            <span>Denda Keterlambatan</span>
-                                            <span class="font-bold">+ Rp {{ number_format($rental->total_late_fee, 0, ',', '.') }}</span>
-                                        </div>
-                                    @endif
-                                    @if($rental->total_damage_fee > 0)
-                                        <div class="flex justify-between">
-                                            <span>Denda Kerusakan Unit</span>
-                                            <span class="font-bold">+ Rp {{ number_format($rental->total_damage_fee, 0, ',', '.') }}</span>
-                                        </div>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="pt-3 border-t-2 border-wheat-200/90 flex flex-col space-y-3">
-                        <div class="flex items-baseline justify-between">
-                            <div>
-                                <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-700 block">Total Akhir</span>
-                                <span class="text-[11px] text-darkbrown-500 font-medium">Tanpa Deposit Uang Tunai</span>
-                            </div>
-                            <span class="text-2xl font-black {{ $hasDenda ? 'text-red-700' : 'text-darkbrown-900' }} tracking-tight font-heading">
-                                Rp {{ number_format($totalFinal, 0, ',', '.') }}
-                            </span>
-                        </div>
-
-                        {{-- Tombol bayar denda bila ada denda yang belum terselesaikan --}}
-                        @if($hasDenda && Auth::check() && Auth::id() === $rental->user_id)
-                            <button
-                                type="button"
-                                onclick="payPendingBooking()"
-                                class="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-red-600 hover:bg-red-700 text-white shadow transition flex items-center justify-center gap-2"
-                            >
-                                <span>Bayar Denda (Rp {{ number_format($rental->total_late_fee + $rental->total_damage_fee, 0, ',', '.') }})</span>
-                            </button>
-                        @endif
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-
     </div>
 
-    @push('scripts')
-        <script>
-            // Realtime countdown timer berdasarkan server timestamp
-            (function() {
-                const isPending = {{ $rental->status === 'pending' ? 'true' : 'false' }};
-                const expiresAtTimestamp = {{ $rental->expires_at ? $rental->expires_at->timestamp : 0 }};
-                const serverNowTimestamp = {{ now()->timestamp }};
+    @if($hasRental)
+    {{-- Midtrans Snap SDK --}}
+    @if(config('services.midtrans.client_key'))
+    <script src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
+            data-client-key="{{ config('services.midtrans.client_key') }}"></script>
+    @endif
 
-                if (isPending && expiresAtTimestamp > 0) {
-                    const clientLoadTime = Math.floor(Date.now() / 1000);
-                    // Hitung perbedaan waktu (skew) antara jam browser klien dan server
-                    const timeSkew = clientLoadTime - serverNowTimestamp;
-
-                    const timerElement = document.getElementById('countdown-timer');
-                    const payBtn = document.getElementById('btn-pay-pending');
-                    const timerBox = document.getElementById('payment-timer-box');
-                    const timerTitle = document.getElementById('payment-timer-title');
-                    const timerIcon = document.getElementById('payment-timer-icon');
-
-                    function formatRemaining(totalSeconds) {
-                        const m = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-                        const s = String(totalSeconds % 60).padStart(2, '0');
-                        return `${m}:${s}`;
-                    }
-
-                    function checkTime() {
-                        const nowClientSec = Math.floor(Date.now() / 1000);
-                        const estimatedServerSec = nowClientSec - timeSkew;
-                        const remaining = Math.max(0, expiresAtTimestamp - estimatedServerSec);
-
-                        if (timerElement) {
-                            timerElement.textContent = formatRemaining(remaining);
-                        }
-
-                        if (remaining <= 0) {
-                            clearInterval(timerInterval);
-                            if (timerElement) {
-                                timerElement.textContent = '00:00 (Kedaluwarsa)';
-                                timerElement.className = 'font-mono font-black text-red-900 bg-red-200 border border-red-300 px-2 py-0.5 rounded text-xs';
-                            }
-                            if (payBtn) {
-                                payBtn.disabled = true;
-                                payBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                            }
-                            if (timerBox) {
-                                timerBox.classList.remove('bg-sunglow-50', 'border-sunglow-300');
-                                timerBox.classList.add('bg-red-50', 'border-red-200');
-                            }
-                            if (timerTitle) {
-                                timerTitle.textContent = 'Batas Waktu Pembayaran Telah Habis';
-                                timerTitle.classList.remove('text-darkbrown-900');
-                                timerTitle.classList.add('text-red-900');
-                            }
-                            if (timerIcon) {
-                                timerIcon.textContent = '⚠️';
-                            }
-
-                            // Reload otomatis setelah 1.5 detik agar backend mengupdate status booking menjadi expired
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1500);
-                        }
-                    }
-
-                    checkTime();
-                    const timerInterval = setInterval(checkTime, 1000);
-                }
-            })();
-
-            function payPendingBooking() {
-                const btn = document.getElementById('btn-pay-pending');
-                if (btn) {
-                    btn.disabled = true;
-                    btn.textContent = 'Memproses...';
-                }
-
-                fetch('{{ route('rentals.pay', $rental->id) }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(res => {
-                    return res.json().then(data => ({ status: res.status, ok: res.ok, body: data }));
-                })
-                .then(res => {
-                    if (!res.ok) {
-                        alert(res.body.message || 'Pembayaran tidak dapat diproses (waktu pembayaran mungkin telah habis).');
-                        window.location.reload();
-                        return;
-                    }
-
-                    const data = res.body;
-                    if (data && data.data && data.data.snap_token) {
-                        if (typeof snap !== 'undefined') {
-                            snap.pay(data.data.snap_token, {
-                                onSuccess: function() { window.location.reload(); },
-                                onPending: function() { window.location.reload(); },
-                                onError: function() { alert('Pembayaran gagal atau dibatalkan.'); window.location.reload(); },
-                                onClose: function() { window.location.reload(); }
-                            });
-                        } else {
-                            alert('Snap token didapat: ' + data.data.snap_token);
-                        }
-                    } else {
-                        alert('Gagal memproses transaksi Snap.');
-                    }
-                })
-                .catch(err => {
-                    alert('Terjadi kendala jaringan.');
-                })
-                .finally(() => {
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.textContent = '💳 Bayar Sekarang';
-                    }
-                });
-            }
-        </script>
-    @endpush
+    @endif
 </x-layouts.customer>

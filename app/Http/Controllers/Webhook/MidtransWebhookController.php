@@ -4,43 +4,74 @@ namespace App\Http\Controllers\Webhook;
 
 use App\Exceptions\InvalidMidtransSignatureException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Webhook\MidtransNotificationRequest;
 use App\Services\MidtransService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
+/**
+ * Menerima dan memproses notifikasi webhook dari Midtrans.
+ *
+ * Validasi signature SHA512 dilakukan oleh MidtransService.
+ *
+ * @see docs/TENDAKU_payment_spec.md §7.3
+ */
 class MidtransWebhookController extends Controller
 {
-    public function handle(Request $request, MidtransService $midtrans): JsonResponse
-    {
-        $notification = $request->validate([
-            'order_id' => ['required', 'string', 'max:100'],
-            'status_code' => ['required', 'string', 'max:10'],
-            'gross_amount' => ['required', 'numeric', 'gt:0'],
-            'signature_key' => ['required', 'string', 'size:128'],
-            'transaction_status' => ['required', 'string', 'max:50'],
-            'transaction_id' => ['nullable', 'string', 'max:100'],
-            'fraud_status' => ['nullable', 'string', 'max:50'],
-            'payment_type' => ['nullable', 'string', 'max:50'],
-        ]);
+    public function handle(
+        MidtransNotificationRequest $request,
+        MidtransService $midtrans,
+    ): JsonResponse {
+        // Validasi input dilakukan oleh MidtransNotificationRequest.
+        $notification = $request->validated();
 
         try {
             $payment = $midtrans->handleNotification($notification);
         } catch (InvalidMidtransSignatureException) {
-            Log::warning('Rejected Midtrans notification with an invalid signature.', [
-                'order_id' => $notification['order_id'],
-            ]);
+            // Signature salah: jangan mengubah database.
+            Log::warning(
+                'Rejected Midtrans notification with an invalid signature.',
+                [
+                    'order_id' => $notification['order_id'] ?? null,
+                    'ip' => $request->ip(),
+                ]
+            );
 
-            return response()->json(['message' => 'Invalid notification signature.'], 403);
+            return response()->json([
+                'message' => 'Invalid notification signature.',
+            ], 403);
+        } catch (ModelNotFoundException) {
+            // Order tidak ditemukan.
+            Log::warning(
+                'Midtrans notification for unknown order_id.',
+                [
+                    'order_id' => $notification['order_id'] ?? null,
+                ]
+            );
+
+            return response()->json([
+                'message' => 'Payment not found.',
+            ], 404);
         } catch (InvalidArgumentException $exception) {
-            Log::warning('Rejected Midtrans notification with an invalid amount.', [
-                'order_id' => $notification['order_id'],
-            ]);
+            // Misalnya, nominal notifikasi tidak sesuai.
+            Log::warning(
+                'Midtrans notification amount mismatch.',
+                [
+                    'order_id' => $notification['order_id'] ?? null,
+                    'notification_amount' =>
+                        $notification['gross_amount'] ?? null,
+                    'message' => $exception->getMessage(),
+                ]
+            );
 
-            return response()->json(['message' => $exception->getMessage()], 422);
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
         }
 
+        // Pemrosesan berhasil.
         return response()->json([
             'status' => 'success',
             'payment_status' => $payment->status,

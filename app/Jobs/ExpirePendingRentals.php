@@ -10,28 +10,27 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Job auto-cancel tagihan expired.
+ * Rental pending yang expires_at < now → expired.
+ * Payments pending terkait → expired (§4.2, §5.1).
+ * Idempoten: tidak menyentuh status non-pending.
+ *
+ * @see docs/TENDAKU_payment_spec.md §4.2, §5.2
+ */
 class ExpirePendingRentals implements ShouldQueue
 {
     use Queueable;
 
     /**
-     * Create a new job instance.
-     */
-    public function __construct()
-    {
-        //
-    }
-
-    /**
      * Execute the job.
      * Ubah status rental pending yang expires_at < now menjadi 'expired'.
-     * Idempoten dan tidak menyentuh status non-pending.
+     * Sekaligus expire payments pending yang terkait dengan rental tersebut.
      */
     public function handle(): int
     {
         $now = Carbon::now();
 
-        // Cari rental pending yang melewati 'expires_at' dan belum memiliki pembayaran 'paid'
         $affectedRows = DB::transaction(function () use ($now) {
             $expiredRentals = Rental::query()
                 ->where('status', 'pending')

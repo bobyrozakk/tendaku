@@ -1,4 +1,6 @@
-import { createIcons, icons } from 'lucide';
+import { createIcons, icons } from "lucide";
+import "./pages/customer/booking-status.js";
+import "../css/pages/customer/booking-status.css";
 
 let renderTimeout = null;
 
@@ -12,23 +14,21 @@ function renderLucideIcons() {
 
 window.renderLucideIcons = renderLucideIcons;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
     renderLucideIcons();
 });
 
 // Livewire v3 hooks
-document.addEventListener('livewire:navigated', () => {
+document.addEventListener("livewire:navigated", () => {
     renderLucideIcons();
 });
 
-document.addEventListener('livewire:init', () => {
+document.addEventListener("livewire:init", () => {
     if (window.Livewire) {
-        Livewire.hook('commit', ({ succeed }) => {
+        Livewire.hook("commit", ({ succeed }) => {
             succeed(() => {
                 renderLucideIcons();
             });
         });
     }
 });
-
-

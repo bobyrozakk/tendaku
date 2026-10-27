@@ -12,6 +12,7 @@ use App\Models\RentalDetail;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Services\AvailabilityService;
+use App\Services\PaymentService;
 use App\Services\RentalService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -130,7 +131,62 @@ class RentalServiceTest extends TestCase
         $this->assertLessThanOrEqual(20, strlen($rental->booking_code));
     }
 
-    public function test_create_booking_calculation_for_single_day_and_multi_day(): void
+    public function test_create_booking_creates_pending_payment_via_payment_service(): void
+    {
+        $this->createUnit($this->item1, 'TD-001');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-12', // 3 hari: 50.000 x 3 = 150.000
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        $payment = app(PaymentService::class)->createOnlinePayment($rental, 'full');
+
+        $this->assertDatabaseHas('payments', [
+            'rental_id' => $rental->id,
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+        $this->assertSame($payment->id, $rental->payments()->first()->id);
+    }
+
+    public function test_create_booking_payment_amount_matches_grand_total_with_delivery_and_discount(): void
+    {
+        $this->createUnit($this->item1, 'TD-001');
+
+        $rental = $this->service->createBooking([
+            'vendor_id' => $this->vendor->id,
+            'user_id' => $this->customer->id,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-10', // 1 hari: 50.000
+            'pickup_method' => 'delivery',
+            'delivery_address' => 'Jl. Merbabu No. 12',
+            'delivery_fee' => 20000,
+            'discount_amount' => 5000,
+            'items' => [
+                ['master_item_id' => $this->item1->id, 'quantity' => 1],
+            ],
+        ]);
+
+        app(PaymentService::class)->createOnlinePayment($rental, 'full');
+
+        // grand_total = 50.000 + 20.000 - 5.000 = 65.000
+        $this->assertDatabaseHas('payments', [
+            'rental_id' => $rental->id,
+            'amount' => 65000,
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_create_booking_throws_exception_when_stock_is_insufficient(): void
     {
         $this->createUnit($this->item1, 'TD-001');
         $this->createUnit($this->item1, 'TD-002');
@@ -675,6 +731,7 @@ class RentalServiceTest extends TestCase
         $unit1 = $this->createUnit($this->item1, 'TD-001');
 
         $rental = $this->service->createBooking([
+            'user_id' => $this->customer->id,
             'vendor_id' => $this->vendor->id,
             'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
@@ -713,6 +770,7 @@ class RentalServiceTest extends TestCase
         $unit1 = $this->createUnit($this->item1, 'TD-001');
 
         $rental = $this->service->createBooking([
+            'user_id' => $this->customer->id,
             'vendor_id' => $this->vendor->id,
             'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
@@ -755,6 +813,7 @@ class RentalServiceTest extends TestCase
         $this->createUnit($this->item1, 'TD-001');
 
         $rental = $this->service->createBooking([
+            'user_id' => $this->customer->id,
             'vendor_id' => $this->vendor->id,
             'user_id' => $this->customer->id,
             'pickup_date' => '2026-10-10',
