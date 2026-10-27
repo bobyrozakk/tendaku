@@ -55,10 +55,12 @@
                     </p>
                     <div class="flex items-center gap-2 pt-2">
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-avocado-500/20 text-avocado-300 border border-avocado-500/30">
-                            ✓ Peralatan Higienis & Terverifikasi
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-avocado-400"></i>
+                            <span>Peralatan Higienis & Terverifikasi</span>
                         </span>
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-goldenrod-500/20 text-sunglow-300 border border-goldenrod-500/30">
-                            ✓ POS Kasir Toko
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-sunglow-400"></i>
+                            <span>POS Kasir Toko</span>
                         </span>
                     </div>
                 </div>
@@ -82,7 +84,8 @@
                         Ada pertanyaan seputar penyewaan, deposit unit, atau ingin gabung jadi vendor rental?
                     </p>
                     <div class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-darkbrown-900 border border-darkbrown-700 text-xs text-sunglow-300 font-semibold">
-                        <span>💬 CS Tendaku: 0812-3456-7890</span>
+                        <i data-lucide="message-circle" class="w-4 h-4 text-sunglow-400"></i>
+                        <span>CS Tendaku: 0812-3456-7890</span>
                     </div>
                 </div>
             </div>

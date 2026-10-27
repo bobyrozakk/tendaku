@@ -1,8 +1,9 @@
 <x-layouts.customer>
     <x-slot name="header">
         <div class="flex items-center gap-2 text-xs font-semibold text-darkbrown-600 mb-2">
-            <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-700 transition flex items-center gap-1">
-                <span>← Kembali ke Katalog</span>
+            <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-700 transition flex items-center gap-1.5">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                <span>Kembali ke Katalog</span>
             </a>
             <span>/</span>
             <span class="text-darkbrown-900 font-bold truncate">{{ $item->name }}</span>
@@ -73,7 +74,10 @@
                 <!-- Deskripsi & Fitur Utama -->
                 <div class="card-tendaku rounded-2xl bg-white p-6 border border-wheat-200 shadow-tendaku space-y-4">
                     <h2 class="text-lg font-extrabold text-darkbrown-900 border-b border-wheat-200 pb-3 font-heading flex items-center justify-between">
-                        <span>📝 Deskripsi Peralatan</span>
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-5 h-5 text-darkbrown-800"></i>
+                            <span>Deskripsi Peralatan</span>
+                        </span>
                         <span class="text-xs font-medium text-darkbrown-500">Kondisi: {{ $item->dominant_condition }}</span>
                     </h2>
                     <p class="text-sm text-darkbrown-700 leading-relaxed">
@@ -83,14 +87,14 @@
                     <!-- Jaminan Kebersihan & Layanan Vendor -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                         <div class="p-3 rounded-xl bg-avocado-50 border border-avocado-200 flex items-start gap-2.5">
-                            <span class="text-lg">✨</span>
+                            <i data-lucide="sparkles" class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5"></i>
                             <div>
                                 <h4 class="text-xs font-bold text-avocado-900">Steril & Higienis</h4>
                                 <p class="text-[11px] text-avocado-800">Dibersihkan dan disinfeksi pasca setiap penyewaan.</p>
                             </div>
                         </div>
                         <div class="p-3 rounded-xl bg-sunglow-50 border border-sunglow-200 flex items-start gap-2.5">
-                            <span class="text-lg">🪪</span>
+                            <i data-lucide="credit-card" class="w-5 h-5 text-goldenrod-700 shrink-0 mt-0.5"></i>
                             <div>
                                 <h4 class="text-xs font-bold text-darkbrown-900">Jaminan KTP Asli</h4>
                                 <p class="text-[11px] text-darkbrown-700">Tanpa deposit uang tunai, cukup KTP fisik.</p>
@@ -102,7 +106,8 @@
                 <!-- Spesifikasi Teknis & Informasi Unit -->
                 <div class="card-tendaku rounded-2xl bg-white p-6 border border-wheat-200 shadow-tendaku space-y-4">
                     <h2 class="text-lg font-extrabold text-darkbrown-900 border-b border-wheat-200 pb-3 font-heading flex items-center gap-2">
-                        <span>📐 Informasi Peralatan & Unit</span>
+                        <i data-lucide="info" class="w-5 h-5 text-darkbrown-800"></i>
+                        <span>Informasi Peralatan & Unit</span>
                     </h2>
                     
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-xs">
