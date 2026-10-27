@@ -238,6 +238,15 @@
                                     Tanpa Deposit
                                 </span>
                             </div>
+                            <!-- Cart quick-add icon (pojok kanan bawah thumbnail) -->
+                            @if($unitCount > 0)
+                                <a href="{{ route('customer.product.show', $item->id) }}#booking-form"
+                                   title="Tambah ke Keranjang — pilih tanggal di halaman detail"
+                                   class="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm border border-wheat-200 flex items-center justify-center text-darkbrown-700 hover:bg-avocado-600 hover:text-white hover:border-avocado-600 transition-all duration-200 shadow-md hover:shadow-lg z-10"
+                                >
+                                    <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                                </a>
+                            @endif
                         </div>
 
                         <!-- Content Info -->
@@ -269,7 +278,6 @@
                                 @endif
                                 <span class="text-[11px] text-darkbrown-500 font-medium">| {{ $item->dominant_condition }}</span>
                             </div>
-                        </div>
                     </div>
 
                     <!-- Card Footer Price & Action -->
@@ -286,16 +294,27 @@
                         </div>
 
                         @if($unitCount > 0)
-                            <a href="{{ route('customer.product.show', $item->id) }}" 
-                               class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
-                                Lihat Detail & Sewa
-                            </a>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ route('customer.product.show', $item->id) }}" 
+                                   class="btn-tendaku-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
+                                    Lihat Detail &amp; Sewa
+                                </a>
+                                <a href="{{ route('customer.product.show', $item->id) }}#booking-form"
+                                   title="Tambah ke Keranjang"
+                                   class="flex-shrink-0 w-10 h-10 rounded-xl border-2 border-avocado-600 text-avocado-700 hover:bg-avocado-600 hover:text-white transition-all flex items-center justify-center shadow-sm hover:shadow-md"
+                                >
+                                    <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                                </a>
+                            </div>
                         @else
                             <button type="button" 
                                     disabled 
                                     class="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block bg-wheat-200 text-darkbrown-400 border border-wheat-300 cursor-not-allowed select-none opacity-80 shadow-none"
                                     title="Stok peralatan sedang tidak tersedia">
-                                Lihat Detail & Sewa (Stok Habis)
+                                <span class="flex items-center justify-center gap-1.5">
+                                    <i data-lucide="shopping-cart" class="w-3.5 h-3.5 opacity-50"></i>
+                                    Stok Habis
+                                </span>
                             </button>
                         @endif
                     </div>

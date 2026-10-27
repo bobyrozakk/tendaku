@@ -47,7 +47,7 @@
         </div>
 
         {{-- FORM BOOKING --}}
-        <form wire:submit="proceedToBooking" class="space-y-4">
+        <form wire:submit="addToCart" id="booking-form" class="space-y-4">
 
             <div class="flex items-center justify-between">
                 <h3 class="text-xs font-extrabold uppercase tracking-wider text-darkbrown-700 flex items-center gap-2">
@@ -325,7 +325,7 @@
             @endphp
             <button
                 type="submit"
-                id="btn-sewa-sekarang"
+                id="btn-masuk-keranjang"
                 wire:loading.attr="disabled"
                 wire:loading.class="opacity-75 cursor-wait"
                 @class([
@@ -336,26 +336,45 @@
                 ])
                 @disabled(!$canSubmit)
             >
-                <span wire:loading.remove wire:target="proceedToBooking" class="flex items-center gap-2">
+                <span wire:loading.remove wire:target="addToCart" class="flex items-center gap-2">
                     @if($this->totalDays <= 0)
                         Pilih Tanggal Dahulu
                     @elseif($this->availableStock < $this->quantity)
                         Stok Tidak Mencukupi
                     @else
                         <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                        Sewa Sekarang
+                        Masukkan ke Keranjang
                     @endif
                 </span>
 
-                <span wire:loading wire:target="proceedToBooking" class="flex items-center gap-2">
+                <span wire:loading wire:target="addToCart" class="flex items-center gap-2">
                     <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                     </svg>
-                    Menyiapkan Pesanan...
+                    Menambahkan...
                 </span>
             </button>
         </form>
+
+        {{-- Tombol Lanjut ke Checkout (Hanya jika ada item di keranjang dari produk ini) --}}
+        @php
+            $navCart = app(\App\Services\CartService::class)->get(auth()->user());
+            $cartHasThisProduct = is_array($navCart) && !empty($navCart['master_item_id']) && $navCart['master_item_id'] === $this->product->id;
+        @endphp
+        @if($cartHasThisProduct)
+            <div class="mt-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200 flex flex-col gap-2" wire:poll.5s>
+                <p class="text-xs font-semibold text-avocado-900 flex items-center gap-1.5">
+                    <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
+                    Produk ini sudah ada di keranjangmu!
+                </p>
+                <a href="{{ route('checkout.index') }}"
+                   class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all"
+                >
+                    🛒 Lanjut ke Checkout
+                </a>
+            </div>
+        @endif
 
         {{-- TRUST BADGES --}}
         <div class="pt-4 border-t border-wheat-200 space-y-2">
