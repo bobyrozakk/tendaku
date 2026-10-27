@@ -69,6 +69,9 @@ class BookingController extends Controller
     {
         $rental = $this->findAuthorizedRental($request, $code);
 
+        // Otomatis ubah status menjadi expired jika batas waktu pembayaran (5 menit) telah lewat
+        $rental->expireIfPastDue();
+
         $rental->loadMissing([
             'vendor',
             'customer',

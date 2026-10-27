@@ -32,39 +32,38 @@ class ExpirePendingRentals implements ShouldQueue
         $now = Carbon::now();
 
         $affectedRows = DB::transaction(function () use ($now) {
-            // Cari rental pending yang sudah lewat expires_at
-            $expiredRentalIds = Rental::query()
+            $expiredRentals = Rental::query()
                 ->where('status', 'pending')
                 ->whereNotNull('expires_at')
                 ->where('expires_at', '<', $now)
-                ->pluck('id');
+                ->whereDoesntHave('payments', function ($query) {
+                    $query->where('status', 'paid');
+                })
+                ->lockForUpdate()
+                ->get();
 
-            if ($expiredRentalIds->isEmpty()) {
+            if ($expiredRentals->isEmpty()) {
                 return 0;
             }
 
-            // Expire payments pending yang terkait rental expired (§5.2: expire → expired)
-            // Hanya expire jika rental belum punya pembayaran yang sudah paid
-            // (jika sudah paid, rental tidak akan di-status pending lagi)
+            $rentalIds = $expiredRentals->pluck('id')->all();
+
+            Rental::query()
+                ->whereIn('id', $rentalIds)
+                ->update([
+                    'status' => 'expired',
+                    'updated_at' => $now,
+                ]);
+
             Payment::query()
-                ->whereIn('rental_id', $expiredRentalIds)
+                ->whereIn('rental_id', $rentalIds)
                 ->where('status', 'pending')
                 ->update([
-                    'status' => 'expired',
+                    'status' => 'failed',
                     'updated_at' => $now,
                 ]);
 
-            // Expire rental
-            // Guard status: rental yang baru dikonfirmasi webhook di antara SELECT dan UPDATE tidak boleh ditimpa
-            $count = Rental::query()
-                ->whereIn('id', $expiredRentalIds)
-                ->where('status', 'pending')
-                ->update([
-                    'status' => 'expired',
-                    'updated_at' => $now,
-                ]);
-
-            return $count;
+            return count($rentalIds);
         });
 
         if ($affectedRows > 0) {

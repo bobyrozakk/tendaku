@@ -32,20 +32,28 @@
     <div class="space-y-6">
         <!-- Main Product Card & Specs -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- Foto Produk -->
-            <div class="lg:col-span-4">
+            <!-- Foto Produk & Galeri -->
+            <div class="lg:col-span-4"
+                 @php
+                     $allImages = $product->images->isNotEmpty()
+                         ? $product->images
+                         : ($product->image_url ? collect([(object)['id' => 0, 'image_url' => $product->image_url, 'is_primary' => true]]) : collect());
+                     $defaultActive = $product->primaryImage?->image_url ?? $product->image_url ?? ($allImages->first()->image_url ?? '');
+                 @endphp
+                 x-data="{ activePhoto: '{{ $defaultActive }}' }">
                 <x-card padding="p-3" class="bg-white">
                     <div class="aspect-square w-full rounded-2xl overflow-hidden bg-wheat-100 border border-wheat-200 relative">
-                        @if ($product->image_url)
-                            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
-                        @else
+                        <template x-if="activePhoto">
+                            <img :src="activePhoto" alt="{{ $product->name }}" class="w-full h-full object-cover transition-all duration-200">
+                        </template>
+                        <template x-if="!activePhoto">
                             <div class="w-full h-full flex flex-col items-center justify-center text-wheat-400">
                                 <svg class="w-16 h-16 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
                                 <span class="text-xs font-semibold">Belum ada foto</span>
                             </div>
-                        @endif
+                        </template>
 
                         <div class="absolute top-3 right-3">
                             @if ($product->is_active)
@@ -55,6 +63,22 @@
                             @endif
                         </div>
                     </div>
+
+                    @if ($allImages->count() > 1)
+                        <div class="grid grid-cols-5 gap-2 mt-3">
+                            @foreach ($allImages as $idx => $img)
+                                <button type="button"
+                                        @click="activePhoto = '{{ $img->image_url }}'"
+                                        :class="activePhoto === '{{ $img->image_url }}' ? 'ring-2 ring-avocado-500 border-transparent scale-105' : 'opacity-70 hover:opacity-100 border-wheat-200'"
+                                        class="relative aspect-square rounded-xl overflow-hidden border bg-wheat-50 transition-all">
+                                    <img src="{{ $img->image_url }}" alt="Thumbnail {{ $idx + 1 }}" class="w-full h-full object-cover">
+                                    @if ($img->is_primary)
+                                        <span class="absolute bottom-1 right-1 w-2 h-2 rounded-full bg-avocado-500" title="Foto Utama"></span>
+                                    @endif
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
                 </x-card>
             </div>
 

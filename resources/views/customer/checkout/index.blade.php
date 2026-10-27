@@ -81,7 +81,9 @@
             'needsNik'          => (bool) $needsNik,
             'needsAddress'      => (bool) $needsAddress,
             // Guest tidak boleh delivery: paksa self_pickup sejak awal
-            'pickupMethod'      => $isLoggedIn ? $booking['pickup_method'] : 'self_pickup',
+            'pickupMethod'      => $isLoggedIn
+                ? ($booking['pickup_method'] ?? 'self_pickup')
+                : 'self_pickup',
             'name'              => $needsName ? '' : ($user->name ?? ''),
             'deliveryAddress'   => $savedAddress,
             'deliveryNotes'     => $booking['delivery_notes'] ?? '',
@@ -505,7 +507,7 @@
 
                             <div class="rounded-xl bg-sunglow-100/70 border border-sunglow-300/80 p-4">
                                 <label for="f_return_date" class="text-sm font-semibold text-goldenrod-800">Tanggal kembali</label>
-                                <input type="date" id="f_return_date" x-model="returnDate" :min="pickupDate || minDate" @change="touched = true"
+                                <input type="date" id="f_return_date" x-model="returnDate" :min="pickupDate || minDate" @change="onReturnChange()"
                                        class="mt-1.5 w-full rounded-lg border border-sunglow-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 focus:border-goldenrod-500 focus:ring-2 focus:ring-goldenrod-400/30">
                                 <div class="mt-1.5 text-sm text-darkbrown-600"><span x-text="fmtLong(returnDate)"></span> · maksimal {{ $booking['return_time'] }}</div>
                             </div>
@@ -716,11 +718,15 @@
                     return (this.isLoggedIn && this.pickupMethod === 'delivery') ? this.deliveryFeeAmount : 0;
                 },
                 get grandTotal() {
-                    return Math.max(0, this.subtotal + this.deposit + this.deliveryFee - this.discount);
+                    return Math.max(
+                        0,
+                        this.subtotal + this.deposit + this.deliveryFee - this.discount
+                    );
                 },
                 get dpAmount() {
-                    // Sebelum ada perubahan pakai angka dari server; setelah diubah, perkiraan dari persentase
-                    return this.touched ? Math.round(this.grandTotal * this.dpPercentage / 100) : this.serverDpAmount;
+                    return Math.round(
+                        this.grandTotal * this.dpPercentage / 100
+                    );
                 },
                 get payableAmount() {
                     return (this.paymentOption === 'dp') ? this.dpAmount : this.grandTotal;
@@ -766,30 +772,62 @@
                     this.touched = true;
                 },
                 onPickupChange() {
-                    if (this.pickupDate && (!this.returnDate || this.returnDate < this.pickupDate)) {
+                    if (!this.pickupDate) return;
+
+                    if (!this.returnDate || this.returnDate < this.pickupDate) {
                         this.returnDate = this.pickupDate;
                     }
+
                     this.touched = true;
+                },
+
+                onReturnChange() {
+                    this.touched = true;
+
+                    if (
+                        this.pickupDate &&
+                        this.returnDate &&
+                        this.returnDate < this.pickupDate
+                    ) {
+                        this.returnDate = this.pickupDate;
+                    }
                 },
 
                 startCountdown() {
                     if (!this.expiresAtIso) return;
+
                     const tick = () => {
-                        const ms = new Date(this.expiresAtIso) - new Date();
-                        if (isNaN(ms)) { this.remaining = ''; return; }
+                        const expiresAt = new Date(this.expiresAtIso).getTime();
+
+                        if (!Number.isFinite(expiresAt)) {
+                            this.remaining = '';
+                            clearInterval(this.countdownTimer);
+                            return;
+                        }
+
+                        const ms = expiresAt - Date.now();
+
                         if (ms <= 0) {
-                            this.remaining = 'habis';
+                            this.remaining = '00:00:00';
                             this.expired = true;
                             clearInterval(this.countdownTimer);
                             return;
                         }
+
                         const h = Math.floor(ms / 3600000);
                         const m = Math.floor((ms % 3600000) / 60000);
                         const s = Math.floor((ms % 60000) / 1000);
-                        this.remaining = [h, m, s].map(n => String(n).padStart(2, '0')).join(':');
+
+                        this.remaining = [h, m, s]
+                            .map(n => String(n).padStart(2, '0'))
+                            .join(':');
                     };
+
                     tick();
-                    if (!this.expired) this.countdownTimer = setInterval(tick, 1000);
+
+                    if (!this.expired && this.remaining) {
+                        this.countdownTimer = setInterval(tick, 1000);
+                    }
                 },
 
                 validate() {
@@ -880,9 +918,21 @@
 
                         const response = await fetch(this.storeUrl, {
                             method: 'POST',
-                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': this.csrf,
+                            },
                             body: fd,
                         });
+
+                        const contentType = response.headers.get('content-type') || '';
+
+                        if (!contentType.includes('application/json')) {
+                            throw new Error(
+                                `Respons server tidak valid (HTTP ${response.status})`
+                            );
+                        }
+
                         const data = await response.json();
 
                         if (!response.ok) {

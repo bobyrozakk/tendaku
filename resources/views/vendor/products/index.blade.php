@@ -97,9 +97,14 @@
                                 <!-- Info Produk -->
                                 <td class="py-3.5 px-5">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-12 h-12 rounded-xl overflow-hidden bg-wheat-100 shrink-0 border border-wheat-200">
+                                        <div class="w-12 h-12 rounded-xl overflow-hidden bg-wheat-100 shrink-0 border border-wheat-200 relative">
                                             @if ($product->image_url)
                                                 <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                                @if (($product->images_count ?? 0) > 1)
+                                                    <span class="absolute bottom-0 right-0 bg-darkbrown-900/80 text-white font-extrabold text-[9px] px-1 rounded-tl-md" title="{{ $product->images_count }} foto produk">
+                                                        {{ $product->images_count }}
+                                                    </span>
+                                                @endif
                                             @else
                                                 <div class="w-full h-full flex items-center justify-center text-wheat-400">
                                                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

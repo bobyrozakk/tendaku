@@ -7,10 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\StoreCheckoutRequest;
 use App\Models\MasterItem;
 use App\Models\Rental;
+use App\Models\User;
+use App\Services\CartService;
 use App\Services\CheckoutSummaryBuilder;
 use App\Services\GuestRentalAccess;
 use App\Services\MidtransService;
 use App\Services\PaymentService;
+use App\Services\PhoneNumberNormalizer;
 use App\Services\RentalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -21,6 +24,11 @@ use Illuminate\View\View;
 class CheckoutController extends Controller
 {
     private const CART_SESSION_KEY = 'booking_cart';
+
+    /**
+     * Masa berlaku pembayaran (menit) sebelum booking kedaluwarsa (maksimal 5 menit).
+     */
+    public const PAYMENT_TIMEOUT_MINUTES = 5;
 
     public function __construct(
         private readonly CheckoutSummaryBuilder $summary,
@@ -114,11 +122,17 @@ class CheckoutController extends Controller
 
             $rental = $rentalService->createBooking($bookingData);
 
+            $rental = $this->applyPreviewBookingCode(
+                $rental,
+                $request->input('booking_code')
+            );
+
             // Hanya satu mekanisme pembuatan payment.
             // Jangan membuat payment kedua secara manual.
+            $paymentOption = $request->validated('payment_option') ?: 'full';
             $payment = $paymentService->createOnlinePayment(
                 $rental,
-                $request->validated('payment_option'),
+                $paymentOption,
                 1,
                 $this->paymentChannel(
                     $request->validated('payment_channel')
@@ -135,14 +149,31 @@ class CheckoutController extends Controller
             // Keranjang dibersihkan setelah proses pembayaran berhasil
             // menghasilkan Snap token.
             session()->forget(self::CART_SESSION_KEY);
+            if (Auth::check()) {
+                app(CartService::class)->clear(Auth::user());
+            }
 
-            return response()->json([
-                'snap_token' => $snapToken,
-                'booking_code' => $rental->booking_code,
-                'redirect_url' => $this->statusUrl($request, $rental),
-                'payment_type' => $payment->payment_type,
-                'payment_amount' => (int) $payment->amount,
-            ]);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'snap_token' => $snapToken,
+                    'booking_code' => $rental->booking_code,
+                    'redirect_url' => $this->statusUrl($request, $rental),
+                    'payment_type' => $payment->payment_type,
+                    'payment_amount' => (int) $payment->amount,
+                ]);
+            }
+
+            $methodLabel = $pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY
+                ? 'Diantar ke Lokasi (Kurir Vendor)'
+                : 'Ambil di Tempat (Self-Pickup)';
+
+            $isGuest = $request->user() === null;
+            $successMessage = $isGuest
+                ? "Booking #{$rental->booking_code} ({$methodLabel}) berhasil dibuat. Tunjukkan kode booking saat pengambilan; pembayaran diselesaikan di outlet vendor."
+                : "Booking #{$rental->booking_code} ({$methodLabel}) berhasil dibuat. Selesaikan pembayaran sebelum batas waktu.";
+
+            return redirect()->route('booking.status', $rental->booking_code)
+                ->with('success', $successMessage);
         } catch (InsufficientStockException $e) {
             return $this->failure(
                 $request,
@@ -176,8 +207,12 @@ class CheckoutController extends Controller
             'vendor_id' => $masterItem->vendor_id,
             'pickup_date' => $request->validated('pickup_date')
                 ?: ($cart['pickup_date'] ?? null),
+            'pickup_time' => $cart['pickup_time'] ?? '09:00',
             'return_date' => $request->validated('return_date')
                 ?: ($cart['return_date'] ?? null),
+            'return_time' => $cart['return_time'] ?? '09:00',
+            'rental_days' => isset($cart['total_days']) ? (int) $cart['total_days'] : null,
+            'expires_in_minutes' => self::PAYMENT_TIMEOUT_MINUTES,
             'pickup_method' => $pickupMethod,
             'delivery_fee' => $this->summary->deliveryFee(
                 $masterItem->vendor,
@@ -320,5 +355,29 @@ class CheckoutController extends Controller
             : redirect()
                 ->back()
                 ->with('error', $message);
+    }
+
+    /**
+     * Terapkan kode booking yang sebelumnya sudah ditampilkan di pratinjau checkout.
+     */
+    protected function applyPreviewBookingCode(Rental $rental, ?string $previewCode): Rental
+    {
+        if (! is_string($previewCode) || $previewCode === '' || $previewCode === $rental->booking_code) {
+            return $rental;
+        }
+
+        $exists = Rental::withoutGlobalScopes()
+            ->where('booking_code', $previewCode)
+            ->where('id', '!=', $rental->id)
+            ->exists();
+
+        if ($exists) {
+            return $rental;
+        }
+
+        $rental->booking_code = $previewCode;
+        $rental->save();
+
+        return $rental;
     }
 }

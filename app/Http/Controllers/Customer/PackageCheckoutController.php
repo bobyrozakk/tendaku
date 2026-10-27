@@ -17,7 +17,12 @@ use Illuminate\View\View;
 class PackageCheckoutController extends Controller
 {
     /**
-     * Masa berlaku pembayaran (jam) sebelum booking paket kedaluwarsa.
+     * Masa berlaku pembayaran (menit) sebelum booking paket kedaluwarsa (maksimal 5 menit).
+     */
+    public const PAYMENT_TIMEOUT_MINUTES = 5;
+
+    /**
+     * Masa berlaku pembayaran (jam) sebelum booking paket kedaluwarsa (kompatibilitas backward).
      */
     public const PAYMENT_WINDOW_HOURS = 12;
 
@@ -104,14 +109,17 @@ class PackageCheckoutController extends Controller
                 'guest_phone' => $isGuest ? $validated['guest_phone'] : null,
                 'guest_id_number' => $isGuest ? $validated['guest_id_number'] : null,
                 'pickup_date' => $pickupDate->toDateString(),
+                'pickup_time' => '09:00',
                 'return_date' => $returnDate->toDateString(),
+                'return_time' => '09:00',
+                'rental_days' => (int) $package->duration_days,
                 'pickup_method' => $pickupMethod,
                 'delivery_address' => $deliveryAddress,
                 'delivery_fee' => $pickupMethod === 'delivery' ? self::DELIVERY_FEE : 0,
                 'discount_amount' => 0,
                 // Harga paket sudah ditetapkan owner, bukan akumulasi tarif harian alat.
                 'subtotal_override' => (float) $package->price,
-                'expires_in_hours' => self::PAYMENT_WINDOW_HOURS,
+                'expires_in_minutes' => self::PAYMENT_TIMEOUT_MINUTES,
                 'notes' => 'Paket Camping: '.$package->name.' ('.$package->duration_days.' hari)',
                 'items' => $items,
             ]);
@@ -190,6 +198,7 @@ class PackageCheckoutController extends Controller
 
     protected function resolveReturnDate(Carbon $pickupDate, int $durationDays): Carbon
     {
-        return $pickupDate->copy()->addDays(max(1, $durationDays) - 1);
+        // 1 hari sewa = 24 jam penuh sejak waktu pengambilan barang
+        return $pickupDate->copy()->addDays(max(1, $durationDays));
     }
 }

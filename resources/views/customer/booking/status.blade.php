@@ -231,16 +231,12 @@
     @endphp
     @endif
 
-
-
     <div @if($hasRental) x-data="statusPage({{ \Illuminate\Support\Js::from($pageConfig) }})" @endif class="py-4 sm:py-6">
 
         @include('customer.booking.status.sections.expired-notice')
 
-
         <div class="status-grid {{ $hasList ? '' : 'no-list' }} {{ $hasRental ? '' : 'no-right' }}">
             @include('customer.booking.status.sections.history')
-
 
             <main class="status-main space-y-6">
                 @if($hasRental)
@@ -266,7 +262,6 @@
     <script src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
             data-client-key="{{ config('services.midtrans.client_key') }}"></script>
     @endif
-
 
     @endif
 </x-layouts.customer>

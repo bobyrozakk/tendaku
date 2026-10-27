@@ -19,8 +19,17 @@ class ProductBooking extends Component
     /** Tanggal pengambilan barang (default: besok) */
     public string $pickup_date = '';
 
-    /** Tanggal pengembalian barang (default: lusa) */
+    /** Jam pengambilan barang (format HH:mm, default: 09:00) */
+    public string $pickup_time = '09:00';
+
+    /** Durasi sewa yang dipilih (hari, default: 1 hari = 24 jam penuh) */
+    public int $duration_days = 1;
+
+    /** Tanggal pengembalian barang */
     public string $return_date = '';
+
+    /** Jam pengembalian barang (format HH:mm) */
+    public string $return_time = '09:00';
 
     /** Kuantitas unit yang disewa (default: 1) */
     public int $quantity = 1;
@@ -32,20 +41,76 @@ class ProductBooking extends Component
     {
         $this->product = $product;
         $this->quantity = 1;
+        $this->duration_days = 1;
 
-        // Nilai default: besok dan lusa
+        // Nilai default: pengambilan besok pukul 09:00
         $this->pickup_date = Carbon::tomorrow()->format('Y-m-d');
-        $this->return_date = Carbon::today()->addDays(2)->format('Y-m-d');
+        $this->pickup_time = '09:00';
+
+        // Sinkronisasi batas pengembalian (24 jam per hari durasi)
+        $this->syncReturnFromDuration();
     }
 
     /**
-     * Ketika pickup_date berubah, sesuaikan return_date bila perlu.
+     * Hitung otomatis tanggal & waktu pengembalian berdasarkan durasi sewa (24 jam per hari).
+     */
+    public function syncReturnFromDuration(): void
+    {
+        if (empty($this->pickup_date)) {
+            return;
+        }
+
+        $time = ! empty($this->pickup_time) ? $this->pickup_time : '09:00';
+        $pickup = Carbon::parse("{$this->pickup_date} {$time}");
+        $return = $pickup->copy()->addDays(max(1, $this->duration_days));
+
+        $this->return_date = $return->format('Y-m-d');
+        $this->return_time = $return->format('H:i');
+
+        $this->resetErrorBag(['return_date', 'return_time']);
+    }
+
+    /**
+     * Ketika pickup_date berubah, sesuaikan return_date sesuai durasi.
      */
     public function updatedPickupDate(): void
     {
-        if ($this->return_date && $this->return_date < $this->pickup_date) {
-            $this->return_date = $this->pickup_date;
+        $this->syncReturnFromDuration();
+    }
+
+    /**
+     * Ketika pickup_time berubah, sesuaikan return_time sesuai durasi.
+     */
+    public function updatedPickupTime(): void
+    {
+        $this->syncReturnFromDuration();
+    }
+
+    /**
+     * Ketika durasi hari diubah, perbarui tanggal pengembalian.
+     */
+    public function updatedDurationDays(): void
+    {
+        if ($this->duration_days < 1) {
+            $this->duration_days = 1;
         }
+        $this->syncReturnFromDuration();
+    }
+
+    /**
+     * Ketika tanggal pengembalian diubah manual oleh customer.
+     */
+    public function updatedReturnDate(): void
+    {
+        $this->validateReturnDateTime();
+    }
+
+    /**
+     * Ketika waktu pengembalian diubah manual oleh customer.
+     */
+    public function updatedReturnTime(): void
+    {
+        $this->validateReturnDateTime();
     }
 
     /**
@@ -59,7 +124,40 @@ class ProductBooking extends Component
     }
 
     /**
-     * Computed: hitung total hari sewa inklusif (pickup s/d return).
+     * Validasi waktu pengembalian terhadap waktu pengambilan dan durasi sewa.
+     */
+    public function validateReturnDateTime(): bool
+    {
+        if (empty($this->pickup_date) || empty($this->return_date)) {
+            return false;
+        }
+
+        $pickupTime = ! empty($this->pickup_time) ? $this->pickup_time : '09:00';
+        $returnTime = ! empty($this->return_time) ? $this->return_time : '09:00';
+
+        $pickup = Carbon::parse("{$this->pickup_date} {$pickupTime}");
+        $return = Carbon::parse("{$this->return_date} {$returnTime}");
+
+        if ($return->lt($pickup)) {
+            $this->addError('return_date', 'Waktu pengembalian tidak boleh sebelum waktu pengambilan.');
+
+            return false;
+        }
+
+        $maxReturn = $pickup->copy()->addDays(max(1, $this->duration_days));
+        if ($return->gt($maxReturn)) {
+            $this->addError('return_time', 'Waktu pengembalian tidak boleh melampaui durasi yang dipilih (maksimal '.$maxReturn->translatedFormat('d M Y, H:i').' WIB).');
+
+            return false;
+        }
+
+        $this->resetErrorBag(['return_date', 'return_time']);
+
+        return true;
+    }
+
+    /**
+     * Computed: hitung total hari sewa berdasarkan durasi jam aktual (24 jam = 1 hari).
      */
     #[Computed]
     public function totalDays(): int
@@ -68,14 +166,19 @@ class ProductBooking extends Component
             return 0;
         }
 
-        $pickup = Carbon::parse($this->pickup_date)->startOfDay();
-        $return = Carbon::parse($this->return_date)->startOfDay();
+        $pickupTime = ! empty($this->pickup_time) ? $this->pickup_time : '09:00';
+        $returnTime = ! empty($this->return_time) ? $this->return_time : '09:00';
 
-        if ($return->lt($pickup)) {
+        $pickup = Carbon::parse("{$this->pickup_date} {$pickupTime}");
+        $return = Carbon::parse("{$this->return_date} {$returnTime}");
+
+        $hours = $pickup->floatDiffInHours($return, false);
+        if ($hours < 0) {
             return 0;
         }
 
-        return (int) $pickup->diffInDays($return) + 1;
+        // Durasi <= 24 jam dihitung 1 hari penuh; lebih dari 24 jam dibulatkan ke atas per 24 jam.
+        return max(1, (int) ceil($hours / 24));
     }
 
     /**
@@ -145,11 +248,24 @@ class ProductBooking extends Component
                 'date_format:Y-m-d',
                 'after_or_equal:today',
             ],
+            'pickup_time' => [
+                'required',
+                'date_format:H:i',
+            ],
+            'duration_days' => [
+                'required',
+                'integer',
+                'min:1',
+            ],
             'return_date' => [
                 'required',
                 'date',
                 'date_format:Y-m-d',
                 'after_or_equal:pickup_date',
+            ],
+            'return_time' => [
+                'required',
+                'date_format:H:i',
             ],
             'quantity' => [
                 'required',
@@ -169,19 +285,27 @@ class ProductBooking extends Component
         return [
             'pickup_date.required' => 'Tanggal mulai sewa wajib diisi.',
             'pickup_date.after_or_equal' => 'Tanggal mulai sewa tidak boleh sebelum hari ini.',
+            'pickup_time.required' => 'Waktu pengambilan barang wajib diisi.',
+            'duration_days.required' => 'Durasi sewa wajib dipilih.',
+            'duration_days.min' => 'Durasi sewa minimal 1 hari (24 jam).',
             'return_date.required' => 'Tanggal selesai sewa wajib diisi.',
             'return_date.after_or_equal' => 'Tanggal selesai harus sama atau setelah tanggal mulai sewa.',
+            'return_time.required' => 'Waktu pengembalian barang wajib diisi.',
             'quantity.required' => 'Jumlah unit sewa wajib diisi.',
             'quantity.min' => 'Jumlah unit sewa minimal 1 unit.',
         ];
     }
 
     /**
-     * Kirim data pemesanan ke checkout dengan master_item_id, qty, dan tanggal.
+     * Kirim data pemesanan ke checkout dengan master_item_id, qty, waktu lengkap, dan total harga.
      */
     public function proceedToBooking(): mixed
     {
         $this->validate();
+
+        if (! $this->validateReturnDateTime()) {
+            return null;
+        }
 
         if ($this->totalDays <= 0) {
             $this->addError('return_date', 'Durasi sewa harus minimal 1 hari.');
@@ -205,7 +329,10 @@ class ProductBooking extends Component
             'quantity' => $this->quantity,
             'qty' => $this->quantity,
             'pickup_date' => $this->pickup_date,
+            'pickup_time' => $this->pickup_time,
             'return_date' => $this->return_date,
+            'return_time' => $this->return_time,
+            'duration_days' => $this->duration_days,
             'total_days' => $this->totalDays,
             'total_price' => $this->totalPrice,
             'vendor_id' => $this->product->vendor_id,

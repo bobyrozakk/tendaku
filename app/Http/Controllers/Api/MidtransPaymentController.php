@@ -20,6 +20,14 @@ class MidtransPaymentController extends Controller
     {
         $this->authorizeCustomerOwnership($request, $rental);
 
+        $rental->expireIfPastDue();
+
+        if ($rental->status === 'expired') {
+            return response()->json([
+                'message' => 'Batas waktu pembayaran telah habis. Booking telah kedaluwarsa dan tidak dapat dilanjutkan.',
+            ], 422);
+        }
+
         abort_unless(
             $rental->status === 'pending',
             422,
@@ -28,8 +36,11 @@ class MidtransPaymentController extends Controller
 
         $payment = $rental->payments()
             ->where('status', 'pending')
-            ->whereIn('payment_type', ['full', 'dp'])
-            ->where('channel', 'midtrans')
+            ->whereIn('payment_type', ['full', 'dp', 'settlement'])
+            ->where(function ($q) {
+                $q->where('channel', 'midtrans')
+                    ->orWhere('payment_method', 'midtrans_snap');
+            })
             ->latest('id')
             ->firstOrFail();
 
@@ -38,7 +49,7 @@ class MidtransPaymentController extends Controller
         return response()->json([
             'data' => [
                 'payment_id' => $payment->getKey(),
-                'order_id' => $payment->order_id,
+                'order_id' => $payment->order_id ?? $payment->midtrans_order_id,
                 'snap_token' => $snapToken,
             ],
         ]);

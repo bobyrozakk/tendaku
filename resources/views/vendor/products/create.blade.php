@@ -21,8 +21,7 @@
 
     <div class="max-w-3xl">
         <x-card class="bg-white">
-            <form method="POST" action="{{ route('vendor.products.store') }}" enctype="multipart/form-data" class="space-y-6"
-                  x-data="{ imagePreview: null }">
+            <form method="POST" action="{{ route('vendor.products.store') }}" enctype="multipart/form-data" class="space-y-6">
                 @csrf
 
                 <!-- Nama Produk -->
@@ -92,28 +91,155 @@
                     </div>
                 </div>
 
-                <!-- Foto Produk -->
-                <div>
-                    <x-input-label for="image" value="Foto Produk (Opsional)" class="font-bold text-xs text-darkbrown-800" />
-                    <div class="mt-2 flex items-center gap-4">
-                        <div class="w-20 h-20 rounded-2xl bg-wheat-100 border-2 border-dashed border-wheat-300 overflow-hidden flex items-center justify-center shrink-0">
-                            <template x-if="imagePreview">
-                                <img :src="imagePreview" class="w-full h-full object-cover">
-                            </template>
-                            <template x-if="!imagePreview">
-                                <svg class="w-8 h-8 text-wheat-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                            </template>
+                <!-- Upload Foto Produk (Maksimal 5 Foto) -->
+                <div x-data="{
+                    files: [],
+                    maxFiles: 5,
+                    errorMessage: null,
+                    isDragging: false,
+                    formatSize(bytes) {
+                        if (bytes < 1024) return bytes + ' B';
+                        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                        return (bytes / 1048576).toFixed(1) + ' MB';
+                    },
+                    handleFiles(incomingFiles) {
+                        this.errorMessage = null;
+                        const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+                        const maxSizeBytes = 2 * 1024 * 1024; // 2MB
+
+                        const newFiles = Array.from(incomingFiles);
+                        if (!newFiles.length) return;
+
+                        if (this.files.length + newFiles.length > this.maxFiles) {
+                            this.errorMessage = `Maksimal ${this.maxFiles} foto yang diperbolehkan. Anda sudah memilih ${this.files.length} foto.`;
+                        }
+
+                        const availableSlots = this.maxFiles - this.files.length;
+                        const filesToProcess = newFiles.slice(0, availableSlots);
+
+                        for (const file of filesToProcess) {
+                            if (!validTypes.includes(file.type) && !file.name.match(/\.(jpe?g|png|webp)$/i)) {
+                                this.errorMessage = `File '${file.name}' tidak didukung. Format yang diperbolehkan: JPG, JPEG, PNG, WEBP.`;
+                                continue;
+                            }
+                            if (file.size > maxSizeBytes) {
+                                this.errorMessage = `File '${file.name}' (${this.formatSize(file.size)}) melebihi batas maksimal 2MB.`;
+                                continue;
+                            }
+                            this.files.push({
+                                file: file,
+                                name: file.name,
+                                size: file.size,
+                                url: URL.createObjectURL(file)
+                            });
+                        }
+
+                        this.syncInputFiles();
+                    },
+                    removeFile(index) {
+                        if (this.files[index] && this.files[index].url) {
+                            URL.revokeObjectURL(this.files[index].url);
+                        }
+                        this.files.splice(index, 1);
+                        this.syncInputFiles();
+                        if (this.files.length < this.maxFiles) {
+                            this.errorMessage = null;
+                        }
+                    },
+                    syncInputFiles() {
+                        const dt = new DataTransfer();
+                        this.files.forEach(item => dt.items.add(item.file));
+                        this.$refs.fileInput.files = dt.files;
+                    }
+                }" class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <x-input-label for="images" value="Foto Produk (Maksimal 5 Foto)" class="font-bold text-xs text-darkbrown-800" />
+                            <p class="text-[11px] text-darkbrown-500 mt-0.5">Unggah 1 hingga 5 foto. Foto pertama otomatis dijadikan foto utama katalog.</p>
                         </div>
-                        <div class="flex-1">
-                            <input id="image" name="image" type="file" accept="image/*"
-                                   @change="const file = $event.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => imagePreview = e.target.result; reader.readAsDataURL(file); }"
-                                   class="block w-full text-xs text-darkbrown-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-wheat-200 file:text-darkbrown-800 hover:file:bg-wheat-300 cursor-pointer" />
-                            <p class="text-[11px] text-darkbrown-400 mt-1">Format: JPG, PNG, WEBP. Maksimal 2MB.</p>
-                            <x-input-error :messages="$errors->get('image')" class="mt-1" />
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-extrabold transition"
+                              :class="files.length >= maxFiles ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-wheat-200 text-darkbrown-800'"
+                              x-text="`${files.length}/${maxFiles} foto`">
+                            0/5 foto
+                        </span>
+                    </div>
+
+                    <!-- Hidden Multiple Input -->
+                    <input x-ref="fileInput" id="images" name="images[]" type="file" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                           class="sr-only"
+                           @change="handleFiles($event.target.files); $event.target.value = '';">
+
+                    <!-- Alert Validasi Frontend -->
+                    <template x-if="errorMessage">
+                        <div class="p-3 rounded-xl bg-red-50 border border-red-200 flex items-start justify-between gap-2 text-xs text-red-700">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                <span x-text="errorMessage"></span>
+                            </div>
+                            <button type="button" @click="errorMessage = null" class="text-red-500 hover:text-red-800 font-bold">&times;</button>
+                        </div>
+                    </template>
+
+                    <!-- Dropzone Area (Aktif jika foto < 5) -->
+                    <div x-show="files.length < maxFiles"
+                         @dragover.prevent="isDragging = true"
+                         @dragleave.prevent="isDragging = false"
+                         @drop.prevent="isDragging = false; handleFiles($event.dataTransfer.files)"
+                         @click="$refs.fileInput.click()"
+                         :class="isDragging ? 'border-avocado-500 bg-avocado-50/50 scale-[1.005]' : 'border-wheat-300 hover:border-avocado-400 bg-wheat-50/50 hover:bg-wheat-50'"
+                         class="border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-12 h-12 rounded-2xl bg-wheat-200/80 flex items-center justify-center text-darkbrown-700 mb-2">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-xs font-bold text-darkbrown-900">
+                                Klik untuk memilih foto atau seret ke area ini
+                            </p>
+                            <p class="text-[11px] text-darkbrown-500 mt-1">
+                                Format: JPG, JPEG, PNG, WEBP • Ukuran maksimal 2MB per foto • Hingga 5 foto
+                            </p>
                         </div>
                     </div>
+
+                    <!-- Grid Preview Foto Terpilih -->
+                    <div x-show="files.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 pt-2">
+                        <template x-for="(item, index) in files" :key="index">
+                            <div class="relative group aspect-square rounded-2xl overflow-hidden border-2 bg-white shadow-sm transition"
+                                 :class="index === 0 ? 'border-avocado-500 ring-2 ring-avocado-200' : 'border-wheat-200'">
+                                <img :src="item.url" :alt="item.name" class="w-full h-full object-cover">
+
+                                <!-- Badge Foto Utama -->
+                                <template x-if="index === 0">
+                                    <span class="absolute top-2 left-2 px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-avocado-600 text-white shadow-sm">
+                                        Foto Utama
+                                    </span>
+                                </template>
+
+                                <!-- Tombol Hapus Foto -->
+                                <button type="button" @click.stop="removeFile(index)"
+                                        title="Hapus foto ini"
+                                        class="absolute top-2 right-2 w-7 h-7 rounded-xl bg-white/90 hover:bg-red-600 text-darkbrown-700 hover:text-white shadow-md flex items-center justify-center transition">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+
+                                <!-- Nama dan Ukuran File -->
+                                <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-darkbrown-950/80 via-darkbrown-950/40 to-transparent p-2 text-white">
+                                    <p class="text-[10px] font-bold truncate" x-text="item.name"></p>
+                                    <p class="text-[9px] text-wheat-200" x-text="formatSize(item.size)"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <x-input-error :messages="$errors->get('images')" class="mt-1" />
+                    <x-input-error :messages="$errors->get('images.*')" class="mt-1" />
+                    <x-input-error :messages="$errors->get('image')" class="mt-1" />
                 </div>
 
                 <!-- Deskripsi Produk -->
