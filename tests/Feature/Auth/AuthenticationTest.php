@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Models\Vendor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -195,5 +196,71 @@ class AuthenticationTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertGuest();
+    }
+
+    public function test_config_files_do_not_produce_output_when_included(): void
+    {
+        $configFiles = glob(config_path('*.php'));
+
+        foreach ($configFiles as $file) {
+            ob_start();
+            require $file;
+            $output = ob_get_clean();
+
+            $this->assertSame('', $output, "Config file [{$file}] produced unexpected output when included. Ensure no leading or trailing whitespace exists outside <?php tags.");
+        }
+    }
+
+    public function test_all_roles_can_login_and_access_their_respective_dashboards(): void
+    {
+        $vendor = Vendor::create([
+            'name' => 'Tendaku Vendor Store',
+            'slug' => 'tendaku-vendor-store',
+            'phone' => '081234567890',
+            'address' => 'Jl. Outdoor No. 1',
+            'status' => 'active',
+        ]);
+
+        // 1. Customer
+        $customer = User::factory()->create(['role' => 'customer']);
+        $comp = Volt::test('pages.auth.login')
+            ->set('form.email', $customer->email)
+            ->set('form.password', 'password');
+        $comp->call('login');
+        $comp->assertRedirect(route('home', absolute: false));
+        $this->actingAs($customer)->get(route('customer.booking.index'))->assertOk();
+
+        // 2. Vendor Owner
+        $owner = User::factory()->create([
+            'role' => 'vendor_owner',
+            'vendor_id' => $vendor->id,
+        ]);
+        $comp = Volt::test('pages.auth.login')
+            ->set('form.email', $owner->email)
+            ->set('form.password', 'password');
+        $comp->call('login');
+        $comp->assertRedirect(route('vendor.owner.dashboard', absolute: false));
+        $this->actingAs($owner)->get(route('vendor.owner.dashboard'))->assertOk();
+
+        // 3. Vendor Admin (Kasir)
+        $admin = User::factory()->create([
+            'role' => 'vendor_admin',
+            'vendor_id' => $vendor->id,
+        ]);
+        $comp = Volt::test('pages.auth.login')
+            ->set('form.email', $admin->email)
+            ->set('form.password', 'password');
+        $comp->call('login');
+        $comp->assertRedirect(route('kasir.dashboard', absolute: false));
+        $this->actingAs($admin)->get(route('kasir.dashboard'))->assertOk();
+
+        // 4. Super Admin
+        $superAdmin = User::factory()->create(['role' => 'super_admin']);
+        $comp = Volt::test('pages.auth.superadmin-login')
+            ->set('form.email', $superAdmin->email)
+            ->set('form.password', 'password');
+        $comp->call('login');
+        $comp->assertRedirect(route('dashboard', absolute: false));
+        $this->actingAs($superAdmin)->get(route('dashboard'))->assertOk();
     }
 }

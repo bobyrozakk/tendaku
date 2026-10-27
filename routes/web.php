@@ -5,14 +5,13 @@ use App\Http\Controllers\Admin\SettlementInvoiceController;
 use App\Http\Controllers\Api\MidtransPaymentController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\BookingVaController;
+use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
-use App\Http\Controllers\Customer\PaymentRetryController;
-use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
 use App\Http\Controllers\Customer\PackageCheckoutController;
+use App\Http\Controllers\Customer\PaymentRetryController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
-use App\Http\Controllers\Vendor\CashierPaymentController;
 use App\Http\Controllers\Vendor\CategoryController;
 use App\Http\Controllers\Vendor\OwnerDashboardController;
 use App\Http\Controllers\Vendor\ProductController;
@@ -87,17 +86,6 @@ Route::post('payments/{order_id}/retry', [PaymentRetryController::class, 'store'
 // Webhook Midtrans: tanpa auth/sesi, dikecualikan dari CSRF di bootstrap/app.php (signature SHA512 yang memvalidasi)
 Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
     ->name('webhook.midtrans');
-
-// Endpoint kasir vendor: pelunasan sisa & denda (§7.4, §4.2)
-Route::middleware(['auth', 'verified', 'role:vendor_admin,vendor_owner', 'vendor.active'])
-    ->prefix('vendor/rentals')
-    ->name('vendor.rentals.')
-    ->group(function () {
-        Route::post('{rental}/pay-remaining', [CashierPaymentController::class, 'payRemaining'])
-            ->name('pay-remaining');
-        Route::post('{rental}/pay-fine', [CashierPaymentController::class, 'payFine'])
-            ->name('pay-fine');
-    });
 
 // Design System Reference
 Route::view('design-system', 'design-system')->name('design-system');
