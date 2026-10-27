@@ -245,10 +245,8 @@
             <!-- Right Actions -->
             <div class="flex items-center gap-2 sm:gap-2.5">
                 <!-- Search -->
-                <button class="p-2 text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150" title="Cari alat camping">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
+                <button class="p-2 text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150 flex items-center justify-center" title="Cari alat camping">
+                    <i data-lucide="search" class="w-5 h-5"></i>
                 </button>
 
                 <!-- Cart -->
@@ -269,9 +267,7 @@
                        class="relative p-2 text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150 flex items-center justify-center"
                        title="Keranjang Sewa"
                     >
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                        </svg>
+                        <i data-lucide="shopping-cart" class="w-5 h-5"></i>
                         <span
                             x-show="qty > 0"
                             x-cloak

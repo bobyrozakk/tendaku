@@ -18,7 +18,7 @@
             <ol class="hidden sm:flex items-center gap-2 text-sm" aria-label="Tahapan pemesanan">
                 <li class="flex items-center gap-2 text-avocado-700 font-semibold">
                     <span class="w-6 h-6 rounded-full bg-avocado-600 text-white flex items-center justify-center">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
                     </span>
                     Pilih alat
                 </li>
@@ -202,11 +202,11 @@
 
                     <div class="flex flex-wrap gap-2 text-sm">
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1">
-                            <svg class="w-4 h-4 text-sunglow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                            <i data-lucide="store" class="w-4 h-4 text-sunglow-300"></i>
                             {{ $booking['vendor']['name'] }}
                         </span>
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1">
-                            <svg class="w-4 h-4 text-sunglow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            <i data-lucide="calendar" class="w-4 h-4 text-sunglow-300"></i>
                             <span x-text="fmtShort(pickupDate) + ' – ' + fmtShort(returnDate)">{{ $booking['pickup_date'] }} – {{ $booking['return_date'] }}</span>
                         </span>
                         <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1"
@@ -218,7 +218,7 @@
 
                 <div class="shrink-0 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm px-4 py-3 lg:min-w-[15rem]">
                     <div class="flex items-center gap-2 text-sm text-avocado-100">
-                        <svg class="w-4 h-4 text-sunglow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <i data-lucide="clock" class="w-4 h-4 text-sunglow-300"></i>
                         Bayar sebelum
                     </div>
                     <div class="mt-0.5 font-bold">{{ $booking['expires_at'] }}</div>
@@ -324,13 +324,13 @@
                         @endif
 
                         <div class="flex items-start gap-2.5 rounded-xl bg-sunglow-100/70 border border-sunglow-300/70 px-3.5 py-3 text-sm text-darkbrown-800">
-                            <svg class="w-5 h-5 text-goldenrod-700 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0M9 14h.01M13 14h2" /></svg>
+                            <i data-lucide="credit-card" class="w-5 h-5 text-goldenrod-700 shrink-0 mt-0.5"></i>
                             <span>Bawa <strong>KTP asli</strong> dan nomor booking saat mengambil alat. KTP ditahan toko selama masa sewa dan dikembalikan setelah alat diperiksa.</span>
                         </div>
 
                         @if ($isGuest || $needsPhone)
                             <div class="flex items-start gap-2.5 rounded-xl bg-avocado-50 border border-avocado-200 px-3.5 py-3 text-sm text-avocado-950">
-                                <svg class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0" /></svg>
+                                <i data-lucide="bell" class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5"></i>
                                 <span>Pengingat pengembalian (H-1 &amp; hari pengembalian) dikirim ke nomor WhatsApp yang Anda isi di atas.</span>
                             </div>
                         @else
@@ -363,7 +363,7 @@
                                    class="relative flex gap-3 rounded-2xl border p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
                                 <input type="radio" name="ui_pickup_method" value="self_pickup" x-model="pickupMethod" class="sr-only">
                                 <div class="w-10 h-10 rounded-xl bg-avocado-100 text-avocado-700 flex items-center justify-center shrink-0">
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                    <i data-lucide="store" class="w-5 h-5"></i>
                                 </div>
                                 <div class="min-w-0 flex-1 pr-6">
                                     <div class="flex items-center justify-between gap-2">
@@ -374,7 +374,9 @@
                                 </div>
                                 <span class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition"
                                       :class="pickupMethod === 'self_pickup' ? 'bg-avocado-600 border-avocado-600' : 'border-wheat-400 bg-white'" aria-hidden="true">
-                                    <svg x-show="pickupMethod === 'self_pickup'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                    <span x-show="pickupMethod === 'self_pickup'" class="flex items-center justify-center">
+                                        <i data-lucide="check" class="w-3 h-3 text-white"></i>
+                                    </span>
                                 </span>
                             </label>
 
@@ -384,7 +386,7 @@
                                    class="relative flex gap-3 rounded-2xl border p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
                                 <input type="radio" name="ui_pickup_method" value="delivery" x-model="pickupMethod" class="sr-only">
                                 <div class="w-10 h-10 rounded-xl bg-sunglow-200 text-goldenrod-800 flex items-center justify-center shrink-0">
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v9H3zM14 10h4l3 3v3h-7z" /><circle cx="7" cy="17.5" r="1.8" /><circle cx="17" cy="17.5" r="1.8" /></svg>
+                                    <i data-lucide="truck" class="w-5 h-5"></i>
                                 </div>
                                 <div class="min-w-0 flex-1 pr-6">
                                     <div class="flex items-center justify-between gap-2">
@@ -395,13 +397,15 @@
                                 </div>
                                 <span class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition"
                                       :class="pickupMethod === 'delivery' ? 'bg-avocado-600 border-avocado-600' : 'border-wheat-400 bg-white'" aria-hidden="true">
-                                    <svg x-show="pickupMethod === 'delivery'" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                    <span x-show="pickupMethod === 'delivery'" class="flex items-center justify-center">
+                                        <i data-lucide="check" class="w-3 h-3 text-white"></i>
+                                    </span>
                                 </span>
                             </label>
                             @else
                             <div class="flex gap-3 rounded-2xl border border-dashed border-wheat-400 bg-wheat-50 p-4" aria-disabled="true">
                                 <div class="w-10 h-10 rounded-xl bg-wheat-200 text-darkbrown-500 flex items-center justify-center shrink-0">
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                    <i data-lucide="lock" class="w-5 h-5"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <span class="font-bold text-darkbrown-700">Diantar ke lokasi</span>
@@ -414,7 +418,7 @@
 
                         <!-- Detail: ambil di toko -->
                         <div x-show="pickupMethod === 'self_pickup'" x-cloak class="flex items-start gap-3 rounded-xl bg-wheat-50 border border-wheat-200 p-4 text-sm">
-                            <svg class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            <i data-lucide="map-pin" class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5"></i>
                             <div class="space-y-0.5">
                                 <div class="font-bold text-darkbrown-900">{{ $booking['vendor']['pickup_location'] }}</div>
                                 <div class="text-darkbrown-600">{{ $booking['vendor']['address'] }}</div>
@@ -477,7 +481,7 @@
                                 </div>
                             </div>
                             <a href="tel:{{ $booking['vendor']['phone'] }}" class="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-sm font-bold text-darkbrown-800 bg-white border border-wheat-300 hover:bg-wheat-50 transition self-start sm:self-center">
-                                <svg class="w-4 h-4 text-avocado-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                <i data-lucide="phone" class="w-4 h-4 text-avocado-600"></i>
                                 {{ $booking['vendor']['phone'] }}
                             </a>
                         </div>
@@ -527,16 +531,16 @@
                                     <div class="flex items-start gap-3.5 min-w-0">
                                         <div class="w-12 h-12 rounded-xl bg-wheat-100 border border-wheat-200 flex items-center justify-center shrink-0">
                                             <template x-if="item.icon === 'tent'">
-                                                <svg class="w-6 h-6 text-avocado-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 20 10 4 1 20h18Z" /><path d="m14 20-4-8-4 8" /></svg>
+                                                <i data-lucide="tent" class="w-6 h-6 text-avocado-700"></i>
                                             </template>
                                             <template x-if="item.icon === 'sleeping_bag'">
-                                                <svg class="w-6 h-6 text-goldenrod-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="12" height="18" x="6" y="3" rx="4" /><path d="M10 7h4" /><path d="M10 11h4" /></svg>
+                                                <i data-lucide="moon" class="w-6 h-6 text-goldenrod-700"></i>
                                             </template>
                                             <template x-if="item.icon === 'stove'">
-                                                <svg class="w-6 h-6 text-sunglow-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7" /><path d="M12 9v6" /><path d="M9 12h6" /></svg>
+                                                <i data-lucide="flame" class="w-6 h-6 text-sunglow-700"></i>
                                             </template>
                                             <template x-if="!['tent','sleeping_bag','stove'].includes(item.icon)">
-                                                <svg class="w-6 h-6 text-avocado-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2v1" /><path d="M12 7a5 5 0 0 0-5 5c0 2 1.5 3.5 2 4.5h6c.5-1 2-2.5 2-4.5a5 5 0 0 0-5-5Z" /></svg>
+                                                <i data-lucide="package" class="w-6 h-6 text-avocado-700"></i>
                                             </template>
                                         </div>
 
@@ -638,7 +642,7 @@
                         </fieldset>
 
                         <div x-show="formError" x-cloak role="alert" class="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-3 text-sm text-red-800">
-                            <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <i data-lucide="alert-circle" class="w-5 h-5 shrink-0 mt-0.5"></i>
                             <span x-text="formError"></span>
                         </div>
 
@@ -647,7 +651,7 @@
                                     :class="(isProcessing || expired) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
                                     class="w-full py-3.5 px-5 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
                                 <template x-if="!isProcessing">
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                    <i data-lucide="lock" class="w-5 h-5"></i>
                                 </template>
                                 <template x-if="isProcessing">
                                     <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
@@ -697,7 +701,14 @@
                 phase: 'form',
                 createdCode: '',
 
-                init() { this.startCountdown(); },
+                init() { 
+                    this.startCountdown(); 
+                    this.$nextTick(() => { 
+                        if (typeof window.renderLucideIcons === 'function') {
+                            window.renderLucideIcons();
+                        }
+                    });
+                },
 
                 get isGuest() { return !this.isLoggedIn; },
                 get showAddressForm() { return this.needsAddress || this.editAddress; },
