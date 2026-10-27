@@ -305,12 +305,17 @@
                                    class="btn-tendaku-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
                                     Lihat Detail &amp; Sewa
                                 </a>
-                                <a href="{{ route('customer.product.show', $item->id) }}#booking-form"
-                                   title="Tambah ke Keranjang"
-                                   class="flex-shrink-0 w-10 h-10 rounded-xl border-2 border-avocado-600 text-avocado-700 hover:bg-avocado-600 hover:text-white transition-all flex items-center justify-center shadow-sm hover:shadow-md"
+                                <button type="button"
+                                    wire:click.stop="addToCart({{ $item->id }})"
+                                    wire:loading.attr="disabled"
+                                    title="Tambah ke Keranjang"
+                                    class="flex-shrink-0 w-10 h-10 rounded-xl border-2 border-avocado-600 text-avocado-700 hover:bg-avocado-600 hover:text-white transition-all flex items-center justify-center shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
                                 >
-                                    <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                                </a>
+                                    <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
+                                        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                                    </span>
+                                    <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block w-3.5 h-3.5 border-2 border-avocado-600 border-t-transparent rounded-full animate-spin"></span>
+                                </button>
                             </div>
                         @else
                             <button type="button" 
