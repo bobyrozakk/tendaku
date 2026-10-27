@@ -116,8 +116,16 @@ class CheckoutSummaryBuilder
         ];
     }
 
-    private function itemData(MasterItem $item, int $qty, int $dailyRate, int $depositPerUnit, int $subtotal): array
+        private function itemData(MasterItem $item, int $qty, int $dailyRate, int $depositPerUnit, int $subtotal): array
     {
+        $stock = app(\App\Services\AvailabilityService::class)->checkAvailability(
+            $item->id,
+            request('pickup_date', now()->toDateString()),
+            request('return_date', now()->addDay()->toDateString())
+        );
+
+        $realStock = max(1, $stock ?: $item->units()->where('status', '!=', 'retired')->count());
+
         return [
             'id' => $item->id,
             'name' => $item->name,
@@ -126,7 +134,9 @@ class CheckoutSummaryBuilder
             'specs' => $item->description ?? '',
             'price_per_day' => $dailyRate,
             'deposit_per_unit' => $depositPerUnit,
-            'qty' => $qty,
+            'qty' => min($qty, $realStock),
+            'stock' => $realStock,
+            'max_qty' => $realStock,
             'subtotal' => $subtotal,
             'icon' => $item->category?->icon,
         ];

@@ -168,11 +168,17 @@ class BookingController extends Controller
     /**
      * Tanda terima KTP digital.
      */
-    public function receipt(Request $request, string $code): View
+        public function receipt(Request $request, string $code): View
     {
         $rental = $this->findAuthorizedRental($request, $code);
 
-        $rental->loadMissing(['vendor', 'customer', 'pickedUpBy']);
+        $rental->loadMissing([
+            'vendor',
+            'customer',
+            'pickedUpBy',
+            'details.masterItem.category',
+            'payments',
+        ]);
 
         return view('customer.booking.receipt', compact('rental'));
     }

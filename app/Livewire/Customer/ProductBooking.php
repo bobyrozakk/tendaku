@@ -297,9 +297,11 @@ class ProductBooking extends Component
     }
 
     /**
-     * Kirim data pemesanan ke checkout dengan master_item_id, qty, waktu lengkap, dan total harga.
+     * Masukkan produk ke keranjang sewa.
+     * Validasi vendor agar 1 keranjang hanya dari 1 toko.
+     * Setelah berhasil, tampilkan toast dan tidak redirect ke checkout.
      */
-    public function proceedToBooking(): mixed
+    public function addToCart(): ?string
     {
         $this->validate();
 
@@ -320,6 +322,26 @@ class ProductBooking extends Component
             return null;
         }
 
+        $cartService = app(CartService::class);
+        $existingCart = $cartService->get(Auth::user());
+
+        // Validasi: barang di keranjang harus dari vendor yang sama
+        if (
+            is_array($existingCart)
+            && ! empty($existingCart['master_item_id'])
+            && isset($existingCart['vendor_id'])
+            && (int) $existingCart['vendor_id'] !== (int) $this->product->vendor_id
+        ) {
+            $existingVendor = $existingCart['vendor_name'] ?? 'toko sebelumnya';
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'title' => 'Keranjang Beda Toko',
+                'message' => "Keranjangmu masih berisi produk dari {$existingVendor}. Selesaikan atau kosongkan keranjang dahulu sebelum menambah dari toko berbeda.",
+            ]);
+
+            return null;
+        }
+
         $cartData = [
             'master_item_id' => $this->product->id,
             'product_id' => $this->product->id,
@@ -336,12 +358,39 @@ class ProductBooking extends Component
             'total_days' => $this->totalDays,
             'total_price' => $this->totalPrice,
             'vendor_id' => $this->product->vendor_id,
+            'vendor_name' => $this->product->vendor?->name ?? 'Vendor',
             'category_name' => $this->product->category?->name,
         ];
 
-        app(CartService::class)->set($cartData, Auth::user());
+        $cartService->set($cartData, Auth::user());
 
-        return redirect()->route('checkout.index');
+        // Emit toast sukses dan update badge keranjang
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'title' => 'Ditambahkan ke Keranjang! 🛒',
+            'message' => "{$this->product->name} ({$this->quantity} unit, {$this->totalDays} hari) berhasil masuk keranjang.",
+        ]);
+
+        $this->dispatch('cart-updated', count: $this->quantity);
+
+        return null;
+    }
+
+    /**
+     * Backward-compatible alias yang langsung redirect ke checkout.
+     * Dipertahankan agar unit test yang memanggil proceedToBooking tidak rusak.
+     *
+     * @internal
+     */
+    public function proceedToBooking(): mixed
+    {
+        $this->addToCart();
+
+        if ($this->getErrorBag()->isEmpty()) {
+            return redirect()->route('checkout.index');
+        }
+
+        return null;
     }
 
     public function render(): View

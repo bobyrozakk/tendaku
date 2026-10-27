@@ -18,7 +18,7 @@
             <ol class="hidden sm:flex items-center gap-2 text-sm" aria-label="Tahapan pemesanan">
                 <li class="flex items-center gap-2 text-avocado-700 font-semibold">
                     <span class="w-6 h-6 rounded-full bg-avocado-600 text-white flex items-center justify-center">
-                        <i data-lucide="check" class="w-3 h-3"></i>
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
                     </span>
                     Pilih alat
                 </li>
@@ -289,13 +289,13 @@
                         @endif
 
                         <div class="flex items-start gap-2.5 rounded-xl bg-sunglow-100/70 border border-sunglow-300/70 px-3.5 py-3 text-sm text-darkbrown-800">
-                            <i data-lucide="id-card" class="w-4 h-4 text-sunglow-300"></i>
+                            <i data-lucide="credit-card" class="w-5 h-5 text-goldenrod-700 shrink-0 mt-0.5"></i>
                             <span>Bawa <strong>KTP asli</strong> dan nomor booking saat mengambil alat. KTP ditahan toko selama masa sewa dan dikembalikan setelah alat diperiksa.</span>
                         </div>
 
                         @if ($isGuest || $needsPhone)
                             <div class="flex items-start gap-2.5 rounded-xl bg-avocado-50 border border-avocado-200 px-3.5 py-3 text-sm text-avocado-950">
-                                <i data-lucide="bell" class="w-4 h-4 text-avocado-300"></i>
+                                <i data-lucide="bell" class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5"></i>
                                 <span>Pengingat pengembalian (H-1 &amp; hari pengembalian) dikirim ke nomor WhatsApp yang Anda isi di atas.</span>
                             </div>
                         @else
@@ -379,7 +379,7 @@
 
                         <!-- Detail: ambil di toko -->
                         <div x-show="pickupMethod === 'self_pickup'" x-cloak class="flex items-start gap-3 rounded-xl bg-wheat-50 border border-wheat-200 p-4 text-sm">
-                            <i data-lucide="store" class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5"></i>
+                            <i data-lucide="map-pin" class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5"></i>
                             <div class="space-y-0.5">
                                 <div class="font-bold text-darkbrown-900">{{ $booking['vendor']['pickup_location'] }}</div>
                                 <div class="text-darkbrown-600">{{ $booking['vendor']['address'] }}</div>
@@ -449,20 +449,63 @@
                     </div>
 
                     <!-- Jadwal (bisa diubah) -->
-                    <div class="p-5 sm:p-6">
+                                        <!-- Jadwal sewa (Floating Dropdown Popover) -->
+                    <div class="p-5 sm:p-6" @click.outside="calOpen = null">
                         <div class="flex items-center justify-between gap-3 mb-3">
                             <h3 class="font-bold text-darkbrown-900">Jadwal sewa</h3>
                             <span class="text-sm text-darkbrown-500">Tanggal bisa diubah</span>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-stretch gap-3">
-                            <div class="rounded-xl bg-avocado-50 border border-avocado-200 p-4">
-                                <label for="f_pickup_date" class="text-sm font-semibold text-avocado-800">Tanggal ambil</label>
-                                <input type="date" id="f_pickup_date" x-model="pickupDate" :min="minDate" @change="onPickupChange()"
-                                       class="mt-1.5 w-full rounded-lg border border-avocado-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 focus:border-avocado-600 focus:ring-2 focus:ring-avocado-500/30">
-                                <div class="mt-1.5 text-sm text-darkbrown-600"><span x-text="fmtLong(pickupDate)"></span> · pukul {{ $booking['pickup_time'] }}</div>
+
+                            <!-- Kolom Tanggal Ambil -->
+                            <div class="relative rounded-xl bg-avocado-50 border border-avocado-200 p-4">
+                                <label class="text-sm font-semibold text-avocado-800">Tanggal ambil</label>
+
+                                <!-- Tombol input custom yang memicu dropdown -->
+                                <button type="button" @click="openCalendar('pickup')"
+                                        class="mt-1.5 w-full flex items-center justify-between rounded-lg border border-avocado-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 hover:border-avocado-500 focus:outline-none focus:ring-2 focus:ring-avocado-500/30 transition text-left shadow-2xs">
+                                    <span x-text="pickupDate ? fmtShort(pickupDate) : 'Pilih tanggal'"></span>
+                                    <i data-lucide="calendar" class="w-4 h-4 text-avocado-700"></i>
+                                </button>
+
+                                <div class="mt-1.5 text-sm text-darkbrown-600">
+                                    <span x-text="fmtLong(pickupDate)"></span> · pukul {{ $booking['pickup_time'] }}
+                                </div>
+
+                                <!-- Floating Dropdown Kalender (Ambil) -->
+                                <div x-show="calOpen === 'pickup'" x-cloak x-transition.opacity.duration.150ms
+                                     class="absolute top-full left-0 mt-2 z-40 w-72 sm:w-80 p-4 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg">
+                                    <div class="flex items-center justify-between pb-2.5 border-b border-wheat-200 mb-2.5">
+                                        <button type="button" @click="prevMonth()" class="w-7 h-7 rounded-lg hover:bg-wheat-100 flex items-center justify-center font-bold text-darkbrown-700">‹</button>
+                                        <span class="text-xs font-bold text-darkbrown-900" x-text="monthNames[calMonth] + ' ' + calYear"></span>
+                                        <button type="button" @click="nextMonth()" class="w-7 h-7 rounded-lg hover:bg-wheat-100 flex items-center justify-center font-bold text-darkbrown-700">›</button>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-darkbrown-400 mb-1.5">
+                                        <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-1 text-center text-xs">
+                                        <template x-for="(cell, idx) in calendarDays" :key="idx">
+                                            <div>
+                                                <template x-if="cell.empty"><span class="w-7 h-7 inline-block"></span></template>
+                                                <template x-if="!cell.empty">
+                                                    <button type="button" :disabled="cell.disabled" @click="selectCalDate(cell.iso)"
+                                                            :class="[
+                                                                cell.selected ? 'bg-avocado-700 text-white font-bold shadow-xs' :
+                                                                (cell.inRange ? 'bg-avocado-100 text-avocado-900 font-semibold' :
+                                                                (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium'))
+                                                            ]"
+                                                            class="w-7 h-7 rounded-lg inline-flex items-center justify-center transition text-xs"
+                                                            x-text="cell.day">
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
 
+                            <!-- Badge Durasi di Tengah -->
                             <div class="flex sm:flex-col items-center justify-center gap-2">
                                 <span class="hidden sm:block w-px flex-1 bg-wheat-300"></span>
                                 <span class="rounded-full bg-darkbrown-900 text-wheat-100 px-3 py-1 text-xs font-bold whitespace-nowrap"
@@ -470,12 +513,53 @@
                                 <span class="hidden sm:block w-px flex-1 bg-wheat-300"></span>
                             </div>
 
-                            <div class="rounded-xl bg-sunglow-100/70 border border-sunglow-300/80 p-4">
-                                <label for="f_return_date" class="text-sm font-semibold text-goldenrod-800">Tanggal kembali</label>
-                                <input type="date" id="f_return_date" x-model="returnDate" :min="pickupDate || minDate" @change="onReturnChange()"
-                                       class="mt-1.5 w-full rounded-lg border border-sunglow-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 focus:border-goldenrod-500 focus:ring-2 focus:ring-goldenrod-400/30">
-                                <div class="mt-1.5 text-sm text-darkbrown-600"><span x-text="fmtLong(returnDate)"></span> · maksimal {{ $booking['return_time'] }}</div>
+                            <!-- Kolom Tanggal Kembali -->
+                            <div class="relative rounded-xl bg-sunglow-100/70 border border-sunglow-300/80 p-4">
+                                <label class="text-sm font-semibold text-goldenrod-800">Tanggal kembali</label>
+
+                                <!-- Tombol input custom yang memicu dropdown -->
+                                <button type="button" @click="openCalendar('return')"
+                                        class="mt-1.5 w-full flex items-center justify-between rounded-lg border border-sunglow-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 hover:border-goldenrod-500 focus:outline-none focus:ring-2 focus:ring-goldenrod-400/30 transition text-left shadow-2xs">
+                                    <span x-text="returnDate ? fmtShort(returnDate) : 'Pilih tanggal'"></span>
+                                    <i data-lucide="calendar" class="w-4 h-4 text-goldenrod-700"></i>
+                                </button>
+
+                                <div class="mt-1.5 text-sm text-darkbrown-600">
+                                    <span x-text="fmtLong(returnDate)"></span> · maksimal {{ $booking['return_time'] }}
+                                </div>
+
+                                <!-- Floating Dropdown Kalender (Kembali) -->
+                                <div x-show="calOpen === 'return'" x-cloak x-transition.opacity.duration.150ms
+                                     class="absolute top-full right-0 sm:left-auto mt-2 z-40 w-72 sm:w-80 p-4 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg">
+                                    <div class="flex items-center justify-between pb-2.5 border-b border-wheat-200 mb-2.5">
+                                        <button type="button" @click="prevMonth()" class="w-7 h-7 rounded-lg hover:bg-wheat-100 flex items-center justify-center font-bold text-darkbrown-700">‹</button>
+                                        <span class="text-xs font-bold text-darkbrown-900" x-text="monthNames[calMonth] + ' ' + calYear"></span>
+                                        <button type="button" @click="nextMonth()" class="w-7 h-7 rounded-lg hover:bg-wheat-100 flex items-center justify-center font-bold text-darkbrown-700">›</button>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-darkbrown-400 mb-1.5">
+                                        <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
+                                    </div>
+                                    <div class="grid grid-cols-7 gap-1 text-center text-xs">
+                                        <template x-for="(cell, idx) in calendarDays" :key="idx">
+                                            <div>
+                                                <template x-if="cell.empty"><span class="w-7 h-7 inline-block"></span></template>
+                                                <template x-if="!cell.empty">
+                                                    <button type="button" :disabled="cell.disabled" @click="selectCalDate(cell.iso)"
+                                                            :class="[
+                                                                cell.selected ? 'bg-goldenrod-600 text-white font-bold shadow-xs' :
+                                                                (cell.inRange ? 'bg-sunglow-100 text-darkbrown-900 font-semibold' :
+                                                                (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium'))
+                                                            ]"
+                                                            class="w-7 h-7 rounded-lg inline-flex items-center justify-center transition text-xs"
+                                                            x-text="cell.day">
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
+
                         </div>
                         <p x-show="errors.dates" x-text="errors.dates" x-cloak class="mt-2 text-sm text-red-700"></p>
                     </div>
@@ -497,22 +581,29 @@
                                             </div>
                                             <p x-show="item.specs" class="text-sm text-darkbrown-500 line-clamp-2" x-text="item.specs"></p>
                                             <p class="text-sm text-darkbrown-700" x-text="formatRupiah(item.price_per_day) + '/hari × ' + rentalDays + ' hari'"></p>
-                                            <p x-show="item.deposit_per_unit > 0" class="text-sm text-goldenrod-800" x-text="'Deposit ' + formatRupiah(item.deposit_per_unit * item.qty)"></p>
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center justify-between md:justify-end gap-5 shrink-0 pl-[3.75rem] md:pl-0">
-                                        <div>
-                                            <div class="inline-flex items-center rounded-xl border border-wheat-300 bg-white">
-                                                <button type="button" @click="changeQty(i, -1)" :disabled="item.qty <= 1" aria-label="Kurangi unit"
-                                                        class="w-9 h-9 flex items-center justify-center text-lg font-bold text-darkbrown-800 rounded-l-xl hover:bg-wheat-100 disabled:opacity-40 disabled:cursor-not-allowed transition">−</button>
-                                                <input type="number" min="1" :max="item.max_qty" x-model.number="item.qty" @change="clampQty(i)" aria-label="Jumlah unit"
-                                                       class="w-12 h-9 border-0 border-x border-wheat-200 p-0 text-center text-sm font-bold text-darkbrown-900 focus:ring-0">
-                                                <button type="button" @click="changeQty(i, 1)" :disabled="item.qty >= item.max_qty" aria-label="Tambah unit"
-                                                        class="w-9 h-9 flex items-center justify-center text-lg font-bold text-darkbrown-800 rounded-r-xl hover:bg-wheat-100 disabled:opacity-40 disabled:cursor-not-allowed transition">+</button>
-                                            </div>
-                                            <div x-show="item.max_qty < 99" class="mt-1 text-xs text-darkbrown-500 text-center" x-text="'Maks ' + item.max_qty + ' unit'"></div>
+                                    <div class="flex flex-col items-end gap-1.5 shrink-0 pl-[3.75rem] md:pl-0">
+                                        <div class="inline-flex items-center rounded-2xl border-2 border-wheat-200 bg-white shadow-sm overflow-hidden p-0.5">
+                                            <button type="button" @click="changeQty(i, -1)" :disabled="item.qty <= 1" aria-label="Kurangi unit"
+                                                    class="w-8 h-8 rounded-xl flex items-center justify-center text-base font-black text-darkbrown-800 hover:bg-wheat-100 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                                                −
+                                            </button>
+                                            <input type="number" min="1" :max="item.max_qty" x-model.number="item.qty" @change="clampQty(i)" aria-label="Jumlah unit"
+                                                   class="w-10 border-0 p-0 text-center text-sm font-black text-darkbrown-900 focus:ring-0">
+                                            <button type="button" @click="changeQty(i, 1)" :disabled="item.qty >= item.max_qty" aria-label="Tambah unit"
+                                                    class="w-8 h-8 rounded-xl flex items-center justify-center text-base font-black text-darkbrown-800 hover:bg-wheat-100 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                                                +
+                                            </button>
                                         </div>
+
+                                        <!-- Badge peringatan jika stok terbatas -->
+                                        <template x-if="item.max_qty <= 2">
+                                            <span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full shadow-2xs">
+                                                <span>Sisa <strong x-text="item.max_qty"></strong> unit!</span>
+                                            </span>
+                                        </template>
                                     </div>
                                 </li>
                             </template>
@@ -589,7 +680,7 @@
                         </fieldset>
 
                         <div x-show="formError" x-cloak role="alert" class="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-3 text-sm text-red-800">
-                            <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0 mt-0.5"></i>
+                            <i data-lucide="alert-circle" class="w-5 h-5 shrink-0 mt-0.5"></i>
                             <span x-text="formError"></span>
                         </div>
 
@@ -646,8 +737,76 @@
                 // Serah terima setelah booking dibuat: form -> handoff
                 phase: 'form',
                 createdCode: '',
+                                // State & Logika Kalender Kiyowo
+                calOpen: null, // 'pickup' | 'return' | null
+                calYear: new Date().getFullYear(),
+                calMonth: new Date().getMonth(),
+                monthNames: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
 
-                init() { this.startCountdown(); },
+                openCalendar(type) {
+                    this.calOpen = this.calOpen === type ? null : type;
+                    const cur = type === 'pickup' ? this.pickupDate : this.returnDate;
+                    if (cur) {
+                        const d = new Date(cur);
+                        if (!isNaN(d)) {
+                            this.calYear = d.getFullYear();
+                            this.calMonth = d.getMonth();
+                        }
+                    }
+                },
+                prevMonth() {
+                    if (this.calMonth === 0) { this.calMonth = 11; this.calYear--; }
+                    else { this.calMonth--; }
+                },
+                nextMonth() {
+                    if (this.calMonth === 11) { this.calMonth = 0; this.calYear++; }
+                    else { this.calMonth++; }
+                },
+                get calendarDays() {
+                    const days = [];
+                    const firstDay = new Date(this.calYear, this.calMonth, 1).getDay();
+                    const totalDays = new Date(this.calYear, this.calMonth + 1, 0).getDate();
+
+                    for (let i = 0; i < firstDay; i++) days.push({ empty: true });
+
+                    for (let d = 1; d <= totalDays; d++) {
+                        const mm = String(this.calMonth + 1).padStart(2, '0');
+                        const dd = String(d).padStart(2, '0');
+                        const iso = `${this.calYear}-${mm}-${dd}`;
+                        const isPast = iso < this.minDate;
+                        const isBeforePickup = this.calOpen === 'return' && this.pickupDate && iso < this.pickupDate;
+                        const isSelected = (this.calOpen === 'pickup' && this.pickupDate === iso) || (this.calOpen === 'return' && this.returnDate === iso);
+                        const inRange = this.pickupDate && this.returnDate && iso >= this.pickupDate && iso <= this.returnDate;
+
+                        days.push({
+                            day: d,
+                            iso: iso,
+                            disabled: isPast || isBeforePickup,
+                            selected: isSelected,
+                            inRange: inRange
+                        });
+                    }
+                    return days;
+                },
+                selectCalDate(iso) {
+                    if (this.calOpen === 'pickup') {
+                        this.pickupDate = iso;
+                        this.onPickupChange();
+                    } else {
+                        this.returnDate = iso;
+                        this.onReturnChange();
+                    }
+                    this.calOpen = null;
+                },
+
+                init() {
+                    this.startCountdown();
+                    this.$nextTick(() => {
+                        if (typeof window.renderLucideIcons === 'function') {
+                            window.renderLucideIcons();
+                        }
+                    });
+                },
 
                 get isGuest() { return !this.isLoggedIn; },
                 get showAddressForm() { return this.needsAddress || this.editAddress; },

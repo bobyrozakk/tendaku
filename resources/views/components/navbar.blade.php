@@ -245,10 +245,8 @@
             <!-- Right Actions -->
             <div class="flex items-center gap-2 sm:gap-2.5">
                 <!-- Search -->
-                <button class="p-2 text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150" title="Cari alat camping">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
+                <button class="p-2 text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150 flex items-center justify-center" title="Cari alat camping">
+                    <i data-lucide="search" class="w-5 h-5"></i>
                 </button>
 
                 <!-- Cart -->
@@ -258,17 +256,29 @@
                         ? (int) ($activeCart['qty'] ?? $activeCart['quantity'] ?? 1)
                         : 0;
                 @endphp
-                <a href="{{ route('checkout.index') }}" class="relative p-2 text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150" title="Keranjang Sewa">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                    </svg>
-                    @if($cartQty > 0)
-                        <span class="absolute top-1 right-1 w-4 h-4 rounded-full font-bold text-[10px] flex items-center justify-center text-white"
-                              style="background: linear-gradient(135deg, #d5a007, #fbce6b); box-shadow: 0 1px 6px rgba(213,160,7,0.5);">
-                            {{ $cartQty }}
+                <div
+                    x-data="{ qty: {{ $cartQty }} }"
+                    @cart-updated.window="
+                        const evCount = ($event && $event.detail) ? ($event.detail.count ?? $event.detail[0]?.count) : null;
+                        qty = (typeof evCount === 'number') ? evCount : (qty > 0 ? qty : 1);
+                    "
+                >
+                    <a href="{{ route('checkout.index') }}"
+                       class="relative p-2 text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150 flex items-center justify-center"
+                       title="Keranjang Sewa"
+                    >
+                        <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                        <span
+                            x-show="qty > 0"
+                            x-cloak
+                            x-text="qty"
+                            class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full font-bold text-[10px] flex items-center justify-center text-white"
+                            style="background: linear-gradient(135deg, #d5a007, #fbce6b); box-shadow: 0 1px 6px rgba(213,160,7,0.5);"
+                        >
+                            {{ $cartQty > 0 ? $cartQty : '' }}
                         </span>
-                    @endif
-                </a>
+                    </a>
+                </div>
 
                 <!-- Auth -->
                 @auth

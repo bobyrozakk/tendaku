@@ -48,6 +48,18 @@
 
                         <div class="space-y-2 text-sm text-darkbrown-600">
                             <div class="flex justify-between"><span>Subtotal sewa</span><span class="font-bold text-darkbrown-800">{{ $rupiah($rental->subtotal) }}</span></div>
+                            @php
+                                $adminFee = max(0, (int) round($rental->subtotal * 0.05));
+                            @endphp
+                            @if($adminFee > 0)
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span>Biaya layanan & admin (5%)</span>
+                                        <span class="block text-[11px] text-darkbrown-400">Pemeliharaan platform & jaminan transaksi</span>
+                                    </div>
+                                    <span class="font-bold text-darkbrown-800">{{ $rupiah($adminFee) }}</span>
+                                </div>
+                            @endif
                             @if($rental->delivery_fee > 0)
                                 <div class="flex justify-between"><span>Biaya pengantaran</span><span class="font-bold text-darkbrown-800">{{ $rupiah($rental->delivery_fee) }}</span></div>
                             @endif
@@ -71,16 +83,4 @@
                             <span class="text-2xl font-black tracking-tight font-heading {{ $hasDenda ? 'text-red-700' : 'text-darkbrown-900' }}">{{ $rupiah($totalFinal) }}</span>
                         </div>
                     </div>
-                    @if($status !== 'pending' && !in_array($status, ['cancelled', 'expired']))
-                        <div class="pt-3 border-t border-wheat-200 flex items-center justify-between">
-                            <span class="text-xs text-darkbrown-500">Bukti transaksi elektronik</span>
-                            <a href="{{ route('booking.receipt', $rental->booking_code) }}"
-                               class="inline-flex items-center gap-1.5 text-xs font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                Lihat struk pesanan
-                            </a>
-                        </div>
-                    @endif
                 </section>

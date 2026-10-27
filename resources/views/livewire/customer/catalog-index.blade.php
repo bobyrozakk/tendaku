@@ -7,7 +7,8 @@
                 <!-- Input Real-time Search -->
                 <div class="lg:col-span-8 relative">
                     <label for="search" class="block text-xs font-bold uppercase text-darkbrown-600 mb-1.5 tracking-wider">
-                        🔍 Cari Alat Camping Real-Time
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
+                        Cari Alat Camping Real-Time
                     </label>
                     <div class="relative">
                         <input 
@@ -60,7 +61,8 @@
                 <!-- Filter Vendor -->
                 <div>
                     <label for="vendor_id" class="block text-xs font-bold uppercase text-darkbrown-600 mb-1 tracking-wider">
-                        🏬 Vendor / Toko
+                        <i data-lucide="store" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
+                        Vendor / Toko
                     </label>
                     <select 
                         id="vendor_id"
@@ -77,7 +79,8 @@
                 <!-- Rentang Harga -->
                 <div>
                     <label class="block text-xs font-bold uppercase text-darkbrown-600 mb-1 tracking-wider">
-                        💰 Rentang Harga / Hari
+                        <i data-lucide="tag" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
+                        Rentang Harga / Hari
                     </label>
                     <div class="flex items-center gap-1.5">
                         <input 
@@ -99,7 +102,8 @@
                 <!-- Urutan (Sort) -->
                 <div>
                     <label for="sort" class="block text-xs font-bold uppercase text-darkbrown-600 mb-1 tracking-wider">
-                        ⚡ Urutkan
+                        <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
+                        Urutkan
                     </label>
                     <select 
                         id="sort"
@@ -117,7 +121,8 @@
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="block text-xs font-bold uppercase text-darkbrown-600 tracking-wider">
-                            📅 Cek Tanggal
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
+                            Cek Tanggal
                         </label>
                         <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold text-darkbrown-700 hover:text-avocado-700 transition select-none">
                             <input 
@@ -151,25 +156,43 @@
             <!-- Filter Kategori Tabs (Pills) -->
             <div>
                 <label class="block text-xs font-bold uppercase text-darkbrown-600 mb-2 tracking-wider">
-                    🏷️ Filter Kategori:
+                    <i data-lucide="layers" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
+                    Filter Kategori:
                 </label>
                 <div class="flex flex-wrap items-center gap-2 pt-1">
                     <button 
                         type="button"
                         wire:click="selectCategory(null)" 
-                        class="px-4 py-2 rounded-xl text-xs font-bold transition-all border {{ is_null($categoryId) ? 'bg-darkbrown-800 text-wheat-200 border-darkbrown-900 shadow-md scale-[1.02]' : 'bg-wheat-100 text-darkbrown-800 border-wheat-300 hover:bg-wheat-200' }}"
+                        class="px-4 py-2 rounded-xl text-xs font-bold transition-all border inline-flex items-center gap-1.5 {{ is_null($categoryId) ? 'bg-darkbrown-800 text-wheat-200 border-darkbrown-900 shadow-md scale-[1.02]' : 'bg-wheat-100 text-darkbrown-800 border-wheat-300 hover:bg-wheat-200' }}"
                     >
-                        ✨ Semua Kategori
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        <span>Semua Kategori</span>
                     </button>
                     @foreach($categories as $cat)
                         @php
                             $isActive = $categoryId === $cat->id;
+                            $catIcon = match(strtolower($cat->icon ?? '')) {
+                                'tent' => 'tent',
+                                'moon' => 'moon',
+                                'flame' => 'flame',
+                                'sun', 'flashlight' => 'flashlight',
+                                'bag', 'backpack' => 'backpack',
+                                default => match(true) {
+                                    str_contains(strtolower($cat->name), 'tenda') => 'tent',
+                                    str_contains(strtolower($cat->name), 'sleep') || str_contains(strtolower($cat->name), 'tidur') => 'moon',
+                                    str_contains(strtolower($cat->name), 'masak') || str_contains(strtolower($cat->name), 'cook') => 'flame',
+                                    str_contains(strtolower($cat->name), 'lampu') || str_contains(strtolower($cat->name), 'light') => 'flashlight',
+                                    str_contains(strtolower($cat->name), 'tas') || str_contains(strtolower($cat->name), 'carrier') || str_contains(strtolower($cat->name), 'bag') => 'backpack',
+                                    default => 'tag'
+                                }
+                            };
                         @endphp
                         <button 
                             type="button"
                             wire:click="selectCategory({{ $cat->id }})"
                             class="px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 {{ $isActive ? 'bg-avocado-600 text-white border-avocado-700 shadow-md scale-[1.02]' : 'bg-white text-darkbrown-700 border-wheat-300 hover:border-avocado-400 hover:bg-wheat-50' }}"
                         >
+                            <i data-lucide="{{ $catIcon }}" class="w-3.5 h-3.5"></i>
                             <span>{{ $cat->name }}</span>
                             @if(isset($cat->items_count))
                                 <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] {{ $isActive ? 'bg-avocado-800 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
@@ -201,7 +224,8 @@
             </p>
         </div>
         <div class="flex items-center gap-2 text-xs text-darkbrown-600 font-medium bg-wheat-100 px-3 py-1.5 rounded-lg border border-wheat-200 self-start sm:self-auto">
-            <span>🛡️ Jaminan: <strong>KTP Asli saat Pickup (Tanpa Deposit)</strong></span>
+            <i data-lucide="shield-check" class="w-4 h-4 text-avocado-600 shrink-0"></i>
+            <span>Jaminan: <strong>KTP Asli saat Pickup (Tanpa Deposit)</strong></span>
         </div>
     </div>
 
@@ -238,6 +262,21 @@
                                     Tanpa Deposit
                                 </span>
                             </div>
+                            <!-- Cart quick-add icon (pojok kanan bawah thumbnail) -->
+                            @if($unitCount > 0)
+                                <button
+                                    type="button"
+                                    wire:click.stop="addToCart({{ $item->id }})"
+                                    wire:loading.attr="disabled"
+                                    title="Tambah ke Keranjang"
+                                    class="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-white/95 backdrop-blur-sm border border-wheat-200 flex items-center justify-center text-darkbrown-700 hover:bg-avocado-600 hover:text-white hover:border-avocado-600 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg z-10 cursor-pointer group/cart"
+                                >
+                                    <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
+                                        <i data-lucide="shopping-cart" class="w-4 h-4 transition-transform group-hover/cart:scale-110"></i>
+                                    </span>
+                                    <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block w-3.5 h-3.5 border-2 border-avocado-600 border-t-transparent rounded-full animate-spin"></span>
+                                </button>
+                            @endif
                         </div>
 
                         <!-- Content Info -->
@@ -269,7 +308,6 @@
                                 @endif
                                 <span class="text-[11px] text-darkbrown-500 font-medium">| {{ $item->dominant_condition }}</span>
                             </div>
-                        </div>
                     </div>
 
                     <!-- Card Footer Price & Action -->
@@ -285,10 +323,35 @@
                             <span class="text-[10px] text-wheat-500">{{ $item->item_age }}</span>
                         </div>
 
-                        <a href="{{ route('customer.product.show', $item->id) }}" 
-                           class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
-                            Lihat Detail & Sewa
-                        </a>
+                        @if($unitCount > 0)
+                            <div class="flex items-center gap-2">
+                                <a href="{{ route('customer.product.show', $item->id) }}" 
+                                   class="btn-tendaku-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
+                                    Lihat Detail &amp; Sewa
+                                </a>
+                                <button type="button"
+                                    wire:click.stop="addToCart({{ $item->id }})"
+                                    wire:loading.attr="disabled"
+                                    title="Tambah ke Keranjang"
+                                    class="flex-shrink-0 w-10 h-10 rounded-xl border-2 border-avocado-600 text-avocado-700 hover:bg-avocado-600 hover:text-white transition-all flex items-center justify-center shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
+                                >
+                                    <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
+                                        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                                    </span>
+                                    <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block w-3.5 h-3.5 border-2 border-avocado-600 border-t-transparent rounded-full animate-spin"></span>
+                                </button>
+                            </div>
+                        @else
+                            <button type="button" 
+                                    disabled 
+                                    class="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block bg-wheat-200 text-darkbrown-400 border border-wheat-300 cursor-not-allowed select-none opacity-80 shadow-none"
+                                    title="Stok peralatan sedang tidak tersedia">
+                                <span class="flex items-center justify-center gap-1.5">
+                                    <i data-lucide="shopping-cart" class="w-3.5 h-3.5 opacity-50"></i>
+                                    Stok Habis
+                                </span>
+                            </button>
+                        @endif
                     </div>
                 </article>
             @endforeach
@@ -301,8 +364,8 @@
     @else
         <!-- Empty State -->
         <div class="card-tendaku-warm p-12 text-center rounded-2xl border border-wheat-300 my-8">
-            <div class="w-16 h-16 bg-wheat-200 text-darkbrown-700 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                🔍
+            <div class="w-16 h-16 bg-wheat-200 text-darkbrown-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="search-x" class="w-8 h-8 text-darkbrown-600"></i>
             </div>
             <h3 class="text-lg font-bold text-darkbrown-900 font-heading">Peralatan Tidak Ditemukan</h3>
             <p class="text-sm text-darkbrown-600 max-w-md mx-auto mt-2">
