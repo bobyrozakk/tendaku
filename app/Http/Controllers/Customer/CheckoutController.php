@@ -13,7 +13,6 @@ use App\Services\CheckoutSummaryBuilder;
 use App\Services\GuestRentalAccess;
 use App\Services\MidtransService;
 use App\Services\PaymentService;
-use App\Services\PhoneNumberNormalizer;
 use App\Services\RentalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -146,12 +145,8 @@ class CheckoutController extends Controller
                 $this->guestAccess->grant($rental);
             }
 
-            // Keranjang dibersihkan setelah proses pembayaran berhasil
-            // menghasilkan Snap token.
-            session()->forget(self::CART_SESSION_KEY);
-            if (Auth::check()) {
-                app(CartService::class)->clear(Auth::user());
-            }
+            // Keranjang dibersihkan setelah checkout berhasil diproses
+            app(CartService::class)->clear(Auth::user());
 
             if ($request->expectsJson()) {
                 return response()->json([
@@ -177,7 +172,7 @@ class CheckoutController extends Controller
         } catch (InsufficientStockException $e) {
             return $this->failure(
                 $request,
-                'Stok tidak tersedia: ' . $e->getMessage()
+                'Stok tidak tersedia: '.$e->getMessage()
             );
         } catch (\InvalidArgumentException $e) {
             return $this->failure($request, $e->getMessage());
@@ -232,8 +227,7 @@ class CheckoutController extends Controller
             return $data + [
                 'guest_name' => $request->validated('guest_name'),
                 'guest_phone' => $request->validated('guest_phone'),
-                'guest_id_number' =>
-                    $request->validated('guest_id_number') ?? '',
+                'guest_id_number' => $request->validated('guest_id_number') ?? '',
             ];
         }
 
@@ -314,23 +308,18 @@ class CheckoutController extends Controller
             $request->user() === null
             && ! empty($rental->guest_phone)
         ) {
-            $url .= '?phone=' . urlencode($rental->guest_phone);
+            $url .= '?phone='.urlencode($rental->guest_phone);
         }
 
         return $url;
     }
 
     /**
-     * Membaca keranjang booking dari session.
+     * Membaca keranjang booking dari CartService (session atau database user).
      */
     private function cart(): ?array
     {
-        $cart = session(self::CART_SESSION_KEY);
-
-        return (
-            empty($cart)
-            || empty($cart['master_item_id'])
-        ) ? null : $cart;
+        return app(CartService::class)->get(Auth::user());
     }
 
     /**

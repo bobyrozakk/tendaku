@@ -6,8 +6,10 @@ use App\Models\ItemCategory;
 use App\Models\MasterItem;
 use App\Models\Vendor;
 use App\Services\AvailabilityService;
+use App\Services\CartService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -110,6 +112,97 @@ class CatalogIndex extends Component
         $this->sort = 'latest';
         $this->onlyAvailable = false;
         $this->resetPage();
+    }
+
+    /**
+     * Tambah item langsung ke keranjang dari card katalog.
+     * Menerapkan aturan:
+     * 1. 1 keranjang hanya boleh dari 1 vendor toko yang sama.
+     * 2. Periksa ketersediaan stok fisik sebelum masuk keranjang.
+     * 3. Update counter keranjang di navbar dan trigger toast notifikasi.
+     */
+    public function addToCart(int $masterItemId, AvailabilityService $availabilityService): void
+    {
+        $masterItem = MasterItem::with(['vendor', 'category'])->findOrFail($masterItemId);
+
+        $cartService = app(CartService::class);
+        $user = Auth::user();
+        $existingCart = $cartService->get($user);
+
+        // Validasi aturan: 1 keranjang hanya boleh dari 1 vendor toko
+        if (
+            is_array($existingCart)
+            && ! empty($existingCart['master_item_id'])
+            && isset($existingCart['vendor_id'])
+            && (int) $existingCart['vendor_id'] !== (int) $masterItem->vendor_id
+        ) {
+            $existingVendor = $existingCart['vendor_name'] ?? 'toko sebelumnya';
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'title' => 'Keranjang Beda Toko',
+                'message' => "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
+            ]);
+
+            return;
+        }
+
+        // Tentukan tanggal sewa (dari filter tanggal aktif atau default besok - lusa)
+        $pickupDate = (! empty($this->startDate) && Carbon::parse($this->startDate)->gte(Carbon::today()))
+            ? $this->startDate
+            : Carbon::tomorrow()->toDateString();
+
+        $returnDate = (! empty($this->endDate) && Carbon::parse($this->endDate)->gte(Carbon::parse($pickupDate)))
+            ? $this->endDate
+            : Carbon::parse($pickupDate)->addDay()->toDateString();
+
+        $pickupCarbon = Carbon::parse($pickupDate);
+        $returnCarbon = Carbon::parse($returnDate);
+        $durationDays = max(1, (int) $pickupCarbon->diffInDays($returnCarbon));
+
+        // Cek ketersediaan stok
+        $availableStock = $availabilityService->checkAvailability($masterItem->id, $pickupDate, $returnDate);
+        if ($availableStock < 1) {
+            $this->dispatch('notify', [
+                'type' => 'error',
+                'title' => 'Stok Habis',
+                'message' => "Maaf, stok {$masterItem->name} sedang tidak tersedia untuk tanggal yang dipilih.",
+            ]);
+
+            return;
+        }
+
+        $totalPrice = (int) $masterItem->daily_rate * $durationDays;
+
+        $cartData = [
+            'master_item_id' => $masterItem->id,
+            'product_id' => $masterItem->id,
+            'product_name' => $masterItem->name,
+            'product_image' => $masterItem->image_url,
+            'daily_rate' => (int) $masterItem->daily_rate,
+            'quantity' => 1,
+            'qty' => 1,
+            'pickup_date' => $pickupDate,
+            'pickup_time' => '10:00',
+            'return_date' => $returnDate,
+            'return_time' => '16:00',
+            'duration_days' => $durationDays,
+            'total_days' => $durationDays,
+            'total_price' => $totalPrice,
+            'vendor_id' => $masterItem->vendor_id,
+            'vendor_name' => $masterItem->vendor?->name ?? 'Vendor',
+            'category_name' => $masterItem->category?->name,
+        ];
+
+        $cartService->set($cartData, $user);
+
+        // Update badge keranjang di navbar dan tampilkan notifikasi sukses
+        $this->dispatch('cart-updated', count: 1);
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'title' => 'Masuk Keranjang! 🛒',
+            'message' => "{$masterItem->name} berhasil ditambahkan ke keranjang.",
+        ]);
     }
 
     public function render(AvailabilityService $availabilityService): View

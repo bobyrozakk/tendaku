@@ -371,7 +371,7 @@ class ProductBooking extends Component
             'message' => "{$this->product->name} ({$this->quantity} unit, {$this->totalDays} hari) berhasil masuk keranjang.",
         ]);
 
-        $this->dispatch('cart-updated');
+        $this->dispatch('cart-updated', count: $this->quantity);
 
         return null;
     }

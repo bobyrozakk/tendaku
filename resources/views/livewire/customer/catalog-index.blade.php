@@ -240,12 +240,18 @@
                             </div>
                             <!-- Cart quick-add icon (pojok kanan bawah thumbnail) -->
                             @if($unitCount > 0)
-                                <a href="{{ route('customer.product.show', $item->id) }}#booking-form"
-                                   title="Tambah ke Keranjang — pilih tanggal di halaman detail"
-                                   class="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-white/90 backdrop-blur-sm border border-wheat-200 flex items-center justify-center text-darkbrown-700 hover:bg-avocado-600 hover:text-white hover:border-avocado-600 transition-all duration-200 shadow-md hover:shadow-lg z-10"
+                                <button
+                                    type="button"
+                                    wire:click.stop="addToCart({{ $item->id }})"
+                                    wire:loading.attr="disabled"
+                                    title="Tambah ke Keranjang"
+                                    class="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-white/95 backdrop-blur-sm border border-wheat-200 flex items-center justify-center text-darkbrown-700 hover:bg-avocado-600 hover:text-white hover:border-avocado-600 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg z-10 cursor-pointer group/cart"
                                 >
-                                    <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                                </a>
+                                    <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
+                                        <i data-lucide="shopping-cart" class="w-4 h-4 transition-transform group-hover/cart:scale-110"></i>
+                                    </span>
+                                    <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block w-3.5 h-3.5 border-2 border-avocado-600 border-t-transparent rounded-full animate-spin"></span>
+                                </button>
                             @endif
                         </div>
 
