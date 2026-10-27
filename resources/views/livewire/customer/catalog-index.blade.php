@@ -285,10 +285,19 @@
                             <span class="text-[10px] text-wheat-500">{{ $item->item_age }}</span>
                         </div>
 
-                        <a href="{{ route('customer.product.show', $item->id) }}" 
-                           class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
-                            Lihat Detail & Sewa
-                        </a>
+                        @if($unitCount > 0)
+                            <a href="{{ route('customer.product.show', $item->id) }}" 
+                               class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
+                                Lihat Detail & Sewa
+                            </a>
+                        @else
+                            <button type="button" 
+                                    disabled 
+                                    class="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block bg-wheat-200 text-darkbrown-400 border border-wheat-300 cursor-not-allowed select-none opacity-80 shadow-none"
+                                    title="Stok peralatan sedang tidak tersedia">
+                                Lihat Detail & Sewa (Stok Habis)
+                            </button>
+                        @endif
                     </div>
                 </article>
             @endforeach
