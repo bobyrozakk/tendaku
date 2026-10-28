@@ -304,7 +304,6 @@
                                     Pengingat pengembalian (H-1 &amp; hari pengembalian) dikirim ke
                                     <span class="font-mono font-bold text-avocado-700">{{ $user->phone }}</span>.
                                 </span>
-                                <a href="{{ route('profile') }}" class="shrink-0 font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">Ubah di profil</a>
                             </div>
                         @endif
                     </div>
