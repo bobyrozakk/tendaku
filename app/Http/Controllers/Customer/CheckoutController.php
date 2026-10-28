@@ -23,7 +23,7 @@ use Illuminate\View\View;
 class CheckoutController extends Controller
 {
     private const CART_SESSION_KEY = 'booking_cart';
-    public const PAYMENT_TIMEOUT_HOURS = 2;
+    private const PAYMENT_TIMEOUT_MINUTES = 60;
 
     public function __construct(
         private readonly CheckoutSummaryBuilder $summary,
@@ -196,16 +196,6 @@ class CheckoutController extends Controller
         $pickupDate = $request->validated('pickup_date') ?: ($cart['pickup_date'] ?? null);
         $returnDate = $request->validated('return_date') ?: ($cart['return_date'] ?? null);
 
-        $rentalDays = null;
-        if ($pickupDate && $returnDate) {
-            $p = \Carbon\Carbon::parse($pickupDate);
-            $r = \Carbon\Carbon::parse($returnDate);
-
-            $rentalDays = max(1, (int) $p->diffInDays($r) + 1);
-        } else {
-            $rentalDays = isset($cart['total_days']) ? (int) $cart['total_days'] : 1;
-        }
-
         $requestedItems = $request->input('items');
         $qty = 1;
         if (is_array($requestedItems) && isset($requestedItems[0]['qty'])) {
@@ -216,11 +206,10 @@ class CheckoutController extends Controller
         $data = [
             'vendor_id' => $masterItem->vendor_id,
             'pickup_date' => $pickupDate,
-            'pickup_time' => $cart['pickup_time'] ?? '09:00',
+            'pickup_time' => $masterItem->vendor->pickup_time ?: config('rental.default_pickup_time', '09:00'),
             'return_date' => $returnDate,
-            'return_time' => $cart['return_time'] ?? '09:00',
-            'rental_days' => $rentalDays,
-            'expires_in_minutes' => self::PAYMENT_TIMEOUT_HOURS * 60,
+            'return_time' => $masterItem->vendor->return_time ?: config('rental.default_return_time', '09:00'),
+            'expires_in_minutes' => self::PAYMENT_TIMEOUT_MINUTES,
             'pickup_method' => $pickupMethod,
             'delivery_fee' => $this->summary->deliveryFee(
                 $masterItem->vendor,
