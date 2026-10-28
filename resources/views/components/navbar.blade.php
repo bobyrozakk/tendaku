@@ -214,28 +214,22 @@
                               {{ request()->routeIs('customer.catalog.index', 'customer.product.show', 'checkout.index') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                         Katalog Alat
                     </a>
-                    <a href="{{ route('customer.packages.index') }}"
-                       title="{{ auth()->check() ? 'Paket camping siap sewa' : 'Masuk untuk mengakses paket camping' }}"
-                       class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
-                              {{ request()->routeIs('customer.packages.*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
-                        <span class="inline-flex items-center gap-1.5">
+                    @auth
+                        <a href="{{ route('customer.packages.index') }}"
+                           title="Paket camping siap sewa"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
+                                  {{ request()->routeIs('customer.packages.*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                             Paket Camping
-                            @guest
-                                <i data-lucide="lock" class="w-3 h-3 text-darkbrown-400" aria-hidden="true"></i>
-                            @endguest
-                        </span>
-                    </a>
-                    <a href="{{ route('customer.weather.index') }}"
-                       title="{{ auth()->check() ? 'Prakiraan cuaca spot camping' : 'Masuk untuk mengakses prakiraan cuaca' }}"
-                       class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
-                              {{ request()->routeIs('customer.weather.index') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
-                        <span class="inline-flex items-center gap-1.5">
+                        </a>
+                    @endauth
+                    @auth
+                        <a href="{{ route('customer.weather.index') }}"
+                           title="Prakiraan cuaca spot camping"
+                           class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
+                                  {{ request()->routeIs('customer.weather.index') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                             Cuaca
-                            @guest
-                                <i data-lucide="lock" class="w-3 h-3 text-darkbrown-400" aria-hidden="true"></i>
-                            @endguest
-                        </span>
-                    </a>
+                        </a>
+                    @endauth
                     @auth
                         <a href="{{ route('customer.booking.index') }}"
                            class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
