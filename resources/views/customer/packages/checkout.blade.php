@@ -247,18 +247,13 @@
                         <label class="flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition"
                                :class="method === 'delivery' ? 'border-avocado-500 bg-avocado-50' : 'border-wheat-300 bg-white hover:bg-wheat-50'">
                             <input type="radio" name="pickup_method" value="delivery" x-model="method"
-                                   @disabled(! $isLoggedIn)
-                                   class="mt-0.5 text-avocado-600 focus:ring-avocado-500 disabled:opacity-40" />
+                                   class="mt-0.5 text-avocado-600 focus:ring-avocado-500" />
                             <span>
                                 <span class="block text-xs font-bold text-darkbrown-900">
                                     Diantar (+Rp {{ number_format($deliveryFeeAmount, 0, ',', '.') }})
                                 </span>
                                 <span class="block text-[11px] text-darkbrown-500">
-                                    @if ($isLoggedIn)
-                                        Dikirim ke alamat pada profil Anda.
-                                    @else
-                                        Wajib masuk ke akun terlebih dahulu.
-                                    @endif
+                                    Dikirim ke alamat pada profil akun Anda.
                                 </span>
                             </span>
                         </label>
@@ -274,61 +269,18 @@
                     Data Penyewa
                 </h2>
 
-                @if ($isLoggedIn)
-                    <div class="p-3 rounded-xl bg-avocado-50 border border-avocado-200">
-                        <p class="text-xs font-bold text-avocado-900">{{ auth()->user()->name }}</p>
-                        <p class="text-[11px] text-avocado-800 mt-0.5">
-                            {{ auth()->user()->email }}
-                            @if (auth()->user()->phone)
-                                &middot; {{ auth()->user()->phone }}
-                            @endif
-                        </p>
-                        <p class="text-[11px] text-avocado-700 mt-1">
-                            Data penyewa mengikuti profil akun Anda.
-                        </p>
-                    </div>
-                @else
-                    <div class="p-3 rounded-xl bg-sunglow-50 border border-sunglow-200">
-                        <p class="text-xs font-bold text-darkbrown-900">Pemesanan tanpa akun (guest)</p>
-                        <p class="text-[11px] text-darkbrown-600 mt-0.5">
-                            Sudah punya akun?
-                            <a href="{{ route('login') }}" class="font-bold text-avocado-700 underline">Masuk di sini</a>
-                            agar data terisi otomatis dan riwayat sewa tersimpan.
-                        </p>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="sm:col-span-2">
-                            <label for="guest_name" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                                Nama Lengkap *
-                            </label>
-                            <input type="text" id="guest_name" name="guest_name" value="{{ old('guest_name') }}"
-                                   required placeholder="Sesuai KTP"
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                            <x-input-error :messages="$errors->get('guest_name')" class="mt-1" />
-                        </div>
-
-                        <div>
-                            <label for="guest_phone" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                                Nomor WhatsApp *
-                            </label>
-                            <input type="text" id="guest_phone" name="guest_phone" value="{{ old('guest_phone') }}"
-                                   required placeholder="08xxxxxxxxxx"
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                            <x-input-error :messages="$errors->get('guest_phone')" class="mt-1" />
-                        </div>
-
-                        <div>
-                            <label for="guest_id_number" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                                NIK (KTP) *
-                            </label>
-                            <input type="text" id="guest_id_number" name="guest_id_number" value="{{ old('guest_id_number') }}"
-                                   required placeholder="16 digit NIK"
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                            <x-input-error :messages="$errors->get('guest_id_number')" class="mt-1" />
-                        </div>
-                    </div>
-                @endif
+                <div class="p-3.5 rounded-xl bg-avocado-50 border border-avocado-200">
+                    <p class="text-xs font-bold text-avocado-900">{{ auth()->user()->name }}</p>
+                    <p class="text-[11px] text-avocado-800 mt-0.5">
+                        {{ auth()->user()->email }}
+                        @if (auth()->user()->phone)
+                            &middot; {{ auth()->user()->phone }}
+                        @endif
+                    </p>
+                    <p class="text-[11px] text-avocado-700 mt-1">
+                        Data penyewa otomatis menggunakan akun profil Anda.
+                    </p>
+                </div>
             </div>
 
             <!-- Metode Pembayaran -->

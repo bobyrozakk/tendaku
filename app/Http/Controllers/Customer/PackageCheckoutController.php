@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Customer;
 use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\CampingPackage;
-use App\Services\PhoneNumberNormalizer;
 use App\Services\RentalService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -46,9 +45,8 @@ class PackageCheckoutController extends Controller
     {
         $package = $this->findPackage($id);
 
-        $isLoggedIn = Auth::check();
         $requestedMethod = $request->query('pickup_method');
-        $pickupMethod = $isLoggedIn && in_array($requestedMethod, ['self_pickup', 'delivery'], true)
+        $pickupMethod = in_array($requestedMethod, ['self_pickup', 'delivery'], true)
             ? $requestedMethod
             : 'self_pickup';
 
@@ -79,7 +77,7 @@ class PackageCheckoutController extends Controller
         return view('customer.packages.checkout', [
             'package' => $package,
             'vendor' => $package->vendor,
-            'isLoggedIn' => $isLoggedIn,
+            'isLoggedIn' => true,
             'pickupMethod' => $pickupMethod,
             'pickupDate' => $pickupDate,
             'pickupTime' => $pickupTime,
@@ -100,17 +98,11 @@ class PackageCheckoutController extends Controller
 
         $pickupMethod = $request->input('pickup_method', 'self_pickup');
         $paymentChannel = $request->input('payment_channel', 'qris');
+        $user = Auth::user();
 
-        if ($pickupMethod === 'delivery' && ! Auth::check()) {
-            return redirect()->route('login')
-                ->with('warning', 'Layanan pengantaran (delivery) mengharuskan Anda memiliki akun terverifikasi.');
-        }
+        $validated = $this->validatedInput($request);
 
-        $isGuest = ! Auth::check();
-
-        $validated = $this->validatedInput($request, $isGuest);
-
-        $deliveryAddress = $pickupMethod === 'delivery' ? Auth::user()?->address : null;
+        $deliveryAddress = $pickupMethod === 'delivery' ? $user?->address : null;
 
         if ($pickupMethod === 'delivery' && blank($deliveryAddress)) {
             return redirect()->route('customer.packages.checkout', $package)
@@ -165,10 +157,10 @@ class PackageCheckoutController extends Controller
         try {
             $rental = $rentalService->createBooking([
                 'vendor_id' => (int) $package->vendor_id,
-                'user_id' => Auth::id(),
-                'guest_name' => $isGuest ? $validated['guest_name'] : null,
-                'guest_phone' => $isGuest ? $validated['guest_phone'] : null,
-                'guest_id_number' => $isGuest ? $validated['guest_id_number'] : null,
+                'user_id' => $user->id,
+                'guest_name' => null,
+                'guest_phone' => null,
+                'guest_id_number' => null,
                 'pickup_date' => $pickupDateTime->format('Y-m-d'),
                 'pickup_time' => $pickupDateTime->format('H:i:s'),
                 'return_date' => $returnDateTime->format('Y-m-d'),
@@ -196,37 +188,23 @@ class PackageCheckoutController extends Controller
     }
 
     /**
-     * Validasi input checkout paket. Guest wajib mengisi identitas dan nomor WhatsApp yang valid.
+     * Validasi input checkout paket.
      *
      * @return array<string, mixed>
      */
-    private function validatedInput(Request $request, bool $isGuest): array
+    private function validatedInput(Request $request): array
     {
-        $validated = $request->validate([
+        return $request->validate([
             'pickup_date' => ['required', 'date', 'after_or_equal:today'],
             'pickup_time' => ['nullable', 'date_format:H:i'],
             'return_date' => ['nullable', 'date', 'after_or_equal:pickup_date'],
             'return_time' => ['nullable', 'date_format:H:i'],
             'pickup_method' => ['nullable', 'in:self_pickup,delivery'],
-            'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:255'],
-            'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
-            'guest_id_number' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
         ], [
             'pickup_date.required' => 'Tanggal mulai sewa wajib dipilih.',
             'pickup_date.after_or_equal' => 'Tanggal mulai sewa tidak boleh di masa lalu.',
             'return_date.after_or_equal' => 'Tanggal pengembalian harus sama atau setelah tanggal mulai sewa.',
-            'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
-            'guest_phone.required' => 'Nomor WhatsApp wajib diisi agar pengingat pengembalian dapat dikirim.',
-            'guest_id_number.required' => 'NIK wajib diisi untuk pemesanan tanpa akun.',
         ]);
-
-        if ($isGuest && PhoneNumberNormalizer::normalize($validated['guest_phone']) === null) {
-            throw ValidationException::withMessages([
-                'guest_phone' => 'Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx.',
-            ]);
-        }
-
-        return $validated;
     }
 
     /**

@@ -242,7 +242,7 @@
                             <select id="pickup_method" name="pickup_method"
                                     class="input-tendaku w-full py-2 px-2.5 rounded-xl text-xs font-medium border-wheat-300">
                                 <option value="self_pickup">Ambil di Toko (Gratis)</option>
-                                <option value="delivery">Diantar (+Rp 25.000, wajib login)</option>
+                                <option value="delivery">Diantar (+Rp 25.000)</option>
                             </select>
                         </div>
 

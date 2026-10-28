@@ -48,21 +48,25 @@ Route::get('/katalog/{id}', [CatalogController::class, 'show'])
     ->whereNumber('id')
     ->name('customer.product.show');
 
-// Paket Camping (publik)
-Route::get('/paket-camping', [CustomerCampingPackageController::class, 'index'])
-    ->name('customer.packages.index');
-Route::get('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'index'])
-    ->whereNumber('id')
-    ->name('customer.packages.checkout');
-Route::post('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'store'])
-    ->whereNumber('id')
-    ->name('customer.packages.checkout.store');
-Route::get('/paket-camping/{id}', [CustomerCampingPackageController::class, 'show'])
-    ->whereNumber('id')
-    ->name('customer.packages.show');
+// Paket Camping (khusus customer yang terdaftar dan login)
+Route::middleware(['auth', 'role:customer'])->group(function () {
+    Route::get('/paket-camping', [CustomerCampingPackageController::class, 'index'])
+        ->name('customer.packages.index');
+    Route::get('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'index'])
+        ->whereNumber('id')
+        ->name('customer.packages.checkout');
+    Route::post('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'store'])
+        ->whereNumber('id')
+        ->name('customer.packages.checkout.store');
+    Route::get('/paket-camping/{id}', [CustomerCampingPackageController::class, 'show'])
+        ->whereNumber('id')
+        ->name('customer.packages.show');
+});
 
-// Prakiraan Cuaca Spot Camping (publik)
-Route::view('/cuaca', 'customer.weather.index')->name('customer.weather.index');
+// Prakiraan Cuaca Spot Camping (wajib login)
+Route::view('/cuaca', 'customer.weather.index')
+    ->middleware('auth')
+    ->name('customer.weather.index');
 
 // Alias Route URL langsung (untuk backward compatibility & kemudahan akses)
 Route::get('checkout', fn () => redirect()->route('checkout.index'));
