@@ -40,7 +40,10 @@ class Pos extends Component
     public function updatedActiveTab()
     {
         $this->selectedOrderId = null;
-        $this->loadDefaultOrder();
+        // Tab completed hanya menampilkan riwayat, tidak perlu auto-select
+        if ($this->activeTab === 'pending') {
+            $this->loadDefaultOrder();
+        }
     }
 
     private function loadDefaultOrder(): void
@@ -60,13 +63,43 @@ class Pos extends Component
         $this->modalBarcode = '';
 
         $order = $this->getSelectedOrderProperty();
-        if ($order && ! isset($this->scannedUnits[$order->id])) {
-            $this->scannedUnits[$order->id] = [];
-            // Jika pesanan sudah confirmed / completed / returned, otomatis semua unit sudah terverifikasi
-            if (in_array($order->status, ['confirmed', 'picked_up', 'completed', 'returned'])) {
-                foreach ($order->details as $d) {
-                    if ($d->item_unit_id && $d->itemUnit?->barcode) {
-                        $this->scannedUnits[$order->id][$d->id] = true;
+        if ($order) {
+            // Auto-alokasikan unit fisik ber-barcode yang tersedia dari vendor jika belum ada unit_id
+            $vendorId = Auth::user()?->vendor_id;
+            $usedUnitIds = $order->details->pluck('item_unit_id')->filter()->all();
+
+            foreach ($order->details as $detail) {
+                if (! $detail->item_unit_id) {
+                    $availableUnit = ItemUnit::withoutGlobalScope('vendor')
+                        ->where('vendor_id', $vendorId)
+                        ->where('master_item_id', $detail->master_item_id)
+                        ->where('status', 'available')
+                        ->whereNotIn('id', $usedUnitIds)
+                        ->orderBy('id', 'asc')
+                        ->first();
+
+                    if ($availableUnit) {
+                        $detail->update([
+                            'item_unit_id' => $availableUnit->id,
+                            'condition_before' => $availableUnit->condition ?: 'good',
+                        ]);
+                        $usedUnitIds[] = $availableUnit->id;
+                    }
+                }
+            }
+
+            // Refresh relasi order details
+            $order->load(['details.masterItem', 'details.itemUnit']);
+
+            $orderId = (string) $order->id;
+            if (! isset($this->scannedUnits[$orderId])) {
+                $this->scannedUnits[$orderId] = [];
+                // Jika pesanan sudah confirmed / completed / returned, otomatis semua unit sudah terverifikasi
+                if (in_array($order->status, ['confirmed', 'picked_up', 'completed', 'returned'])) {
+                    foreach ($order->details as $d) {
+                        if ($d->item_unit_id && $d->itemUnit?->barcode) {
+                            $this->scannedUnits[$orderId][(string) $d->id] = true;
+                        }
                     }
                 }
             }
@@ -83,7 +116,7 @@ class Pos extends Component
 
         return Rental::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
-            ->with(['details.masterItem', 'details.itemUnit', 'customer'])
+            ->with(['details.masterItem', 'details.itemUnit', 'customer', 'payments'])
             ->find($this->selectedOrderId);
     }
 
@@ -110,13 +143,14 @@ class Pos extends Component
 
         $vendorId = Auth::user()?->vendor_id;
         $masterItemIds = $order->details->pluck('master_item_id')->unique();
+        $assignedUnitIds = $order->details->pluck('item_unit_id')->filter();
 
         return ItemUnit::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
             ->whereIn('master_item_id', $masterItemIds)
-            ->where(function ($q) {
+            ->where(function ($q) use ($assignedUnitIds) {
                 $q->where('status', 'available')
-                    ->orWhereIn('id', $this->getSelectedOrderProperty()->details->pluck('item_unit_id')->filter());
+                    ->orWhereIn('id', $assignedUnitIds);
             })
             ->with('masterItem')
             ->get();
@@ -188,10 +222,13 @@ class Pos extends Component
         }
 
         // Tandai detail ini sudah dicocokkan
-        if (! isset($this->scannedUnits[$order->id])) {
-            $this->scannedUnits[$order->id] = [];
+        // Selalu gunakan string key agar konsisten setelah Livewire serialize/deserialize JSON
+        $orderId = (string) $order->id;
+        $detailId = (string) $matchedDetail->id;
+        if (! isset($this->scannedUnits[$orderId])) {
+            $this->scannedUnits[$orderId] = [];
         }
-        $this->scannedUnits[$order->id][$matchedDetail->id] = true;
+        $this->scannedUnits[$orderId][$detailId] = true;
 
         $this->scanSuccessMessage = "✓ Cocok: Unit {$unit->unit_code} ({$unit->barcode}) berhasil dicocokkan!";
         $this->scanError = '';
@@ -210,13 +247,17 @@ class Pos extends Component
             return;
         }
 
-        // Validasi: pastikan semua item di detail pesanan telah discan / dicocokkan fisiknya
-        $allScanned = $order->details->every(function ($d) use ($order) {
-            return ! empty($d->item_unit_id) && ! empty($this->scannedUnits[$order->id][$d->id]);
+        // Validasi: gunakan string key agar konsisten dengan penyimpanan Livewire (JSON serialize)
+        $orderKey = (string) $order->id;
+        $allScanned = $order->details->every(function ($d) use ($orderKey) {
+            $detailKey = (string) $d->id;
+
+            return ! empty($d->item_unit_id) && ! empty($this->scannedUnits[$orderKey][$detailKey]);
         });
 
         if (! $allScanned) {
             $this->scanError = '⚠ Harap scan dan cocokkan barcode untuk semua unit fisik sebelum menyetujui pesanan!';
+            $this->dispatch('approve-validation-failed');
 
             return;
         }
@@ -226,6 +267,14 @@ class Pos extends Component
             'status' => 'confirmed',
         ]);
 
+        // Update semua ItemUnit yang terkait menjadi "rented"
+        $unitIds = $order->details->pluck('item_unit_id')->filter()->unique()->values();
+        if ($unitIds->isNotEmpty()) {
+            ItemUnit::withoutGlobalScope('vendor')
+                ->whereIn('id', $unitIds)
+                ->update(['status' => 'rented']);
+        }
+
         $msg = "Pesanan {$order->booking_code} telah tervalidasi via barcode & siap diserahkan (Siap Pickup)!";
         session()->flash('pos_message', $msg);
         $this->dispatch('toast', [
@@ -233,6 +282,14 @@ class Pos extends Component
             'title' => 'Berhasil!',
             'message' => $msg,
         ]);
+
+        // Tutup modal dari server setelah berhasil, bukan dari Alpine di client
+        $this->dispatch('approve-success');
+
+        // Auto-pindah ke order pending berikutnya agar kasir tidak perlu aksi manual
+        unset($this->scannedUnits[(string) $orderId]);
+        $this->selectedOrderId = null;
+        $this->loadDefaultOrder();
     }
 
     private function filteredOrdersQuery()
@@ -245,7 +302,9 @@ class Pos extends Component
                 $q->where('status', 'pending');
             })
             ->when($this->activeTab === 'completed', function ($q) {
-                $q->whereIn('status', ['confirmed', 'picked_up', 'completed', 'returned']);
+                // Riwayat validasi yang selesai hari ini saja (besok akan bersih dari tab ini)
+                $q->whereIn('status', ['confirmed', 'picked_up', 'completed', 'returned'])
+                    ->whereDate('updated_at', today());
             })
             ->when($this->searchOrder, function ($q) {
                 $q->where(function ($sub) {
@@ -254,7 +313,8 @@ class Pos extends Component
                         ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$this->searchOrder}%"));
                 });
             })
-            ->with(['details.masterItem', 'details.itemUnit', 'customer'])
+            // List hanya butuh customer name, payments, dan jumlah detail — kurangi eager load berat
+            ->with(['customer:id,name', 'details:id,rental_id', 'payments:id,rental_id,status,payment_type,amount'])
             ->latest('id');
     }
 
@@ -267,9 +327,11 @@ class Pos extends Component
             ->where('status', 'pending')
             ->count();
 
+        // Riwayat tervalidasi hari ini
         $completed = Rental::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
             ->whereIn('status', ['confirmed', 'picked_up', 'completed', 'returned'])
+            ->whereDate('updated_at', today())
             ->count();
 
         return [
@@ -285,7 +347,6 @@ class Pos extends Component
         return view('livewire.kasir.pos', [
             'orders' => $orders,
             'kpi' => $this->kpi,
-            'eligibleUnits' => $this->eligibleUnits,
         ]);
     }
 }
