@@ -19,7 +19,7 @@ class PackageCheckoutController extends Controller
     /**
      * Masa berlaku pembayaran (menit) sebelum booking paket kedaluwarsa (maksimal 5 menit).
      */
-    public const PAYMENT_TIMEOUT_MINUTES = 5;
+    public const PAYMENT_TIMEOUT_HOURS = 1;
 
     /**
      * Masa berlaku pembayaran (jam) sebelum booking paket kedaluwarsa (kompatibilitas backward).
