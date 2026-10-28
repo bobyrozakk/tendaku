@@ -8,9 +8,11 @@ use App\Models\Rental;
 use App\Models\RentalDetail;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\MidtransService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\URL;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class BookingStatusAndHistoryTest extends TestCase
@@ -30,6 +32,8 @@ class BookingStatusAndHistoryTest extends TestCase
         parent::setUp();
 
         Carbon::setTestNow('2026-10-10 10:00:00');
+
+        config(['services.midtrans.server_key' => 'test-midtrans-server-key']);
 
         $this->vendor = Vendor::create([
             'name' => 'Tendaku Vendor Store',
@@ -228,34 +232,30 @@ class BookingStatusAndHistoryTest extends TestCase
             ->get(route('booking.status', $rental->booking_code));
 
         $response->assertStatus(200);
-        $response->assertSee('Denda Keterlambatan');
+        $response->assertSee('Denda keterlambatan');
         $response->assertSee('Rp 50.000');
-        $response->assertSee('Denda Kerusakan Unit');
+        $response->assertSee('Denda kerusakan unit');
         $response->assertSee('Rp 20.000');
         $response->assertSee('Rp 220.000');
-        $response->assertSee('Bayar Denda');
+        $response->assertSee('Bayar denda');
     }
 
-    public function test_customer_can_view_ktp_receipt(): void
+    public function test_customer_can_view_order_receipt(): void
     {
-        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT01', 'picked_up');
-        $rental->update([
-            'ktp_collateral_status' => 'held',
-            'ktp_received_at' => Carbon::now(),
-            'ktp_collateral_notes' => 'Disimpan di Loker A-01',
-        ]);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT01', 'confirmed');
 
         $response = $this->actingAs($this->customer1)
             ->get(route('booking.receipt', $rental->booking_code));
 
         $response->assertStatus(200);
-        $response->assertSee('REC-TDK-2026-RCPT01');
+        $response->assertSee('Bukti Pemesanan');
+        $response->assertSee('#TDK-2026-RCPT01');
         $response->assertSee('Budi Penyewa');
-        $response->assertSee('Disimpan di Loker A-01');
+        $response->assertSee('Tendaku Vendor Store');
         $response->assertDontSee('Budi Santoso'); // Bukan data dummy
     }
 
-    public function test_get_snap_token_for_pending_rental(): void
+    public function test_pay_returns_virtual_account_info_for_pending_rental(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-SNAP01', 'pending');
         $rental->payments()->create([
@@ -264,9 +264,20 @@ class BookingStatusAndHistoryTest extends TestCase
             'channel' => 'midtrans',
             'order_id' => 'TDK-2026-SNAP01-FULL-1',
             'amount' => 150000,
-            'snap_token' => 'snap-token-test-12345',
             'status' => 'pending',
         ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('chargeBankTransfer')
+                ->once()
+                ->with(\Mockery::type(\App\Models\Payment::class), 'bca')
+                ->andReturn([
+                    'bank' => 'bca',
+                    'va_number' => '1234567890',
+                    'biller_code' => null,
+                    'qr_code_url' => null,
+                ]);
+        });
 
         $response = $this->actingAs($this->customer1)
             ->postJson(route('booking.pay', $rental->booking_code));
@@ -275,8 +286,11 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertJson([
                 'status' => 'success',
                 'order_id' => 'TDK-2026-SNAP01-FULL-1',
-                'snap_token' => 'snap-token-test-12345',
                 'amount' => 150000,
+                'va_info' => [
+                    'bank' => 'bca',
+                    'va_number' => '1234567890',
+                ],
             ]);
     }
 
@@ -291,6 +305,13 @@ class BookingStatusAndHistoryTest extends TestCase
             'amount' => 150000,
             'status' => 'pending',
         ]);
+
+        // Jangan menembak API Midtrans asli: status dikembalikan apa adanya.
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('syncStatus')
+                ->once()
+                ->andReturnUsing(fn ($payment) => $payment);
+        });
 
         $response = $this->actingAs($this->customer1)
             ->postJson(route('booking.sync', $rental->booking_code));
