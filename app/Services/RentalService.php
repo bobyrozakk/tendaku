@@ -521,4 +521,15 @@ class RentalService
     {
         return $this->parseRentalDateTime($pickupDate, $returnDate);
     }
+
+    public function calculateRentalDays(
+        string|DateTimeInterface $pickupDate,
+        string|DateTimeInterface $returnDate,
+        ?string $pickupTime = null,
+        ?string $returnTime = null
+    ): int {
+        [$start, $end] = $this->parseRentalDateTime($pickupDate, $returnDate, $pickupTime, $returnTime);
+
+        return max(1, (int) ceil($start->floatDiffInHours($end, false) / 24));
+    }
 }
