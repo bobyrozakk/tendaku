@@ -215,15 +215,15 @@
                         Jumlah Unit
                     </label>
                     <span class="text-[11px] font-bold text-darkbrown-600">
-                        Tersedia: 
+                        Tersedia:
                         <strong class="{{ $this->availableStock > 0 ? 'text-avocado-700' : 'text-red-600' }}">
                             {{ $this->availableStock }} Unit
                         </strong>
                     </span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         wire:click="$set('quantity', {{ max(1, $quantity - 1) }})"
                         class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
                     >
@@ -238,8 +238,8 @@
                         class="input-tendaku flex-1 text-center font-bold text-sm py-2 px-3 rounded-xl border-wheat-300"
                         required
                     />
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         wire:click="$set('quantity', {{ $quantity + 1 }})"
                         class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
                     >
