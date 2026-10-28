@@ -49,8 +49,26 @@
         $needsNik   = $isGuest || empty($user?->nik);
 
         // Alamat antar: hanya relevan untuk member (tamu tidak bisa delivery)
-        $savedAddress = $booking['delivery_address'] ?? ($user?->address ?? '');
-        $needsAddress = $isLoggedIn && blank($savedAddress);
+        $addressList = ($addresses ?? collect())->map(fn ($addr) => [
+            'id' => $addr->id,
+            'label' => $addr->label,
+            'recipient_name' => $addr->recipient_name,
+            'phone_number' => $addr->phone_number,
+            'full_address' => $addr->full_address,
+            'province' => $addr->province,
+            'city' => $addr->city,
+            'district' => $addr->district,
+            'village' => $addr->village,
+            'postal_code' => $addr->postal_code,
+            'notes' => $addr->notes,
+            'is_default' => (bool) $addr->is_default,
+            'formatted_address' => $addr->formatted_address,
+            'delivery_snapshot' => $addr->toDeliverySnapshot(),
+        ])->values()->all();
+
+        $initialAddressId = $defaultAddress?->id ?? ($addressList[0]['id'] ?? null);
+        $savedAddress = $defaultAddress ? $defaultAddress->toDeliverySnapshot() : ($booking['delivery_address'] ?? ($user?->address ?? ''));
+        $needsAddress = $isLoggedIn && empty($addressList) && blank($savedAddress);
 
         $maskedNik = (! $isGuest && ! empty($user?->nik))
             ? substr($user->nik, 0, 4) . str_repeat('•', max(0, strlen($user->nik) - 8)) . substr($user->nik, -4)
@@ -85,6 +103,9 @@
                 ? ($booking['pickup_method'] ?? 'self_pickup')
                 : 'self_pickup',
             'name'              => $needsName ? '' : ($user->name ?? ''),
+            'addresses'         => $addressList,
+            'selectedAddressId' => $initialAddressId,
+            'storeAddressUrl'   => route('customer.addresses.store'),
             'deliveryAddress'   => $savedAddress,
             'deliveryNotes'     => $booking['delivery_notes'] ?? '',
             'items'             => $items,
@@ -331,12 +352,12 @@
                         @if ($isGuest || $needsPhone)
                             <div class="flex items-start gap-2.5 rounded-xl bg-avocado-50 border border-avocado-200 px-3.5 py-3 text-sm text-avocado-950">
                                 <i data-lucide="bell" class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5"></i>
-                                <span>Pengingat pengembalian (H-1 &amp; hari pengembalian) dikirim ke nomor WhatsApp yang Anda isi di atas.</span>
+                                <span><strong>Pengingat Pengembalian via WhatsApp</strong> (H-1 &amp; hari pengembalian) dikirim ke nomor WhatsApp yang Anda isi di atas.</span>
                             </div>
                         @else
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-avocado-50 border border-avocado-200 px-3.5 py-3 text-sm text-avocado-950">
                                 <span>
-                                    Pengingat pengembalian (H-1 &amp; hari pengembalian) dikirim ke
+                                    <strong>Pengingat Pengembalian via WhatsApp</strong> (H-1 &amp; hari pengembalian) dikirim ke
                                     <span class="font-mono font-bold text-avocado-700">{{ $user->phone }}</span>.
                                 </span>
                                 <a href="{{ route('profile') }}" class="shrink-0 font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">Ubah di profil</a>
@@ -428,36 +449,103 @@
 
                         <!-- Detail: diantar (member saja) -->
                         @if ($isLoggedIn)
-                        <div x-show="pickupMethod === 'delivery'" x-cloak class="rounded-xl bg-wheat-50 border border-wheat-200 p-4 space-y-3 text-sm">
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="font-bold text-darkbrown-900">Alamat pengantaran</span>
-                                <button type="button" x-show="!needsAddress" @click="editAddress = !editAddress"
-                                        class="text-sm font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2"
-                                        x-text="editAddress ? 'Selesai' : 'Ubah'"></button>
+                        <div x-show="pickupMethod === 'delivery'" x-cloak class="rounded-xl bg-wheat-50 border border-wheat-200 p-4 space-y-4 text-sm">
+                            <div class="flex items-center justify-between gap-3 border-b border-wheat-200/80 pb-3">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="map-pin" class="w-4 h-4 text-avocado-700"></i>
+                                    <span class="font-bold text-darkbrown-900">Alamat Pengantaran</span>
+                                </div>
+                                <button type="button" @click="openAddAddressModal()"
+                                        class="inline-flex items-center gap-1.5 text-xs font-bold text-avocado-700 hover:text-avocado-800 bg-white border border-wheat-300 hover:border-avocado-500 px-3 py-1.5 rounded-lg shadow-sm transition">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>Tambah Alamat</span>
+                                </button>
                             </div>
 
-                            <!-- Tampil saja kalau alamat sudah tersimpan -->
-                            <div x-show="!showAddressForm" class="space-y-1">
-                                <p class="font-semibold text-darkbrown-900 leading-relaxed" x-text="address"></p>
-                                <p x-show="notes" class="text-darkbrown-600">Catatan untuk kurir: <span x-text="notes"></span></p>
-                            </div>
+                            <!-- Bila customer memiliki alamat tersimpan -->
+                            <template x-if="addresses.length > 0">
+                                <div class="space-y-3">
+                                    <!-- Kartu Alamat Terpilih -->
+                                    <div class="rounded-xl bg-white border-2 border-avocado-600/60 p-3.5 shadow-sm space-y-2">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider bg-wheat-100 text-darkbrown-800"
+                                                      x-text="selectedAddress ? selectedAddress.label : 'Alamat'"></span>
+                                                <template x-if="selectedAddress && selectedAddress.is_default">
+                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-avocado-100 text-avocado-800">Utama</span>
+                                                </template>
+                                            </div>
+                                            <button type="button" x-show="addresses.length > 1" @click="showAddressPicker = !showAddressPicker"
+                                                    class="text-xs font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2"
+                                                    x-text="showAddressPicker ? 'Tutup Pilihan' : 'Pilih Alamat Lain'"></button>
+                                        </div>
 
-                            <!-- Form alamat + penjelasan -->
-                            <div x-show="showAddressForm" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="f_address" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">Alamat lengkap</label>
-                                    <textarea id="f_address" rows="4" x-model="address" placeholder="Jalan, nomor, RT/RW, kelurahan, kecamatan, kota"
-                                              :class="errors.address ? '{{ $errBorder }}' : '{{ $okBorder }}'"
-                                              class="{{ $inputBase }} resize-none"></textarea>
-                                    <p x-show="errors.address" x-text="errors.address" x-cloak class="mt-1 text-sm text-red-700"></p>
+                                        <div class="text-xs text-darkbrown-900 space-y-0.5">
+                                            <p class="font-bold text-sm text-darkbrown-900">
+                                                <span x-text="selectedAddress ? selectedAddress.recipient_name : ''"></span>
+                                                <span class="font-normal text-darkbrown-500" x-text="selectedAddress ? ' (' + selectedAddress.phone_number + ')' : ''"></span>
+                                            </p>
+                                            <p class="text-darkbrown-700 leading-relaxed" x-text="selectedAddress ? (selectedAddress.formatted_address || selectedAddress.full_address) : address"></p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Dropdown / List Pilihan Alamat Lain -->
+                                    <div x-show="showAddressPicker" x-cloak class="rounded-xl bg-white border border-wheat-200 p-3 space-y-2 max-h-60 overflow-y-auto">
+                                        <p class="text-xs font-bold text-darkbrown-700">Pilih dari daftar alamat tersimpan:</p>
+                                        <div class="space-y-2">
+                                            <template x-for="addr in addresses" :key="addr.id">
+                                                <div @click="selectAddress(addr.id)"
+                                                     :class="selectedAddressId === addr.id ? 'border-avocado-600 bg-avocado-50/50' : 'border-wheat-200 hover:border-wheat-400 bg-white'"
+                                                     class="p-2.5 rounded-lg border cursor-pointer transition flex items-start justify-between gap-3">
+                                                    <div class="min-w-0 space-y-0.5">
+                                                        <div class="flex items-center gap-1.5">
+                                                            <span class="text-[10px] font-bold uppercase tracking-wider bg-wheat-100 text-darkbrown-700 px-1.5 py-0.5 rounded" x-text="addr.label"></span>
+                                                            <span class="text-xs font-bold text-darkbrown-900" x-text="addr.recipient_name"></span>
+                                                            <template x-if="addr.is_default">
+                                                                <span class="text-[9px] font-bold uppercase bg-avocado-100 text-avocado-800 px-1.5 py-0.5 rounded">Utama</span>
+                                                            </template>
+                                                        </div>
+                                                        <p class="text-xs text-darkbrown-600 truncate" x-text="addr.formatted_address || addr.full_address"></p>
+                                                    </div>
+                                                    <div class="shrink-0 mt-0.5">
+                                                        <span class="w-4 h-4 rounded-full border flex items-center justify-center"
+                                                              :class="selectedAddressId === addr.id ? 'border-avocado-600 bg-avocado-600 text-white' : 'border-wheat-400'">
+                                                            <i x-show="selectedAddressId === addr.id" data-lucide="check" class="w-2.5 h-2.5 text-white"></i>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label for="f_notes" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">Penjelasan lokasi <span class="font-normal text-darkbrown-500">(opsional)</span></label>
-                                    <textarea id="f_notes" rows="4" x-model="notes" placeholder="Patokan, warna pagar, titik kumpul trip, atau pesan untuk kurir"
-                                              :class="errors.notes ? '{{ $errBorder }}' : '{{ $okBorder }}'"
-                                              class="{{ $inputBase }} resize-none"></textarea>
-                                    <p x-show="errors.notes" x-text="errors.notes" x-cloak class="mt-1 text-sm text-red-700"></p>
+                            </template>
+
+                            <!-- Bila belum ada alamat tersimpan -->
+                            <template x-if="addresses.length === 0">
+                                <div class="rounded-xl border border-dashed border-wheat-300 bg-white p-5 text-center space-y-2.5">
+                                    <div class="w-10 h-10 rounded-full bg-wheat-100 text-darkbrown-500 mx-auto flex items-center justify-center">
+                                        <i data-lucide="map-pin-off" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-darkbrown-800 text-xs">Belum Ada Alamat Tersimpan</p>
+                                        <p class="text-[11px] text-darkbrown-500 mt-0.5">Simpan alamat pengantaran lengkap agar kurir vendor dapat mengirimkan alat ke lokasi Anda.</p>
+                                    </div>
+                                    <button type="button" @click="openAddAddressModal()"
+                                            class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 px-3.5 py-2 rounded-xl shadow-sm transition">
+                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                        <span>Tambah Alamat Pengantaran</span>
+                                    </button>
                                 </div>
+                            </template>
+
+                            <!-- Catatan untuk Kurir -->
+                            <div class="pt-2">
+                                <label for="f_notes" class="block text-xs font-semibold text-darkbrown-800 mb-1">Catatan Tambahan untuk Kurir <span class="font-normal text-darkbrown-500">(opsional)</span></label>
+                                <textarea id="f_notes" rows="2" x-model="notes" placeholder="Patokan, warna pagar, jam pengantaran, atau pesan khusus untuk kurir"
+                                          :class="errors.notes ? '{{ $errBorder }}' : '{{ $okBorder }}'"
+                                          class="{{ $inputBase }} resize-none text-xs"></textarea>
+                                <p x-show="errors.notes" x-text="errors.notes" x-cloak class="mt-1 text-xs text-red-700"></p>
+                                <p x-show="errors.address" x-text="errors.address" x-cloak class="mt-1 text-xs text-red-700"></p>
                             </div>
                         </div>
                         @endif
@@ -673,6 +761,158 @@
             </div>
         </div>
 
+        <!-- Modal Tambah Alamat Baru (Tanpa Meninggalkan Checkout) -->
+        <div x-show="showAddAddressModal" x-cloak
+             class="fixed inset-0 z-50 overflow-y-auto"
+             aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="showAddAddressModal"
+                     x-transition:enter="ease-out duration-300"
+                     x-transition:enter-start="opacity-0"
+                     x-transition:enter-end="opacity-100"
+                     x-transition:leave="ease-in duration-200"
+                     x-transition:leave-start="opacity-100"
+                     x-transition:leave-end="opacity-0"
+                     class="fixed inset-0 transition-opacity bg-darkbrown-950/60 backdrop-blur-sm"
+                     @click="closeAddAddressModal()"></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="showAddAddressModal"
+                     x-transition:enter="ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave="ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                     x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                     class="inline-block w-full max-w-xl p-6 my-8 text-left align-middle transition-all transform bg-white shadow-2xl rounded-2xl border border-wheat-200 sm:my-8">
+                    
+                    <div class="flex items-center justify-between pb-4 border-b border-wheat-200">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-avocado-100 text-avocado-800 flex items-center justify-center">
+                                <i data-lucide="map-pin" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-darkbrown-900 font-heading">Tambah Alamat Pengantaran</h3>
+                                <p class="text-xs text-darkbrown-500">Alamat otomatis tersimpan ke akun Anda untuk sewa berikutnya.</p>
+                            </div>
+                        </div>
+                        <button type="button" @click="closeAddAddressModal()" class="text-darkbrown-400 hover:text-darkbrown-700 p-1.5 rounded-lg hover:bg-wheat-100 transition">
+                            <i data-lucide="x" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+
+                    <div x-show="newAddressErrors.general" x-cloak class="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700" x-text="newAddressErrors.general"></div>
+
+                    <form @submit.prevent="saveNewAddress()" class="mt-4 space-y-4">
+                        <!-- Label Alamat -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1.5">Label Alamat *</label>
+                            <div class="flex items-center gap-2 mb-2">
+                                <template x-for="l in ['Rumah', 'Kos', 'Kantor']" :key="l">
+                                    <button type="button" @click="newAddressForm.label = l"
+                                            :class="newAddressForm.label === l ? 'bg-avocado-700 text-white border-avocado-700' : 'bg-wheat-50 text-darkbrown-700 border-wheat-300 hover:bg-wheat-100'"
+                                            class="px-3 py-1 text-xs font-semibold rounded-lg border transition" x-text="l"></button>
+                                </template>
+                            </div>
+                            <input type="text" x-model="newAddressForm.label" required placeholder="Cth: Rumah, Kos, Kantor, Villa"
+                                   class="{{ $inputBase }} text-xs">
+                            <p x-show="newAddressErrors.label" x-text="newAddressErrors.label[0]" class="text-[11px] text-red-600 mt-1"></p>
+                        </div>
+
+                        <!-- Nama Penerima & Telepon -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Nama Penerima *</label>
+                                <input type="text" x-model="newAddressForm.recipient_name" required placeholder="Nama lengkap penerima"
+                                       class="{{ $inputBase }} text-xs">
+                                <p x-show="newAddressErrors.recipient_name" x-text="newAddressErrors.recipient_name[0]" class="text-[11px] text-red-600 mt-1"></p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">No. WhatsApp Penerima *</label>
+                                <input type="tel" x-model="newAddressForm.phone_number" required placeholder="08xxxxxxxxxx"
+                                       class="{{ $inputBase }} text-xs">
+                                <p x-show="newAddressErrors.phone_number" x-text="newAddressErrors.phone_number[0]" class="text-[11px] text-red-600 mt-1"></p>
+                            </div>
+                        </div>
+
+                        <!-- Alamat Lengkap -->
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Alamat Lengkap (Jalan, No, RT/RW) *</label>
+                            <textarea rows="2" x-model="newAddressForm.full_address" required placeholder="Nama jalan, nomor rumah/gedung, RT/RW"
+                                      class="{{ $inputBase }} resize-none text-xs"></textarea>
+                            <p x-show="newAddressErrors.full_address" x-text="newAddressErrors.full_address[0]" class="text-[11px] text-red-600 mt-1"></p>
+                        </div>
+
+                        <!-- Provinsi & Kota -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Provinsi *</label>
+                                <input type="text" x-model="newAddressForm.province" required placeholder="Cth: Jawa Barat"
+                                       class="{{ $inputBase }} text-xs">
+                                <p x-show="newAddressErrors.province" x-text="newAddressErrors.province[0]" class="text-[11px] text-red-600 mt-1"></p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kota / Kabupaten *</label>
+                                <input type="text" x-model="newAddressForm.city" required placeholder="Cth: Bandung"
+                                       class="{{ $inputBase }} text-xs">
+                                <p x-show="newAddressErrors.city" x-text="newAddressErrors.city[0]" class="text-[11px] text-red-600 mt-1"></p>
+                            </div>
+                        </div>
+
+                        <!-- Kecamatan & Kelurahan -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kecamatan *</label>
+                                <input type="text" x-model="newAddressForm.district" required placeholder="Cth: Coblong"
+                                       class="{{ $inputBase }} text-xs">
+                                <p x-show="newAddressErrors.district" x-text="newAddressErrors.district[0]" class="text-[11px] text-red-600 mt-1"></p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kelurahan / Desa</label>
+                                <input type="text" x-model="newAddressForm.village" placeholder="Cth: Dago"
+                                       class="{{ $inputBase }} text-xs">
+                            </div>
+                        </div>
+
+                        <!-- Kode Pos & Patokan -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kode Pos</label>
+                                <input type="text" x-model="newAddressForm.postal_code" placeholder="40135" maxlength="10"
+                                       class="{{ $inputBase }} text-xs">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Patokan Lokasi</label>
+                                <input type="text" x-model="newAddressForm.notes" placeholder="Cth: Depan minimarket, pagar hitam"
+                                       class="{{ $inputBase }} text-xs">
+                            </div>
+                        </div>
+
+                        <!-- Jadikan Utama -->
+                        <div class="flex items-center gap-2 pt-1">
+                            <input type="checkbox" id="modal_is_default" x-model="newAddressForm.is_default"
+                                   class="rounded border-wheat-300 text-avocado-700 focus:ring-avocado-600">
+                            <label for="modal_is_default" class="text-xs text-darkbrown-800 font-medium">Jadikan alamat utama untuk pengantaran berikutnya</label>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-wheat-200">
+                            <button type="button" @click="closeAddAddressModal()"
+                                    class="px-4 py-2 text-xs font-bold text-darkbrown-700 bg-white border border-wheat-300 hover:bg-wheat-100 rounded-xl transition">
+                                Batal
+                            </button>
+                            <button type="submit" :disabled="newAddressSubmitting"
+                                    class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 rounded-xl shadow-sm disabled:opacity-50 transition">
+                                <span x-show="!newAddressSubmitting">Simpan & Gunakan</span>
+                                <span x-show="newAddressSubmitting">Menyimpan...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         </div>
         </div>
     </div>
@@ -697,12 +937,37 @@
                 expired: false,
                 countdownTimer: null,
 
+                // State pengelolaan banyak alamat
+                addresses: cfg.addresses || [],
+                selectedAddressId: cfg.selectedAddressId || null,
+                storeAddressUrl: cfg.storeAddressUrl || '',
+                showAddressPicker: false,
+                showAddAddressModal: false,
+                newAddressSubmitting: false,
+                newAddressErrors: {},
+                newAddressForm: {
+                    label: 'Rumah',
+                    recipient_name: cfg.name || '',
+                    phone_number: '',
+                    full_address: '',
+                    province: 'Jawa Barat',
+                    city: 'Bandung',
+                    district: '',
+                    village: '',
+                    postal_code: '',
+                    notes: '',
+                    is_default: true,
+                },
+
                 // Serah terima setelah booking dibuat: form -> handoff
                 phase: 'form',
                 createdCode: '',
 
                 init() { 
                     this.startCountdown(); 
+                    if (this.selectedAddressId) {
+                        this.selectAddress(this.selectedAddressId);
+                    }
                     this.$nextTick(() => { 
                         if (typeof window.renderLucideIcons === 'function') {
                             window.renderLucideIcons();
@@ -712,6 +977,92 @@
 
                 get isGuest() { return !this.isLoggedIn; },
                 get showAddressForm() { return this.needsAddress || this.editAddress; },
+
+                get selectedAddress() {
+                    return this.addresses.find(a => a.id === this.selectedAddressId) || null;
+                },
+
+                selectAddress(id) {
+                    this.selectedAddressId = id;
+                    const addr = this.addresses.find(a => a.id === id);
+                    if (addr) {
+                        this.address = addr.delivery_snapshot || addr.formatted_address;
+                    }
+                    this.showAddressPicker = false;
+                    if (this.errors.address) delete this.errors.address;
+                },
+
+                openAddAddressModal() {
+                    this.newAddressErrors = {};
+                    if (!this.newAddressForm.recipient_name && this.name) {
+                        this.newAddressForm.recipient_name = this.name;
+                    }
+                    if (!this.newAddressForm.phone_number && this.phone) {
+                        this.newAddressForm.phone_number = this.phone;
+                    }
+                    this.showAddAddressModal = true;
+                    this.$nextTick(() => {
+                        if (typeof window.renderLucideIcons === 'function') {
+                            window.renderLucideIcons();
+                        }
+                    });
+                },
+
+                closeAddAddressModal() {
+                    this.showAddAddressModal = false;
+                    this.newAddressErrors = {};
+                },
+
+                async saveNewAddress() {
+                    this.newAddressSubmitting = true;
+                    this.newAddressErrors = {};
+                    try {
+                        const resp = await fetch(this.storeAddressUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': this.csrf
+                            },
+                            body: JSON.stringify(this.newAddressForm)
+                        });
+
+                        const data = await resp.json();
+
+                        if (!resp.ok) {
+                            this.newAddressErrors = data.errors || { general: data.message || 'Gagal menyimpan alamat.' };
+                            this.newAddressSubmitting = false;
+                            return;
+                        }
+
+                        const created = data.data;
+                        if (created.is_default) {
+                            this.addresses.forEach(a => a.is_default = false);
+                        }
+                        this.addresses.unshift(created);
+                        this.selectAddress(created.id);
+                        this.showAddAddressModal = false;
+
+                        // Reset form
+                        this.newAddressForm = {
+                            label: 'Rumah',
+                            recipient_name: this.name || '',
+                            phone_number: '',
+                            full_address: '',
+                            province: 'Jawa Barat',
+                            city: 'Bandung',
+                            district: '',
+                            village: '',
+                            postal_code: '',
+                            notes: '',
+                            is_default: false,
+                        };
+                    } catch (err) {
+                        this.newAddressErrors = { general: 'Terjadi gangguan jaringan saat menyimpan alamat.' };
+                    } finally {
+                        this.newAddressSubmitting = false;
+                    }
+                },
 
                 get rentalDays() {
                     const a = new Date(this.pickupDate), b = new Date(this.returnDate);
@@ -849,9 +1200,12 @@
                     }
                     if (this.needsNik && !/^\d{16}$/.test(this.nik)) e.nik = 'NIK harus 16 digit angka.';
 
-                    if (this.pickupMethod === 'delivery' && this.address.trim().length < 10) {
-                        e.address = 'Alamat pengantaran belum lengkap.';
-                        this.editAddress = true;
+                    if (this.pickupMethod === 'delivery') {
+                        if (this.addresses.length > 0 && !this.selectedAddressId) {
+                            e.address = 'Silakan pilih salah satu alamat pengantaran.';
+                        } else if (this.addresses.length === 0 && this.address.trim().length < 5) {
+                            e.address = 'Silakan tambahkan alamat pengantaran terlebih dahulu.';
+                        }
                     }
                     if (!this.pickupDate || !this.returnDate || this.returnDate < this.pickupDate) {
                         e.dates = 'Tanggal kembali tidak boleh sebelum tanggal ambil.';
@@ -923,8 +1277,12 @@
 
                         // Alamat antar (member + delivery)
                         if (this.pickupMethod === 'delivery') {
+                            if (this.selectedAddressId) {
+                                fd.append('customer_address_id', this.selectedAddressId);
+                            }
                             fd.append('delivery_address', this.address.trim());
                             fd.append('delivery_notes', this.notes.trim());
+                            fd.append('notes', this.notes.trim());
                         }
 
                         const response = await fetch(this.storeUrl, {

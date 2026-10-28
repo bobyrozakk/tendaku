@@ -74,10 +74,17 @@ class PackageCheckoutController extends Controller
         $rentalDays = max(1, (int) ceil(max(0, $hours) / 24));
         $subtotal = (float) ($package->price * $rentalDays);
 
+        $user = Auth::user();
+        $addresses = $user ? $user->addresses()->orderByDesc('is_default')->latest('id')->get() : collect();
+        $defaultAddress = $user ? $user->defaultAddress() : null;
+
         return view('customer.packages.checkout', [
             'package' => $package,
             'vendor' => $package->vendor,
             'isLoggedIn' => true,
+            'user' => $user,
+            'addresses' => $addresses,
+            'defaultAddress' => $defaultAddress,
             'pickupMethod' => $pickupMethod,
             'pickupDate' => $pickupDate,
             'pickupTime' => $pickupTime,
@@ -100,13 +107,53 @@ class PackageCheckoutController extends Controller
         $paymentChannel = $request->input('payment_channel', 'qris');
         $user = Auth::user();
 
-        $validated = $this->validatedInput($request);
+        $isGuest = ! Auth::check();
 
-        $deliveryAddress = $pickupMethod === 'delivery' ? $user?->address : null;
+        $validated = $this->validatedInput($request, $isGuest);
 
-        if ($pickupMethod === 'delivery' && blank($deliveryAddress)) {
-            return redirect()->route('customer.packages.checkout', $package)
-                ->with('warning', 'Alamat pengantaran belum lengkap di profil Anda. Lengkapi alamat pada halaman profil terlebih dahulu.');
+        $deliveryAddress = null;
+        $customerAddressId = null;
+
+        if ($pickupMethod === 'delivery') {
+            $user = Auth::user();
+            $addressId = $request->input('customer_address_id');
+            $selectedAddress = null;
+
+            if ($addressId) {
+                // Pastikan alamat milik customer yang login (tidak dapat dimanipulasi)
+                $selectedAddress = $user->addresses()->where('id', $addressId)->first();
+            }
+
+            if (! $selectedAddress) {
+                $selectedAddress = $user->defaultAddress();
+            }
+
+            if ($selectedAddress) {
+                $deliveryAddress = $selectedAddress->toDeliverySnapshot();
+                $customerAddressId = $selectedAddress->id;
+            } else {
+                $deliveryAddress = $request->input('delivery_address') ?: $user->address;
+            }
+
+            if (blank($deliveryAddress)) {
+                return redirect()->route('customer.packages.checkout', $package)
+                    ->with('warning', 'Alamat pengantaran belum tersedia. Silakan pilih atau tambahkan alamat terlebih dahulu.');
+            }
+        }
+
+        // Jika member melengkapi nomor telepon atau NIK, simpan ke akunnya
+        if (! $isGuest) {
+            $user = Auth::user();
+            $userUpdates = [];
+            if ($request->filled('phone') && blank($user->phone)) {
+                $userUpdates['phone'] = $request->input('phone');
+            }
+            if ($request->filled('nik') && blank($user->nik)) {
+                $userUpdates['nik'] = $request->input('nik');
+            }
+            if (! empty($userUpdates)) {
+                $user->update($userUpdates);
+            }
         }
 
         $pickupTimeStr = ! empty($validated['pickup_time']) ? trim($validated['pickup_time']) : '09:00';
@@ -168,6 +215,7 @@ class PackageCheckoutController extends Controller
                 'rental_days' => $rentalDays,
                 'pickup_method' => $pickupMethod,
                 'delivery_address' => $deliveryAddress,
+                'customer_address_id' => $customerAddressId,
                 'delivery_fee' => $pickupMethod === 'delivery' ? self::DELIVERY_FEE : 0,
                 'discount_amount' => 0,
                 // Tarif paket camping per 24 jam x jumlah periode sewa
@@ -192,7 +240,7 @@ class PackageCheckoutController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function validatedInput(Request $request): array
+    private function validatedInput(Request $request, bool $isGuest = false): array
     {
         return $request->validate([
             'pickup_date' => ['required', 'date', 'after_or_equal:today'],
@@ -200,10 +248,21 @@ class PackageCheckoutController extends Controller
             'return_date' => ['nullable', 'date', 'after_or_equal:pickup_date'],
             'return_time' => ['nullable', 'date_format:H:i'],
             'pickup_method' => ['nullable', 'in:self_pickup,delivery'],
+            'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:255'],
+            'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
+            'guest_id_number' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
+            'customer_address_id' => ['nullable', 'integer', 'exists:customer_addresses,id'],
+            'delivery_address' => ['nullable', 'string', 'max:500'],
+            'phone' => ['nullable', 'string', 'max:32'],
+            'nik' => ['nullable', 'string', 'max:32'],
         ], [
             'pickup_date.required' => 'Tanggal mulai sewa wajib dipilih.',
             'pickup_date.after_or_equal' => 'Tanggal mulai sewa tidak boleh di masa lalu.',
             'return_date.after_or_equal' => 'Tanggal pengembalian harus sama atau setelah tanggal mulai sewa.',
+            'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
+            'guest_phone.required' => 'Nomor WhatsApp wajib diisi agar pengingat pengembalian dapat dikirim.',
+            'guest_id_number.required' => 'NIK wajib diisi untuk pemesanan tanpa akun.',
+            'customer_address_id.exists' => 'Alamat pengantaran yang dipilih tidak valid.',
         ]);
     }
 

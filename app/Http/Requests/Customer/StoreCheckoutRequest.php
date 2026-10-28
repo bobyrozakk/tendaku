@@ -30,17 +30,23 @@ class StoreCheckoutRequest extends FormRequest
 
         return [
             'pickup_method' => ['required', 'string', 'in:self_pickup,delivery'],
-            'payment_option' => ['required', 'string', 'in:full,dp'],
+            'payment_option' => ['nullable', 'string', 'in:full,dp'],
             'payment_channel' => ['nullable', 'string', 'max:50'],
             'pickup_date' => ['nullable', 'date', 'after_or_equal:today'],
             'return_date' => ['nullable', 'date', 'after_or_equal:pickup_date'],
 
-            // Wajib untuk guest
-            'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:100'],
-            'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:20'],
-            'guest_id_number' => [$isGuest ? 'required' : 'nullable', 'string', 'max:30'],
+            // Data identitas guest (divalidasi di controller setelah pengecekan keranjang & delivery guard)
+            'guest_name' => ['nullable', 'string', 'max:100'],
+            'guest_phone' => ['nullable', 'string', 'max:20'],
+            'guest_id_number' => ['nullable', 'string', 'max:30'],
 
-            // Delivery hanya untuk user login
+            // Data penyewa akun jika belum lengkap di profil
+            'name' => ['nullable', 'string', 'max:100'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'nik' => ['nullable', 'string', 'max:30'],
+
+            // Delivery & alamat
+            'customer_address_id' => ['nullable', 'integer', 'exists:customer_addresses,id'],
             'delivery_address' => ['nullable', 'string', 'max:500'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
@@ -81,6 +87,7 @@ class StoreCheckoutRequest extends FormRequest
             'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
             'guest_phone.required' => 'Nomor telepon wajib diisi untuk pemesanan tanpa akun.',
             'guest_id_number.required' => 'Nomor KTP wajib diisi untuk pemesanan tanpa akun.',
+            'customer_address_id.exists' => 'Alamat pengantaran yang dipilih tidak valid.',
         ];
     }
 }
