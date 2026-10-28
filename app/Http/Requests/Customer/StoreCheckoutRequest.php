@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Customer;
 
+use App\Services\PhoneNumberNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 /**
  * Validasi payload POST /katalog/booking dari form checkout.
@@ -42,6 +44,28 @@ class StoreCheckoutRequest extends FormRequest
             'delivery_address' => ['nullable', 'string', 'max:500'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($this->user() !== null) {
+                return;
+            }
+
+            $phone = $this->input('guest_phone');
+
+            if ($validator->errors()->has('guest_phone') || ! is_string($phone)) {
+                return;
+            }
+
+            if (PhoneNumberNormalizer::normalize($phone) === null) {
+                $validator->errors()->add(
+                    'guest_phone',
+                    'Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx.'
+                );
+            }
+        });
     }
 
     /**

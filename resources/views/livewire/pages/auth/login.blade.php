@@ -82,7 +82,6 @@ new #[Layout('layouts.guest')] class extends Component
                 "Selamat datang, {$user->name}!",
         };
 
-        Session::flash('status', $welcomeMessage);
         Session::flash('success', $welcomeMessage);
 
         $intended = session('url.intended');

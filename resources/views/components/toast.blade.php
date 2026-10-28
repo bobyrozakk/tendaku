@@ -4,7 +4,6 @@
 
 <div
     x-data="tendakuToast()"
-    x-init="init()"
     @toast.window="add($event.detail)"
     @notify.window="add($event.detail)"
     class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none"
@@ -161,17 +160,24 @@
             add(payload) {
                 if (!payload || !payload.message) return;
 
+                const type = payload.type || 'info';
+                const duplicate = this.toasts.find(
+                    (toast) => toast.visible && toast.type === type && toast.message === payload.message
+                );
+
+                if (duplicate) return;
+
                 const id = Date.now() + Math.floor(Math.random() * 1000);
-                const duration = payload.duration || (payload.type === 'danger' || payload.type === 'error' ? 5000 : 4000);
+                const duration = payload.duration || (type === 'danger' || type === 'error' ? 5000 : 4000);
                 const title = payload.title || (
-                    payload.type === 'success' ? 'Berhasil!' :
-                    (payload.type === 'danger' || payload.type === 'error' ? 'Perhatian' :
-                    (payload.type === 'warning' ? 'Info Penting' : 'Informasi'))
+                    type === 'success' ? 'Berhasil!' :
+                    (type === 'danger' || type === 'error' ? 'Perhatian' :
+                    (type === 'warning' ? 'Info Penting' : 'Informasi'))
                 );
 
                 const toast = {
                     id: id,
-                    type: payload.type || 'info',
+                    type: type,
                     title: title,
                     message: payload.message,
                     duration: duration,

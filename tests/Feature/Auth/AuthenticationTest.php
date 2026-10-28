@@ -51,7 +51,9 @@ class AuthenticationTest extends TestCase
 
         $component
             ->assertHasNoErrors()
-            ->assertRedirect(route('home', absolute: false));
+            ->assertRedirect(route('home', absolute: false))
+            ->assertSessionHas('success', "Selamat datang, {$user->name}!")
+            ->assertSessionMissing('status');
 
         $this->assertAuthenticated();
     }
@@ -129,7 +131,8 @@ class AuthenticationTest extends TestCase
         $component
             ->assertHasNoErrors()
             ->assertRedirect(route('dashboard', absolute: false))
-            ->assertSessionHas('success', "Selamat datang Superadmin {$superAdmin->name}!");
+            ->assertSessionHas('success', "Selamat datang Superadmin {$superAdmin->name}!")
+            ->assertSessionMissing('status');
 
         $this->assertAuthenticatedAs($superAdmin);
     }

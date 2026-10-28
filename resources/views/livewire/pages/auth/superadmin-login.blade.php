@@ -19,7 +19,6 @@ new #[Layout('layouts.guest')] class extends Component
 
         $user = auth()->user();
         $welcomeMessage = "Selamat datang Superadmin {$user->name}!";
-        Session::flash('status', $welcomeMessage);
         Session::flash('success', $welcomeMessage);
 
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);

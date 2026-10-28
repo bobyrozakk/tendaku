@@ -228,12 +228,12 @@ class BookingStatusAndHistoryTest extends TestCase
             ->get(route('booking.status', $rental->booking_code));
 
         $response->assertStatus(200);
-        $response->assertSee('Denda Keterlambatan');
+        $response->assertSee('Denda keterlambatan');
         $response->assertSee('Rp 50.000');
-        $response->assertSee('Denda Kerusakan Unit');
+        $response->assertSee('Denda kerusakan unit');
         $response->assertSee('Rp 20.000');
         $response->assertSee('Rp 220.000');
-        $response->assertSee('Bayar Denda');
+        $response->assertSee('Bayar denda');
     }
 
     public function test_customer_can_view_ktp_receipt(): void
