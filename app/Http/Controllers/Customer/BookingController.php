@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rental;
+use App\Services\BookingReceiptService;
 use App\Services\MidtransService;
 use App\Services\RentalAccessGuard;
 use Illuminate\Validation\Rule;
@@ -168,8 +169,11 @@ class BookingController extends Controller
     /**
      * Tanda terima KTP digital.
      */
-        public function receipt(Request $request, string $code): View
-    {
+    public function receipt(
+        Request $request,
+        string $code,
+        BookingReceiptService $receiptService
+    ): View {
         $rental = $this->findAuthorizedRental($request, $code);
 
         $rental->loadMissing([
@@ -180,7 +184,12 @@ class BookingController extends Controller
             'payments',
         ]);
 
-        return view('customer.booking.receipt', compact('rental'));
+        $receiptData = $receiptService->build($rental);
+
+        return view('customer.booking.receipt', array_merge(
+            ['rental' => $rental],
+            $receiptData
+        ));
     }
 
     /**
