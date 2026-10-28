@@ -81,9 +81,14 @@ class RentalService
             $data['return_time'] ?? null
         );
 
+        $timesSpecified = ! empty($data['pickup_time'])
+            || ! empty($data['return_time'])
+            || (preg_match('/\d{1,2}:\d{2}/', (string) $data['pickup_date']) === 1)
+            || (preg_match('/\d{1,2}:\d{2}/', (string) $data['return_date']) === 1);
+
         $hours = $pickupDate->floatDiffInHours($returnDate, false);
-        if ($hours < 0) {
-            throw new InvalidArgumentException("Tanggal pengembalian ({$returnDate->format('Y-m-d H:i')}) tidak boleh lebih awal dari tanggal pengambilan ({$pickupDate->format('Y-m-d H:i')}).");
+        if (($timesSpecified && $hours <= 0) || (! $timesSpecified && $hours < 0)) {
+            throw new InvalidArgumentException("Waktu pengembalian ({$returnDate->format('Y-m-d H:i')}) harus setelah waktu pengambilan ({$pickupDate->format('Y-m-d H:i')}).");
         }
 
         // Durasi sewa 1 hari = 24 jam penuh sejak waktu pengambilan barang.
@@ -500,8 +505,17 @@ class RentalService
             }
         }
 
-        if ($end->lt($start)) {
-            throw new InvalidArgumentException("Tanggal pengembalian ({$end->format('Y-m-d H:i')}) tidak boleh lebih awal dari tanggal pengambilan ({$start->format('Y-m-d H:i')}).");
+        $timesSpecified = $hasPickupTimeInStr
+            || $hasReturnTimeInStr
+            || ($pickupTime !== null && trim($pickupTime) !== '')
+            || ($returnTime !== null && trim($returnTime) !== '');
+
+        if ($timesSpecified && $end->lte($start)) {
+            throw new InvalidArgumentException("Waktu pengembalian ({$end->format('Y-m-d H:i')}) harus setelah waktu pengambilan ({$start->format('Y-m-d H:i')}).");
+        }
+
+        if (! $timesSpecified && $end->lt($start)) {
+            throw new InvalidArgumentException("Tanggal pengembalian ({$end->format('Y-m-d')}) tidak boleh lebih awal dari tanggal pengambilan ({$start->format('Y-m-d')}).");
         }
 
         return [$start, $end];

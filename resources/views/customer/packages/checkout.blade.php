@@ -26,7 +26,109 @@
 
     <form method="POST" action="{{ route('customer.packages.checkout.store', $package) }}"
           class="grid grid-cols-1 lg:grid-cols-12 gap-8 py-2"
-          x-data="{ method: '{{ $pickupMethod }}', deliveryFee: {{ $deliveryFeeAmount }} }">
+          x-data="{
+              method: '{{ $pickupMethod }}',
+              deliveryFee: {{ $deliveryFeeAmount }},
+              packagePrice: {{ $price }},
+              pickupDate: '{{ old('pickup_date', $pickupDate->format('Y-m-d')) }}',
+              pickupTime: '{{ old('pickup_time', $pickupTime) }}',
+              returnDate: '{{ old('return_date', $returnDate->format('Y-m-d')) }}',
+              returnTime: '{{ old('return_time', $returnTime) }}',
+              durationDays: {{ old('duration_days', $rentalDays) }},
+              totalHours: {{ $hours }},
+              subtotal: {{ $price * $rentalDays }},
+              errorMessage: '',
+              isValid: true,
+
+              init() {
+                  this.recalculate();
+              },
+
+              setDuration(days) {
+                  this.durationDays = Math.max(1, parseInt(days) || 1);
+                  if (!this.pickupDate) return;
+                  const [y, m, d] = this.pickupDate.split('-').map(Number);
+                  const [h, min] = (this.pickupTime || '09:00').split(':').map(Number);
+                  const pickup = new Date(y, m - 1, d, h, min, 0);
+
+                  if (isNaN(pickup.getTime())) return;
+
+                  const ret = new Date(pickup.getTime() + this.durationDays * 24 * 60 * 60 * 1000);
+                  const rY = ret.getFullYear();
+                  const rM = String(ret.getMonth() + 1).padStart(2, '0');
+                  const rD = String(ret.getDate()).padStart(2, '0');
+                  const rH = String(ret.getHours()).padStart(2, '0');
+                  const rMin = String(ret.getMinutes()).padStart(2, '0');
+
+                  this.returnDate = `${rY}-${rM}-${rD}`;
+                  this.returnTime = `${rH}:${rMin}`;
+                  this.recalculate();
+              },
+
+              onPickupChange() {
+                  this.setDuration(this.durationDays);
+              },
+
+              onReturnChange() {
+                  this.recalculate();
+              },
+
+              recalculate() {
+                  this.errorMessage = '';
+                  if (!this.pickupDate || !this.pickupTime || !this.returnDate || !this.returnTime) {
+                      this.isValid = false;
+                      return;
+                  }
+
+                  const [pY, pM, pD] = this.pickupDate.split('-').map(Number);
+                  const [pH, pMin] = this.pickupTime.split(':').map(Number);
+                  const pickup = new Date(pY, pM - 1, pD, pH, pMin, 0);
+
+                  const [rY, rM, rD] = this.returnDate.split('-').map(Number);
+                  const [rH, rMin] = this.returnTime.split(':').map(Number);
+                  const ret = new Date(rY, rM - 1, rD, rH, rMin, 0);
+
+                  if (isNaN(pickup.getTime()) || isNaN(ret.getTime())) {
+                      this.isValid = false;
+                      return;
+                  }
+
+                  const now = new Date();
+                  if (pickup.getTime() < now.getTime() - 60000) {
+                      this.errorMessage = 'Waktu pengambilan tidak boleh di masa lalu.';
+                      this.isValid = false;
+                      return;
+                  }
+
+                  const diffMs = ret.getTime() - pickup.getTime();
+                  const diffHours = diffMs / (1000 * 60 * 60);
+
+                  if (diffMs <= 0) {
+                      this.errorMessage = 'Waktu pengembalian wajib setelah waktu pengambilan (tidak boleh sama atau lebih awal).';
+                      this.isValid = false;
+                      this.durationDays = 0;
+                      this.totalHours = 0;
+                      this.subtotal = 0;
+                      return;
+                  }
+
+                  this.totalHours = Math.round(diffHours * 10) / 10;
+                  this.durationDays = Math.max(1, Math.ceil(diffHours / 24));
+                  this.subtotal = this.durationDays * this.packagePrice;
+                  this.isValid = true;
+              },
+
+              formatRupiah(val) {
+                  return 'Rp ' + (Math.round(val) || 0).toLocaleString('id-ID');
+              },
+
+              formatDateIndo(dateStr) {
+                  if (!dateStr) return '';
+                  const parts = dateStr.split('-');
+                  if (parts.length !== 3) return dateStr;
+                  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+              }
+          }">
         @csrf
         <input type="hidden" name="package_id" value="{{ $package->id }}" />
 
@@ -34,35 +136,97 @@
         <div class="lg:col-span-7 space-y-6">
             <!-- Jadwal Sewa -->
             <div class="card-tendaku rounded-2xl bg-white p-6 border border-wheat-200 shadow-tendaku space-y-4">
-                <h2 class="text-base font-extrabold text-darkbrown-900 border-b border-wheat-200 pb-3 font-heading flex items-center gap-2">
-                    <i data-lucide="calendar-days" class="w-4 h-4 text-avocado-600"></i>
-                    Jadwal Sewa
+                <h2 class="text-base font-extrabold text-darkbrown-900 border-b border-wheat-200 pb-3 font-heading flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                        <i data-lucide="calendar-days" class="w-4 h-4 text-avocado-600"></i>
+                        Jadwal Sewa & Waktu Pengambilan
+                    </span>
                 </h2>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label for="pickup_date" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                            Tanggal Mulai Sewa *
+                <!-- Waktu Pengambilan -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-700">
+                            Waktu Pengambilan Barang *
                         </label>
-                        <input type="date" id="pickup_date" name="pickup_date"
-                               value="{{ old('pickup_date', $pickupDate->format('Y-m-d')) }}"
-                               min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                               required
-                               class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                        <x-input-error :messages="$errors->get('pickup_date')" class="mt-1" />
+                        <span class="text-[10px] text-darkbrown-500 font-medium">Mulai tanggal & jam pengambilan</span>
                     </div>
-
-                    <div>
-                        <span class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                            Tanggal Pengembalian
-                        </span>
-                        <div class="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-darkbrown-800 bg-wheat-100 border border-wheat-200">
-                            {{ $returnDate->format('d/m/Y') }}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <input type="date" id="pickup_date" name="pickup_date"
+                                   x-model="pickupDate"
+                                   @change="onPickupChange()"
+                                   min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
+                                   required
+                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
+                            <x-input-error :messages="$errors->get('pickup_date')" class="mt-1" />
                         </div>
-                        <p class="text-[11px] text-darkbrown-400 mt-1">
-                            Otomatis {{ $package->duration_days }} hari dari tanggal mulai.
-                        </p>
+                        <div>
+                            <input type="time" id="pickup_time" name="pickup_time"
+                                   x-model="pickupTime"
+                                   @change="onPickupChange()"
+                                   required
+                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
+                            <x-input-error :messages="$errors->get('pickup_time')" class="mt-1" />
+                        </div>
                     </div>
+                </div>
+
+                <!-- Durasi Sewa -->
+                <div class="flex items-center justify-between py-2 px-3 rounded-xl bg-wheat-50 border border-wheat-200">
+                    <span class="text-[11px] font-bold text-darkbrown-800 flex items-center gap-1.5">
+                        <i data-lucide="clock" class="w-3.5 h-3.5 text-avocado-600"></i>
+                        Durasi Sewa
+                    </span>
+                    <div class="flex items-center gap-1">
+                        <button type="button"
+                                @click="setDuration(Math.max(1, durationDays - 1))"
+                                class="w-7 h-7 rounded-md border border-wheat-300 bg-white hover:bg-wheat-100 text-darkbrown-800 font-bold flex items-center justify-center transition shadow-sm text-xs">
+                            -
+                        </button>
+                        <div class="w-9 h-7 text-center font-bold text-xs text-darkbrown-900 bg-white flex items-center justify-center rounded-md border border-wheat-300 shadow-inner">
+                            <span x-text="durationDays">{{ $rentalDays }}</span>
+                        </div>
+                        <button type="button"
+                                @click="setDuration(durationDays + 1)"
+                                class="w-7 h-7 rounded-md border border-wheat-300 bg-white hover:bg-wheat-100 text-darkbrown-800 font-bold flex items-center justify-center transition shadow-sm text-xs">
+                            +
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Waktu Pengembalian -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-700">
+                            Waktu Pengembalian Barang *
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <input type="date" id="return_date" name="return_date"
+                                   x-model="returnDate"
+                                   @change="onReturnChange()"
+                                   :min="pickupDate"
+                                   required
+                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
+                            <x-input-error :messages="$errors->get('return_date')" class="mt-1" />
+                        </div>
+                        <div>
+                            <input type="time" id="return_time" name="return_time"
+                                   x-model="returnTime"
+                                   @change="onReturnChange()"
+                                   required
+                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
+                            <x-input-error :messages="$errors->get('return_time')" class="mt-1" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pesan Error Validasi Tanggal/Waktu -->
+                <div x-show="errorMessage" x-cloak class="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 shrink-0 mt-0.5"></i>
+                    <span x-text="errorMessage"></span>
                 </div>
 
                 <div>
@@ -196,8 +360,9 @@
                 <div class="card-tendaku rounded-2xl bg-white border border-wheat-200 shadow-tendaku overflow-hidden">
                     <div class="relative aspect-[16/9] bg-wheat-100">
                         <img src="{{ $image }}" alt="{{ $package->name }}" class="w-full h-full object-cover" />
-                        <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-darkbrown-900/85 text-wheat-200 backdrop-blur-md">
-                            {{ $package->duration_days }} Hari
+                        <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-darkbrown-900/85 text-wheat-200 backdrop-blur-md"
+                              x-text="durationDays > 0 ? durationDays + ' Hari Sewa' : 'Pilih Jadwal'">
+                            {{ $rentalDays }} Hari Sewa
                         </span>
                     </div>
 
@@ -223,8 +388,16 @@
 
                         <div class="pt-3 border-t border-wheat-200 space-y-2 text-xs">
                             <div class="flex items-center justify-between">
-                                <span class="text-darkbrown-600">Harga paket</span>
+                                <span class="text-darkbrown-600">Harga paket / 24 jam</span>
                                 <span class="font-bold text-darkbrown-900">Rp {{ number_format($price, 0, ',', '.') }}</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-darkbrown-600">
+                                    Subtotal (<span x-text="durationDays + ' hari sewa'">{{ $rentalDays }} hari sewa</span>)
+                                </span>
+                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(subtotal)">
+                                    Rp {{ number_format($price * $rentalDays, 0, ',', '.') }}
+                                </span>
                             </div>
                             <div class="flex items-center justify-between" x-show="method === 'delivery'" x-cloak>
                                 <span class="text-darkbrown-600">Biaya pengantaran</span>
@@ -233,14 +406,15 @@
                             <div class="flex items-center justify-between pt-2 border-t border-wheat-200">
                                 <span class="font-bold text-darkbrown-900">Total Bayar</span>
                                 <span class="text-lg font-extrabold text-avocado-800 font-heading"
-                                      x-text="'Rp ' + ({{ $price }} + (method === 'delivery' ? deliveryFee : 0)).toLocaleString('id-ID')">
-                                    Rp {{ number_format($pickupMethod === 'delivery' ? $price + $deliveryFeeAmount : $price, 0, ',', '.') }}
+                                      x-text="formatRupiah(subtotal + (method === 'delivery' ? deliveryFee : 0))">
+                                    Rp {{ number_format(($price * $rentalDays) + ($pickupMethod === 'delivery' ? $deliveryFeeAmount : 0), 0, ',', '.') }}
                                 </span>
                             </div>
                         </div>
 
                         <button type="submit"
-                                class="btn-tendaku-primary w-full py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all">
+                                :disabled="!isValid"
+                                class="btn-tendaku-primary w-full py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                             Buat Pesanan & Lanjut Bayar
                         </button>
 
@@ -254,7 +428,9 @@
                 <div class="card-tendaku rounded-2xl bg-white p-4 border border-wheat-200 text-[11px] text-darkbrown-600 space-y-2">
                     <p class="flex items-center gap-2">
                         <i data-lucide="calendar-check" class="w-3.5 h-3.5 text-avocado-600 shrink-0"></i>
-                        Mulai {{ $pickupDate->format('d/m/Y') }} &middot; kembali {{ $returnDate->format('d/m/Y') }}
+                        <span>
+                            Mulai <strong x-text="formatDateIndo(pickupDate) + ' ' + pickupTime"></strong> &middot; kembali <strong x-text="formatDateIndo(returnDate) + ' ' + returnTime"></strong>
+                        </span>
                     </p>
                     <p class="flex items-center gap-2">
                         <i data-lucide="shield-check" class="w-3.5 h-3.5 text-avocado-600 shrink-0"></i>
