@@ -218,6 +218,7 @@ class RentalService
                 'return_time' => $returnDate->format('H:i:s'),
                 'pickup_method' => $pickupMethod,
                 'delivery_address' => $pickupMethod === 'delivery' ? ($data['delivery_address'] ?? null) : null,
+                'customer_address_id' => $pickupMethod === 'delivery' && ! empty($data['customer_address_id']) ? (int) $data['customer_address_id'] : null,
                 'rental_days' => $rentalDays,
                 'subtotal' => $subtotal,
                 'delivery_fee' => $deliveryFee,

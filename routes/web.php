@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\RevenueExportController;
 use App\Http\Controllers\Admin\SettlementInvoiceController;
 use App\Http\Controllers\Api\MidtransPaymentController;
+use App\Http\Controllers\Customer\AddressController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\BookingVaController;
 use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
@@ -41,6 +42,18 @@ Route::prefix('katalog/booking')->group(function () {
 Route::get('riwayat-sewa', [BookingController::class, 'index'])
     ->middleware(['auth'])
     ->name('customer.booking.index');
+
+// Pengelolaan Alamat Lengkap Customer (Wajib Login)
+Route::middleware(['auth'])
+    ->prefix('customer/addresses')
+    ->name('customer.addresses.')
+    ->group(function () {
+        Route::get('/', [AddressController::class, 'index'])->name('index');
+        Route::post('/', [AddressController::class, 'store'])->name('store');
+        Route::put('/{address}', [AddressController::class, 'update'])->name('update');
+        Route::delete('/{address}', [AddressController::class, 'destroy'])->name('destroy');
+        Route::post('/{address}/default', [AddressController::class, 'setDefault'])->name('default');
+    });
 
 // 3. Katalog
 Route::get('/katalog', [CatalogController::class, 'index'])->name('customer.catalog.index');

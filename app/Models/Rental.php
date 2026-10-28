@@ -33,6 +33,7 @@ class Rental extends Model
         'returned_at',
         'pickup_method',
         'delivery_address',
+        'customer_address_id',
         'rental_days',
         'subtotal',
         'delivery_fee',
@@ -93,6 +94,11 @@ class Rental extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function customerAddress(): BelongsTo
+    {
+        return $this->belongsTo(CustomerAddress::class, 'customer_address_id');
     }
 
     public function createdBy(): BelongsTo

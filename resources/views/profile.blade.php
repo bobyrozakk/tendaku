@@ -24,6 +24,10 @@
             </div>
 
             <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
+                <livewire:profile.manage-addresses />
+            </div>
+
+            <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
                 <livewire:profile.update-password-form />
             </div>
 
