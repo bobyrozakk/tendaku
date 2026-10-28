@@ -332,7 +332,11 @@ class MidtransService
             return;
         }
 
-        if ($payment->status === PaymentStatus::Failed->value) {
+        if (in_array($payment->status, [
+            PaymentStatus::Failed->value,
+            PaymentStatus::Expired->value,
+            PaymentStatus::Cancelled->value,
+        ], true)) {
             $this->escrow->markVoid($payment);
         }
     }
