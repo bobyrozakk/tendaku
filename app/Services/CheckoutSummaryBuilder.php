@@ -43,7 +43,15 @@ class CheckoutSummaryBuilder
 
         $pickupMethod = $this->resolvePickupMethod($isLoggedIn, $requestedMethod);
         $quantity = $this->quantityOf($cart);
-        $rentalDays = max(1, (int) ($cart['total_days'] ?? 1));
+        $pickupTime = $vendor->pickup_time ?: config('rental.default_pickup_time', '09:00');
+        $returnTime = $vendor->return_time ?: config('rental.default_return_time', '09:00');
+
+        $rentalDays = app(RentalService::class)->calculateRentalDays(
+            Carbon::parse($cart['pickup_date'])->toDateString(),
+            Carbon::parse($cart['return_date'])->toDateString(),
+            $pickupTime,
+            $returnTime,
+        );
 
         $dailyRate = (int) $masterItem->daily_rate;
         $depositPerUnit = 0;
@@ -72,9 +80,9 @@ class CheckoutSummaryBuilder
                 'email' => $user?->email ?? '',
             ],
             'pickup_date' => Carbon::parse($cart['pickup_date'])->translatedFormat('l, d F Y'),
-            'pickup_time' => $this->clock($vendor->pickup_time),
+            'pickup_time' => $this->clock($pickupTime),
             'return_date' => Carbon::parse($cart['return_date'])->translatedFormat('l, d F Y'),
-            'return_time' => $this->clock($vendor->return_time),
+            'return_time' => $this->clock($returnTime),
             'rental_days' => $rentalDays,
             'pickup_method' => $pickupMethod,
             'delivery_address' => $user?->address ?? '',
