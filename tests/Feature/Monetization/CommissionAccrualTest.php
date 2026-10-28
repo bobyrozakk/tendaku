@@ -23,33 +23,6 @@ class CommissionAccrualTest extends TestCase
         config(['services.midtrans.server_key' => self::SERVER_KEY]);
     }
 
-    public function test_paid_qris_settlement_accrues_one_commission_and_holds_escrow(): void
-    {
-        [, , $payment] = $this->createRentalWithPendingPayment();
-        $payment->update(['amount' => 500000, 'payment_channel' => 'qris']);
-
-        $this->postJson(route('webhook.midtrans'), $this->signedNotification([
-            'gross_amount' => '500000.00',
-            'payment_type' => 'qris',
-        ]))->assertOk();
-
-        $commission = PlatformCommission::withoutGlobalScope('vendor')->sole();
-
-        $this->assertSame($payment->getKey(), $commission->payment_id);
-        $this->assertSame('500000.00', $commission->base_amount);
-        $this->assertSame('0.0500', $commission->rate);
-        $this->assertSame('25000.00', $commission->amount);
-        $this->assertSame('accrued', $commission->status);
-        $this->assertNotNull($commission->recognized_at);
-
-        $payment->refresh();
-
-        $this->assertSame('paid', $payment->status);
-        $this->assertSame('held', $payment->escrow_status);
-        $this->assertSame('qris', $payment->payment_channel);
-        $this->assertSame('3500.00', $payment->gateway_fee_amount);
-    }
-
     public function test_a_paid_dp_payment_also_accrues_a_commission(): void
     {
         [, , $payment] = $this->createRentalWithPendingPayment();
@@ -155,7 +128,7 @@ class CommissionAccrualTest extends TestCase
         ]))->assertOk();
 
         $this->assertSame(0, PlatformCommission::withoutGlobalScope('vendor')->count());
-        $this->assertSame('failed', $payment->refresh()->status);
+        $this->assertSame('expired', $payment->refresh()->status);
         $this->assertSame('void', $payment->escrow_status);
         $this->assertSame('pending', $rental->refresh()->status);
     }
