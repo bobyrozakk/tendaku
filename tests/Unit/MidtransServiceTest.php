@@ -10,7 +10,7 @@ class MidtransServiceTest extends TestCase
 {
     public function test_order_id_prefix_is_tdk(): void
     {
-        $this->assertSame('TDK-', MidtransService::ORDER_ID_PREFIX);
+        $this->assertSame('TDK', MidtransService::ORDER_ID_PREFIX);
     }
 
     public function test_order_id_generation_matches_specification(): void
