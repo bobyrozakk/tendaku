@@ -1,4 +1,4 @@
-<div class="space-y-6" x-data="{ showPickupModal: false }">
+<div class="space-y-6" x-data="{ showPickupModal: false }" @close-pickup-modal.window="showPickupModal = false">
     <!-- Success Notification Banner -->
     @if($pickupSuccessMessage)
         <div class="p-4 rounded-2xl bg-avocado-50 border border-avocado-300 text-avocado-900 flex items-center justify-between shadow-tendaku-sm animate-fade-in">
@@ -30,7 +30,7 @@
                         <h2 class="font-extrabold text-base text-darkbrown-900">Antrean Pickup Hari Ini</h2>
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sunglow-100 text-darkbrown-900 border border-sunglow-300">
                             <span class="w-1.5 h-1.5 rounded-full bg-sunglow-600 animate-pulse"></span>
-                            {{ count($pickupOrders) }} Siap Pickup
+                            {{ $totalCount ?? $filteredOrders->total() }} Siap Pickup
                         </span>
                     </div>
                     <p class="text-[11px] text-darkbrown-500">Klik transaksi untuk membuka verifikasi dan serah terima unit</p>
@@ -102,6 +102,25 @@
                     <p class="text-[11px]">Gunakan kata kunci pencarian lain atau pastikan ada transaksi berstatus 'Siap Pickup'.</p>
                 </div>
             @endforelse
+        </div>
+
+        {{-- Pagination & Footer Summary --}}
+        <div class="px-5 py-4 border-t border-wheat-200/80 bg-wheat-50/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+            {{-- Informasi Counter Data --}}
+            <div class="text-xs text-darkbrown-600 font-medium">
+                @if($filteredOrders->total() > 0)
+                    Menampilkan <span class="font-extrabold text-darkbrown-900">{{ $filteredOrders->firstItem() }}</span> – <span class="font-extrabold text-darkbrown-900">{{ $filteredOrders->lastItem() }}</span> dari <span class="font-extrabold text-avocado-800">{{ $filteredOrders->total() }}</span> pesanan siap pickup
+                @else
+                    Menampilkan <span class="font-bold text-darkbrown-900">0</span> pesanan siap pickup
+                @endif
+            </div>
+
+            {{-- Navigation Links Pagination --}}
+            @if($filteredOrders->hasPages())
+                <div class="w-full sm:w-auto flex justify-center sm:justify-end">
+                    {{ $filteredOrders->links('kasir.pagination') }}
+                </div>
+            @endif
         </div>
     </x-card>
 
@@ -433,7 +452,6 @@
                             <button 
                                 type="button"
                                 wire:click="confirmPickup"
-                                x-on:click="if ({{ $this->isPickupReady ? 'true' : 'false' }}) { showPickupModal = false }"
                                 class="w-full sm:w-auto py-2.5 px-6 rounded-xl font-extrabold text-xs tracking-wider uppercase transition-all duration-200 shadow-sm flex items-center justify-center gap-2 {{ $this->isPickupReady ? 'bg-gradient-to-r from-emerald-600 to-avocado-600 hover:from-emerald-500 hover:to-avocado-500 text-white cursor-pointer shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/50 hover:scale-[1.02] active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300 opacity-80' }}"
                                 {{ !$this->isPickupReady ? 'disabled' : '' }}
                             >

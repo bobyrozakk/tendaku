@@ -63,8 +63,13 @@
         $hasRental    = isset($rental) && $rental;
         $hasList      = auth()->check() && isset($rentals);
 
+        // Determine paid status safely (rental may not be set on list-only page)
+        $isPaid = $hasRental
+            ? $rental->payments->contains(fn ($p) => $p->status === 'paid')
+            : false;
+
         $statusLabels = [
-            'pending'   => 'Menunggu Pembayaran',
+            'pending'   => $isPaid ? 'Menunggu Validasi Kasir' : 'Menunggu Pembayaran',
             'confirmed' => 'Dikonfirmasi (Siap Pickup)',
             'picked_up' => 'Sedang Dipakai (Disewa)',
             'returned'  => 'Telah Dikembalikan',
@@ -73,7 +78,15 @@
             'expired'   => 'Kedaluwarsa',
         ];
 
-        $statusTabs = ['' => 'Semua Transaksi'] + $statusLabels;
+        $statusTabs = ['' => 'Semua Transaksi'] + [
+            'pending'   => 'Menunggu Pembayaran / Validasi',
+            'confirmed' => 'Dikonfirmasi (Siap Pickup)',
+            'picked_up' => 'Sedang Dipakai (Disewa)',
+            'returned'  => 'Telah Dikembalikan',
+            'completed' => 'Selesai',
+            'cancelled' => 'Dibatalkan',
+            'expired'   => 'Kedaluwarsa',
+        ];
     @endphp
 
     @if($hasRental)
@@ -83,8 +96,12 @@
         // Urutan titik timeline dan pemetaan status rental ke titik aktif.
         $nodeOrder = ['created', 'payment', 'pickup', 'rental', 'return', 'done'];
 
+        // Jika pembayaran sudah dibayar (paid) tetapi status rental masih pending (menunggu validasi barcode kasir),
+        // tampilan timeline customer sudah maju ke tahap serah terima / pickup
+        // ($isPaid sudah dihitung di atas, cukup dipakai ulang di sini)
+
         $statusToNode = [
-            'pending'   => 'payment',
+            'pending'   => $isPaid ? 'pickup' : 'payment',
             'confirmed' => 'pickup',
             'picked_up' => 'rental',
             'returned'  => 'return',
@@ -92,7 +109,7 @@
         ];
 
         $isExpiredOrCancelled = in_array($status, ['cancelled', 'expired'], true);
-        $isExpiredNow = $status === 'pending' && $rental->expires_at && $rental->expires_at->isPast();
+        $isExpiredNow = $status === 'pending' && ! $isPaid && $rental->expires_at && $rental->expires_at->isPast();
 
         // Utamakan tagihan online yang masih menunggu (terbaru). Setelah ganti bank ada beberapa payment per rental.
         $onlinePayment = $rental->payments->where('channel', 'midtrans')->whereIn('payment_type', ['full', 'dp'])->where('status', 'pending')->sortByDesc('id')->first()

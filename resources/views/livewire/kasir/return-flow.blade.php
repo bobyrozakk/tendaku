@@ -246,69 +246,89 @@
                                         </div>
 
                                         @if(!$isDetailReturned)
-                                            <div class="p-4 space-y-4 bg-white">
+                                            <div class="p-4 space-y-4 bg-white"
+                                                 wire:key="inspection-item-{{ $detail->id }}"
+                                                 x-data="{
+                                                     cond: @entangle('inspectionNotes.' . $detail->id).live,
+                                                     fee: @entangle('damageFees.' . $detail->id).live,
+                                                     setCond(val) {
+                                                         this.cond = val;
+                                                         if (val === 'good') {
+                                                             this.fee = 0;
+                                                         }
+                                                     }
+                                                 }">
                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    {{-- Radio Badge / Pill Tombol Pilihan Kondisi --}}
+                                                    {{-- Radio Badge / Card Pilihan Kondisi --}}
                                                     <div>
                                                         <label class="text-xs font-bold text-darkbrown-800 block mb-2">
                                                             Kondisi Fisik Saat Kembali
                                                         </label>
-                                                        @php
-                                                            $currentCondition = $inspectionNotes[$detail->id] ?? 'good';
-                                                        @endphp
-                                                        <div class="grid grid-cols-3 gap-2">
-                                                            {{-- Tombol Pill: Baik --}}
-                                                            <button type="button"
-                                                                    wire:click="setCondition({{ $detail->id }}, 'good')"
-                                                                    class="py-2 px-2.5 rounded-xl text-xs font-bold transition-all duration-150 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none {{ $currentCondition === 'good' ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm shadow-emerald-500/25 ring-2 ring-emerald-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800' }}">
+                                                        <div class="grid grid-cols-3 gap-2" role="radiogroup">
+                                                            {{-- Tombol Card: Baik --}}
+                                                            <label :class="cond === 'good' ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm shadow-emerald-500/25 ring-2 ring-emerald-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-800'"
+                                                                   class="py-2.5 px-2 rounded-xl text-xs font-bold transition-all duration-100 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none">
+                                                                <input type="radio"
+                                                                       name="condition_ui_{{ $detail->id }}"
+                                                                       value="good"
+                                                                       x-model="cond"
+                                                                       @change="if (cond === 'good') fee = 0"
+                                                                       class="sr-only">
                                                                 <i data-lucide="check" class="w-4 h-4"></i>
                                                                 <span class="text-[11px] leading-tight">Baik</span>
-                                                            </button>
+                                                            </label>
 
-                                                            {{-- Tombol Pill: Rusak --}}
-                                                            <button type="button"
-                                                                    wire:click="setCondition({{ $detail->id }}, 'damaged')"
-                                                                    class="py-2 px-2.5 rounded-xl text-xs font-bold transition-all duration-150 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none {{ $currentCondition === 'damaged' ? 'bg-amber-500 text-white border-amber-600 shadow-sm shadow-amber-500/25 ring-2 ring-amber-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800' }}">
+                                                            {{-- Tombol Card: Rusak --}}
+                                                            <label :class="cond === 'damaged' ? 'bg-amber-500 text-white border-amber-600 shadow-sm shadow-amber-500/25 ring-2 ring-amber-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800'"
+                                                                   class="py-2.5 px-2 rounded-xl text-xs font-bold transition-all duration-100 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none">
+                                                                <input type="radio"
+                                                                       name="condition_ui_{{ $detail->id }}"
+                                                                       value="damaged"
+                                                                       x-model="cond"
+                                                                       class="sr-only">
                                                                 <i data-lucide="alert-triangle" class="w-4 h-4"></i>
                                                                 <span class="text-[11px] leading-tight">Rusak</span>
-                                                            </button>
+                                                            </label>
 
-                                                            {{-- Tombol Pill: Hilang --}}
-                                                            <button type="button"
-                                                                    wire:click="setCondition({{ $detail->id }}, 'lost')"
-                                                                    class="py-2 px-2.5 rounded-xl text-xs font-bold transition-all duration-150 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none {{ $currentCondition === 'lost' ? 'bg-rose-600 text-white border-rose-700 shadow-sm shadow-rose-600/25 ring-2 ring-rose-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800' }}">
+                                                            {{-- Tombol Card: Hilang --}}
+                                                            <label :class="cond === 'lost' ? 'bg-rose-600 text-white border-rose-700 shadow-sm shadow-rose-600/25 ring-2 ring-rose-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800'"
+                                                                   class="py-2.5 px-2 rounded-xl text-xs font-bold transition-all duration-100 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none">
+                                                                <input type="radio"
+                                                                       name="condition_ui_{{ $detail->id }}"
+                                                                       value="lost"
+                                                                       x-model="cond"
+                                                                       class="sr-only">
                                                                 <i data-lucide="x-circle" class="w-4 h-4"></i>
                                                                 <span class="text-[11px] leading-tight">Hilang</span>
-                                                            </button>
+                                                            </label>
                                                         </div>
                                                     </div>
 
                                                     {{-- Denda Kerusakan Input --}}
-                                                    @php
-                                                        $isFeeRequired = in_array($currentCondition, ['damaged', 'lost']);
-                                                        $currentFee = (float)($damageFees[$detail->id] ?? 0);
-                                                        $isFeeInvalid = $isFeeRequired && $currentFee <= 0;
-                                                    @endphp
                                                     <div>
                                                         <div class="flex items-center justify-between mb-2">
                                                             <label class="text-xs font-bold text-darkbrown-800 flex items-center gap-1.5">
                                                                 <span>Denda Kerusakan / Ganti Rugi</span>
-                                                                @if($isFeeRequired)
-                                                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-700 border border-rose-300 animate-pulse">
-                                                                        Wajib Diisi
-                                                                    </span>
-                                                                @endif
+                                                                <span x-show="cond === 'damaged' || cond === 'lost'"
+                                                                      x-cloak
+                                                                      class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-700 border border-rose-300 animate-pulse">
+                                                                    Wajib Diisi
+                                                                </span>
                                                             </label>
                                                         </div>
                                                         <div class="relative">
-                                                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-xs font-bold {{ $isFeeInvalid ? 'text-rose-600' : 'text-darkbrown-400' }}">
+                                                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-xs font-bold"
+                                                                  :class="cond === 'good' ? 'text-darkbrown-300' : (((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'text-rose-600' : 'text-darkbrown-400')">
                                                                 Rp
                                                             </span>
                                                             <input type="number"
                                                                    min="0"
-                                                                   wire:model.live="damageFees.{{ $detail->id }}"
-                                                                   placeholder="{{ $isFeeRequired ? 'Masukkan nominal denda...' : '0' }}"
-                                                                   class="w-full text-xs font-bold pl-10 pr-3.5 py-2.5 rounded-xl transition duration-150 shadow-sm {{ $isFeeInvalid ? 'bg-rose-50/70 border-rose-400 text-rose-900 focus:ring-2 focus:ring-rose-500/30 focus:border-rose-600 ring-1 ring-rose-400' : 'bg-wheat-50/50 border-wheat-300 text-darkbrown-900 focus:bg-white focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-500' }}" />
+                                                                   step="1000"
+                                                                   x-model.number="fee"
+                                                                   :disabled="cond === 'good'"
+                                                                   :placeholder="cond === 'good' ? '0 (Kondisi Baik - Tanpa Denda)' : 'Masukkan nominal denda...'"
+                                                                   :class="cond === 'good' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed select-none' : (((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'bg-rose-50/70 border-rose-400 text-rose-900 focus:ring-2 focus:ring-rose-500/30 focus:border-rose-600 ring-1 ring-rose-400' : 'bg-wheat-50/50 border-wheat-300 text-darkbrown-900 focus:bg-white focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-500')"
+                                                                   class="w-full text-xs font-bold pl-10 pr-3.5 py-2.5 rounded-xl transition duration-150 shadow-sm" />
                                                         </div>
 
                                                         @error('damageFees.' . $detail->id)
@@ -316,29 +336,16 @@
                                                                 <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i>
                                                                 <span>{{ $message }}</span>
                                                             </p>
-                                                        @elseif($isFeeInvalid)
-                                                            <p class="text-[10px] font-medium text-rose-600 mt-1.5 flex items-center gap-1">
-                                                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 shrink-0"></i>
-                                                                <span>Wajib mengisi denda agar tidak terjadi kerugian.</span>
-                                                            </p>
-                                                        @endif
+                                                        @enderror
                                                     </div>
                                                 </div>
 
-                                                <div class="flex items-center justify-between pt-2 border-t border-wheat-100">
-                                                    <div>
-                                                        @if($isFeeInvalid)
-                                                            <span class="text-[11px] font-bold text-rose-600 flex items-center gap-1">
-                                                                <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
-                                                                <span>Isi nominal denda untuk melanjutkan</span>
-                                                            </span>
-                                                        @endif
-                                                    </div>
-
+                                                <div class="flex items-center justify-end pt-2 border-t border-wheat-100">
                                                     <button wire:click="markItemReturned({{ $detail->id }})"
-                                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 {{ $isFeeInvalid ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-80' : 'text-white shadow-sm cursor-pointer active:scale-95 hover:brightness-105' }}"
-                                                            style="{{ !$isFeeInvalid ? 'background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 12px rgba(78,101,6,0.25);' : '' }}"
-                                                            {{ $isFeeInvalid ? 'disabled' : '' }}>
+                                                            :disabled="(cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)"
+                                                            :class="((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-80' : 'text-white shadow-sm cursor-pointer active:scale-95 hover:brightness-105'"
+                                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200"
+                                                            style="background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 12px rgba(78,101,6,0.25);">
                                                         <i data-lucide="check" class="w-4 h-4"></i>
                                                         <span>Konfirmasi Fisik Item</span>
                                                     </button>

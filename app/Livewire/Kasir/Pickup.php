@@ -2,16 +2,30 @@
 
 namespace App\Livewire\Kasir;
 
+use App\Models\ItemUnit;
+use App\Models\Rental;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Livewire\WithPagination;
 
 class Pickup extends Component
 {
     use WithFileUploads;
+    use WithPagination;
 
     public $searchPickup = '';
 
     public $selectedPickupId = null;
+
+    protected $paginationTheme = 'tailwind';
+
+    public function updatingSearchPickup(): void
+    {
+        $this->resetPage();
+    }
 
     // Tenant Photo & KTP Verification
     public $tenantPhoto = null;
@@ -30,57 +44,22 @@ class Pickup extends Component
     // Success Banner
     public $pickupSuccessMessage = null;
 
-    // Mock Orders with Status "Siap Pickup"
-    public $pickupOrders = [
-        [
-            'id' => 'TND-2026-004',
-            'customer_name' => 'Budi Santoso',
-            'phone' => '0812-3456-7890',
-            'rental_period' => '03 Okt 2026 - 05 Okt 2026 (2 Hari)',
-            'payment_status' => 'Lunas (QRIS)',
-            'status' => 'Siap Pickup',
-            'allocated_units' => [
-                ['item_id' => 101, 'name' => 'Tenda Dome 4P', 'barcode' => 'A-001', 'status' => 'Reserved'],
-                ['item_id' => 102, 'name' => 'Tenda Dome 4P', 'barcode' => 'A-002', 'status' => 'Reserved'],
-                ['item_id' => 103, 'name' => 'Carrier 60L', 'barcode' => 'CR-011', 'status' => 'Reserved'],
-            ],
-        ],
-        [
-            'id' => 'TND-2026-008',
-            'customer_name' => 'Siti Rahmawati',
-            'phone' => '0857-1122-3344',
-            'rental_period' => '03 Okt 2026 - 06 Okt 2026 (3 Hari)',
-            'payment_status' => 'Lunas (Transfer BCA)',
-            'status' => 'Siap Pickup',
-            'allocated_units' => [
-                ['item_id' => 201, 'name' => 'Sleeping Bag Thermal', 'barcode' => 'SB-005', 'status' => 'Reserved'],
-                ['item_id' => 202, 'name' => 'Matras Foil Camping', 'barcode' => 'MT-009', 'status' => 'Reserved'],
-            ],
-        ],
-        [
-            'id' => 'TND-2026-012',
-            'customer_name' => 'Dedi Pratama',
-            'phone' => '0813-9988-7766',
-            'rental_period' => '03 Okt 2026 - 04 Okt 2026 (1 Hari)',
-            'payment_status' => 'Lunas (E-Wallet)',
-            'status' => 'Siap Pickup',
-            'allocated_units' => [
-                ['item_id' => 301, 'name' => 'Kompor Portable Camping', 'barcode' => 'KP-003', 'status' => 'Reserved'],
-                ['item_id' => 302, 'name' => 'Nesting Set Rantang', 'barcode' => 'NST-014', 'status' => 'Reserved'],
-            ],
-        ],
-    ];
-
     public function mount()
     {
-        if (! empty($this->pickupOrders)) {
-            $this->selectPickup($this->pickupOrders[0]['id']);
+        $this->loadDefaultPickup();
+    }
+
+    private function loadDefaultPickup(): void
+    {
+        $first = $this->pickupOrdersQuery()->first();
+        if ($first && ! $this->selectedPickupId) {
+            $this->selectPickup((string) $first->id);
         }
     }
 
     public function selectPickup($id)
     {
-        $this->selectedPickupId = $id;
+        $this->selectedPickupId = (string) $id;
         $this->tenantPhoto = null;
         $this->tenantPhotoUploaded = false;
         $this->tenantKtpUploaded = false;
@@ -103,9 +82,38 @@ class Pickup extends Component
         $this->tenantKtpUploaded = true;
     }
 
-    public function getSelectedOrderProperty()
+    public function getSelectedOrderProperty(): ?array
     {
-        return collect($this->pickupOrders)->firstWhere('id', $this->selectedPickupId);
+        if (! $this->selectedPickupId) {
+            return null;
+        }
+
+        $vendorId = Auth::user()?->vendor_id;
+
+        $rental = Rental::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'confirmed')
+            ->where(function ($q) {
+                if (is_numeric($this->selectedPickupId)) {
+                    $q->where('id', $this->selectedPickupId);
+                } else {
+                    $q->where('booking_code', $this->selectedPickupId);
+                }
+            })
+            ->with([
+                'customer:id,name,phone',
+                'details:id,rental_id,master_item_id,item_unit_id',
+                'details.masterItem:id,name',
+                'details.itemUnit:id,unit_code,barcode',
+                'payments' => fn ($p) => $p->where('status', 'paid')->select(['id', 'rental_id', 'payment_method', 'status']),
+            ])
+            ->first();
+
+        if (! $rental) {
+            return null;
+        }
+
+        return $this->formatRentalToArray($rental);
     }
 
     public function getIsPhotoVerifiedProperty()
@@ -124,46 +132,155 @@ class Pickup extends Component
 
     public function confirmPickup()
     {
-        if (! $this->isPickupReady) {
+        if (! $this->isPickupReady || ! $this->selectedPickupId) {
             return;
         }
 
-        $order = $this->getSelectedOrderProperty();
-        if (! $order) {
+        $vendorId = Auth::user()?->vendor_id;
+        $user = Auth::user();
+
+        $rental = Rental::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'confirmed')
+            ->where(function ($q) {
+                if (is_numeric($this->selectedPickupId)) {
+                    $q->where('id', $this->selectedPickupId);
+                } else {
+                    $q->where('booking_code', $this->selectedPickupId);
+                }
+            })
+            ->with(['details.itemUnit', 'customer'])
+            ->first();
+
+        if (! $rental) {
             return;
         }
 
-        $completedOrderId = $order['id'];
-        $customerName = $order['customer_name'];
+        $bookingCode = $rental->booking_code;
+        $customerName = $rental->customer?->name ?? $rental->guest_name;
 
-        // Update status order & remove from active pickup queue
-        $this->pickupOrders = collect($this->pickupOrders)->reject(function ($o) use ($completedOrderId) {
-            return $o['id'] === $completedOrderId;
-        })->values()->toArray();
-
-        $this->pickupSuccessMessage = "Serah Terima Berhasil! Transaksi {$completedOrderId} ({$customerName}) telah diperbarui menjadi 'Sedang Disewa'. Status unit fisik berubah menjadi 'Sedang Disewa'.";
-
-        if (! empty($this->pickupOrders)) {
-            $this->selectPickup($this->pickupOrders[0]['id']);
-            $this->pickupSuccessMessage = "Serah Terima Berhasil! Transaksi {$completedOrderId} ({$customerName}) telah diperbarui menjadi 'Sedang Disewa'. Status unit fisik berubah menjadi 'Sedang Disewa'.";
-        } else {
-            $this->selectedPickupId = null;
+        // Simpan foto jaminan penyewa bila diupload
+        $photoPath = null;
+        if ($this->tenantPhoto) {
+            $photoPath = $this->tenantPhoto->store('ktp_collateral', 'public');
         }
+
+        DB::transaction(function () use ($rental, $user, $photoPath) {
+            // 1. Update status Rental menjadi picked_up (Sedang Disewa)
+            $rental->update([
+                'status' => 'picked_up',
+                'picked_up_at' => Carbon::now(),
+                'picked_up_by' => $user->id,
+                'ktp_collateral_status' => 'held',
+                'ktp_received_at' => Carbon::now(),
+                'ktp_collateral_photo_url' => $photoPath ?? $rental->ktp_collateral_photo_url,
+            ]);
+
+            // 2. Update status fisik item_units menjadi rented
+            $unitIds = $rental->details->pluck('item_unit_id')->filter()->all();
+            if (! empty($unitIds)) {
+                ItemUnit::withoutGlobalScope('vendor')
+                    ->whereIn('id', $unitIds)
+                    ->update([
+                        'status' => 'rented',
+                    ]);
+            }
+        });
+
+        $successText = "Serah Terima Berhasil! Transaksi {$bookingCode} ({$customerName}) telah diperbarui menjadi 'Sedang Disewa'. Unit fisik telah diserahkan.";
+
+        // Reset state & pilih order antrean berikutnya bila ada
+        $this->selectedPickupId = null;
+        $nextOrder = $this->pickupOrdersQuery()->first();
+        if ($nextOrder) {
+            $this->selectPickup((string) $nextOrder->id);
+        }
+
+        // Simpan pesan berhasil SETELAH selectPickup agar tidak ter-reset menjadi null
+        $this->pickupSuccessMessage = $successText;
+        $this->dispatch('close-pickup-modal');
+    }
+
+    private function pickupOrdersQuery()
+    {
+        $vendorId = Auth::user()?->vendor_id;
+
+        return Rental::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'confirmed')
+            ->when($this->searchPickup, function ($q) {
+                $s = trim($this->searchPickup);
+                $q->where(function ($sub) use ($s) {
+                    $sub->where('booking_code', 'like', "%{$s}%")
+                        ->orWhere('guest_name', 'like', "%{$s}%")
+                        ->orWhere('guest_phone', 'like', "%{$s}%")
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$s}%")->orWhere('phone', 'like', "%{$s}%"));
+                });
+            })
+            ->with([
+                'customer:id,name,phone',
+                'details:id,rental_id,master_item_id,item_unit_id',
+                'details.masterItem:id,name',
+                'details.itemUnit:id,unit_code,barcode',
+                'payments' => fn ($p) => $p->where('status', 'paid')->select(['id', 'rental_id', 'payment_method', 'status']),
+            ])
+            ->orderBy('pickup_date', 'asc')
+            ->orderBy('id', 'asc');
+    }
+
+    private function formatRentalToArray(Rental $rental): array
+    {
+        $customerName = $rental->customer?->name ?? $rental->guest_name;
+        $phone = $rental->customer?->phone ?? $rental->guest_phone ?? '-';
+        $period = $rental->pickup_date->format('d M Y').' - '.$rental->return_date->format('d M Y').' ('.$rental->rental_days.' Hari)';
+
+        $paymentStatus = 'Lunas';
+        $paidPayment = $rental->payments->first();
+        if ($paidPayment) {
+            $methodName = match ($paidPayment->payment_method) {
+                'midtrans_snap' => 'Midtrans/Online',
+                'qris' => 'QRIS',
+                'cash' => 'Tunai/Cash',
+                'transfer' => 'Transfer Bank',
+                default => strtoupper($paidPayment->payment_method),
+            };
+            $paymentStatus = "Lunas ({$methodName})";
+        }
+
+        $allocatedUnits = [];
+        foreach ($rental->details as $d) {
+            $unit = $d->itemUnit;
+            $allocatedUnits[] = [
+                'item_id' => $d->id,
+                'name' => $d->masterItem?->name ?? 'Barang',
+                'barcode' => $unit?->barcode ?? $unit?->unit_code ?? 'Belum dialokasikan',
+                'status' => $unit ? 'Ready' : 'Pending',
+            ];
+        }
+
+        return [
+            'id' => $rental->booking_code,
+            'real_id' => $rental->id,
+            'customer_name' => $customerName,
+            'phone' => $phone,
+            'rental_period' => $period,
+            'payment_status' => $paymentStatus,
+            'status' => 'Siap Pickup',
+            'allocated_units' => $allocatedUnits,
+        ];
     }
 
     public function render()
     {
-        $filteredOrders = collect($this->pickupOrders)->filter(function ($order) {
-            if (empty($this->searchPickup)) {
-                return true;
-            }
+        $paginated = $this->pickupOrdersQuery()->paginate(10);
+        $totalCount = $paginated->total();
 
-            return stripos($order['id'], $this->searchPickup) !== false ||
-                   stripos($order['customer_name'], $this->searchPickup) !== false;
-        });
+        // Transform pagination collection agar tetap kompatibel dengan blade yang ada
+        $transformed = $paginated->through(fn ($rental) => $this->formatRentalToArray($rental));
 
         return view('livewire.kasir.pickup', [
-            'filteredOrders' => $filteredOrders,
+            'filteredOrders' => $transformed,
+            'totalCount' => $totalCount,
         ]);
     }
 }
