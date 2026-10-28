@@ -163,7 +163,7 @@
                                    class="py-2.5 px-3 rounded-xl text-xs font-bold text-center text-darkbrown-800 bg-wheat-100 hover:bg-wheat-200 transition">
                                     Lihat Detail
                                 </a>
-                                <a href="{{ route('customer.packages.checkout', $package) }}"
+                                <a href="{{ route('checkout.index', $package) }}"
                                    class="btn-tendaku-primary py-2.5 px-3 rounded-xl text-xs font-bold text-center shadow-md hover:shadow-lg transition-all">
                                     Sewa Paket
                                 </a>
