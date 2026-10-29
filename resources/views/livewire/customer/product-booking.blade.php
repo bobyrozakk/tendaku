@@ -369,23 +369,22 @@
             </button>
         </form>
 
-        {{-- Tombol Lanjut ke Checkout (Hanya jika ada item di keranjang dari produk ini) --}}
-        @php
-            $navCart = app(\App\Services\Booking\CartService::class)->get(auth()->user());
-            $cartHasThisProduct = is_array($navCart) && !empty($navCart['master_item_id']) && $navCart['master_item_id'] === $this->product->id;
-        @endphp
-        @if($cartHasThisProduct)
-            <div class="mt-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200 flex flex-col gap-2" wire:poll.5s>
+        {{-- Tombol Lanjut ke Checkout (muncul jika produk ini sudah ada di keranjang) --}}
+        @if($inCart)
+            <div class="mt-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200 flex flex-col gap-2">
                 <p class="text-xs font-semibold text-avocado-900 flex items-center gap-1.5">
                     <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
                     Produk ini sudah ada di keranjangmu!
                 </p>
-                <a href="{{ route('checkout.index') }}"
-                   class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-all"
+                <button
+                    type="button"
+                    wire:click="proceedToBooking"
+                    wire:loading.attr="disabled"
+                    class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-all"
                 >
                     <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
                     <span>Lanjut ke Checkout</span>
-                </a>
+                </button>
             </div>
         @endif
 

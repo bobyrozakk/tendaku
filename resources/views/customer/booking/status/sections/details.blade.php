@@ -49,12 +49,12 @@
                         <div class="space-y-2 text-sm text-darkbrown-600">
                             <div class="flex justify-between"><span>Subtotal sewa</span><span class="font-bold text-darkbrown-800">{{ $rupiah($rental->subtotal) }}</span></div>
                             @php
-                                $adminFee = max(0, (int) round($rental->subtotal * 0.05));
+                                $adminFee = (int) $rental->adminFee();
                             @endphp
                             @if($adminFee > 0)
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <span>Biaya layanan & admin (5%)</span>
+                                        <span>Biaya layanan & admin</span>
                                         <span class="block text-[11px] text-darkbrown-400">Pemeliharaan platform & jaminan transaksi</span>
                                     </div>
                                     <span class="font-bold text-darkbrown-800">{{ $rupiah($adminFee) }}</span>

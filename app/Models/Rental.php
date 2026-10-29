@@ -158,4 +158,19 @@ class Rental extends Model
     {
         return app(\App\Services\Booking\RentalService::class)->expire($this);
     }
+
+    /**
+     * Biaya admin yang dibayar customer, diturunkan dari angka yang tersimpan
+     * (grand_total - subtotal - ongkir + diskon) agar tetap benar untuk
+     * booking lama yang dibuat dengan tarif berbeda.
+     */
+    public function adminFee(): float
+    {
+        return max(0.0, round(
+            (float) $this->grand_total
+            - (float) $this->subtotal
+            - (float) $this->delivery_fee
+            + (float) $this->discount_amount
+        ));
+    }
 }

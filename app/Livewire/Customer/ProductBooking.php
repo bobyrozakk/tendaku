@@ -35,6 +35,9 @@ class ProductBooking extends Component
     /** Kuantitas unit yang disewa (default: 1) */
     public int $quantity = 1;
 
+    /** True jika produk ini sudah ada di keranjang */
+    public bool $inCart = false;
+
     /**
      * Inisialisasi properti saat komponen dimuat.
      */
@@ -50,6 +53,12 @@ class ProductBooking extends Component
 
         // Sinkronisasi batas pengembalian (24 jam per hari durasi)
         $this->syncReturnFromDuration();
+
+        // Cek apakah produk ini sudah ada di keranjang (bandingkan sebagai integer)
+        $cart = app(CartService::class)->get(Auth::user());
+        $this->inCart = is_array($cart)
+            && ! empty($cart['master_item_id'])
+            && (int) $cart['master_item_id'] === (int) $this->product->id;
     }
 
     /**
@@ -354,6 +363,7 @@ class ProductBooking extends Component
         ];
 
         $cartService->set($cartData, Auth::user());
+        $this->inCart = true;
 
         // Emit toast sukses dan update badge keranjang
         $this->dispatch('notify', [
@@ -377,8 +387,8 @@ class ProductBooking extends Component
     {
         $this->addToCart();
 
-        if ($this->getErrorBag()->isEmpty()) {
-            return redirect()->route('checkout.index');
+        if ($this->getErrorBag()->isEmpty() && $this->inCart) {
+            $this->redirectRoute('checkout.index');
         }
 
         return null;

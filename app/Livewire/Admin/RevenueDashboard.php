@@ -80,7 +80,8 @@ class RevenueDashboard extends Component
             'exportUrl' => $this->exportUrl(),
             'paymentTypeLabels' => [
                 'dp' => 'DP',
-                'settlement' => 'Pelunasan',
+                'full' => 'Bayar Penuh',
+                'remaining' => 'Pelunasan',
                 'fine' => 'Denda',
                 'deposit' => 'Deposit',
                 'deposit_refund' => 'Refund Deposit',

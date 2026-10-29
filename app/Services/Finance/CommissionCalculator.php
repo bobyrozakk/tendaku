@@ -7,11 +7,13 @@ use InvalidArgumentException;
 class CommissionCalculator
 {
     /**
-     * Tipe pembayaran yang dikenai komisi platform.
+     * Tipe pembayaran yang memicu komisi platform. Komisi dihitung dari total
+     * sewa dan dicatat sekali per rental, pada pembayaran pertama (dp atau
+     * full). Pelunasan (remaining) dan denda tidak dikenai komisi lagi.
      *
      * @var list<string>
      */
-    public const COMMISSIONABLE_PAYMENT_TYPES = ['dp', 'settlement'];
+    public const COMMISSIONABLE_PAYMENT_TYPES = ['dp', 'full'];
 
     public function __construct(
         private readonly float $defaultRate,
@@ -30,8 +32,8 @@ class CommissionCalculator
     public static function fromConfig(): self
     {
         return new self(
-            defaultRate: (float) config('monetization.commission.rate'),
-            minimumCommission: (int) config('monetization.commission.minimum'),
+            defaultRate: (float) config('booking.admin_fee_rate'),
+            minimumCommission: (int) config('booking.admin_fee_minimum'),
             qrisMdrThreshold: (int) config('monetization.qris.mdr_threshold'),
             qrisMdrRateBelowThreshold: (float) config('monetization.qris.mdr_rate_below_threshold'),
             qrisMdrRateAboveThreshold: (float) config('monetization.qris.mdr_rate_above_threshold'),

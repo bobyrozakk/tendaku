@@ -188,7 +188,7 @@ class RentalService
                 : $subtotal;
             $deliveryFee = (float) ($data['delivery_fee'] ?? 0.0);
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
-            $adminFee = (float) round($subtotal * (float) config('booking.admin_fee_rate'));
+            $adminFee = (float) app(\App\Services\Finance\CommissionCalculator::class)->commissionFor($subtotal);
             $grandTotal = max(0.0, $subtotal + $deliveryFee + $adminFee - $discountAmount);
 
             if (isset($data['expires_at'])) {

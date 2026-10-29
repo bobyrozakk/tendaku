@@ -36,7 +36,7 @@ class MidtransPaymentController extends Controller
 
         $payment = $rental->payments()
             ->where('status', 'pending')
-            ->whereIn('payment_type', ['full', 'dp', 'settlement'])
+            ->whereIn('payment_type', ['full', 'dp'])
             ->where(function ($q) {
                 $q->where('channel', 'midtrans')
                     ->orWhere('payment_method', 'midtrans_snap');

@@ -44,7 +44,7 @@ class CheckoutSummaryBuilder
         $pickupMethod = $this->resolvePickupMethod($isLoggedIn, $requestedMethod);
         $quantity = $this->quantityOf($cart);
         $pickupTime = $vendor->pickup_time ?: config('booking.default_pickup_time');
-        $returnTime = $vendor->return_time ?: config('booking.default_return_time');
+        $returnTime = $pickupTime;
 
         $rentalDays = app(RentalService::class)->calculateRentalDays(
             Carbon::parse($cart['pickup_date'])->toDateString(),
@@ -58,7 +58,7 @@ class CheckoutSummaryBuilder
         $discount = 0;
 
         $itemSubtotal = $dailyRate * $quantity * $rentalDays;
-        $adminFee = (int) round($itemSubtotal * 0.05);
+        $adminFee = app(\App\Services\Finance\CommissionCalculator::class)->commissionFor((float) $itemSubtotal);
         $totalDeposit = 0;
         $deliveryFee = $this->deliveryFee($vendor, $pickupMethod, $isLoggedIn);
         $grandTotal = $itemSubtotal + $adminFee + $deliveryFee - $discount;

@@ -37,7 +37,7 @@ class SettlementService
             ->where('status', 'paid')
             ->whereNull('settlement_id')
             ->whereBetween('paid_at', [$periodStart, $periodEnd])
-            ->whereIn('payment_type', ['dp', 'settlement', 'fine'])
+            ->whereIn('payment_type', ['dp', 'full', 'remaining', 'fine'])
             ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
             ->where(function ($query): void {
                 $query->where(function ($cash): void {

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Customer;
 
 use App\Services\PhoneNumberNormalizer;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -33,7 +34,8 @@ class StoreCheckoutRequest extends FormRequest
             'payment_option' => ['nullable', 'string', 'in:full,dp'],
             'payment_channel' => ['nullable', 'string', 'max:50'],
             'pickup_date' => ['nullable', 'date', 'after_or_equal:today'],
-            'return_date' => ['nullable', 'date', 'after_or_equal:pickup_date'],
+            'pickup_time' => ['nullable', 'date_format:H:i'],
+            'return_date' => ['nullable', 'date', 'after:pickup_date'],
             'items' => ['nullable', 'array'],
             'items.*.id' => ['nullable'],
             'items.*.qty' => ['nullable', 'integer', 'min:1'],
@@ -58,6 +60,17 @@ class StoreCheckoutRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
+            $date = $this->input('pickup_date');
+            $time = $this->input('pickup_time');
+
+            if (
+                is_string($date) && is_string($time)
+                && ! $validator->errors()->hasAny(['pickup_date', 'pickup_time'])
+                && Carbon::parse("{$date} {$time}")->isPast()
+            ) {
+                $validator->errors()->add('pickup_time', 'Jam ambil tidak boleh di masa lalu.');
+            }
+
             if ($this->user() !== null) {
                 return;
             }

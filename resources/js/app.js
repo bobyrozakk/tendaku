@@ -1,7 +1,9 @@
 import { createIcons, icons } from "lucide";
 import "./pages/customer/booking-status.js";
+import "./pages/customer/booking-create.js";
 import "../css/pages/customer/booking-status.css";
 import "../css/pages/customer/booking-receipt.css";
+import "../css/pages/customer/booking-create.css";
 
 let renderTimeout = null;
 

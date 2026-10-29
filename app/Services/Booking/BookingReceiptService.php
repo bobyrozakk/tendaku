@@ -87,12 +87,7 @@ class BookingReceiptService
         $deliveryFee = (float) $rental->delivery_fee;
         $discount = (float) $rental->discount_amount;
 
-        /*
-         * TODO:
-         * Samakan dengan perhitungan biaya checkout.
-         * Jangan menghitung ulang jika admin fee sudah tersimpan.
-         */
-        $adminFee = (float) round($subtotal * 0.05);
+        $adminFee = $rental->adminFee();
 
         $grandTotal = (float) (
             $rental->final_total ?: $rental->grand_total

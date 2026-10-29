@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Enums\PaymentStatus;
 use App\Models\Payment;
+use App\Models\PlatformCommission;
+use App\Services\Finance\CommissionService;
 use App\Services\Payment\MidtransService;
 use Illuminate\Console\Command;
 use Throwable;
@@ -25,7 +27,7 @@ class ReconcilePaidPayments extends Command
      */
     protected $description = 'Lengkapi escrow dan komisi untuk pembayaran Midtrans yang sudah lunas';
 
-    public function handle(MidtransService $midtrans): int
+    public function handle(MidtransService $midtrans, CommissionService $commissions): int
     {
         $payments = Payment::withoutGlobalScopes()
             ->where('status', PaymentStatus::Paid->value)
@@ -49,8 +51,42 @@ class ReconcilePaidPayments extends Command
             }
         }
 
-        $this->info("Rekonsiliasi selesai: {$done} pembayaran diproses.");
+        $backfilled = $this->backfillCommissions($commissions);
+
+        $this->info("Rekonsiliasi selesai: {$done} pembayaran diproses, {$backfilled} komisi dilengkapi.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Lengkapi komisi untuk rental yang pembayaran pertamanya (dp/full)
+     * sudah lunas tetapi belum punya komisi aktif.
+     */
+    private function backfillCommissions(CommissionService $commissions): int
+    {
+        $payments = Payment::withoutGlobalScopes()
+            ->where('status', PaymentStatus::Paid->value)
+            ->whereIn('payment_type', ['dp', 'full'])
+            ->whereNotIn('rental_id', PlatformCommission::withoutGlobalScope('vendor')
+                ->where('status', '!=', 'void')
+                ->select('rental_id'))
+            ->orderBy('paid_at')
+            ->orderBy('id')
+            ->get();
+
+        $count = 0;
+
+        foreach ($payments as $payment) {
+            try {
+                if ($commissions->accrueForPayment($payment) !== null) {
+                    $count++;
+                }
+            } catch (Throwable $e) {
+                report($e);
+                $this->error("Gagal membuat komisi payment #{$payment->id}: {$e->getMessage()}");
+            }
+        }
+
+        return $count;
     }
 }

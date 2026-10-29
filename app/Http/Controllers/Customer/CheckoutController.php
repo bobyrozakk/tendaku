@@ -56,7 +56,7 @@ class CheckoutController extends Controller
         $defaultAddress = $user ? $user->defaultAddress() : null;
 
         return view(
-            'customer.checkout.index',
+            'customer.booking.create',
             compact('booking', 'isLoggedIn', 'addresses', 'defaultAddress')
         );
     }
@@ -206,12 +206,16 @@ class CheckoutController extends Controller
         } else {
             $qty = $this->summary->quantityOf($cart);
         }
+        // Jam ambil dipilih customer; jam kembali selalu sama dengan jam ambil.
+        $pickupTime = $request->validated('pickup_time')
+            ?: ($masterItem->vendor->pickup_time ?: config('booking.default_pickup_time'));
+
         $data = [
             'vendor_id' => $masterItem->vendor_id,
             'pickup_date' => $pickupDate,
-            'pickup_time' => $masterItem->vendor->pickup_time ?: config('booking.default_pickup_time'),
+            'pickup_time' => $pickupTime,
             'return_date' => $returnDate,
-            'return_time' => $masterItem->vendor->return_time ?: config('booking.default_return_time'),
+            'return_time' => $pickupTime,
             'expires_in_minutes' => (int) config('booking.payment_expiry_minutes'),
             'pickup_method' => $pickupMethod,
             'delivery_fee' => $this->summary->deliveryFee(
