@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\EnsureVendorOwner;
+use App\Http\Middleware\SetActiveVendor;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +16,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->trustProxies(
+            at: '*',
+            headers: Request::HEADER_X_FORWARDED_PROTO,
+        );
+        $middleware->validateCsrfTokens(except: ['webhook/midtrans']);
+        $middleware->alias([
+            'role' => EnsureUserHasRole::class,
+            'vendor.owner' => EnsureVendorOwner::class,
+            'vendor.active' => SetActiveVendor::class,
+            'super_admin' => EnsureSuperAdmin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

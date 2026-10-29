@@ -29,15 +29,15 @@
 
             <!-- Quick Action Buttons -->
             <div class="flex flex-wrap items-center gap-4 pt-2">
-                <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-accent !py-3.5 !px-6 text-sm font-bold shadow-tendaku-glow">
-                    <span>⛺ Jelajahi Katalog Peralatan</span>
-                    <svg class="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-                    </svg>
+                <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-accent !py-3.5 !px-6 text-sm font-bold shadow-tendaku-glow inline-flex items-center gap-2">
+                    <i data-lucide="tent" class="w-4 h-4"></i>
+                    <span>Jelajahi Katalog Peralatan</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4 ml-1"></i>
                 </a>
 
-                <a href="#jaminan-ktp" class="btn-tendaku-outline !text-wheat-200 !border-wheat-400/30 hover:!bg-white/10 !py-3.5 !px-6 text-sm font-semibold">
-                    🪪 Pelajari Jaminan KTP
+                <a href="#jaminan-ktp" class="btn-tendaku-outline !text-wheat-200 !border-wheat-400/30 hover:!bg-white/10 !py-3.5 !px-6 text-sm font-semibold inline-flex items-center gap-2">
+                    <i data-lucide="credit-card" class="w-4 h-4"></i>
+                    <span>Pelajari Jaminan KTP</span>
                 </a>
             </div>
 
@@ -72,7 +72,7 @@
             <!-- Kiri: Penjelasan -->
             <div class="space-y-4 max-w-2xl">
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-avocado-100 border border-avocado-300 text-xs font-extrabold text-avocado-900 uppercase tracking-wider">
-                    <span>🪪</span>
+                    <i data-lucide="credit-card" class="w-3.5 h-3.5 text-avocado-700"></i>
                     <span>Sistem Jaminan Tendaku</span>
                 </div>
                 <h2 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight leading-tight">
@@ -84,21 +84,27 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                     <div class="flex items-start gap-3 p-3 bg-white rounded-xl border border-wheat-200 shadow-sm">
-                        <div class="w-10 h-10 rounded-lg bg-sunglow-100 text-sunglow-600 flex items-center justify-center text-lg shrink-0">📋</div>
+                        <div class="w-10 h-10 rounded-lg bg-sunglow-100 text-goldenrod-700 flex items-center justify-center shrink-0">
+                            <i data-lucide="clipboard-check" class="w-5 h-5"></i>
+                        </div>
                         <div>
                             <h4 class="text-xs font-bold text-darkbrown-900">1. Booking Online</h4>
                             <p class="text-[11px] text-darkbrown-600 mt-0.5">Pilih alat & tanggal sewa, bayar lunas via transfer/QRIS.</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3 p-3 bg-white rounded-xl border border-wheat-200 shadow-sm">
-                        <div class="w-10 h-10 rounded-lg bg-avocado-100 text-avocado-600 flex items-center justify-center text-lg shrink-0">🪪</div>
+                        <div class="w-10 h-10 rounded-lg bg-avocado-100 text-avocado-700 flex items-center justify-center shrink-0">
+                            <i data-lucide="credit-card" class="w-5 h-5"></i>
+                        </div>
                         <div>
                             <h4 class="text-xs font-bold text-darkbrown-900">2. Serah Terima KTP</h4>
                             <p class="text-[11px] text-darkbrown-600 mt-0.5">Tunjukkan KTP asli saat ambil unit di toko vendor.</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3 p-3 bg-white rounded-xl border border-wheat-200 shadow-sm">
-                        <div class="w-10 h-10 rounded-lg bg-goldenrod-100 text-goldenrod-600 flex items-center justify-center text-lg shrink-0">✅</div>
+                        <div class="w-10 h-10 rounded-lg bg-goldenrod-100 text-goldenrod-700 flex items-center justify-center shrink-0">
+                            <i data-lucide="check-circle" class="w-5 h-5"></i>
+                        </div>
                         <div>
                             <h4 class="text-xs font-bold text-darkbrown-900">3. Kembalikan & Selesai</h4>
                             <p class="text-[11px] text-darkbrown-600 mt-0.5">Return unit, cek kondisi, KTP dikembalikan.</p>
@@ -110,7 +116,7 @@
             <!-- Kanan: Badge Visual -->
             <div class="shrink-0 flex flex-col items-center gap-3">
                 <div class="w-28 h-28 rounded-2xl bg-white border-2 border-avocado-300 shadow-tendaku-avocado-glow flex flex-col items-center justify-center text-center p-3">
-                    <span class="text-3xl">🛡️</span>
+                    <i data-lucide="shield-check" class="w-10 h-10 text-avocado-600"></i>
                     <span class="text-[10px] font-extrabold uppercase text-avocado-800 mt-1 leading-tight">Deposit<br/>Rp 0</span>
                 </div>
                 <span class="text-[11px] font-bold text-avocado-800 text-center">Aman & Terpercaya</span>
@@ -134,20 +140,20 @@
 
         @php
             $landingCategories = [
-                ['icon' => '⛺', 'name' => 'Tenda & Flysheet', 'id' => 1],
-                ['icon' => '🛏️', 'name' => 'Sleeping Bag', 'id' => 2],
-                ['icon' => '🍳', 'name' => 'Masak & Nesting', 'id' => 3],
-                ['icon' => '🎒', 'name' => 'Carrier & Ransel', 'id' => 4],
-                ['icon' => '💡', 'name' => 'Lampu & Headlamp', 'id' => 5],
-                ['icon' => '🪑', 'name' => 'Meja & Kursi Lipat', 'id' => 6],
+                ['icon' => 'tent', 'name' => 'Tenda & Flysheet', 'id' => 1],
+                ['icon' => 'moon', 'name' => 'Sleeping Bag', 'id' => 2],
+                ['icon' => 'flame', 'name' => 'Masak & Nesting', 'id' => 3],
+                ['icon' => 'backpack', 'name' => 'Carrier & Ransel', 'id' => 4],
+                ['icon' => 'flashlight', 'name' => 'Lampu & Headlamp', 'id' => 5],
+                ['icon' => 'armchair', 'name' => 'Meja & Kursi Lipat', 'id' => 6],
             ];
         @endphp
 
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             @foreach($landingCategories as $cat)
                 <a href="{{ route('customer.catalog.index', ['category_id' => $cat['id']]) }}" class="p-4 rounded-2xl bg-white border border-wheat-200 hover:border-avocado-400 hover:bg-avocado-50/40 shadow-tendaku-sm transition text-center group">
-                    <div class="w-12 h-12 rounded-xl bg-wheat-100 group-hover:bg-avocado-500 group-hover:text-white text-avocado-700 flex items-center justify-center mx-auto mb-2 transition text-xl">
-                        {{ $cat['icon'] }}
+                    <div class="w-12 h-12 rounded-xl bg-wheat-100 group-hover:bg-avocado-500 group-hover:text-white text-avocado-700 flex items-center justify-center mx-auto mb-2 transition">
+                        <i data-lucide="{{ $cat['icon'] }}" class="w-6 h-6"></i>
                     </div>
                     <span class="text-xs font-bold text-darkbrown-800 group-hover:text-avocado-700">{{ $cat['name'] }}</span>
                 </a>
@@ -250,22 +256,30 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="card-tendaku p-6 text-center space-y-3 hover:shadow-tendaku-glow transition-all duration-200">
-                <div class="w-14 h-14 rounded-2xl bg-avocado-100 text-avocado-700 flex items-center justify-center mx-auto text-2xl">✨</div>
+                <div class="w-14 h-14 rounded-2xl bg-avocado-100 text-avocado-700 flex items-center justify-center mx-auto">
+                    <i data-lucide="sparkles" class="w-7 h-7"></i>
+                </div>
                 <h4 class="font-bold text-sm text-darkbrown-900">Steril & Higienis</h4>
                 <p class="text-xs text-darkbrown-600 leading-relaxed">Setiap unit dicuci, disinfeksi, dan dikemas profesional pasca penyewaan.</p>
             </div>
             <div class="card-tendaku p-6 text-center space-y-3 hover:shadow-tendaku-glow transition-all duration-200">
-                <div class="w-14 h-14 rounded-2xl bg-sunglow-100 text-sunglow-700 flex items-center justify-center mx-auto text-2xl">🪪</div>
+                <div class="w-14 h-14 rounded-2xl bg-sunglow-100 text-goldenrod-700 flex items-center justify-center mx-auto">
+                    <i data-lucide="credit-card" class="w-7 h-7"></i>
+                </div>
                 <h4 class="font-bold text-sm text-darkbrown-900">Jaminan KTP Saja</h4>
                 <p class="text-xs text-darkbrown-600 leading-relaxed">Tidak perlu deposit uang. KTP asli sebagai jaminan saat pengambilan unit.</p>
             </div>
             <div class="card-tendaku p-6 text-center space-y-3 hover:shadow-tendaku-glow transition-all duration-200">
-                <div class="w-14 h-14 rounded-2xl bg-goldenrod-100 text-goldenrod-700 flex items-center justify-center mx-auto text-2xl">🌤️</div>
+                <div class="w-14 h-14 rounded-2xl bg-goldenrod-100 text-goldenrod-700 flex items-center justify-center mx-auto">
+                    <i data-lucide="cloud-sun" class="w-7 h-7"></i>
+                </div>
                 <h4 class="font-bold text-sm text-darkbrown-900">Prediksi Cuaca</h4>
                 <p class="text-xs text-darkbrown-600 leading-relaxed">Cek prakiraan cuaca di halaman detail produk sebelum menentukan tanggal camping.</p>
             </div>
             <div class="card-tendaku p-6 text-center space-y-3 hover:shadow-tendaku-glow transition-all duration-200">
-                <div class="w-14 h-14 rounded-2xl bg-wheat-200 text-darkbrown-700 flex items-center justify-center mx-auto text-2xl">⚡</div>
+                <div class="w-14 h-14 rounded-2xl bg-wheat-200 text-darkbrown-700 flex items-center justify-center mx-auto">
+                    <i data-lucide="zap" class="w-7 h-7"></i>
+                </div>
                 <h4 class="font-bold text-sm text-darkbrown-900">Booking Instan</h4>
                 <p class="text-xs text-darkbrown-600 leading-relaxed">Pilih alat, tentukan tanggal, bayar online, dan ambil unit di vendor terdekat.</p>
             </div>
@@ -287,7 +301,7 @@
         </div>
 
         <div class="shrink-0 flex items-center gap-3">
-            <a href="{{ route('dashboard') }}" class="btn-tendaku-dark !py-3 !px-5 text-sm font-bold shadow-tendaku">
+            <a href="{{ route('vendor.dashboard') }}" class="btn-tendaku-dark !py-3 !px-5 text-sm font-bold shadow-tendaku">
                 Masuk Portal Vendor & POS →
             </a>
         </div>

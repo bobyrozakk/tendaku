@@ -36,32 +36,36 @@
         background-color: #FBCE6B;
         color: #2B2202;
     }
+
+    [x-cloak] {
+        display: none !important;
+    }
 }
 
 @layer components {
     /* Tendaku Custom Buttons */
     .btn-tendaku-primary {
-        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-avocado-500 hover:bg-avocado-600 active:bg-avocado-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-avocado-500 hover:bg-avocado-600 active:bg-avocado-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
     }
 
     .btn-tendaku-accent {
-        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-darkbrown-800 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-500 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-darkbrown-800 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-500 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2;
     }
 
     .btn-tendaku-gold {
-        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-goldenrod-500 hover:bg-goldenrod-600 active:bg-goldenrod-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-goldenrod-500 hover:bg-goldenrod-600 active:bg-goldenrod-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2;
     }
 
     .btn-tendaku-secondary {
-        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-medium text-sm text-darkbrown-800 bg-wheat-100 hover:bg-wheat-200 border border-wheat-300/80 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-wheat-400 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-darkbrown-800 bg-wheat-100 hover:bg-wheat-200 border border-wheat-300/80 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-wheat-400 focus:ring-offset-2;
     }
 
     .btn-tendaku-dark {
-        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-wheat-200 bg-darkbrown-800 hover:bg-darkbrown-900 active:bg-darkbrown-950 shadow-sm transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-darkbrown-800 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-wheat-200 bg-darkbrown-800 hover:bg-darkbrown-900 active:bg-darkbrown-950 shadow-sm transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-darkbrown-800 focus:ring-offset-2;
     }
 
     .btn-tendaku-outline {
-        @apply inline-flex items-center justify-center px-4 py-2.5 rounded-xl font-semibold text-sm text-avocado-600 border border-avocado-500/40 hover:bg-avocado-50 active:bg-avocado-100 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-avocado-600 border border-avocado-500/40 hover:bg-avocado-50 active:bg-avocado-100 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
     }
 
     /* Tendaku Cards */
@@ -119,6 +123,16 @@
 
 .bg-gradient-gold {
     background: linear-gradient(135deg, #FBCE6B 0%, #D5A007 100%);
+}
+
+/* Sembunyikan scrollbar horizontal pada area chart/filter */
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
 }
 
 /* Camping Pattern Subtle Texture */

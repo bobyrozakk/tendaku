@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Jobs;
+
+use App\Models\Payment;
+use App\Models\Rental;
+use Carbon\Carbon;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Job auto-cancel tagihan expired.
+ * Rental pending yang expires_at < now → expired.
+ * Payments pending terkait → expired (§4.2, §5.1).
+ * Idempoten: tidak menyentuh status non-pending.
+ *
+ * @see docs/TENDAKU_payment_spec.md §4.2, §5.2
+ */
+class ExpirePendingRentals implements ShouldQueue
+{
+    use Queueable;
+
+    /**
+     * Execute the job.
+     * Ubah status rental pending yang expires_at < now menjadi 'expired'.
+     * Sekaligus expire payments pending yang terkait dengan rental tersebut.
+     */
+    public function handle(): int
+    {
+        $now = Carbon::now();
+
+        $affectedRows = DB::transaction(function () use ($now) {
+            $expiredRentals = Rental::query()
+                ->where('status', 'pending')
+                ->whereNotNull('expires_at')
+                ->where('expires_at', '<', $now)
+                ->whereDoesntHave('payments', function ($query) {
+                    $query->where('status', 'paid');
+                })
+                ->lockForUpdate()
+                ->get();
+
+            if ($expiredRentals->isEmpty()) {
+                return 0;
+            }
+
+            $rentalIds = $expiredRentals->pluck('id')->all();
+
+            Rental::query()
+                ->whereIn('id', $rentalIds)
+                ->update([
+                    'status' => 'expired',
+                    'updated_at' => $now,
+                ]);
+
+            Payment::query()
+                ->whereIn('rental_id', $rentalIds)
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'failed',
+                    'updated_at' => $now,
+                ]);
+
+            return count($rentalIds);
+        });
+
+        if ($affectedRows > 0) {
+            Log::info("ExpirePendingRentals: {$affectedRows} rental pending berhasil diubah statusnya menjadi 'expired'.");
+        }
+
+        return $affectedRows;
+    }
+}

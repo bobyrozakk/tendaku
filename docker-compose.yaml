@@ -26,38 +26,15 @@ services:
         depends_on:
             - app
 
-    # open comment if use mysql
-    db:
-        image: mysql:8.0
-        container_name: tendaku_db
+    mailpit:
+        image: "axllent/mailpit:latest"
+        container_name: tendaku_mailpit
         restart: unless-stopped
-        environment:
-            MYSQL_DATABASE: ${DB_DATABASE:-laravel}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
-            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-            MYSQL_USER: ${DB_USERNAME:-laravel}
         ports:
-            - "33060:3306"
-        volumes:
-            - db-data:/var/lib/mysql
+            - "1025:1025"
+            - "8025:8025"
         networks:
             - tendaku-network
-
-    # postgre
-    # postgres_db:
-    #     image: postgres:15
-    #     container_name: tendaku_postgres
-    #     restart: unless-stopped
-    #     environment:
-    #         POSTGRES_DB: ${DB_DATABASE:-laravel}
-    #         POSTGRES_USER: ${DB_USERNAME:-postgres}
-    #         POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
-    #     ports:
-    #         - "54320:5432"
-    #     volumes:
-    #         - db-data:/var/lib/postgresql/data
-    #     networks:
-    #         - tendaku-network
 
 networks:
     tendaku-network:

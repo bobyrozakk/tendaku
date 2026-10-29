@@ -29,24 +29,8 @@
         </header>
     @endif
 
-    <!-- Global Flash Notification Messages -->
-    <div class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-        @if (session()->has('success'))
-            <x-alert type="success" :title="'Berhasil!'">
-                {{ session('success') }}
-            </x-alert>
-        @endif
-        @if (session()->has('error'))
-            <x-alert type="danger" :title="'Perhatian'">
-                {{ session('error') }}
-            </x-alert>
-        @endif
-        @if (session()->has('warning'))
-            <x-alert type="warning" :title="'Info Penting'">
-                {{ session('warning') }}
-            </x-alert>
-        @endif
-    </div>
+    <!-- Global Toast Notification -->
+    <x-toast />
 
     <!-- Main Content Slot -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
@@ -71,10 +55,12 @@
                     </p>
                     <div class="flex items-center gap-2 pt-2">
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-avocado-500/20 text-avocado-300 border border-avocado-500/30">
-                            ✓ Peralatan Higienis & Terverifikasi
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-avocado-400"></i>
+                            <span>Peralatan Higienis & Terverifikasi</span>
                         </span>
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-goldenrod-500/20 text-sunglow-300 border border-goldenrod-500/30">
-                            ✓ POS Kasir Toko
+                            <i data-lucide="check" class="w-3.5 h-3.5 text-sunglow-400"></i>
+                            <span>POS Kasir Toko</span>
                         </span>
                     </div>
                 </div>
@@ -85,6 +71,9 @@
                     <ul class="space-y-2.5 text-sm text-wheat-400">
                         <li><a href="{{ url('/') }}" class="hover:text-sunglow-300 transition">Beranda</a></li>
                         <li><a href="{{ url('/katalog') }}" class="hover:text-sunglow-300 transition">Katalog Tenda & Matras</a></li>
+                        @auth
+                            <li><a href="{{ route('customer.packages.index') }}" class="hover:text-sunglow-300 transition">Paket Camping</a></li>
+                        @endauth
                         <li><a href="{{ url('/design-system') }}" class="hover:text-sunglow-300 transition font-semibold text-sunglow-300">Design System Guide</a></li>
                         <li><a href="{{ route('dashboard') }}" class="hover:text-sunglow-300 transition">Portal Vendor & POS</a></li>
                     </ul>
@@ -97,7 +86,8 @@
                         Ada pertanyaan seputar penyewaan, deposit unit, atau ingin gabung jadi vendor rental?
                     </p>
                     <div class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-darkbrown-900 border border-darkbrown-700 text-xs text-sunglow-300 font-semibold">
-                        <span>💬 CS Tendaku: 0812-3456-7890</span>
+                        <i data-lucide="message-circle" class="w-4 h-4 text-sunglow-400"></i>
+                        <span>CS Tendaku: 0812-3456-7890</span>
                     </div>
                 </div>
             </div>
@@ -112,5 +102,6 @@
     </footer>
 
     @livewireScripts
+    @stack('scripts')
 </body>
 </html>

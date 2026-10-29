@@ -1,80 +1,43 @@
-<x-app-layout>
-    <x-slot name="header">
-        <div class="flex items-center justify-between">
-            <div>
-                <h2 class="font-extrabold text-2xl text-darkbrown-800 leading-tight">
-                    {{ __('Dashboard Tendaku') }}
-                </h2>
-                <p class="text-xs text-darkbrown-500 mt-0.5">Selamat datang di sistem manajemen rental perlengkapan camping</p>
-            </div>
-            <a href="{{ url('/design-system') }}" class="btn-tendaku-accent !py-2 !px-3.5 text-xs font-bold">
-                🎨 Lihat Template Desain
-            </a>
-        </div>
-    </x-slot>
-
+<x-layouts.admin :title="'Dashboard Super Admin - Tendaku'">
     <div class="space-y-6">
-        <!-- Stat Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <x-stat-card 
-                title="Total Persewaan Aktif"
-                value="14 Unit"
-                trend="+2 hari ini"
-                :trendUp="true"
-                description="Status disewa dan di lapangan"
-                color="avocado"
-            />
-            <x-stat-card 
-                title="Booking Menunggu Diambil"
-                value="6 Pesanan"
-                description="Siap diserahterimakan"
-                color="goldenrod"
-            />
-            <x-stat-card 
-                title="Stok Unit Siap Sewa"
-                value="78 Unit"
-                description="Kondisi bersih & kering"
-                color="sunglow"
-            />
-            <x-stat-card 
-                title="Jatuh Tempo Pengembalian"
-                value="3 Transaksi"
-                trend="Perlu cek kondisi"
-                :trendUp="false"
-                description="Hari ini sebelum 18:00 WIB"
-                color="dark"
-            />
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="mb-2 flex flex-wrap items-center gap-2">
+                    <x-badge variant="dark" :dot="true">Super Administrator</x-badge>
+                    <span class="text-xs font-medium text-darkbrown-400">Akses penuh seluruh tenant Tendaku</span>
+                </div>
+
+                <h1 class="text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
+                    Dashboard Super Admin
+                </h1>
+                <p class="mt-1 max-w-2xl text-sm text-darkbrown-500">
+                    Pantau performa GMV, tren transaksi, dan kelola persetujuan vendor dari satu halaman.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.pendapatan') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
+                    Laporan Pendapatan
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                </a>
+                <a href="{{ route('admin.settlements') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
+                    Settlement Vendor
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </a>
+                <a href="#kelola-vendor" class="btn-tendaku-primary !px-3.5 !py-2 text-xs">
+                    Kelola Vendor
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                </a>
+            </div>
         </div>
 
-        <!-- Action Quick Links -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <x-card title="Portal Vendor & POS Kasir" subtitle="Kelola transaksi langsung di toko dan serah terima unit">
-                <p class="text-xs text-darkbrown-600 mb-4">
-                    Catat persewaan offline baru, cetak invoice nota, dan periksa kondisi tenda saat dikembalikan oleh pelanggan.
-                </p>
-                <div class="flex items-center gap-2">
-                    <x-primary-button variant="avocado" size="sm">
-                        Buka POS Kasir
-                    </x-primary-button>
-                    <x-secondary-button size="sm">
-                        Kelola Inventori Alat
-                    </x-secondary-button>
-                </div>
-            </x-card>
-
-            <x-card title="Katalog & Pemesanan Pelanggan" subtitle="Tampilan publik untuk calon penyewa alat camping">
-                <p class="text-xs text-darkbrown-600 mb-4">
-                    Pratinjau tampilan katalog alat camping, pemilihan tanggal sewa, serta alur checkout dan pembayaran online.
-                </p>
-                <div class="flex items-center gap-2">
-                    <a href="{{ url('/') }}" class="btn-tendaku-primary !py-1.5 !px-3 text-xs">
-                        Lihat Beranda Pelanggan
-                    </a>
-                    <a href="{{ url('/design-system') }}" class="btn-tendaku-secondary !py-1.5 !px-3 text-xs font-bold">
-                        Panduan Template Desain
-                    </a>
-                </div>
-            </x-card>
-        </div>
+        <livewire:admin.gmv-dashboard />
+        <livewire:admin.vendor-manager />
     </div>
-</x-app-layout>
+</x-layouts.admin>

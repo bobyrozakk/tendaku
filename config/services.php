@@ -35,4 +35,33 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env(
+            'GOOGLE_REDIRECT_URI',
+            rtrim((string) env('APP_URL', 'http://localhost'), '/').'/auth/google/callback'
+        ),
+    ],
+
+    'midtrans' => [
+        // Notes: This currently represents one platform Midtrans account.
+        // Resolve credentials per payment.vendor_id here if the vendor owns its own account.
+        'server_key' => env('MIDTRANS_SERVER_KEY'),
+        'client_key' => env('MIDTRANS_CLIENT_KEY'),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+        'is_sanitized' => true,
+        'is_3ds' => true,
+    ],
+
+    'fonnte' => [
+        // Token API Fonnte (WhatsApp API). Ambil dari dashboard Fonnte.
+        // Paket gratis Fonnte: text-only, kuota per device, tanpa batas waktu.
+        'token' => env('FONNTE_TOKEN'),
+        'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
+        'timeout' => (int) env('FONNTE_TIMEOUT', 10),
+        'retry_times' => (int) env('FONNTE_RETRY_TIMES', 2),
+        'retry_sleep_ms' => (int) env('FONNTE_RETRY_SLEEP_MS', 300),
+    ],
+
 ];
