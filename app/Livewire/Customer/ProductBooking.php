@@ -294,12 +294,6 @@ class ProductBooking extends Component
      */
     public function addToCart(): ?string
     {
-        if (Auth::guest()) {
-            $this->redirectRoute('login');
-
-            return null;
-        }
-
         $this->validate();
 
         if (! $this->validateReturnDateTime()) {
@@ -381,10 +375,6 @@ class ProductBooking extends Component
      */
     public function proceedToBooking(): mixed
     {
-        if (Auth::guest()) {
-            return redirect()->route('login');
-        }
-
         $this->addToCart();
 
         if ($this->getErrorBag()->isEmpty()) {

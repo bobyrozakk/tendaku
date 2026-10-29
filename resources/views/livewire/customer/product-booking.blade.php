@@ -55,7 +55,6 @@
             </div>
         </div>
 
-        @auth
         {{-- FORM BOOKING --}}
         <form wire:submit="addToCart" id="booking-form" class="space-y-4">
 
@@ -389,29 +388,6 @@
                 </a>
             </div>
         @endif
-        @else
-            <div class="rounded-2xl border border-avocado-200 bg-avocado-50/70 p-5 text-center">
-                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-avocado-100 text-avocado-700">
-                    <i data-lucide="lock" class="h-6 w-6"></i>
-                </div>
-                <h3 class="mt-3 font-heading text-sm font-extrabold text-darkbrown-900">
-                    Masuk untuk menyewa alat ini
-                </h3>
-                <p class="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-darkbrown-600">
-                    Keranjang dan proses sewa hanya tersedia untuk akun Tendaku. Masuk atau daftar dulu, lalu pilih tanggal sewa.
-                </p>
-                <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-                    <a href="{{ route('login') }}"
-                       class="btn-tendaku-primary inline-flex flex-1 items-center justify-center rounded-xl px-4 py-2.5 text-center text-xs font-bold">
-                        Masuk
-                    </a>
-                    <a href="{{ route('register') }}"
-                       class="btn-tendaku-secondary inline-flex flex-1 items-center justify-center rounded-xl px-4 py-2.5 text-center text-xs font-bold">
-                        Daftar
-                    </a>
-                </div>
-            </div>
-        @endauth
 
         {{-- TRUST BADGES --}}
         <div class="pt-4 border-t border-wheat-200 space-y-2.5">

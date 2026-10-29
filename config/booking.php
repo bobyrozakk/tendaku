@@ -1,6 +1,12 @@
 <?php
 
 return [
+    // Aturan checkout (satu sumber untuk controller, service, dan summary)
+    'payment_expiry_minutes' => (int) env('BOOKING_PAYMENT_EXPIRY_MINUTES', 60),
+    'admin_fee_rate' => (float) env('BOOKING_ADMIN_FEE_RATE', 0.05),
+    'default_pickup_time' => '09:00',
+    'default_return_time' => '09:00',
+
     'statuses' => [
         'pending' => [
             'label' => 'Menunggu Pembayaran',

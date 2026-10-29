@@ -3,7 +3,7 @@
     <nav class="flex min-w-max items-center gap-2"
          aria-label="Filter status transaksi">
 
-        @foreach (config('booking_filters') as $key => $label)
+        @foreach (['all' => 'Semua Transaksi'] + collect(config('booking.statuses'))->map(fn ($s) => $s['filter'])->all() as $key => $label)
             @php
                 $filterStatus = $key === 'all' ? '' : $key;
                 $isActive = ($status ?? '') === $filterStatus;

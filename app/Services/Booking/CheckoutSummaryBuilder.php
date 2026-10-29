@@ -43,8 +43,8 @@ class CheckoutSummaryBuilder
 
         $pickupMethod = $this->resolvePickupMethod($isLoggedIn, $requestedMethod);
         $quantity = $this->quantityOf($cart);
-        $pickupTime = $vendor->pickup_time ?: config('rental.default_pickup_time', '09:00');
-        $returnTime = $vendor->return_time ?: config('rental.default_return_time', '09:00');
+        $pickupTime = $vendor->pickup_time ?: config('booking.default_pickup_time');
+        $returnTime = $vendor->return_time ?: config('booking.default_return_time');
 
         $rentalDays = app(RentalService::class)->calculateRentalDays(
             Carbon::parse($cart['pickup_date'])->toDateString(),
@@ -71,7 +71,7 @@ class CheckoutSummaryBuilder
             'status' => 'pending',
             'status_label' => 'Menunggu Pembayaran',
             'created_at' => now()->format('d F Y, H:i T'),
-            'expires_at' => now()->addHours((int) config('rental.payment_expiry_hours'))->format('d F Y, H:i T'),
+            'expires_at' => now()->addMinutes((int) config('booking.payment_expiry_minutes'))->format('d F Y, H:i T'),
             'is_guest' => ! $isLoggedIn,
             'vendor' => $this->vendorData($vendor),
             'customer' => [

@@ -2,9 +2,12 @@
 
 namespace App\Services\Booking;
 
+use App\Enums\PaymentStatus;
+use App\Enums\RentalStatus;
 use App\Exceptions\InsufficientStockException;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
+use App\Models\Payment;
 use App\Models\Rental;
 use Carbon\Carbon;
 use DateTimeInterface;
@@ -185,7 +188,7 @@ class RentalService
                 : $subtotal;
             $deliveryFee = (float) ($data['delivery_fee'] ?? 0.0);
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
-            $adminFee = (float) round($subtotal * 0.05); // Tambahkan biaya admin 5%
+            $adminFee = (float) round($subtotal * (float) config('booking.admin_fee_rate'));
             $grandTotal = max(0.0, $subtotal + $deliveryFee + $adminFee - $discountAmount);
 
             if (isset($data['expires_at'])) {
@@ -195,12 +198,9 @@ class RentalService
                     (int) $data['expires_in_minutes']
                 );
             } else {
-                $expiresInHours = (int) (
-                    $data['expires_in_hours']
-                    ?? config('rental.payment_expiry_hours')
-                );
-
-                $expiresAt = Carbon::now()->addHours($expiresInHours);
+                $expiresAt = isset($data['expires_in_hours'])
+                    ? Carbon::now()->addHours((int) $data['expires_in_hours'])
+                    : Carbon::now()->addMinutes((int) config('booking.payment_expiry_minutes'));
             }
 
             $firstMasterItemId = (int) (array_key_first($itemRequirements) ?? 1);
@@ -240,6 +240,65 @@ class RentalService
 
             return $rental->load(['details.masterItem', 'vendor']);
         });
+    }
+
+    /**
+     * Satu-satunya logika expire. Rental pending yang lewat batas bayar
+     * jadi expired dan payment pending-nya jadi expired (bukan failed).
+     * Idempoten; rental yang sudah punya payment paid tidak disentuh.
+     */
+    public function expire(Rental $rental): bool
+    {
+        if (
+            $rental->status !== RentalStatus::Pending->value
+            || ! $rental->expires_at
+            || ! $rental->expires_at->isPast()
+        ) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($rental): bool {
+            $locked = Rental::query()->whereKey($rental->getKey())->lockForUpdate()->first();
+
+            if (
+                ! $locked
+                || $locked->status !== RentalStatus::Pending->value
+                || $locked->payments()->where('status', PaymentStatus::Paid->value)->exists()
+            ) {
+                return false;
+            }
+
+            $locked->update(['status' => RentalStatus::Expired->value]);
+
+            Payment::query()
+                ->where('rental_id', $locked->getKey())
+                ->where('status', PaymentStatus::Pending->value)
+                ->update(['status' => PaymentStatus::Expired->value]);
+
+            $rental->status = RentalStatus::Expired->value;
+
+            return true;
+        });
+    }
+
+    /**
+     * Expire semua rental pending yang lewat batas bayar (dipakai job).
+     */
+    public function expirePastDue(): int
+    {
+        $count = 0;
+
+        Rental::query()
+            ->where('status', RentalStatus::Pending->value)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->each(function (Rental $rental) use (&$count): void {
+                if ($this->expire($rental)) {
+                    $count++;
+                }
+            });
+
+        return $count;
     }
 
     //  Generate kode booking: TDK + Ymd + [ID Toko 2 digit] + [ID Barang 2 digit] + [No Urut 3 digit]

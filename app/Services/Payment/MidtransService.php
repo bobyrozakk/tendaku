@@ -310,7 +310,7 @@ class MidtransService
     /**
      * Terapkan aturan escrow dan komisi setelah status pembayaran berubah.
      */
-    private function applyMonetization(Payment $payment): void
+    public function applyMonetization(Payment $payment): void
     {
         if ($payment->status === PaymentStatus::Paid->value) {
             $this->escrow->markHeld($payment);

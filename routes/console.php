@@ -18,6 +18,9 @@ Artisan::command('rentals:expire-pending', function () {
 
 Schedule::job(new ExpirePendingRentals)->everyMinute();
 
+// Lengkapi escrow dan komisi untuk pembayaran yang dilunasi lewat Edge Function Supabase.
+Schedule::command('payments:reconcile')->everyMinute()->withoutOverlapping();
+
 /*
  * Pengingat pengembalian barang (H-1 dan hari-H) dikirim harian pada jam
  * yang ditentukan di config/notifications.php (default 09:00 WIB).
