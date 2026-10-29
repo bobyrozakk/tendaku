@@ -213,6 +213,23 @@ class CheckoutController extends Controller
         $user = $request->user();
         $pickupMethod = $request->validated('pickup_method');
 
+        $rawItems = ! empty($cart['items']) && is_array($cart['items'])
+            ? array_values($cart['items'])
+            : [
+                [
+                    'master_item_id' => $masterItem->id,
+                    'qty' => $this->summary->quantityOf($cart),
+                ],
+            ];
+
+        $itemsList = array_map(function ($it) {
+            return [
+                'master_item_id' => (int) ($it['master_item_id'] ?? 0),
+                'quantity' => max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1)),
+                'qty' => max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1)),
+            ];
+        }, $rawItems);
+
         $data = [
             'vendor_id' => $masterItem->vendor_id,
             'pickup_date' => $request->validated('pickup_date')
@@ -230,12 +247,7 @@ class CheckoutController extends Controller
                 $user !== null
             ),
             'notes' => $request->validated('notes'),
-            'items' => [
-                [
-                    'master_item_id' => $masterItem->id,
-                    'qty' => $this->summary->quantityOf($cart),
-                ],
-            ],
+            'items' => $itemsList,
         ];
 
         if ($user === null) {

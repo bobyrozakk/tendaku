@@ -38,21 +38,55 @@ class CheckoutSummaryBuilder
     {
         $isLoggedIn = $user !== null;
 
-        $masterItem = MasterItem::with(['vendor', 'category'])->findOrFail($cart['master_item_id']);
-        $vendor = $masterItem->vendor;
+        $rawItems = ! empty($cart['items']) && is_array($cart['items'])
+            ? array_values($cart['items'])
+            : [
+                [
+                    'master_item_id' => $cart['master_item_id'] ?? 0,
+                    'qty' => $this->quantityOf($cart),
+                ],
+            ];
+
+        $masterItemIds = array_map(fn ($it) => (int) ($it['master_item_id'] ?? 0), $rawItems);
+        $masterItems = MasterItem::with(['vendor', 'category'])
+            ->whereIn('id', $masterItemIds)
+            ->get()
+            ->keyBy('id');
+
+        $firstItem = $masterItems->first();
+        if (! $firstItem) {
+            throw new \RuntimeException('Alat camping di keranjang tidak ditemukan.');
+        }
+        $vendor = $firstItem->vendor;
 
         $pickupMethod = $this->resolvePickupMethod($isLoggedIn, $requestedMethod);
-        $quantity = $this->quantityOf($cart);
         $rentalDays = max(1, (int) ($cart['total_days'] ?? 1));
-
-        $dailyRate = (int) $masterItem->daily_rate;
-        $depositPerUnit = (int) $masterItem->deposit_amount;
         $discount = 0; // belum ada fitur diskon
 
-        $itemSubtotal = $dailyRate * $quantity * $rentalDays;
-        $totalDeposit = $depositPerUnit * $quantity;
+        $itemsData = [];
+        $totalSubtotal = 0;
+        $totalDeposit = 0;
+
+        foreach ($rawItems as $rawIt) {
+            $itemId = (int) ($rawIt['master_item_id'] ?? 0);
+            $itemModel = $masterItems->get($itemId);
+            if (! $itemModel) {
+                continue;
+            }
+
+            $qty = max(1, (int) ($rawIt['qty'] ?? $rawIt['quantity'] ?? 1));
+            $dailyRate = (int) $itemModel->daily_rate;
+            $depositPerUnit = (int) $itemModel->deposit_amount;
+            $subtotal = $dailyRate * $qty * $rentalDays;
+
+            $totalSubtotal += $subtotal;
+            $totalDeposit += ($depositPerUnit * $qty);
+
+            $itemsData[] = $this->itemData($itemModel, $qty, $dailyRate, $depositPerUnit, $subtotal);
+        }
+
         $deliveryFee = $this->deliveryFee($vendor, $pickupMethod, $isLoggedIn);
-        $grandTotal = $itemSubtotal + $totalDeposit + $deliveryFee - $discount;
+        $grandTotal = $totalSubtotal + $totalDeposit + $deliveryFee - $discount;
 
         $dpPercentage = (int) ($vendor->dp_percentage ?: config('payment.dp_percentage', 50));
         $dpAmount = (int) ceil($grandTotal * $dpPercentage / 100);
@@ -78,8 +112,8 @@ class CheckoutSummaryBuilder
             'pickup_method' => $pickupMethod,
             'delivery_address' => $user?->address ?? '',
             'delivery_notes' => '',
-            'items' => [$this->itemData($masterItem, $quantity, $dailyRate, $depositPerUnit, $itemSubtotal)],
-            'subtotal' => $itemSubtotal,
+            'items' => $itemsData,
+            'subtotal' => $totalSubtotal,
             'deposit' => $totalDeposit,
             'delivery_fee' => $deliveryFee,
             'discount' => $discount,

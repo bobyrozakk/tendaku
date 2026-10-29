@@ -199,10 +199,23 @@ class CatalogIndex extends Component
             'category_name' => $masterItem->category?->name,
         ];
 
-        $cartService->set($cartData, $user);
+        $result = $cartService->addItem($cartData, $user);
+
+        if ($result['status'] === 'diff_vendor') {
+            $existingVendor = $result['existing_vendor'] ?? 'toko sebelumnya';
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'title' => 'Keranjang Beda Toko',
+                'message' => "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
+            ]);
+
+            return;
+        }
+
+        $totalCount = $result['total_count'] ?? 1;
 
         // Update badge keranjang di navbar dan tampilkan notifikasi sukses
-        $this->dispatch('cart-updated', count: 1);
+        $this->dispatch('cart-updated', count: $totalCount);
 
         $this->dispatch('notify', [
             'type' => 'success',

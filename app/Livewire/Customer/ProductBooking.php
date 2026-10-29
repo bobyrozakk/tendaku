@@ -359,7 +359,20 @@ class ProductBooking extends Component
             'category_name' => $this->product->category?->name,
         ];
 
-        $cartService->set($cartData, Auth::user());
+        $result = $cartService->addItem($cartData, Auth::user());
+
+        if ($result['status'] === 'diff_vendor') {
+            $existingVendor = $result['existing_vendor'] ?? 'toko sebelumnya';
+            $this->dispatch('notify', [
+                'type' => 'warning',
+                'title' => 'Keranjang Beda Toko',
+                'message' => "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
+            ]);
+
+            return null;
+        }
+
+        $totalCount = $result['total_count'] ?? $this->quantity;
 
         // Emit toast sukses dan update badge keranjang
         $this->dispatch('notify', [
@@ -368,7 +381,7 @@ class ProductBooking extends Component
             'message' => "{$this->product->name} ({$this->quantity} unit, {$this->totalDays} hari) berhasil masuk keranjang.",
         ]);
 
-        $this->dispatch('cart-updated', count: $this->quantity);
+        $this->dispatch('cart-updated', count: $totalCount);
 
         return null;
     }
