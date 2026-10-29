@@ -6,7 +6,9 @@ use App\Livewire\Customer\CatalogIndex;
 use App\Models\ItemCategory;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
+use App\Models\User;
 use App\Models\Vendor;
+use App\Services\CartService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
@@ -57,12 +59,71 @@ class CatalogIndexTest extends TestCase
         parent::tearDown();
     }
 
+    private function createItemWithUnit(): MasterItem
+    {
+        $item = MasterItem::create([
+            'vendor_id' => $this->activeVendor->id,
+            'category_id' => $this->category->id,
+            'name' => 'Tenda Uji Keranjang',
+            'slug' => 'tenda-uji-keranjang',
+            'daily_rate' => 50000,
+            'is_active' => true,
+        ]);
+
+        ItemUnit::create([
+            'vendor_id' => $this->activeVendor->id,
+            'master_item_id' => $item->id,
+            'unit_code' => 'TUK-001',
+            'condition' => 'excellent',
+            'status' => 'available',
+            'purchase_date' => Carbon::now()->subMonth(),
+        ]);
+
+        return $item;
+    }
+
     public function test_catalog_index_page_can_be_rendered(): void
     {
         $response = $this->get(route('customer.catalog.index'));
 
         $response->assertStatus(200);
         $response->assertSeeLivewire(CatalogIndex::class);
+    }
+
+    public function test_guest_catalog_shows_login_notice_and_hides_add_to_cart(): void
+    {
+        $this->createItemWithUnit();
+
+        Livewire::test(CatalogIndex::class)
+            ->assertSee('Keranjang khusus member')
+            ->assertDontSee('Tambah ke Keranjang');
+    }
+
+    public function test_guest_cannot_add_item_to_cart(): void
+    {
+        $item = $this->createItemWithUnit();
+
+        Livewire::test(CatalogIndex::class)
+            ->call('addToCart', $item->id)
+            ->assertRedirect(route('login'));
+
+        $this->assertNull(session(CartService::SESSION_KEY));
+    }
+
+    public function test_authenticated_customer_can_add_item_to_cart(): void
+    {
+        $item = $this->createItemWithUnit();
+        $customer = User::factory()->create();
+
+        $this->actingAs($customer);
+
+        Livewire::test(CatalogIndex::class)
+            ->assertSee('Tambah ke Keranjang')
+            ->call('addToCart', $item->id)
+            ->assertHasNoErrors();
+
+        $this->assertSame($item->id, session(CartService::SESSION_KEY.'.master_item_id'));
+        $this->assertSame($item->id, $customer->fresh()->cart['master_item_id'] ?? null);
     }
 
     public function test_items_from_inactive_vendor_are_not_displayed(): void

@@ -233,7 +233,7 @@ function statusPage(cfg) {
 
                     // Ubah status: bulatan bayar jadi centang, garis terisi, tab bayar menutup, tab serah terima membuka
                     this.justDone = 'payment';
-                    this.status = (data.status && this.statusToNode[data.status]) ? data.status : 'confirmed';
+                    this.status = data.rental_status || data.status || 'pending';
 
                     await this.$nextTick();
                     setTimeout(() => {

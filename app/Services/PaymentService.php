@@ -60,6 +60,7 @@ class PaymentService
     /**
      * Payment pending untuk bayar penuh atau DP.
      * Nominal dihitung di server, tidak dari input browser.
+     *
      * @param  'full'|'dp'  $paymentType
      */
     public function createOnlinePayment(
@@ -84,6 +85,7 @@ class PaymentService
         }
 
         return $this->createMidtransPayment($rental, $paymentType, $amount, $attempt, [
+            'payment_channel' => $method,
             'method' => $method,
             'expires_at' => $rental->expires_at,
         ]);
@@ -139,6 +141,7 @@ class PaymentService
 
     /**
      * Transisi status payment dan simpan (lihat PaymentStatus).
+     *
      * @return bool true jika status berubah, false jika diabaikan (idempotent)
      */
     public function advanceStatus(Payment $payment, string $newStatus): bool
@@ -156,6 +159,7 @@ class PaymentService
 
     /**
      * Ringkasan dana layak cair per vendor.
+     *
      * @return Collection<int, object{vendor_id: int, dana_vendor: int, biaya_admin: int, net_payout: int}>
      */
     public function payoutEligibleSummary(): Collection
@@ -179,6 +183,7 @@ class PaymentService
     /**
      * Tandai payments sebagai bagian dari payout.
      * Harus dipanggil di dalam DB::transaction() oleh kode pencairan.
+     *
      * @param  array<int>  $paymentIds
      */
     public function markPaymentsAsPaidOut(array $paymentIds, int $vendorPayoutId): void

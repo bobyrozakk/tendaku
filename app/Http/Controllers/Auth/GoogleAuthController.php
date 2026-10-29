@@ -109,7 +109,6 @@ class GoogleAuthController extends Controller
             default => "Selamat datang, {$user->name}!",
         };
 
-        $request->session()->flash('status', $welcomeMessage);
         $request->session()->flash('success', $welcomeMessage);
 
         return redirect()->intended($destination);

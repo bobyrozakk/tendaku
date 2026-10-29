@@ -48,6 +48,10 @@ class CheckoutTest extends TestCase
             'notifications.reminder.days' => [1, 0],
         ]);
 
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('createTransaction')->andReturn('snap-token-uji');
+        });
+
         $this->vendor = Vendor::create([
             'name' => 'Tendaku Store Gudang',
             'slug' => 'tendaku-store-gudang',
@@ -96,6 +100,7 @@ class CheckoutTest extends TestCase
     {
         $response = $this->withSession($this->cartSession())->post(route('checkout.store'), [
             'pickup_method' => 'self_pickup',
+            'payment_option' => 'full',
             'payment_channel' => 'qris',
             'payment_option' => 'full',
             'guest_name' => 'Tamu Tanpa Akun',
@@ -127,6 +132,7 @@ class CheckoutTest extends TestCase
             ->withSession($this->cartSession())
             ->post(route('checkout.store'), [
                 'pickup_method' => 'self_pickup',
+                'payment_option' => 'full',
                 'payment_channel' => 'qris',
                 'payment_option' => 'full',
             ])
@@ -149,16 +155,17 @@ class CheckoutTest extends TestCase
         $this->withSession($this->cartSession())
             ->get(route('checkout.index'))
             ->assertOk()
-            ->assertSee('No. WhatsApp Aktif')
-            ->assertSee('name="guest_phone"', false)
-            ->assertSee('name="guest_name"', false)
-            ->assertSee('name="guest_id_number"', false);
+            ->assertSee('No. WhatsApp aktif')
+            ->assertSee('id="f_phone"', false)
+            ->assertSee('id="f_name"', false)
+            ->assertSee('id="f_nik"', false);
     }
 
     public function test_guest_checkout_page_is_reachable_after_booking(): void
     {
         $this->withSession($this->cartSession())->post(route('checkout.store'), [
             'pickup_method' => 'self_pickup',
+            'payment_option' => 'full',
             'payment_channel' => 'qris',
             'payment_option' => 'full',
             'guest_name' => 'Tamu Tanpa Akun',
@@ -178,6 +185,7 @@ class CheckoutTest extends TestCase
         $this->withSession($this->cartSession())
             ->post(route('checkout.store'), [
                 'pickup_method' => 'self_pickup',
+                'payment_option' => 'full',
                 'payment_channel' => 'qris',
                 'payment_option' => 'full',
                 'guest_name' => 'Tamu Tanpa Akun',
@@ -193,6 +201,7 @@ class CheckoutTest extends TestCase
         $this->withSession($this->cartSession())
             ->post(route('checkout.store'), [
                 'pickup_method' => 'self_pickup',
+                'payment_option' => 'full',
                 'payment_channel' => 'qris',
                 'payment_option' => 'full',
                 'guest_name' => 'Tamu Tanpa Akun',
@@ -217,6 +226,7 @@ class CheckoutTest extends TestCase
             ->withSession($this->cartSession())
             ->post(route('checkout.store'), [
                 'pickup_method' => 'self_pickup',
+                'payment_option' => 'full',
                 'payment_channel' => 'qris',
                 'payment_option' => 'full',
             ])
@@ -242,7 +252,7 @@ class CheckoutTest extends TestCase
             ->get(route('checkout.index'))
             ->assertOk()
             ->assertSee('081234567890')
-            ->assertSee('Pengingat Pengembalian via WhatsApp');
+            ->assertSee('Pengingat pengembalian (H-1 & hari pengembalian) dikirim ke');
     }
 
     public function test_checkout_redirects_to_catalog_when_cart_is_empty(): void
@@ -263,6 +273,7 @@ class CheckoutTest extends TestCase
         $this->withSession($this->cartSession())
             ->post(route('checkout.store'), [
                 'pickup_method' => 'delivery',
+                'payment_option' => 'full',
                 'payment_channel' => 'qris',
                 'payment_option' => 'full',
                 'guest_name' => 'Tamu Tanpa Akun',
@@ -280,6 +291,7 @@ class CheckoutTest extends TestCase
 
         $this->withSession($this->cartSession())->post(route('checkout.store'), [
             'pickup_method' => 'self_pickup',
+            'payment_option' => 'full',
             'payment_channel' => 'qris',
             'payment_option' => 'full',
             'guest_name' => 'Tamu Tanpa Akun',

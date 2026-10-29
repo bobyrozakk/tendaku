@@ -125,6 +125,14 @@ class ReturnFlow extends Component
             ->find($this->activeOrderId);
     }
 
+    public function updatedInspectionNotes($value, $key): void
+    {
+        $this->resetErrorBag("damageFees.{$key}");
+        if ($value === 'good') {
+            $this->damageFees[$key] = 0;
+        }
+    }
+
     public function setCondition($detailId, $condition)
     {
         $this->inspectionNotes[$detailId] = $condition;
@@ -163,12 +171,21 @@ class ReturnFlow extends Component
 
             // Jika barang rusak/hilang atau dikembalikan, update item_unit juga
             if ($detail->item_unit_id) {
-                $unitStatus = in_array($condition, ['damaged', 'lost']) ? 'maintenance' : 'available';
+                $unitStatus = match ($condition) {
+                    'lost' => 'lost',
+                    'damaged' => 'maintenance',
+                    default => 'available',
+                };
+                $unitCondition = match ($condition) {
+                    'lost' => 'lost',
+                    'damaged' => 'damaged',
+                    default => 'good',
+                };
                 ItemUnit::withoutGlobalScope('vendor')
                     ->where('id', $detail->item_unit_id)
                     ->update([
                         'status' => $unitStatus,
-                        'condition' => in_array($condition, ['damaged', 'lost']) ? 'damaged' : 'good',
+                        'condition' => $unitCondition,
                     ]);
             }
         }
@@ -217,12 +234,21 @@ class ReturnFlow extends Component
                 ]);
 
                 if ($detail->item_unit_id) {
-                    $unitStatus = in_array($cond, ['damaged', 'lost']) ? 'maintenance' : 'available';
+                    $unitStatus = match ($cond) {
+                        'lost' => 'lost',
+                        'damaged' => 'maintenance',
+                        default => 'available',
+                    };
+                    $unitCondition = match ($cond) {
+                        'lost' => 'lost',
+                        'damaged' => 'damaged',
+                        default => 'good',
+                    };
                     ItemUnit::withoutGlobalScope('vendor')
                         ->where('id', $detail->item_unit_id)
                         ->update([
                             'status' => $unitStatus,
-                            'condition' => in_array($cond, ['damaged', 'lost']) ? 'damaged' : 'good',
+                            'condition' => $unitCondition,
                         ]);
                 }
             }
@@ -313,9 +339,9 @@ class ReturnFlow extends Component
         }
 
         if (Carbon::today()->gt($order->return_date)) {
-            $lateDays = Carbon::today()->diffInDays($order->return_date);
+            $lateDays = abs((int) Carbon::today()->diffInDays($order->return_date));
             // Jumlah late fee per day dari snapshot detail
-            $dailyLateRate = $order->details->sum('late_fee_per_day_snapshot') ?: 25000;
+            $dailyLateRate = (float) ($order->details->sum('late_fee_per_day_snapshot') ?: 25000);
 
             return (float) ($lateDays * $dailyLateRate);
         }

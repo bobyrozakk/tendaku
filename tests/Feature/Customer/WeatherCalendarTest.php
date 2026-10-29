@@ -3,6 +3,7 @@
 namespace Tests\Feature\Customer;
 
 use App\Livewire\Customer\WeatherCalendar;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -35,8 +36,15 @@ class WeatherCalendarTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_halaman_cuaca_dapat_diakses_tanpa_login(): void
+    public function test_halaman_cuaca_memerlukan_login(): void
     {
+        $this->get(route('customer.weather.index'))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_halaman_cuaca_dapat_diakses_setelah_login(): void
+    {
+        $this->actingAs(User::factory()->create());
         $this->fakeOpenMeteo();
 
         $this->get(route('customer.weather.index'))
@@ -70,6 +78,8 @@ class WeatherCalendarTest extends TestCase
 
     public function test_menampilkan_banner_error_tanpa_melempar_exception(): void
     {
+        $this->actingAs(User::factory()->create());
+
         Http::fake([
             'api.open-meteo.com/*' => Http::response(['error' => true, 'reason' => 'invalid date range'], 400),
         ]);
@@ -104,6 +114,7 @@ class WeatherCalendarTest extends TestCase
 
     public function test_parameter_url_tidak_valid_tidak_menggagalkan_halaman(): void
     {
+        $this->actingAs(User::factory()->create());
         $this->fakeOpenMeteo();
 
         $this->get(route('customer.weather.index', ['spot' => 'entah', 'periode' => 'abc']))

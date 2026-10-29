@@ -8,6 +8,7 @@ use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Models\Rental;
 use App\Models\RentalDetail;
+use App\Models\User;
 use App\Models\Vendor;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -77,6 +78,37 @@ class ProductBookingTest extends TestCase
         ]);
     }
 
+    public function test_guest_product_detail_shows_login_call_to_action(): void
+    {
+        $product = $this->createProduct();
+
+        Livewire::test(ProductBooking::class, ['product' => $product])
+            ->assertSee('Masuk untuk menyewa alat ini')
+            ->assertDontSee('Masukkan ke Keranjang');
+    }
+
+    public function test_guest_cannot_add_product_to_cart(): void
+    {
+        $product = $this->createProduct();
+
+        Livewire::test(ProductBooking::class, ['product' => $product])
+            ->call('addToCart')
+            ->assertRedirect(route('login'));
+
+        $this->assertNull(session('booking_cart'));
+    }
+
+    public function test_guest_cannot_proceed_to_booking(): void
+    {
+        $product = $this->createProduct();
+
+        Livewire::test(ProductBooking::class, ['product' => $product])
+            ->call('proceedToBooking')
+            ->assertRedirect(route('login'));
+
+        $this->assertNull(session('booking_cart'));
+    }
+
     public function test_it_mounts_with_default_pickup_tomorrow_and_return_day_after(): void
     {
         $product = $this->createProduct();
@@ -140,6 +172,8 @@ class ProductBookingTest extends TestCase
 
     public function test_it_shows_real_time_available_stock_via_availability_service(): void
     {
+        $this->actingAs(User::factory()->create());
+
         $product = $this->createProduct();
         $this->createUnit($product, 'TD-001');
         $this->createUnit($product, 'TD-002');
@@ -178,6 +212,8 @@ class ProductBookingTest extends TestCase
 
     public function test_it_fails_when_requested_quantity_exceeds_available_stock(): void
     {
+        $this->actingAs(User::factory()->create());
+
         $product = $this->createProduct();
         $this->createUnit($product, 'TD-001'); // Hanya ada 1 unit
 
@@ -192,6 +228,8 @@ class ProductBookingTest extends TestCase
 
     public function test_it_fails_validation_when_pickup_date_is_in_the_past(): void
     {
+        $this->actingAs(User::factory()->create());
+
         $product = $this->createProduct();
 
         Livewire::test(ProductBooking::class, ['product' => $product])
@@ -203,6 +241,8 @@ class ProductBookingTest extends TestCase
 
     public function test_it_stores_booking_cart_in_session_and_redirects_on_success(): void
     {
+        $this->actingAs(User::factory()->create());
+
         $product = $this->createProduct(['daily_rate' => 45000]);
         $this->createUnit($product, 'TD-001');
         $this->createUnit($product, 'TD-002');

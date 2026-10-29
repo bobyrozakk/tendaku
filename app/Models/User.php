@@ -71,4 +71,15 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Payment::class, 'received_by');
     }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(CustomerAddress::class, 'user_id');
+    }
+
+    public function defaultAddress(): ?CustomerAddress
+    {
+        return $this->addresses()->where('is_default', true)->first()
+            ?? $this->addresses()->latest('id')->first();
+    }
 }

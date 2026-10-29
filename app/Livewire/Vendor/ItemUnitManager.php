@@ -259,7 +259,7 @@ class ItemUnitManager extends Component
                     ->ignore($unit->id),
             ],
             'condition' => ['required', Rule::in(['excellent', 'good', 'fair', 'damaged', 'lost'])],
-            'status' => ['required', Rule::in(['available', 'rented', 'maintenance', 'retired'])],
+            'status' => ['required', Rule::in(['available', 'rented', 'maintenance', 'retired', 'lost'])],
             'purchaseDate' => ['nullable', 'date'],
             'purchasePrice' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],

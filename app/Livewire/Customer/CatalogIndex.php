@@ -123,6 +123,12 @@ class CatalogIndex extends Component
      */
     public function addToCart(int $masterItemId, AvailabilityService $availabilityService): void
     {
+        if (Auth::guest()) {
+            $this->redirectRoute('login');
+
+            return;
+        }
+
         $masterItem = MasterItem::with(['vendor', 'category'])->findOrFail($masterItemId);
 
         $cartService = app(CartService::class);

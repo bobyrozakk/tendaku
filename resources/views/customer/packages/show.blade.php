@@ -141,30 +141,114 @@
                         @endif
                     </div>
 
-                    <form method="GET" action="{{ route('customer.packages.checkout', $package) }}" class="space-y-3">
-                        <div>
-                            <label for="pickup_date" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                                Tanggal Mulai Sewa
+                    <form method="GET" action="{{ route('customer.packages.checkout', $package) }}"
+                          class="space-y-3.5"
+                          x-data="{
+                              packagePrice: {{ $price }},
+                              pickupDate: '{{ $defaultPickupDate }}',
+                              pickupTime: '09:00',
+                              durationDays: {{ max(1, (int) $package->duration_days) }},
+                              returnDate: '',
+                              returnTime: '09:00',
+                              totalHours: {{ max(1, (int) $package->duration_days) * 24 }},
+
+                              init() {
+                                  this.setDuration(this.durationDays);
+                              },
+
+                              setDuration(days) {
+                                  this.durationDays = Math.max(1, parseInt(days) || 1);
+                                  if (!this.pickupDate) return;
+                                  const [y, m, d] = this.pickupDate.split('-').map(Number);
+                                  const [h, min] = (this.pickupTime || '09:00').split(':').map(Number);
+                                  const pickup = new Date(y, m - 1, d, h, min, 0);
+
+                                  if (isNaN(pickup.getTime())) return;
+
+                                  const ret = new Date(pickup.getTime() + this.durationDays * 24 * 60 * 60 * 1000);
+                                  const rY = ret.getFullYear();
+                                  const rM = String(ret.getMonth() + 1).padStart(2, '0');
+                                  const rD = String(ret.getDate()).padStart(2, '0');
+                                  const rH = String(ret.getHours()).padStart(2, '0');
+                                  const rMin = String(ret.getMinutes()).padStart(2, '0');
+
+                                  this.returnDate = `${rY}-${rM}-${rD}`;
+                                  this.returnTime = `${rH}:${rMin}`;
+                                  this.totalHours = this.durationDays * 24;
+                              },
+
+                              onPickupChange() {
+                                  this.setDuration(this.durationDays);
+                              },
+
+                              formatRupiah(val) {
+                                  return 'Rp ' + (Math.round(val) || 0).toLocaleString('id-ID');
+                              }
+                          }">
+                        <!-- Waktu Pengambilan -->
+                        <div class="space-y-1">
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600">
+                                Waktu Pengambilan *
                             </label>
-                            <input type="date" id="pickup_date" name="pickup_date"
-                                   value="{{ $defaultPickupDate }}"
-                                   min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                                   required
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                            <p class="text-[11px] text-darkbrown-400 mt-1">
-                                Pengembalian: {{ $package->duration_days }} hari setelah tanggal mulai.
-                            </p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="date" id="pickup_date" name="pickup_date"
+                                       x-model="pickupDate"
+                                       @change="onPickupChange()"
+                                       min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
+                                       required
+                                       class="input-tendaku w-full py-2 px-2.5 rounded-xl text-xs font-medium border-wheat-300" />
+                                <input type="time" id="pickup_time" name="pickup_time"
+                                       x-model="pickupTime"
+                                       @change="onPickupChange()"
+                                       required
+                                       class="input-tendaku w-full py-2 px-2.5 rounded-xl text-xs font-medium border-wheat-300" />
+                            </div>
                         </div>
 
+                        <!-- Durasi Sewa Multi-Hari (24 Jam per Periode) -->
+                        <div class="p-3 rounded-xl bg-wheat-50 border border-wheat-200 space-y-1.5">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="font-bold text-darkbrown-800">Durasi Sewa</span>
+                                <span class="font-extrabold text-avocado-800" x-text="durationDays + ' Hari (' + totalHours + ' Jam)'"></span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button type="button"
+                                        @click="setDuration(Math.max(1, durationDays - 1))"
+                                        class="w-8 h-8 rounded-lg border border-wheat-300 bg-white hover:bg-wheat-100 text-darkbrown-800 font-extrabold flex items-center justify-center transition">
+                                    -
+                                </button>
+                                <input type="number" name="duration_days" x-model="durationDays"
+                                       @change="setDuration(durationDays)"
+                                       min="1" max="30"
+                                       class="input-tendaku flex-1 text-center font-extrabold text-xs py-1.5 px-2 rounded-lg border-wheat-300" />
+                                <button type="button"
+                                        @click="setDuration(durationDays + 1)"
+                                        class="w-8 h-8 rounded-lg border border-wheat-300 bg-white hover:bg-wheat-100 text-darkbrown-800 font-extrabold flex items-center justify-center transition">
+                                    +
+                                </button>
+                            </div>
+                            <div class="flex items-center justify-between text-[10px] text-darkbrown-500 pt-0.5">
+                                <span>Pengembalian: <strong class="text-darkbrown-800" x-text="returnDate + ' ' + returnTime"></strong></span>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="return_date" :value="returnDate" />
+                        <input type="hidden" name="return_time" :value="returnTime" />
+
                         <div>
-                            <label for="pickup_method" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
+                            <label for="pickup_method" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1">
                                 Metode Pengambilan
                             </label>
                             <select id="pickup_method" name="pickup_method"
-                                    class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
+                                    class="input-tendaku w-full py-2 px-2.5 rounded-xl text-xs font-medium border-wheat-300">
                                 <option value="self_pickup">Ambil di Toko (Gratis)</option>
-                                <option value="delivery">Diantar (+Rp 25.000, wajib login)</option>
+                                <option value="delivery">Diantar (+Rp 25.000)</option>
                             </select>
+                        </div>
+
+                        <div class="p-2.5 rounded-xl bg-avocado-50 border border-avocado-200 flex items-center justify-between text-xs">
+                            <span class="text-avocado-900 font-semibold">Estimasi Paket:</span>
+                            <span class="font-extrabold text-avocado-900" x-text="formatRupiah(packagePrice * durationDays)"></span>
                         </div>
 
                         <button type="submit"

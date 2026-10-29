@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Customer;
 
+use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Services\AvailabilityService;
 use App\Services\CartService;
@@ -191,26 +192,16 @@ class ProductBooking extends Component
     }
 
     /**
-     * Computed: cek sisa stok unit yang tersedia pada rentang tanggal sewa via AvailabilityService.
+     * Computed: cek sisa unit yang berstatus "available" (Tersedia di Toko).
+     * Sesuai dengan daftar unit fisik kasir untuk status "available" pada produk ini.
      */
     #[Computed]
     public function availableStock(): int
     {
-        if ($this->totalDays <= 0) {
-            return 0;
-        }
-
-        try {
-            $service = app(AvailabilityService::class);
-
-            return $service->checkAvailability(
-                $this->product->id,
-                $this->pickup_date,
-                $this->return_date
-            );
-        } catch (\Throwable) {
-            return 0;
-        }
+        return ItemUnit::withoutGlobalScope('vendor')
+            ->where('master_item_id', $this->product->id)
+            ->where('status', 'available')
+            ->count();
     }
 
     /**
@@ -303,6 +294,12 @@ class ProductBooking extends Component
      */
     public function addToCart(): ?string
     {
+        if (Auth::guest()) {
+            $this->redirectRoute('login');
+
+            return null;
+        }
+
         $this->validate();
 
         if (! $this->validateReturnDateTime()) {
@@ -384,6 +381,10 @@ class ProductBooking extends Component
      */
     public function proceedToBooking(): mixed
     {
+        if (Auth::guest()) {
+            return redirect()->route('login');
+        }
+
         $this->addToCart();
 
         if ($this->getErrorBag()->isEmpty()) {

@@ -254,16 +254,17 @@ class AvailabilityService
     /**
      * Ambil query dasar untuk kandidat unit yang layak sewa:
      * item_units milik master item dengan status != 'retired',
-     * condition NOT IN ('damaged', 'lost'), dan status bukan 'maintenance'.
+     * dan status bukan 'maintenance'.
      *
      * @return Builder<ItemUnit>
      */
     public function getCandidateUnitsQuery(int $masterItemId): Builder
     {
         return ItemUnit::query()
+            ->withoutGlobalScope('vendor')
             ->where('master_item_id', $masterItemId)
             ->whereNotIn('status', ['maintenance', 'retired'])
-            ->whereNotIn('condition', ['damaged', 'lost']);
+            ->where('condition', '!=', 'lost');
     }
 
     /**

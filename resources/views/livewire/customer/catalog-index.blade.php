@@ -206,6 +206,26 @@
         </div>
     </section>
 
+    @guest
+        <section class="flex flex-col gap-3 rounded-2xl border border-avocado-200 bg-avocado-50/80 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-2.5">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-avocado-100 text-avocado-700">
+                    <i data-lucide="lock" class="w-4 h-4"></i>
+                </span>
+                <div>
+                    <p class="text-xs font-bold text-avocado-900">Keranjang khusus member</p>
+                    <p class="mt-0.5 text-xs text-avocado-800">
+                        Masuk atau daftar dulu untuk menambahkan alat ke keranjang dan melanjutkan penyewaan.
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 sm:shrink-0">
+                <a href="{{ route('login') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">Masuk</a>
+                <a href="{{ route('register') }}" class="btn-tendaku-primary !px-3.5 !py-2 text-xs">Daftar</a>
+            </div>
+        </section>
+    @endguest
+
     <!-- Product Grid Header & Status Summary -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-wheat-200 pb-3 gap-2">
         <div>
@@ -243,8 +263,8 @@
                     $catName = $item->category?->name ?? 'Alat Outdoor';
                     $vendorName = $item->vendor?->name ?? 'Tendaku Vendor';
                 @endphp
-                <article class="card-tendaku rounded-2xl overflow-hidden bg-white border border-wheat-200 flex flex-col justify-between hover:shadow-tendaku-glow transition-all duration-300 group">
-                    <div>
+                <article wire:key="catalog-item-{{ $item->id }}" class="card-tendaku group flex h-full flex-col overflow-hidden rounded-2xl border border-wheat-200 bg-white transition-all duration-300 hover:shadow-tendaku-glow">
+                    <div class="flex flex-1 flex-col">
                         <!-- Thumbnail Image Container -->
                         <div class="relative aspect-[4/3] bg-wheat-100 overflow-hidden">
                             <img 
@@ -263,12 +283,13 @@
                                 </span>
                             </div>
                             <!-- Cart quick-add icon (pojok kanan bawah thumbnail) -->
-                            @if($unitCount > 0)
+                            @if($unitCount > 0 && auth()->check())
                                 <button
                                     type="button"
                                     wire:click.stop="addToCart({{ $item->id }})"
                                     wire:loading.attr="disabled"
                                     title="Tambah ke Keranjang"
+                                    aria-label="Tambah {{ $item->name }} ke keranjang"
                                     class="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-white/95 backdrop-blur-sm border border-wheat-200 flex items-center justify-center text-darkbrown-700 hover:bg-avocado-600 hover:text-white hover:border-avocado-600 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg z-10 cursor-pointer group/cart"
                                 >
                                     <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
@@ -308,10 +329,11 @@
                                 @endif
                                 <span class="text-[11px] text-darkbrown-500 font-medium">| {{ $item->dominant_condition }}</span>
                             </div>
+                        </div>
                     </div>
 
                     <!-- Card Footer Price & Action -->
-                    <div class="p-5 pt-0 border-t border-wheat-100 mt-2">
+                    <div class="mt-auto border-t border-wheat-100 p-5 pt-0">
                         <div class="flex items-baseline justify-between py-3">
                             <div>
                                 <span class="text-xs text-darkbrown-500 block font-medium">Harga Sewa</span>
@@ -329,17 +351,20 @@
                                    class="btn-tendaku-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
                                     Lihat Detail &amp; Sewa
                                 </a>
-                                <button type="button"
-                                    wire:click.stop="addToCart({{ $item->id }})"
-                                    wire:loading.attr="disabled"
-                                    title="Tambah ke Keranjang"
-                                    class="flex-shrink-0 w-10 h-10 rounded-xl border-2 border-avocado-600 text-avocado-700 hover:bg-avocado-600 hover:text-white transition-all flex items-center justify-center shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
-                                >
-                                    <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
-                                        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                                    </span>
-                                    <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block w-3.5 h-3.5 border-2 border-avocado-600 border-t-transparent rounded-full animate-spin"></span>
-                                </button>
+                                @auth
+                                    <button type="button"
+                                        wire:click.stop="addToCart({{ $item->id }})"
+                                        wire:loading.attr="disabled"
+                                        title="Tambah ke Keranjang"
+                                        aria-label="Tambah {{ $item->name }} ke keranjang"
+                                        class="flex-shrink-0 w-10 h-10 rounded-xl border-2 border-avocado-600 text-avocado-700 hover:bg-avocado-600 hover:text-white transition-all flex items-center justify-center shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
+                                    >
+                                        <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
+                                            <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                                        </span>
+                                        <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block w-3.5 h-3.5 border-2 border-avocado-600 border-t-transparent rounded-full animate-spin"></span>
+                                    </button>
+                                @endauth
                             </div>
                         @else
                             <button type="button" 
@@ -347,7 +372,7 @@
                                     class="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block bg-wheat-200 text-darkbrown-400 border border-wheat-300 cursor-not-allowed select-none opacity-80 shadow-none"
                                     title="Stok peralatan sedang tidak tersedia">
                                 <span class="flex items-center justify-center gap-1.5">
-                                    <i data-lucide="shopping-cart" class="w-3.5 h-3.5 opacity-50"></i>
+                                    <i data-lucide="ban" class="w-3.5 h-3.5 opacity-50"></i>
                                     Stok Habis
                                 </span>
                             </button>

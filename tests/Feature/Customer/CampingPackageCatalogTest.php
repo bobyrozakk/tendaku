@@ -5,6 +5,7 @@ namespace Tests\Feature\Customer;
 use App\Models\CampingPackage;
 use App\Models\ItemCategory;
 use App\Models\MasterItem;
+use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -74,15 +75,39 @@ class CampingPackageCatalogTest extends TestCase
         ]);
     }
 
+    public function test_guest_cannot_access_camping_package_catalog_and_is_redirected_to_login(): void
+    {
+        $this->get(route('customer.packages.index'))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_guest_cannot_access_camping_package_detail_and_is_redirected_to_login(): void
+    {
+        $activePackage = $this->createPackage($this->activeVendor, 'Paket Aktif', 'paket-aktif');
+
+        $this->get(route('customer.packages.show', $activePackage->id))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_non_customer_cannot_access_camping_package_catalog(): void
+    {
+        $vendorStaff = User::factory()->create(['role' => 'vendor_owner']);
+
+        $this->actingAs($vendorStaff)
+            ->get(route('customer.packages.index'))
+            ->assertRedirect(route('dashboard'));
+    }
+
     public function test_package_catalog_lists_only_active_packages_from_active_vendors(): void
     {
+        $customer = User::factory()->create(['role' => 'customer']);
         $activePackage = $this->createPackage($this->activeVendor, 'Paket Aktif Akhir Pekan', 'paket-aktif-akhir-pekan');
 
         $this->createPackage($this->activeVendor, 'Paket Non-Aktif', 'paket-non-aktif', ['is_active' => false]);
 
         $this->createPackage($this->suspendedVendor, 'Paket Vendor Suspend', 'paket-vendor-suspend');
 
-        $response = $this->get(route('customer.packages.index'));
+        $response = $this->actingAs($customer)->get(route('customer.packages.index'));
 
         $response->assertOk();
         $response->assertSee('Paket Aktif Akhir Pekan');
@@ -93,6 +118,7 @@ class CampingPackageCatalogTest extends TestCase
 
     public function test_package_detail_renders_package_items_and_price(): void
     {
+        $customer = User::factory()->create(['role' => 'customer']);
         $package = $this->createPackage($this->activeVendor, 'Paket Detail Lengkap', 'paket-detail-lengkap', [
             'price' => 275000,
             'duration_days' => 3,
@@ -103,7 +129,7 @@ class CampingPackageCatalogTest extends TestCase
             'quantity' => 2,
         ]);
 
-        $response = $this->get(route('customer.packages.show', $package->id));
+        $response = $this->actingAs($customer)->get(route('customer.packages.show', $package->id));
 
         $response->assertOk();
         $response->assertSee('Paket Detail Lengkap');
@@ -114,16 +140,19 @@ class CampingPackageCatalogTest extends TestCase
 
     public function test_package_detail_returns_404_for_inactive_package_or_suspended_vendor(): void
     {
+        $customer = User::factory()->create(['role' => 'customer']);
         $inactivePackage = $this->createPackage($this->activeVendor, 'Paket Tidak Tayang', 'paket-tidak-tayang', [
             'is_active' => false,
         ]);
 
-        $this->get(route('customer.packages.show', $inactivePackage->id))
+        $this->actingAs($customer)
+            ->get(route('customer.packages.show', $inactivePackage->id))
             ->assertNotFound();
 
         $suspendedPackage = $this->createPackage($this->suspendedVendor, 'Paket Suspend Detail', 'paket-suspend-detail');
 
-        $this->get(route('customer.packages.show', $suspendedPackage->id))
+        $this->actingAs($customer)
+            ->get(route('customer.packages.show', $suspendedPackage->id))
             ->assertNotFound();
     }
 

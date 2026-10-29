@@ -143,38 +143,80 @@
                 </button>
             </div>
 
-            {{-- Search --}}
-            <div class="relative w-full sm:w-72">
-                <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-darkbrown-400">
-                    {{-- Default Search Icon --}}
-                    <i data-lucide="search" wire:loading.remove wire:target="search" class="w-4 h-4"></i>
-                    {{-- Spinner Loading saat mengetik/mencari --}}
-                    <svg wire:loading wire:target="search" class="w-4 h-4 animate-spin text-avocado-600" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                    </svg>
+            {{-- Search + Filter Kategori --}}
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                {{-- Dropdown Kategori --}}
+                <div class="relative shrink-0">
+                    <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-darkbrown-400">
+                        <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <select wire:model.live="filterCategory"
+                            id="filter-category"
+                            class="appearance-none pl-8 pr-7 py-2 text-xs rounded-xl border transition cursor-pointer
+                                   {{ !empty($filterCategory) ? 'border-avocado-500 bg-avocado-50 text-avocado-800 ring-2 ring-avocado-500/20 font-semibold' : 'border-wheat-300 bg-wheat-50/50 text-darkbrown-700' }}
+                                   focus:border-avocado-500 focus:ring-2 focus:ring-avocado-500/20">
+                        <option value="">Semua Kategori</option>
+                        @foreach($categories as $category)
+                            <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-darkbrown-400">
+                        <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                    </div>
                 </div>
-                <input wire:model.live.debounce.250ms="search"
-                       type="text"
-                       placeholder="Cari kode unit, barcode, nama..."
-                       class="w-full pl-9 pr-9 py-2 text-xs rounded-xl border border-wheat-300 focus:border-avocado-500 focus:ring-2 focus:ring-avocado-500/20 bg-wheat-50/50 text-darkbrown-900 placeholder-darkbrown-400 transition">
-                
-                {{-- Clear Search Button (Ikon X di kanan kolom) --}}
-                @if(!empty($search))
-                    <button type="button"
-                            wire:click="$set('search', '')"
-                            title="Hapus pencarian"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-darkbrown-400 hover:text-darkbrown-800 hover:bg-wheat-200/80 transition-all duration-150 cursor-pointer">
-                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                    </button>
-                @endif
+
+                {{-- Search --}}
+                <div class="relative w-full sm:w-60">
+                    <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-darkbrown-400">
+                        {{-- Default Search Icon --}}
+                        <i data-lucide="search" wire:loading.remove wire:target="search" class="w-4 h-4"></i>
+                        {{-- Spinner Loading saat mengetik/mencari --}}
+                        <svg wire:loading wire:target="search" class="w-4 h-4 animate-spin text-avocado-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                    </div>
+                    <input wire:model.live.debounce.250ms="search"
+                           type="text"
+                           placeholder="Cari kode unit, barcode, nama..."
+                           class="w-full pl-9 pr-9 py-2 text-xs rounded-xl border border-wheat-300 focus:border-avocado-500 focus:ring-2 focus:ring-avocado-500/20 bg-wheat-50/50 text-darkbrown-900 placeholder-darkbrown-400 transition">
+
+                    {{-- Clear Search Button (Ikon X di kanan kolom) --}}
+                    @if(!empty($search))
+                        <button type="button"
+                                wire:click="$set('search', '')"
+                                title="Hapus pencarian"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-lg text-darkbrown-400 hover:text-darkbrown-800 hover:bg-wheat-200/80 transition-all duration-150 cursor-pointer">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                    @endif
+                </div>
             </div>
         </div>
 
         {{-- ═══════════════════════════════════════════════════ --}}
         {{-- 3. UNIT LIST (Card-based rows)                     --}}
         {{-- ═══════════════════════════════════════════════════ --}}
-        <div class="divide-y divide-wheat-100">
+        <div class="relative">
+
+            {{-- Loading overlay: muncul instan saat filter / search berubah --}}
+            <div wire:loading
+                 wire:target="search, filterStatus, filterCategory, setTab, updatingSearch, updatingFilterStatus, updatingFilterCategory"
+                 class="absolute inset-0 z-10 flex items-center justify-center rounded-b-2xl"
+                 style="background: rgba(255,255,255,0.72); backdrop-filter: blur(2px);">
+                <div class="flex items-center gap-2.5 px-4 py-2.5 rounded-xl shadow-sm"
+                     style="background: #fff; border: 1px solid #e8dfc9;">
+                    <svg class="w-4 h-4 animate-spin text-avocado-600" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                    <span class="text-xs font-semibold text-darkbrown-700">Memuat data...</span>
+                </div>
+            </div>
+
+        <div class="divide-y divide-wheat-100"
+             wire:loading.class="opacity-40 pointer-events-none"
+             wire:target="search, filterStatus, filterCategory, setTab">
             @forelse($units as $unit)
                 <div class="group flex items-center gap-4 px-5 py-4 hover:bg-wheat-50/60 transition-colors duration-150">
 
@@ -205,33 +247,37 @@
                         </p>
                     </div>
 
-                    {{-- Status Badge --}}
-                    <div class="shrink-0">
+                    {{-- Status Badge (Kolom tetap 120px) --}}
+                    <div class="w-28 shrink-0 flex items-center justify-start">
                         @if($unit->status === 'available')
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-200 shadow-2xs">
                                 <span class="w-1.5 h-1.5 rounded-full bg-avocado-500 animate-pulse"></span>
                                 Tersedia
                             </span>
                         @elseif($unit->status === 'rented')
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200 shadow-2xs">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                 Disewa
                             </span>
                         @elseif($unit->status === 'maintenance')
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200 shadow-2xs">
                                 <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
                                 Perbaikan
                             </span>
                         @else
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                            <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
                                 {{ ucfirst($unit->status) }}
                             </span>
                         @endif
                     </div>
 
-                    {{-- Catatan — ml-auto mendorongnya ke kanan --}}
-                    <div class="hidden md:block ml-auto w-52 shrink-0 text-right">
-                        <p class="text-[11px] text-darkbrown-500 truncate">{{ $unit->notes ?: '—' }}</p>
+                    {{-- Kategori Produk (Kolom tetap 180px di sisi kanan) --}}
+                    <div class="hidden md:flex w-44 shrink-0 items-center justify-start">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium bg-wheat-100/80 text-darkbrown-700 border border-wheat-200/80 max-w-full truncate"
+                              title="{{ $unit->masterItem->category->name ?? 'Tanpa Kategori' }}">
+                            <i data-lucide="tag" class="w-3 h-3 text-darkbrown-400 shrink-0"></i>
+                            <span class="truncate">{{ $unit->masterItem->category->name ?? 'Tanpa Kategori' }}</span>
+                        </span>
                     </div>
 
                     {{-- Tombol Aksi (hanya render jika ada aksi) --}}
@@ -268,6 +314,7 @@
                 </div>
             @endforelse
         </div>
+        </div>{{-- end .relative wrapper --}}
 
         {{-- Pagination & Footer Summary --}}
         <div class="px-5 py-4 border-t border-wheat-200/80 bg-wheat-50/30 flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -283,7 +330,7 @@
             {{-- Navigation Links Pagination --}}
             @if($units->hasPages())
                 <div class="w-full sm:w-auto flex justify-center sm:justify-end">
-                    {{ $units->links() }}
+                    {{ $units->links('kasir.pagination') }}
                 </div>
             @endif
         </div>

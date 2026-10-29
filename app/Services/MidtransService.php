@@ -205,7 +205,7 @@ class MidtransService
     }
 
     /**
-     * @param array<string, string> $notification
+     * @param  array<string, string>  $notification
      *
      * @throws InvalidMidtransSignatureException
      * @throws InvalidArgumentException
@@ -228,7 +228,7 @@ class MidtransService
     }
 
     /**
-     * @param array<string, string> $notification
+     * @param  array<string, string>  $notification
      *
      * @throws InvalidMidtransSignatureException
      */
@@ -252,7 +252,7 @@ class MidtransService
     // ── Internal: status ──────────────────────────────────────────────────
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      */
     private function applyGatewayUpdate(Payment $payment, array $data): Payment
     {
@@ -379,7 +379,8 @@ class MidtransService
             ->count();
 
         if ($paidCount === 1) {
-            $rental->update(['status' => 'confirmed']);
+            // Biarkan status rental tetap 'pending' agar kasir toko memvalidasi dan scan barcode fisik unit terlebih dahulu di POS Kasir
+            // Status pembayaran (Payment) sudah 'paid'. Setelah kasir memvalidasi barcode, status rental akan disetujui menjadi 'confirmed' (Siap Pickup).
         }
     }
 
@@ -398,7 +399,7 @@ class MidtransService
     }
 
     /**
-     * @param array<string, string> $notification
+     * @param  array<string, string>  $notification
      */
     private function assertAmountMatches(
         Payment $payment,

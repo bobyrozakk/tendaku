@@ -54,10 +54,13 @@ class CheckoutController extends Controller
         );
 
         $isLoggedIn = Auth::check();
+        $user = Auth::user();
+        $addresses = $user ? $user->addresses()->orderByDesc('is_default')->latest('id')->get() : collect();
+        $defaultAddress = $user ? $user->defaultAddress() : null;
 
         return view(
             'customer.checkout.index',
-            compact('booking', 'isLoggedIn')
+            compact('booking', 'isLoggedIn', 'addresses', 'defaultAddress')
         );
     }
 
@@ -103,6 +106,18 @@ class CheckoutController extends Controller
                     'warning',
                     'Layanan pengantaran (delivery) mengharuskan Anda memiliki akun terverifikasi. Silakan masuk atau daftar akun terlebih dahulu.'
                 );
+        }
+
+        if ($request->user() === null) {
+            $request->validate([
+                'guest_name' => ['required', 'string', 'max:100'],
+                'guest_phone' => ['required', 'string', 'max:20'],
+                'guest_id_number' => ['required', 'string', 'max:30'],
+            ], [
+                'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
+                'guest_phone.required' => 'Nomor telepon wajib diisi untuk pemesanan tanpa akun.',
+                'guest_id_number.required' => 'Nomor KTP wajib diisi untuk pemesanan tanpa akun.',
+            ]);
         }
 
         try {
@@ -235,12 +250,44 @@ class CheckoutController extends Controller
 
         $data['user_id'] = $user->id;
 
+        // Lengkapi profil user jika ada data yang dikirim dan belum tersimpan di akun
+        $userUpdates = [];
+        if ($request->filled('name') && blank($user->name)) {
+            $userUpdates['name'] = $request->validated('name');
+        }
+        if ($request->filled('phone') && blank($user->phone)) {
+            $userUpdates['phone'] = $request->validated('phone');
+        }
+        if ($request->filled('nik') && blank($user->nik)) {
+            $userUpdates['nik'] = $request->validated('nik');
+        }
+        if (! empty($userUpdates)) {
+            $user->update($userUpdates);
+        }
+
         if (
             $pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY
         ) {
-            $data['delivery_address'] =
-                $request->validated('delivery_address')
-                ?: ($user->address ?? '');
+            $selectedAddress = null;
+            $customerAddressId = $request->validated('customer_address_id');
+
+            if ($customerAddressId) {
+                // Pastikan alamat milik customer yang login (tidak dapat dimanipulasi)
+                $selectedAddress = $user->addresses()->where('id', $customerAddressId)->first();
+            }
+
+            if (! $selectedAddress) {
+                $selectedAddress = $user->defaultAddress();
+            }
+
+            if ($selectedAddress) {
+                $data['customer_address_id'] = $selectedAddress->id;
+                $data['delivery_address'] = $selectedAddress->toDeliverySnapshot();
+            } else {
+                $data['delivery_address'] =
+                    $request->validated('delivery_address')
+                    ?: ($user->address ?? '');
+            }
         }
 
         return $data;

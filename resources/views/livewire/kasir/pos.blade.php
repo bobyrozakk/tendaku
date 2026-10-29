@@ -1,4 +1,6 @@
-<div class="space-y-6" x-data="{ showValidationModal: false }">
+<div class="space-y-6" x-data="{ showValidationModal: false, showScanModal: @entangle('showScanModal') }"
+    x-on:approve-success.window="showValidationModal = false"
+    x-on:approve-validation-failed.window="showValidationModal = true">
     @if(session()->has('pos_message'))
         <div class="p-4 rounded-2xl bg-avocado-50 border border-avocado-300 text-avocado-900 flex items-center justify-between shadow-sm animate-fade-in">
             <div class="flex items-center gap-3">
@@ -24,12 +26,12 @@
             </div>
         </div>
 
-        <!-- Card 2: Completed / Tervalidasi -->
+        <!-- Card 2: Tervalidasi (Confirmed) -->
         <div class="bg-white p-5 rounded-2xl border border-wheat-200/90 shadow-tendaku-sm flex items-center justify-between relative overflow-hidden">
             <div class="space-y-1">
-                <span class="text-xs font-bold text-darkbrown-500 uppercase tracking-wider block">Completed (Disetujui)</span>
+                <span class="text-xs font-bold text-darkbrown-500 uppercase tracking-wider block">Tervalidasi Hari Ini</span>
                 <p class="text-3xl font-extrabold text-avocado-600 tracking-tight">{{ $kpi['completed'] }}</p>
-                <p class="text-[11px] text-darkbrown-500">Pesanan telah divalidasi & siap disewa</p>
+                <p class="text-[11px] text-darkbrown-500">Sudah disetujui kasir & siap diambil penyewa di Pickup</p>
             </div>
             <div class="p-3.5 rounded-2xl bg-avocado-100 text-avocado-700 border border-avocado-200 shrink-0">
                 <i data-lucide="circle-check" class="w-7 h-7 text-avocado-700"></i>
@@ -72,7 +74,7 @@
                 </button>
                 <button wire:click="$set('activeTab', 'completed')"
                     class="px-4 py-2 text-center text-xs font-bold rounded-xl transition-all duration-200 flex items-center gap-1.5 cursor-pointer {{ $activeTab === 'completed' ? 'bg-white text-darkbrown-900 shadow-sm border border-wheat-200' : 'text-darkbrown-600 hover:text-darkbrown-900' }}">
-                    <span>Completed</span>
+                    <span>Tervalidasi</span>
                     <span class="px-1.5 py-0.5 text-[10px] rounded-full bg-avocado-100 text-avocado-800 border border-avocado-200">{{ $kpi['completed'] }}</span>
                 </button>
             </div>
@@ -117,10 +119,25 @@
                             <p class="text-xs font-bold text-darkbrown-800">{{ $order->details->count() }} Item</p>
                             <p class="text-[10px] text-darkbrown-500">Rp {{ number_format($order->grand_total, 0, ',', '.') }}</p>
                         </div>
+                        @php
+                            $isPaid = $order->payments->contains(fn ($p) => $p->status === 'paid');
+                        @endphp
                         @if($isPending)
-                            <x-badge variant="sunglow" size="sm" :dot="true">Pending Validasi</x-badge>
+                            <div class="flex flex-col items-end gap-1">
+                                <x-badge variant="sunglow" size="sm" :dot="true">Pending Validasi</x-badge>
+                                @if($isPaid)
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                                        <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                        Sudah Bayar
+                                    </span>
+                                @else
+                                    <span class="text-[10px] font-medium text-darkbrown-500 bg-wheat-100 px-2 py-0.5 rounded-full">
+                                        Belum Bayar
+                                    </span>
+                                @endif
+                            </div>
                         @else
-                            <x-badge variant="avocado" size="sm" :dot="true">Completed (Disetujui)</x-badge>
+                            <x-badge variant="avocado" size="sm" :dot="true">Tervalidasi (Siap Pickup)</x-badge>
                         @endif
                         <div class="text-wheat-400 group-hover:text-avocado-500 transition-colors">
                             <i data-lucide="chevron-right" class="w-4 h-4"></i>
@@ -142,11 +159,11 @@
         @php
             $custModal = $this->selectedOrder->customer?->name ?? $this->selectedOrder->guest_name;
             $totalItems = $this->selectedOrder->details->count();
-            // Item terhitung matched jika item_unit_id terpasang dan sudah diverifikasi/discan
-            $orderScannedMap = $scannedUnits[$this->selectedOrder->id] ?? [];
+            // Gunakan string key agar konsisten dengan penyimpanan Livewire setelah JSON serialize
+            $orderScannedMap = $scannedUnits[(string) $this->selectedOrder->id] ?? [];
             $assignedCount = 0;
             foreach ($this->selectedOrder->details as $d) {
-                if (!empty($d->item_unit_id) && !empty($orderScannedMap[$d->id])) {
+                if (!empty($d->item_unit_id) && !empty($orderScannedMap[(string) $d->id])) {
                     $assignedCount++;
                 }
             }
@@ -202,15 +219,30 @@
                                 @else
                                     <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-sm">
                                         <i data-lucide="circle-check" class="w-3.5 h-3.5 text-emerald-600"></i>
-                                        Completed (Disetujui)
+                                        Tervalidasi (Siap Pickup)
                                     </span>
                                 @endif
                             </div>
                             <h2 class="text-xl font-black text-darkbrown-900 tracking-tight">Validasi: {{ $custModal }}</h2>
-                            <p class="text-xs text-darkbrown-600 mt-0.5 flex items-center gap-1.5">
-                                <span>Total Tagihan:</span>
-                                <span class="text-avocado-800 font-extrabold text-sm px-2 py-0.5 rounded-md bg-avocado-50 border border-avocado-200/80">Rp {{ number_format($this->selectedOrder->grand_total, 0, ',', '.') }}</span>
-                            </p>
+                            <div class="flex items-center gap-3 mt-1 flex-wrap text-xs">
+                                <span class="text-darkbrown-600 flex items-center gap-1.5">
+                                    <span>Total Tagihan:</span>
+                                    <span class="text-avocado-800 font-extrabold text-sm px-2 py-0.5 rounded-md bg-avocado-50 border border-avocado-200/80">Rp {{ number_format($this->selectedOrder->grand_total, 0, ',', '.') }}</span>
+                                </span>
+                                @php
+                                    $isModalPaid = $this->selectedOrder->payments->contains(fn ($p) => $p->status === 'paid');
+                                @endphp
+                                @if($isModalPaid)
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                        <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                                        Pembayaran Lunas (Online)
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-medium text-[11px] bg-amber-50 text-amber-800 border border-amber-200">
+                                        Menunggu Pembayaran
+                                    </span>
+                                @endif
+                            </div>
                         </div>
                         
                         <!-- Action Button Area -->
@@ -220,7 +252,6 @@
                                     <button
                                         type="button"
                                         wire:click="approveOrder({{ $this->selectedOrder->id }})"
-                                        x-on:click="if ({{ $allMatched ? 'true' : 'false' }}) { showValidationModal = false }"
                                         class="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-extrabold text-xs transition-all duration-200 select-none {{ $allMatched ? 'bg-gradient-to-r from-emerald-600 to-avocado-600 hover:from-emerald-500 hover:to-avocado-500 text-white cursor-pointer shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/50 hover:scale-[1.02] active:scale-[0.98]' : 'bg-wheat-100 text-darkbrown-400 border border-wheat-300/80 cursor-not-allowed opacity-80' }}"
                                         {{ !$allMatched ? 'disabled' : '' }}>
                                         @if(!$allMatched)
@@ -232,7 +263,7 @@
                                             <span class="p-1 rounded-md bg-white/20">
                                                 <i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>
                                             </span>
-                                            <span>Setujui Pesanan (Completed)</span>
+                                            <span>Setujui &amp; Konfirmasi Pesanan</span>
                                         @endif
                                     </button>
 
@@ -280,7 +311,7 @@
                                         @foreach($this->selectedOrder->details as $item)
                                             @php
                                                 $unit = $item->itemUnit;
-                                                $isItemScanned = !empty($orderScannedMap[$item->id]);
+                                                $isItemScanned = !empty($orderScannedMap[(string) $item->id]);
                                             @endphp
                                             <tr class="hover:bg-wheat-50/70 transition-colors">
                                                 <td class="py-3.5 px-4 font-bold text-darkbrown-900 text-sm">
@@ -348,7 +379,11 @@
 
                                     <div class="shrink-0">
                                         @if(!$allMatched)
-                                            <button wire:click="openScanModal" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-avocado-600 hover:bg-avocado-700 active:bg-avocado-800 shadow-sm transition duration-200 cursor-pointer">
+                                            <button 
+                                                type="button"
+                                                x-on:click="showScanModal = true; $nextTick(() => { $refs.barcodeInput?.focus(); if (typeof window.renderLucideIcons === 'function') window.renderLucideIcons(); })"
+                                                wire:click="openScanModal" 
+                                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-avocado-600 hover:bg-avocado-700 active:bg-avocado-800 shadow-sm transition duration-150 cursor-pointer">
                                                 <i data-lucide="scan-barcode" class="w-4 h-4"></i>
                                                 <span>Scan / Input Barcode</span>
                                             </button>
@@ -369,15 +404,32 @@
     @endif
 
     <!-- Modern Scan Barcode Modal (Teleported to Body) DENGAN DAFTAR BARCODE UNTUK DICOCOKKAN -->
-    @if($showScanModal)
     <template x-teleport="body">
-        <div class="fixed inset-0 z-[110] flex items-center justify-center bg-darkbrown-950/65 backdrop-blur-sm p-4 animate-fade-in"
-             x-on:click.self="$wire.set('showScanModal', false)">
-            <div class="w-full max-w-lg bg-white rounded-3xl border border-wheat-200/90 shadow-2xl shadow-darkbrown-950/25 relative overflow-hidden">
-                <!-- Dedicated Close (X) Button di Pojok Kanan Atas Modal (Terpisah dari Aksi Utama) -->
+        <div 
+            x-show="showScanModal"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            x-on:keydown.escape.window="showScanModal = false"
+            x-on:click.self="showScanModal = false"
+            class="fixed inset-0 z-[110] flex items-center justify-center bg-darkbrown-950/65 backdrop-blur-sm p-4"
+            style="display: none;">
+            <div 
+                x-show="showScanModal"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100"
+                x-transition:leave-end="opacity-0 scale-95"
+                class="w-full max-w-lg bg-white rounded-3xl border border-wheat-200/90 shadow-2xl shadow-darkbrown-950/25 relative overflow-hidden">
+                <!-- Dedicated Instant Close (X) Button di Pojok Kanan Atas Modal (0ms, langsung tutup di browser) -->
                 <button 
                     type="button"
-                    wire:click="$set('showScanModal', false)" 
+                    x-on:click="showScanModal = false" 
                     class="absolute top-4 right-4 z-20 p-2.5 rounded-full text-darkbrown-400 hover:text-darkbrown-800 bg-wheat-100/70 hover:bg-wheat-200/90 transition-all duration-150 cursor-pointer shadow-sm group focus:outline-none focus:ring-2 focus:ring-wheat-400"
                     title="Tutup (Esc)">
                     <i data-lucide="x" class="w-4 h-4 transition-transform group-hover:rotate-90 duration-200"></i>
@@ -403,10 +455,10 @@
                                 <div class="relative flex-1">
                                     <input 
                                         type="text"
+                                        x-ref="barcodeInput"
                                         wire:model="modalBarcode" 
                                         class="w-full font-mono uppercase text-xs tracking-wider rounded-xl transition duration-150 py-2.5 px-3.5 bg-wheat-50/40 focus:bg-white focus:outline-none focus:ring-2 {{ $scanError ? 'border-rose-500 text-rose-900 focus:ring-rose-400 focus:border-rose-500 bg-rose-50/30' : 'border-wheat-300 text-darkbrown-900 focus:ring-avocado-500 focus:border-avocado-500' }}" 
                                         placeholder="Scan barcode atau ketik kode unit..." 
-                                        autofocus 
                                     />
                                     @if($scanError)
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-rose-500">
@@ -457,12 +509,12 @@
                         <div class="max-h-56 overflow-y-auto space-y-2 pr-1">
                             @php
                                 $currentOrderDetails = $this->selectedOrder ? $this->selectedOrder->details : collect();
-                                $currentScanned = $scannedUnits[$this->selectedOrder->id ?? 0] ?? [];
+                                $currentScanned = $scannedUnits[(string) ($this->selectedOrder->id ?? 0)] ?? [];
                             @endphp
                             @forelse($currentOrderDetails as $dItem)
                                 @php
                                     $allocatedUnit = $dItem->itemUnit;
-                                    $isDone = !empty($currentScanned[$dItem->id]);
+                                    $isDone = !empty($currentScanned[(string) $dItem->id]);
                                 @endphp
                                 @if($allocatedUnit)
                                     <div wire:click="quickFillBarcode('{{ $allocatedUnit->barcode }}')"
@@ -511,6 +563,5 @@
             </div>
         </div>
     </template>
-    @endif
 </div>
 
