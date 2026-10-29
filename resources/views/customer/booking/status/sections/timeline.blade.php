@@ -54,6 +54,16 @@
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0 text-right">
                                         <span x-show="times['{{ $key }}']" class="text-xs font-semibold text-darkbrown-500" x-text="times['{{ $key }}']">{{ $times[$key] }}</span>
+                                        @if($key === 'rental')
+                                            <span x-show="state('rental') !== 'todo'" x-cloak
+                                                  class="px-2.5 py-0.5 rounded-full text-xs font-bold border bg-avocado-100 text-avocado-800 border-avocado-300"
+                                                  x-text="state('rental') === 'active' ? 'Aktif' : 'Selesai'"></span>
+                                        @elseif($key === 'return')
+                                            <span x-show="state('return') !== 'todo'" x-cloak
+                                                  class="px-2.5 py-0.5 rounded-full text-xs font-bold border"
+                                                  :class="state('return') === 'done' ? 'bg-avocado-100 text-avocado-800 border-avocado-300' : 'bg-sunglow-100 text-goldenrod-900 border-sunglow-300'"
+                                                  x-text="state('return') === 'done' ? 'Dikembalikan' : ({{ $rental->returned_at ? 'true' : 'false' }} ? 'Diperiksa' : 'Belum kembali')"></span>
+                                        @endif
                                         @unless($key === 'created')
                                             <i
                                                 x-show="state('{{ $key }}') === 'todo'"

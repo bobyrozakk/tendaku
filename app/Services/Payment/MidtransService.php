@@ -292,6 +292,15 @@ class MidtransService
             $data
         );
 
+        if ($newStatus === PaymentStatus::Paid) {
+            $settlementTime = $data['settlement_time'] ?? $data['transaction_time'] ?? null;
+            if ($settlementTime) {
+                $payment->paid_at = \Carbon\Carbon::parse($settlementTime, 'Asia/Jakarta');
+            } else {
+                $payment->paid_at ??= now();
+            }
+        }
+
         $payment->save();
 
         if (! $statusChanged) {

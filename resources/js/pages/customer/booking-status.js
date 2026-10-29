@@ -72,8 +72,9 @@ function statusPage(cfg) {
             if (
                 key === "payment" &&
                 (this.isPaid || this.ci > this.order.indexOf("payment"))
-            )
+            ) {
                 return "done";
+            }
             if (this.ci < 0) return "todo";
             const i = this.order.indexOf(key);
             if (i < this.ci) return "done";
@@ -337,7 +338,7 @@ function statusPage(cfg) {
             this.isPaid = true;
             this.justDone = "payment";
             this.activeNode = "pickup";
-            this.status = data.rental_status || "confirmed";
+            this.status = data.rental_status || "pending";
             this.celebrate = false;
             await this.$nextTick();
             if (typeof window.renderLucideIcons === "function") {

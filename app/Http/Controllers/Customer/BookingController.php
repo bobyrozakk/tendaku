@@ -138,8 +138,8 @@ class BookingController extends Controller
             'payment_status' => $payment->status,
             'rental_status' => $rental->status,
             'is_paid' => $isPaid,
-            'paid_at' => $payment->paid_at?->translatedFormat('d M Y, H:i T'),
-            'paid_at_text' => $payment->paid_at?->translatedFormat('d M, H:i'),
+            'paid_at' => $payment->paid_at?->timezone(config('app.timezone', 'Asia/Jakarta'))->translatedFormat('d M Y, H:i T'),
+            'paid_at_text' => $payment->paid_at?->timezone(config('app.timezone', 'Asia/Jakarta'))->translatedFormat('d M, H:i'),
             'message' => $isPaid
                 ? 'Pembayaran berhasil diverifikasi! Pesanan Anda telah dikonfirmasi.'
                 : 'Status pembayaran saat ini: '.$payment->status,
@@ -191,6 +191,7 @@ class BookingController extends Controller
         $rental->loadMissing([
             'vendor',
             'customer',
+            'pickedUpBy:id,name',
             'pickedUpBy',
             'details.masterItem.category',
             'payments',

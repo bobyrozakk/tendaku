@@ -1,13 +1,10 @@
-{{-- Informasi serah terima / pickup --}}
-@if($status !== 'pending' && !in_array($status, ['cancelled', 'expired']))
-    <div x-show="isPaid || (status !== 'pending' && !['cancelled', 'expired'].includes(status))"
-         class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200">
-        <div class="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-avocado-900">
-            <i data-lucide="circle-check" class="h-4 w-4"></i>
-            <span>Pembayaran lunas terverifikasi</span>
-        </div>
+<div x-show="isPaid || (status !== 'pending' && !['cancelled', 'expired'].includes(status))"
+     class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200">
+    <div class="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-avocado-900">
+        <i data-lucide="circle-check" class="h-4 w-4"></i>
+        <span>Pembayaran lunas terverifikasi</span>
     </div>
-@endif
+</div>
 
 <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
     <div>
@@ -51,3 +48,14 @@
         <span>Lihat receipt order</span>
     </a>
 </div>
+
+{{-- Tombol Simulasi Kasir / Testing Saja (hanya tampilan, TIDAK menulis ke database) --}}
+@if(app()->environment('local'))
+<div class="mt-4 pt-3 border-t border-dashed border-wheat-300">
+    <button type="button"
+            @click="activeNode = 'rental'; justDone = 'pickup'"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold text-avocado-800 bg-avocado-100 hover:bg-avocado-200 border border-avocado-300 transition">
+        Selesaikan Serah Terima (test)
+    </button>
+</div>
+@endif

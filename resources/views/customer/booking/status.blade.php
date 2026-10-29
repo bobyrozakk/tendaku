@@ -46,9 +46,6 @@
                         </div>
                     </div>
                 @endif
-                <a href="{{ route('customer.catalog.index') }}" class="btn-tendaku-primary py-2.5 px-4 rounded-xl text-xs font-bold">
-                    + Sewa Alat Baru
-                </a>
             </div>
         </div>
     </x-slot>
@@ -145,7 +142,7 @@
             'created' => ['title' => 'Booking dibuat',        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
             'payment' => ['title' => 'Pembayaran',            'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
             'pickup'  => ['title' => 'Serah terima alat',     'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'],
-            'rental'  => ['title' => 'Masa sewa',             'icon' => 'M19 20L10 4 1 20h18z'],
+            'rental'  => ['title' => 'Sedang disewa',             'icon' => 'M19 20L10 4 1 20h18z'],
             'return'  => ['title' => 'Pengembalian',          'icon' => 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6'],
             'done'    => ['title' => 'Transaksi selesai',     'icon' => 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9'],
         ];
@@ -181,10 +178,11 @@
                 'failed', 'deny', 'cancel' => 'Pembayaran gagal',
                 default                    => 'Tagihan ' . $p->status,
             };
+            $actTime = $isPaid ? ($p->paid_at ?? $p->created_at) : $p->created_at;
             $acts->push([
                 'title' => $label,
                 'sub'   => $rupiah($p->amount),
-                'at'    => $isPaid ? ($p->paid_at ?? $p->created_at) : $p->created_at,
+                'at'    => $actTime ? \Carbon\Carbon::parse($actTime)->timezone(config('app.timezone', 'Asia/Jakarta'))->toIso8601String() : now()->toIso8601String(),
                 'type'  => 'card',
                 'tone'  => $isPaid ? 'green' : ($p->status === 'pending' ? 'amber' : 'red'),
             ]);
