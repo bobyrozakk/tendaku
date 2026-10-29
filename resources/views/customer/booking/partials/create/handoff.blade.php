@@ -6,6 +6,10 @@
                         <div class="flex flex-col items-center gap-5">
                             <div class="relative w-32 h-32 flex items-center justify-center">
                                 <span class="co-halo absolute inset-0 rounded-full bg-avocado-200/70" aria-hidden="true"></span>
+                                <svg class="relative w-24 h-24 text-avocado-600" viewBox="0 0 60 60" fill="none" stroke="currentColor">
+                                    <circle class="co-ring" cx="30" cy="30" r="26.5" stroke-width="4" stroke-linecap="round"/>
+                                    <path class="co-bigtick" d="M18 31l8 8 16-16" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
                             </div>
 
                             <div class="co-copy space-y-2">

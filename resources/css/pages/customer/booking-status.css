@@ -51,7 +51,7 @@
 }
 
 .va-pill-bank {
-    flex: 0 0 30%;
+    /* flex: 0 0 10%; */
     min-width: 5.25rem;
     align-self: stretch;
     border-right-width: 1px;
@@ -180,6 +180,10 @@
     stroke-dasharray: 48;
     stroke-dashoffset: 48;
     animation: tl-draw 0.35s cubic-bezier(0.65, 0, 0.45, 1) 0.5s forwards;
+}
+
+[x-cloak] {
+    display: none !important;
 }
 
 @keyframes tl-draw {

@@ -47,7 +47,7 @@ class RevenueReportService
     /**
      * @var list<string>
      */
-    public const PAYMENT_TYPES = ['dp', 'full', 'remaining', 'fine', 'deposit', 'deposit_refund', 'refund'];
+    public const PAYMENT_TYPES = ['dp', 'full', 'remaining', 'fine', 'refund'];
 
     /**
      * Normalisasi input filter dari Livewire/HTTP menjadi rentang tanggal Carbon.

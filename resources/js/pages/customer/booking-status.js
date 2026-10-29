@@ -51,8 +51,16 @@ function statusPage(cfg) {
             }
         },
 
-        /* ---------- State timeline ---------- */
+        /* State timeline */
+        activeNode: null,
+
         get current() {
+            if (this.activeNode) {
+                return this.activeNode;
+            }
+            if (this.isPaid && this.status === "pending") {
+                return "pickup";
+            }
             return this.statusToNode[this.status] ?? null;
         },
         get ci() {
@@ -61,6 +69,11 @@ function statusPage(cfg) {
 
         state(key) {
             if (key === "created") return "done";
+            if (
+                key === "payment" &&
+                (this.isPaid || this.ci > this.order.indexOf("payment"))
+            )
+                return "done";
             if (this.ci < 0) return "todo";
             const i = this.order.indexOf(key);
             if (i < this.ci) return "done";
@@ -68,7 +81,6 @@ function statusPage(cfg) {
                 return this.status === "completed" ? "done" : "active";
             return "todo";
         },
-        // Hanya titik yang sedang berjalan yang terbuka. Yang sudah lewat atau belum sampai tetap tertutup.
         isOpen(key) {
             return key !== "created" && this.current === key;
         },
@@ -303,17 +315,9 @@ function statusPage(cfg) {
 
         // Pembayaran terdeteksi: centang -> tab bayar menutup -> tab serah terima membuka
         async handlePaid(data) {
-            // Pembayaran denda (bukan tagihan awal): cukup muat ulang agar angka terbaru tampil
-            if (this.current !== "payment") {
-                window.location.reload();
-                return;
-            }
-
             const slow = !reduced();
-
             this.celebrate = true;
-            await wait(slow ? 1400 : 200);
-
+            await wait(slow ? 1200 : 200);
             const now = new Date().toLocaleString("id-ID", {
                 day: "2-digit",
                 month: "short",
@@ -330,27 +334,26 @@ function statusPage(cfg) {
                 tone: "green",
                 fresh: true,
             });
-
-            // Ubah status: bulatan bayar jadi centang, garis terisi, tab bayar menutup, tab serah terima membuka
+            this.isPaid = true;
             this.justDone = "payment";
-            this.status = data.rental_status || data.status || "pending";
-
+            this.activeNode = "pickup";
+            this.status = data.rental_status || "confirmed";
+            this.celebrate = false;
             await this.$nextTick();
+            if (typeof window.renderLucideIcons === "function") {
+                window.renderLucideIcons();
+            }
             setTimeout(() => {
-                const el = document.getElementById("node-" + this.current);
-                if (el)
+                const el = document.getElementById("node-pickup");
+                if (el) {
                     el.scrollIntoView({
                         behavior: reduced() ? "auto" : "smooth",
-                        block: "nearest",
+                        block: "center",
                     });
-            }, 350);
-            setTimeout(() => {
-                this.celebrate = false;
+                }
                 this.justDone = null;
-            }, 900);
+            }, 300);
         },
     };
 }
-
-// Expose to Alpine expressions used in the Blade view.
 window.statusPage = statusPage;

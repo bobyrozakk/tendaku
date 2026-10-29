@@ -1,6 +1,7 @@
 {{-- Informasi serah terima / pickup --}}
 @if($status !== 'pending' && !in_array($status, ['cancelled', 'expired']))
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200">
+    <div x-show="isPaid || (status !== 'pending' && !['cancelled', 'expired'].includes(status))"
+         class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200">
         <div class="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-avocado-900">
             <i data-lucide="circle-check" class="h-4 w-4"></i>
             <span>Pembayaran lunas terverifikasi</span>

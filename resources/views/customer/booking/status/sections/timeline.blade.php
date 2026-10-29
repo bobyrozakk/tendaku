@@ -15,8 +15,24 @@
                                 <span class="relative z-10 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-colors duration-500"
                                       :class="[dotCls('{{ $key }}'), justDone === '{{ $key }}' ? 'dot-pop' : '']">
                                     <span x-show="state('{{ $key }}') === 'active'" class="absolute inset-0 rounded-full bg-sunglow-300/60 animate-ping motion-reduce:animate-none" aria-hidden="true"></span>
-                                    <svg x-show="state('{{ $key }}') === 'done'" class="relative w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                    <svg x-show="state('{{ $key }}') !== 'done'" class="relative w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $n['icon'] }}" /></svg>
+                                    <i x-show="state('{{ $key }}') === 'done'"
+                                       x-cloak
+                                       class="relative w-5 h-5"
+                                       data-lucide="check"
+                                       aria-label="Selesai"></i>
+                                    <i
+                                        x-show="state('{{ $key }}') !== 'done'"
+                                        class="relative w-5 h-5"
+                                        data-lucide="{{ [
+                                            'created' => 'clipboard-check',
+                                            'payment' => 'credit-card',
+                                            'pickup' => 'handshake',
+                                            'rental' => 'calendar-days',
+                                            'return' => 'package-check',
+                                            'done' => 'check',
+                                        ][$key] ?? 'circle' }}"
+                                        aria-hidden="true"
+                                    ></i>
                                 </span>
                                 @unless($loop->last)
                                     <span class="relative w-0.5 flex-1 bg-wheat-200 my-1 rounded">
@@ -39,7 +55,12 @@
                                     <div class="flex items-center gap-2 shrink-0 text-right">
                                         <span x-show="times['{{ $key }}']" class="text-xs font-semibold text-darkbrown-500" x-text="times['{{ $key }}']">{{ $times[$key] }}</span>
                                         @unless($key === 'created')
-                                            <svg x-show="state('{{ $key }}') === 'todo'" class="w-4 h-4 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-label="Belum terbuka"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                            <i
+                                                x-show="state('{{ $key }}') === 'todo'"
+                                                class="w-4 h-4 text-darkbrown-400"
+                                                data-lucide="lock-keyhole"
+                                                aria-label="Belum terbuka"
+                                            ></i>
                                         @endunless
                                     </div>
                                 </header>
@@ -50,31 +71,26 @@
                                         <div class="relative border-t border-wheat-200 p-4 sm:p-5 space-y-4">
 
                                             @switch($key)
-
-                                                {{-- ================= PEMBAYARAN ================= --}}
+                                                {{-- PEMBUATAN --}}
                                                 @case('payment')
                                                     @include('customer.booking.status.payment')
                                                     @break
-                                                {{-- ================= SERAH TERIMA ================= --}}
+                                                {{-- SERAH TERIMA --}}
                                                 @case('pickup')
                                                     @include('customer.booking.status.steps.pickup')
                                                     @break
-
-                                                {{-- ================= MASA SEWA ================= --}}
+                                                {{-- MASA SEWA --}}
                                                 @case('rental')
                                                     @include('customer.booking.status.steps.rental')
                                                     @break
-
-                                                {{-- ================= PENGEMBALIAN ================= --}}
+                                                {{-- PENGEMBALIAN --}}
                                                 @case('return')
                                                     @include('customer.booking.status.steps.return')
                                                     @break
-
-                                                {{-- ================= SELESAI ================= --}}
+                                                {{-- SELESAI --}}
                                                 @case('done')
                                                     @include('customer.booking.status.steps.done')
                                                     @break
-
                                             @endswitch
                                         </div>
                                     </div>

@@ -74,13 +74,12 @@ class BookingReceiptService
                     : 'Belum tersedia',
             };
 
-        $statusLabel = match ($rental->status) {
-            'pending' => 'Menunggu Pembayaran',
-            'cancelled' => 'Pesanan Dibatalkan',
-            'expired' => 'Kedaluwarsa',
-            default => $isPaid
-                ? 'Pembayaran Terverifikasi'
-                : 'Menunggu Konfirmasi',
+        $paidType = $paidPayment?->payment_type === 'dp' ? 'DP' : 'Lunas';
+        $statusLabel = match (true) {
+            $isPaid => "Sudah Dibayar ({$paidType})",
+            $rental->status === 'cancelled' => 'Pesanan Dibatalkan',
+            $rental->status === 'expired' => 'Kedaluwarsa',
+            default => 'Menunggu Pembayaran',
         };
 
         $subtotal = (float) $rental->subtotal;

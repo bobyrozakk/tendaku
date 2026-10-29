@@ -197,7 +197,7 @@
                         <p x-show="errors.dates" x-text="errors.dates" x-cloak class="mt-2 text-sm text-red-700"></p>
                     </div>
 
-                    <!-- Peralatan (jumlah unit bisa diubah) -->
+                    <!-- Peralatan -->
                     <div class="p-5 sm:p-6">
                         <div class="flex items-center justify-between gap-3 mb-3">
                             <h3 class="font-bold text-darkbrown-900">Peralatan yang disewa</h3>
@@ -213,7 +213,6 @@
                                                 <span x-show="item.category" class="rounded-md bg-wheat-100 border border-wheat-200 px-2 py-0.5 text-xs font-semibold text-darkbrown-700" x-text="item.category"></span>
                                             </div>
                                             <p x-show="item.specs" class="text-sm text-darkbrown-500 line-clamp-2" x-text="item.specs"></p>
-                                            <p class="text-sm text-darkbrown-700" x-text="formatRupiah(item.price_per_day) + '/hari × ' + rentalDays + ' hari'"></p>
                                         </div>
                                     </div>
 

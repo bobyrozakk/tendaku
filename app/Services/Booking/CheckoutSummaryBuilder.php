@@ -29,9 +29,10 @@ class CheckoutSummaryBuilder
      */
     public function deliveryFee(Vendor $vendor, string $pickupMethod, bool $isLoggedIn): int
     {
-        return ($isLoggedIn && $pickupMethod === self::PICKUP_DELIVERY)
-            ? (int) $vendor->delivery_fee
-            : 0;
+        if (! $isLoggedIn || $pickupMethod !== self::PICKUP_DELIVERY) {
+            return 0;
+        }
+        return (int) ($vendor->delivery_fee ?: config('booking.delivery_fee', 20000));
     }
 
     public function build(array $cart, ?User $user, ?string $requestedMethod): array

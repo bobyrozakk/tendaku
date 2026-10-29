@@ -42,7 +42,7 @@
                                 <div class="min-w-0 flex-1 pr-6">
                                     <div class="flex items-center justify-between gap-2">
                                         <span class="font-bold text-darkbrown-900">Diantar ke lokasi</span>
-                                        <span class="rounded-md bg-sunglow-100 border border-sunglow-300 px-2 py-0.5 text-xs font-bold text-darkbrown-900">Rp 25.000</span>
+                                        <span class="rounded-md bg-sunglow-100 border border-sunglow-300 px-2 py-0.5 text-xs font-bold text-darkbrown-900">Rp 20.000</span>
                                     </div>
                                     <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Kurir vendor mengantar ke rumah atau titik kumpul trip. Area Malang Raya & Batu.</p>
                                 </div>

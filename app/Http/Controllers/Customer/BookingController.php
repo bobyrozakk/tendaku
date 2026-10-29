@@ -100,14 +100,20 @@ class BookingController extends Controller
     /**
      * Polling: sinkronkan status pembayaran dengan Midtrans.
      */
-    public function syncPayment(Request $request, string $code, MidtransService $midtrans): JsonResponse
+        public function syncPayment(Request $request, string $code, MidtransService $midtrans): JsonResponse
     {
         $rental = $this->findAuthorizedRental($request, $code);
 
+        // Ambil payment pending terakhir, atau payment paid terakhir jika sudah lunas
         $payment = $this->midtransPayments($rental)
             ->whereNotNull('order_id')
+            ->where('status', self::PAYMENT_PENDING)
             ->latest('id')
-            ->first();
+            ->first()
+            ?? $this->midtransPayments($rental)
+                ->whereNotNull('order_id')
+                ->latest('id')
+                ->first();
 
         if (! $payment) {
             return response()->json([
@@ -116,10 +122,15 @@ class BookingController extends Controller
             ], 404);
         }
 
-        $payment = $midtrans->syncStatus($payment);
+        // Jika payment belum 'paid', sinkronkan status dengan Midtrans API
+        if ($payment->status !== self::PAYMENT_PAID) {
+            $payment = $midtrans->syncStatus($payment);
+        }
+
         $rental->refresh();
 
-        $isPaid = $payment->status === self::PAYMENT_PAID;
+        $isPaid = $payment->status === self::PAYMENT_PAID
+            || $rental->payments()->where('status', self::PAYMENT_PAID)->exists();
 
         return response()->json([
             'status' => 'success',
@@ -128,6 +139,7 @@ class BookingController extends Controller
             'rental_status' => $rental->status,
             'is_paid' => $isPaid,
             'paid_at' => $payment->paid_at?->translatedFormat('d M Y, H:i T'),
+            'paid_at_text' => $payment->paid_at?->translatedFormat('d M, H:i'),
             'message' => $isPaid
                 ? 'Pembayaran berhasil diverifikasi! Pesanan Anda telah dikonfirmasi.'
                 : 'Status pembayaran saat ini: '.$payment->status,

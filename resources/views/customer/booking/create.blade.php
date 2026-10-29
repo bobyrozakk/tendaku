@@ -14,25 +14,6 @@
                     Checkout & Pembayaran
                 </h1>
             </div>
-
-            <ol class="hidden sm:flex items-center gap-2 text-sm" aria-label="Tahapan pemesanan">
-                <li class="flex items-center gap-2 text-avocado-700 font-semibold">
-                    <span class="w-6 h-6 rounded-full bg-avocado-600 text-white flex items-center justify-center">
-                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                    </span>
-                    Pilih alat
-                </li>
-                <span class="w-8 h-0.5 rounded bg-avocado-500"></span>
-                <li class="flex items-center gap-2 text-darkbrown-900 font-bold" aria-current="step">
-                    <span class="w-6 h-6 rounded-full bg-darkbrown-900 text-wheat-100 flex items-center justify-center text-xs">2</span>
-                    Checkout
-                </li>
-                <span class="w-8 h-0.5 rounded bg-wheat-300"></span>
-                <li class="flex items-center gap-2 text-darkbrown-500 font-medium">
-                    <span class="w-6 h-6 rounded-full border-2 border-wheat-300 text-darkbrown-500 flex items-center justify-center text-xs">3</span>
-                    Bayar
-                </li>
-            </ol>
         </div>
     </x-slot>
 
@@ -114,7 +95,7 @@
             'minDate'           => now()->toDateString(),
             'initialDays'       => (int) $booking['rental_days'],
             'discount'          => (int) ($booking['discount'] ?? 0),
-            'deliveryFeeAmount' => 25000,
+            'deliveryFeeAmount' => 20000,
             'serverDpAmount'    => (int) ($booking['dp_amount'] ?? 0),
             'dpPercentage'      => (int) ($booking['dp_percentage'] ?? 50),
             'expiresAtIso'      => $booking['expires_at_iso'] ?? null,
@@ -129,32 +110,23 @@
         $errBorder = 'border-red-400 focus:border-red-500 focus:ring-red-200';
     @endphp
 
-
-
     <div x-data="checkoutPage({{ \Illuminate\Support\Js::from($checkoutConfig) }})" class="py-2 sm:py-4">
-
         @include('customer.booking.partials.create.handoff')
-
-        <!-- ============ FORM CHECKOUT (menyusut ke atas setelah booking dibuat) ============ -->
         <div class="co-collapse" :class="{ 'is-collapsed': phase !== 'form' }">
-        <div class="co-inner space-y-6">
-
-        @include('customer.booking.partials.create.trip-banner')
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-            <div class="lg:col-span-7 xl:col-span-8 space-y-6">
-                @include('customer.booking.partials.create.renter-identity')
-                @include('customer.booking.partials.create.delivery-method')
-                @include('customer.booking.partials.create.rental-details')
+            <div class="co-inner space-y-6">
+                @include('customer.booking.partials.create.trip-banner')
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+                    <div class="lg:col-span-7 xl:col-span-8 space-y-6">
+                        @include('customer.booking.partials.create.renter-identity')
+                        @include('customer.booking.partials.create.delivery-method')
+                        @include('customer.booking.partials.create.rental-details')
+                    </div>
+                    <div class="lg:col-span-5 xl:col-span-4">
+                        @include('customer.booking.partials.create.payment-summary')
+                    </div>
+                </div>
             </div>
-
-            @include('customer.booking.partials.create.payment-summary')
-
+        </div>
         @include('customer.booking.partials.create.add-address-modal')
-
-        </div>
-        </div>
     </div>
-
-
 </x-layouts.customer>

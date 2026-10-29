@@ -62,11 +62,22 @@
                     </div>
                 </div>
 
-                <div class="va-pill-num">
-                    <span x-show="vaLoading" x-cloak class="va-loading text-xs font-semibold text-darkbrown-600">Membuat nomor VA...</span>
-                    <span x-show="!vaLoading" class="va-num font-mono font-black text-darkbrown-900 select-all" x-text="vaNumber || '-'">{{ $vaInfo['va_number'] ?? '-' }}</span>
-                    <button type="button" @click="copy(vaNumber)" :disabled="vaLoading || !vaNumber"
-                            class="shrink-0 px-2.5 py-1 rounded-full text-xs font-bold bg-white hover:bg-wheat-100 border border-wheat-300 transition disabled:opacity-60">
+                <div class="va-pill-num flex min-w-0 items-center gap-2">
+                    <span
+                        x-show="vaLoading"
+                        x-cloak
+                        class="va-loading text-xs font-semibold text-darkbrown-600">Membuat nomor VA...
+                    </span>
+                    <span
+                        x-show="!vaLoading"
+                        class="va-num min-w-0 flex-1 truncate font-mono font-black text-darkbrown-900 select-all"
+                        x-text="vaNumber || '-'">{{ $vaInfo['va_number'] ?? '-' }}
+                    </span>
+                    <button
+                        type="button"
+                        @click="copy(vaNumber)"
+                        :disabled="vaLoading || !vaNumber"
+                        class="shrink-0 px-2.5 py-1 rounded-full text-xs font-bold bg-white hover:bg-wheat-100 border border-wheat-300 transition disabled:opacity-60">
                         <span x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
                     </button>
                 </div>

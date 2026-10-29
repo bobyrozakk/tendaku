@@ -101,6 +101,8 @@
             'picked_up' => 'rental',
             'returned'  => 'return',
             'completed' => 'done',
+            'cancelled' => null,
+            'expired'   => null,
         ];
 
         $isExpiredOrCancelled = in_array($status, ['cancelled', 'expired'], true);
@@ -206,6 +208,7 @@
 
         $pageConfig = [
             'status'        => $status,
+            'isPaid'        => (bool) $isPaid,
             'statusLabels'  => $statusLabels,
             'order'         => $nodeOrder,
             'statusToNode'  => $statusToNode,

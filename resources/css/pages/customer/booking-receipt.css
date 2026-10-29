@@ -192,3 +192,49 @@
         display: none !important;
     }
 }
+
+@media print {
+    header,
+    nav,
+    footer,
+    .no-print,
+    .receipt-actions,
+    [role="banner"],
+    .top-announcement-bar {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    @page {
+        margin: 0;
+        size: auto;
+    }
+
+    body {
+        background: #fff !important;
+        margin: 1.5cm !important;
+        padding: 0 !important;
+    }
+
+    .receipt-page {
+        padding: 0 !important;
+        margin: 0 auto !important;
+        background: transparent !important;
+    }
+
+    .receipt-paper {
+        max-width: 100% !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .receipt-divider {
+        margin: 12px 0 !important;
+        border-top: 1px dashed #777 !important;
+    }
+}

@@ -18,7 +18,7 @@
     </div>
 
     <div class="receipt-row">
-        <span>Status</span>
-        <strong>{{ $statusLabel ?? ucfirst($rental->status) }}</strong>
+        <span>Status Pembayaran</span>
+        <strong>{{ $statusLabel }}</strong>
     </div>
 </div>
