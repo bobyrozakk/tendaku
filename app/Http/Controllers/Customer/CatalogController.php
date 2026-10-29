@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ItemCategory;
 use App\Models\MasterItem;
 use App\Models\Vendor;
-use App\Services\AvailabilityService;
+use App\Services\Booking\AvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;

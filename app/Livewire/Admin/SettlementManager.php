@@ -4,7 +4,7 @@ namespace App\Livewire\Admin;
 
 use App\Models\Settlement;
 use App\Models\Vendor;
-use App\Services\SettlementService;
+use App\Services\Finance\SettlementService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;

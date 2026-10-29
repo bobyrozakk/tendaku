@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Services\CommissionCalculator;
+use App\Services\Finance\CommissionCalculator;
 use App\Services\FonnteWhatsAppService;
 use App\Services\WhatsAppService;
 use Illuminate\Auth\Notifications\VerifyEmail;

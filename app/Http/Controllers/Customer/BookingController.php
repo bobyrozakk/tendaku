@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rental;
-use App\Services\BookingReceiptService;
-use App\Services\MidtransService;
-use App\Services\RentalAccessGuard;
+use App\Services\Booking\BookingReceiptService;
+use App\Services\Payment\MidtransService;
+use App\Services\Booking\RentalAccessGuard;
 use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Relations\HasMany;

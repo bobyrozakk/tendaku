@@ -23,7 +23,7 @@ new #[Layout('layouts.guest')] class extends Component
         $user = auth()->user();
 
         if ($user) {
-            app(\App\Services\CartService::class)->syncOnLogin($user);
+            app(\App\Services\Booking\CartService::class)->syncOnLogin($user);
         }
 
         // Jika email belum diverifikasi, arahkan ke halaman verifikasi email (resend email)

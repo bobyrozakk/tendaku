@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\SettlementService;
+use App\Services\Finance\SettlementService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 

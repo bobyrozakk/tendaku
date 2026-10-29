@@ -258,7 +258,7 @@
                 <!-- Cart (khusus member yang sudah login) -->
                 @auth
                     @php
-                        $activeCart = app(\App\Services\CartService::class)->get(auth()->user());
+                        $activeCart = app(\App\Services\Booking\CartService::class)->get(auth()->user());
                         $cartQty = is_array($activeCart) && ! empty($activeCart['master_item_id'])
                             ? (int) ($activeCart['qty'] ?? $activeCart['quantity'] ?? 1)
                             : 0;

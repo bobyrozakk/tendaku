@@ -372,7 +372,7 @@
 
         {{-- Tombol Lanjut ke Checkout (Hanya jika ada item di keranjang dari produk ini) --}}
         @php
-            $navCart = app(\App\Services\CartService::class)->get(auth()->user());
+            $navCart = app(\App\Services\Booking\CartService::class)->get(auth()->user());
             $cartHasThisProduct = is_array($navCart) && !empty($navCart['master_item_id']) && $navCart['master_item_id'] === $this->product->id;
         @endphp
         @if($cartHasThisProduct)

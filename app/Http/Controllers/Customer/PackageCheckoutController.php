@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Customer;
 use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\CampingPackage;
-use App\Services\RentalService;
+use App\Services\Booking\RentalService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;

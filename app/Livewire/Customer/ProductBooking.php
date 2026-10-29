@@ -4,8 +4,8 @@ namespace App\Livewire\Customer;
 
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
-use App\Services\AvailabilityService;
-use App\Services\CartService;
+use App\Services\Booking\AvailabilityService;
+use App\Services\Booking\CartService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;

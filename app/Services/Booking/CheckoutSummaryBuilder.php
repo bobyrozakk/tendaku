@@ -126,7 +126,7 @@ class CheckoutSummaryBuilder
 
         private function itemData(MasterItem $item, int $qty, int $dailyRate, int $depositPerUnit, int $subtotal): array
     {
-        $stock = app(\App\Services\AvailabilityService::class)->checkAvailability(
+        $stock = app(\App\Services\Booking\AvailabilityService::class)->checkAvailability(
             $item->id,
             request('pickup_date', now()->toDateString()),
             request('return_date', now()->addDay()->toDateString())

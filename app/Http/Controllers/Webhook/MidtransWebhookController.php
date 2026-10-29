@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Webhook;
 use App\Exceptions\InvalidMidtransSignatureException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Webhook\MidtransNotificationRequest;
-use App\Services\MidtransService;
+use App\Services\Payment\MidtransService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;

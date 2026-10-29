@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
-use App\Services\MidtransService;
-use App\Services\PaymentService;
-use App\Services\RentalAccessGuard;
+use App\Services\Payment\MidtransService;
+use App\Services\Payment\PaymentService;
+use App\Services\Booking\RentalAccessGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
