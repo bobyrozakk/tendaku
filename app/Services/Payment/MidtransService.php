@@ -1,6 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Payment;
+
+use App\Services\Finance\CommissionCalculator;
+use App\Services\Finance\CommissionService;
+use App\Services\Finance\EscrowService;
 
 use App\Enums\PaymentStatus;
 use App\Exceptions\InvalidMidtransSignatureException;

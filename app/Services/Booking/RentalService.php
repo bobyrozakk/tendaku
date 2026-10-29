@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Booking;
 
 use App\Exceptions\InsufficientStockException;
 use App\Models\ItemUnit;
