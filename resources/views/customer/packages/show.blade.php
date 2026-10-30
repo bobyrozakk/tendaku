@@ -46,10 +46,20 @@
             <div class="card-tendaku rounded-2xl bg-white p-6 border border-wheat-200 shadow-tendaku space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-wheat-200 pb-3">
                     <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading">Tentang Paket</h2>
-                    <div class="flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800">
-                        <i data-lucide="store" class="w-3.5 h-3.5"></i>
-                        <span>{{ $vendorName }}</span>
-                    </div>
+                    @if($package->vendor)
+                        <a href="{{ route('customer.stores.show', $package->vendor->slug ?? $package->vendor_id) }}" 
+                           class="inline-flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800 hover:text-avocado-700 transition"
+                           title="Kunjungi Toko {{ $vendorName }}">
+                            <i data-lucide="store" class="w-3.5 h-3.5 text-goldenrod-600"></i>
+                            <span class="underline-offset-2 hover:underline">{{ $vendorName }}</span>
+                            <span class="text-[10px] bg-avocado-100 text-avocado-800 font-bold px-2 py-0.5 rounded-md ml-1">Kunjungi Toko</span>
+                        </a>
+                    @else
+                        <div class="flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800">
+                            <i data-lucide="store" class="w-3.5 h-3.5"></i>
+                            <span>{{ $vendorName }}</span>
+                        </div>
+                    @endif
                 </div>
 
                 <p class="text-sm text-darkbrown-700 leading-relaxed">

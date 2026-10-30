@@ -302,10 +302,19 @@
 
                         <!-- Content Info -->
                         <div class="p-5 space-y-3">
-                            <div class="flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800">
-                                <i data-lucide="store" class="w-3.5 h-3.5 text-goldenrod-600 flex-shrink-0"></i>
-                                <span class="truncate">{{ $vendorName }}</span>
-                            </div>
+                            @if($item->vendor)
+                                <a href="{{ route('customer.stores.show', $item->vendor->slug ?? $item->vendor_id) }}" 
+                                   class="group/store inline-flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800 hover:text-avocado-700 transition max-w-full"
+                                   title="Kunjungi Toko {{ $vendorName }}">
+                                    <i data-lucide="store" class="w-3.5 h-3.5 text-goldenrod-600 group-hover/store:text-avocado-600 flex-shrink-0 transition-colors"></i>
+                                    <span class="truncate underline-offset-2 group-hover/store:underline">{{ $vendorName }}</span>
+                                </a>
+                            @else
+                                <div class="flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800">
+                                    <i data-lucide="store" class="w-3.5 h-3.5 text-goldenrod-600 flex-shrink-0"></i>
+                                    <span class="truncate">{{ $vendorName }}</span>
+                                </div>
+                            @endif
 
                             <h3 class="font-extrabold text-base text-darkbrown-900 line-clamp-2 leading-snug group-hover:text-avocado-700 transition-colors font-heading">
                                 {{ $item->name }}
