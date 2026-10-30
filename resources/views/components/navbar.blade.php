@@ -270,7 +270,7 @@
                             qty = (typeof evCount === 'number') ? evCount : (qty > 0 ? qty : 1);
                         "
                     >
-                        <a href="{{ route('checkout.index') }}"
+                        <a href="{{ route('customer.cart.index') }}"
                            class="relative p-2 text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150 flex items-center justify-center"
                            title="Keranjang Sewa"
                         >

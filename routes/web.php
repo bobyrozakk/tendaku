@@ -7,6 +7,7 @@ use App\Http\Controllers\Customer\AddressController;
 use App\Http\Controllers\Customer\BookingController;
 use App\Http\Controllers\Customer\BookingVaController;
 use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
+use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PackageCheckoutController;
@@ -23,6 +24,14 @@ use Illuminate\Support\Facades\Route;
 
 // 1. Beranda (Home)
 Route::view('/', 'welcome')->name('home');
+
+// Keranjang Sewa
+Route::get('/keranjang', [CartController::class, 'index'])->name('customer.cart.index');
+Route::post('/keranjang/checkout', [CartController::class, 'checkout'])->name('customer.cart.checkout');
+Route::post('/keranjang/update', [CartController::class, 'updateQty'])->name('customer.cart.update');
+Route::post('/keranjang/remove', [CartController::class, 'removeItem'])->name('customer.cart.remove');
+Route::post('/keranjang/clear', [CartController::class, 'clear'])->name('customer.cart.clear');
+Route::get('/cart', fn () => redirect()->route('customer.cart.index'));
 
 // 2. Booking / Checkout Flow
 Route::prefix('katalog/booking')->group(function () {

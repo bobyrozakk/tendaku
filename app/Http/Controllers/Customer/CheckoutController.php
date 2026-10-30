@@ -116,8 +116,14 @@ class CheckoutController extends Controller
         }
 
         try {
+            $firstCartItem = $cart['items'][0] ?? $cart;
+
+            $masterItemId = (int) (
+                $firstCartItem['master_item_id'] ?? 0
+            );
+
             $masterItem = MasterItem::with('vendor')
-                ->findOrFail($cart['master_item_id']);
+                ->findOrFail($masterItemId);
 
             $bookingData = $this->bookingData(
                 $request,
@@ -210,6 +216,23 @@ class CheckoutController extends Controller
         $pickupTime = $request->validated('pickup_time')
             ?: ($masterItem->vendor->pickup_time ?: config('booking.default_pickup_time'));
 
+        $rawItems = ! empty($cart['items']) && is_array($cart['items'])
+            ? array_values($cart['items'])
+            : [
+                [
+                    'master_item_id' => $masterItem->id,
+                    'qty' => $this->summary->quantityOf($cart),
+                ],
+            ];
+
+        $itemsList = array_map(function ($it) {
+            return [
+                'master_item_id' => (int) ($it['master_item_id'] ?? 0),
+                'quantity' => max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1)),
+                'qty' => max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1)),
+            ];
+        }, $rawItems);
+
         $data = [
             'vendor_id' => $masterItem->vendor_id,
             'pickup_date' => $pickupDate,
@@ -224,12 +247,7 @@ class CheckoutController extends Controller
                 $user !== null
             ),
             'notes' => $request->validated('notes'),
-            'items' => [
-                [
-                    'master_item_id' => $masterItem->id,
-                    'qty' => $qty,
-                ],
-            ],
+            'items' => $itemsList,
         ];
 
         if ($user === null) {
