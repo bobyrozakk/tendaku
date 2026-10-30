@@ -1,9 +1,6 @@
 
 @php
-    $statusLabel = config(
-        "booking.statuses.{$rental->status}.label",
-        ucfirst(str_replace('_', ' ', $rental->status))
-    );
+    $statusLabel = $rental->displayStatusLabel();
 
     $itemCount = $rental->details->count();
     $firstItem = $rental->details->first()?->masterItem;

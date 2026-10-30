@@ -314,6 +314,16 @@
                             Akun Saya
                         </a>
                     @endif
+
+                    {{-- Logout (gaya sama dengan tombol logout kasir) --}}
+                    <form method="POST" action="{{ route('logout') }}" class="inline-block">
+                        @csrf
+                        <button type="submit"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100/90 border border-red-200/90 transition-all duration-150 shadow-sm cursor-pointer"
+                                title="Keluar dari sesi akun">
+                            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </form>
                 @else
                     <a href="{{ route('login') }}" class="hidden sm:inline-flex btn-tendaku-secondary !py-2 !px-3.5 text-xs sm:text-sm">
                         Masuk
