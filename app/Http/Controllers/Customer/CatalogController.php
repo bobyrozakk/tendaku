@@ -42,7 +42,8 @@ class CatalogController extends Controller
         $itemsQuery = MasterItem::publicCatalog()
             ->with(['category', 'vendor'])
             ->withCount(['units' => function ($q) {
-                $q->whereNotIn('status', ['maintenance', 'retired'])
+                // Stok katalog = unit yang benar-benar 'available' di DB.
+                $q->where('status', 'available')
                     ->whereNotIn('condition', ['damaged', 'lost']);
             }]);
 

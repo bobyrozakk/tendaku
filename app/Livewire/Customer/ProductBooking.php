@@ -14,6 +14,9 @@ use Livewire\Component;
 
 class ProductBooking extends Component
 {
+    /** Rentang kalender yang dicek ketersediaannya (hari ini + N hari ke depan). */
+    private const CALENDAR_AHEAD_DAYS = 60;
+
     /** Model produk yang di-mount dari halaman detail */
     public MasterItem $product;
 
@@ -261,11 +264,22 @@ class ProductBooking extends Component
             return $service->bookedDates(
                 $this->product->id,
                 Carbon::today(),
-                Carbon::today()->addDays(60)
+                Carbon::today()->addDays(self::CALENDAR_AHEAD_DAYS)
             );
         } catch (\Throwable) {
             return [];
         }
+    }
+
+    /**
+     * True jika SEMUA tanggal di rentang kalender habis (mis. tidak ada unit
+     * yang bisa disewa). Lebih jelas ditampilkan sebagai "Stok habis" daripada
+     * "61 tanggal stok habis".
+     */
+    #[Computed]
+    public function isOutOfStock(): bool
+    {
+        return count($this->fullyBookedDates) >= self::CALENDAR_AHEAD_DAYS + 1;
     }
 
     /**

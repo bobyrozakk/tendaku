@@ -65,7 +65,12 @@
                 </h3>
 
                 {{-- Indikator Tanggal Penuh --}}
-                @if(count($this->fullyBookedDates) > 0)
+                @if($this->isOutOfStock)
+                    <span class="text-[10px] text-red-600 font-semibold inline-flex items-center gap-1" title="Tidak ada unit yang bisa disewa dalam {{ count($this->fullyBookedDates) }} hari ke depan">
+                        <i data-lucide="alert-triangle" class="w-3 h-3 text-red-500"></i>
+                        Stok habis
+                    </span>
+                @elseif(count($this->fullyBookedDates) > 0)
                     <span class="text-[10px] text-red-600 font-semibold inline-flex items-center gap-1" title="Ada tanggal di mana unit habis total">
                         <i data-lucide="alert-triangle" class="w-3 h-3 text-red-500"></i>
                         {{ count($this->fullyBookedDates) }} tanggal stok habis
