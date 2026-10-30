@@ -1,6 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Payment;
+
+use App\Services\Finance\CommissionCalculator;
+use App\Services\Finance\CommissionService;
+use App\Services\Finance\EscrowService;
 
 use App\Enums\PaymentStatus;
 use App\Exceptions\InvalidMidtransSignatureException;
@@ -288,6 +292,15 @@ class MidtransService
             $data
         );
 
+        if ($newStatus === PaymentStatus::Paid) {
+            $settlementTime = $data['settlement_time'] ?? $data['transaction_time'] ?? null;
+            if ($settlementTime) {
+                $payment->paid_at = \Carbon\Carbon::parse($settlementTime, 'Asia/Jakarta');
+            } else {
+                $payment->paid_at ??= now();
+            }
+        }
+
         $payment->save();
 
         if (! $statusChanged) {
@@ -306,7 +319,7 @@ class MidtransService
     /**
      * Terapkan aturan escrow dan komisi setelah status pembayaran berubah.
      */
-    private function applyMonetization(Payment $payment): void
+    public function applyMonetization(Payment $payment): void
     {
         if ($payment->status === PaymentStatus::Paid->value) {
             $this->escrow->markHeld($payment);
@@ -332,7 +345,11 @@ class MidtransService
             return;
         }
 
-        if ($payment->status === PaymentStatus::Failed->value) {
+        if (in_array($payment->status, [
+            PaymentStatus::Failed->value,
+            PaymentStatus::Expired->value,
+            PaymentStatus::Cancelled->value,
+        ], true)) {
             $this->escrow->markVoid($payment);
         }
     }
@@ -549,5 +566,29 @@ class MidtransService
             'email' => $customer?->email ?? '',
             'phone' => $customer?->phone ?? '',
         ];
+    }
+
+    /**
+     * Batalkan tagihan yang belum dibayar di Midtrans supaya VA/QRIS-nya
+     * tidak bisa dibayar setelah pesanan dibatalkan. Gagal = hanya dicatat.
+     */
+    public function cancelTransaction(Payment $payment): bool
+    {
+        if (empty($payment->order_id)) {
+            return false;
+        }
+
+        try {
+            Transaction::cancel($payment->order_id);
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gagal membatalkan tagihan Midtrans saat pesanan dibatalkan.', [
+                'order_id' => $payment->order_id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 }

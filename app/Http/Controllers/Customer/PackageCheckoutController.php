@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Customer;
 use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\CampingPackage;
-use App\Services\RentalService;
+use App\Http\Requests\Customer\StorePackageCheckoutRequest;
+use App\Services\Booking\CheckoutService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,16 +16,6 @@ use Illuminate\View\View;
 
 class PackageCheckoutController extends Controller
 {
-    /**
-     * Masa berlaku pembayaran (menit) sebelum booking paket kedaluwarsa (maksimal 5 menit).
-     */
-    public const PAYMENT_TIMEOUT_MINUTES = 5;
-
-    /**
-     * Masa berlaku pembayaran (jam) sebelum booking paket kedaluwarsa (kompatibilitas backward).
-     */
-    public const PAYMENT_WINDOW_HOURS = 12;
-
     /**
      * Biaya pengantaran (delivery) dalam Rupiah.
      */
@@ -78,7 +69,7 @@ class PackageCheckoutController extends Controller
         $addresses = $user ? $user->addresses()->orderByDesc('is_default')->latest('id')->get() : collect();
         $defaultAddress = $user ? $user->defaultAddress() : null;
 
-        return view('customer.packages.checkout', [
+        return view('customer.checkout.package', [
             'package' => $package,
             'vendor' => $package->vendor,
             'isLoggedIn' => true,
@@ -99,7 +90,7 @@ class PackageCheckoutController extends Controller
     /**
      * Buat rental dari paket camping.
      */
-    public function store(Request $request, RentalService $rentalService): RedirectResponse
+    public function store(StorePackageCheckoutRequest $request, CheckoutService $checkout): RedirectResponse
     {
         $package = $this->findPackage((int) $request->input('package_id'));
 
@@ -109,7 +100,7 @@ class PackageCheckoutController extends Controller
 
         $isGuest = ! Auth::check();
 
-        $validated = $this->validatedInput($request, $isGuest);
+        $validated = $request->validated();
 
         $deliveryAddress = null;
         $customerAddressId = null;
@@ -202,7 +193,7 @@ class PackageCheckoutController extends Controller
             ->all();
 
         try {
-            $rental = $rentalService->createBooking([
+            $result = $checkout->checkout([
                 'vendor_id' => (int) $package->vendor_id,
                 'user_id' => $user->id,
                 'guest_name' => null,
@@ -220,10 +211,12 @@ class PackageCheckoutController extends Controller
                 'discount_amount' => 0,
                 // Tarif paket camping per 24 jam x jumlah periode sewa
                 'subtotal_override' => $subtotal,
-                'expires_in_minutes' => self::PAYMENT_TIMEOUT_MINUTES,
+                'expires_in_minutes' => (int) config('booking.payment_expiry_minutes'),
                 'notes' => 'Paket Camping: '.$package->name.' ('.$rentalDays.' hari sewa)',
                 'items' => $items,
-            ]);
+            ], 'full', $paymentChannel, false);
+
+            $rental = $result['rental'];
         } catch (InsufficientStockException $exception) {
             return redirect()->route('customer.packages.show', $package)
                 ->with('error', $exception->getMessage());
@@ -233,37 +226,6 @@ class PackageCheckoutController extends Controller
 
         return redirect()->route('booking.status', $rental->booking_code)
             ->with('success', "Paket camping \"{$package->name}\" berhasil dipesan dengan kode #{$rental->booking_code} via {$channelLabel}.");
-    }
-
-    /**
-     * Validasi input checkout paket.
-     *
-     * @return array<string, mixed>
-     */
-    private function validatedInput(Request $request, bool $isGuest = false): array
-    {
-        return $request->validate([
-            'pickup_date' => ['required', 'date', 'after_or_equal:today'],
-            'pickup_time' => ['nullable', 'date_format:H:i'],
-            'return_date' => ['nullable', 'date', 'after_or_equal:pickup_date'],
-            'return_time' => ['nullable', 'date_format:H:i'],
-            'pickup_method' => ['nullable', 'in:self_pickup,delivery'],
-            'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:255'],
-            'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
-            'guest_id_number' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
-            'customer_address_id' => ['nullable', 'integer', 'exists:customer_addresses,id'],
-            'delivery_address' => ['nullable', 'string', 'max:500'],
-            'phone' => ['nullable', 'string', 'max:32'],
-            'nik' => ['nullable', 'string', 'max:32'],
-        ], [
-            'pickup_date.required' => 'Tanggal mulai sewa wajib dipilih.',
-            'pickup_date.after_or_equal' => 'Tanggal mulai sewa tidak boleh di masa lalu.',
-            'return_date.after_or_equal' => 'Tanggal pengembalian harus sama atau setelah tanggal mulai sewa.',
-            'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
-            'guest_phone.required' => 'Nomor WhatsApp wajib diisi agar pengingat pengembalian dapat dikirim.',
-            'guest_id_number.required' => 'NIK wajib diisi untuk pemesanan tanpa akun.',
-            'customer_address_id.exists' => 'Alamat pengantaran yang dipilih tidak valid.',
-        ]);
     }
 
     /**

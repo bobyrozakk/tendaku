@@ -5,8 +5,8 @@ namespace App\Livewire\Customer;
 use App\Models\ItemCategory;
 use App\Models\MasterItem;
 use App\Models\Vendor;
-use App\Services\AvailabilityService;
-use App\Services\CartService;
+use App\Services\Booking\AvailabilityService;
+use App\Services\Booking\CartService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -237,7 +237,9 @@ class CatalogIndex extends Component
         $itemsQuery = MasterItem::publicCatalog()
             ->with(['category', 'vendor'])
             ->withCount(['units' => function ($query) {
-                $query->whereNotIn('status', ['maintenance', 'retired'])
+                // Stok katalog = unit yang benar-benar 'available' di DB
+                // (unit rented/maintenance/retired/lost tidak dihitung).
+                $query->where('status', 'available')
                     ->whereNotIn('condition', ['damaged', 'lost']);
             }]);
 
@@ -287,7 +289,10 @@ class CatalogIndex extends Component
 
         // Jika filter "hanya yang tersedia" dicentang tanpa filter tanggal, pastikan unit fisik > 0
         if ($this->onlyAvailable && ! $hasValidDateRange) {
-            $itemsQuery->has('units');
+            $itemsQuery->whereHas('units', function ($query) {
+                $query->where('status', 'available')
+                    ->whereNotIn('condition', ['damaged', 'lost']);
+            });
         }
 
         $items = $itemsQuery->paginate(12);

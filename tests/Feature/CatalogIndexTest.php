@@ -8,7 +8,7 @@ use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Services\CartService;
+use App\Services\Booking\CartService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;

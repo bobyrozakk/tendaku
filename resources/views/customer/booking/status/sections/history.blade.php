@@ -39,7 +39,7 @@
                            class="block rounded-2xl border p-4 space-y-2.5 transition {{ $isSel ? 'bg-avocado-50 border-avocado-600 ring-2 ring-avocado-600/20' : 'bg-white border-wheat-200 hover:border-wheat-400 shadow-tendaku-sm' }}">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="font-mono text-sm font-extrabold text-darkbrown-900">#{{ $r->booking_code }}</span>
-                                <x-rental-status-badge :status="$r->status" :label="$statusLabels[$r->status] ?? null" />
+                                <x-rental-status-badge :status="$r->status" :label="$r->displayStatusLabel()" />
                             </div>
                             <div class="text-xs text-darkbrown-500 font-medium">
                                 Dipesan pada {{ $r->created_at->translatedFormat('d M Y, H:i') }} WIB

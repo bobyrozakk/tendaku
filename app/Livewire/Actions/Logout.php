@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Actions;
 
-use App\Services\CartService;
+use App\Services\Booking\CartService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 

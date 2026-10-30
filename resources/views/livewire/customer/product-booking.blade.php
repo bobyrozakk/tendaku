@@ -55,7 +55,6 @@
             </div>
         </div>
 
-        @auth
         {{-- FORM BOOKING --}}
         <form wire:submit="addToCart" id="booking-form" class="space-y-4">
 
@@ -66,7 +65,12 @@
                 </h3>
 
                 {{-- Indikator Tanggal Penuh --}}
-                @if(count($this->fullyBookedDates) > 0)
+                @if($this->isOutOfStock)
+                    <span class="text-[10px] text-red-600 font-semibold inline-flex items-center gap-1" title="Tidak ada unit yang bisa disewa dalam {{ count($this->fullyBookedDates) }} hari ke depan">
+                        <i data-lucide="alert-triangle" class="w-3 h-3 text-red-500"></i>
+                        Stok habis
+                    </span>
+                @elseif(count($this->fullyBookedDates) > 0)
                     <span class="text-[10px] text-red-600 font-semibold inline-flex items-center gap-1" title="Ada tanggal di mana unit habis total">
                         <i data-lucide="alert-triangle" class="w-3 h-3 text-red-500"></i>
                         {{ count($this->fullyBookedDates) }} tanggal stok habis
@@ -216,15 +220,15 @@
                         Jumlah Unit
                     </label>
                     <span class="text-[11px] font-bold text-darkbrown-600">
-                        Tersedia: 
+                        Tersedia:
                         <strong class="{{ $this->availableStock > 0 ? 'text-avocado-700' : 'text-red-600' }}">
                             {{ $this->availableStock }} Unit
                         </strong>
                     </span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         wire:click="$set('quantity', {{ max(1, $quantity - 1) }})"
                         class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
                     >
@@ -239,8 +243,8 @@
                         class="input-tendaku flex-1 text-center font-bold text-sm py-2 px-3 rounded-xl border-wheat-300"
                         required
                     />
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         wire:click="$set('quantity', {{ $quantity + 1 }})"
                         class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
                     >
@@ -370,48 +374,24 @@
             </button>
         </form>
 
-        {{-- Tombol Lanjut ke Checkout (Hanya jika ada item di keranjang dari produk ini) --}}
-        @php
-            $navCart = app(\App\Services\CartService::class)->get(auth()->user());
-            $cartHasThisProduct = is_array($navCart) && !empty($navCart['master_item_id']) && $navCart['master_item_id'] === $this->product->id;
-        @endphp
-        @if($cartHasThisProduct)
-            <div class="mt-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200 flex flex-col gap-2" wire:poll.5s>
+        {{-- Tombol Lanjut ke Checkout (muncul jika produk ini sudah ada di keranjang) --}}
+        @if($inCart)
+            <div class="mt-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200 flex flex-col gap-2">
                 <p class="text-xs font-semibold text-avocado-900 flex items-center gap-1.5">
                     <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
                     Produk ini sudah ada di keranjangmu!
                 </p>
-                <a href="{{ route('checkout.index') }}"
-                   class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-all"
+                <button
+                    type="button"
+                    wire:click="proceedToBooking"
+                    wire:loading.attr="disabled"
+                    class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-all"
                 >
                     <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
                     <span>Lanjut ke Checkout</span>
-                </a>
+                </button>
             </div>
         @endif
-        @else
-            <div class="rounded-2xl border border-avocado-200 bg-avocado-50/70 p-5 text-center">
-                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-avocado-100 text-avocado-700">
-                    <i data-lucide="lock" class="h-6 w-6"></i>
-                </div>
-                <h3 class="mt-3 font-heading text-sm font-extrabold text-darkbrown-900">
-                    Masuk untuk menyewa alat ini
-                </h3>
-                <p class="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-darkbrown-600">
-                    Keranjang dan proses sewa hanya tersedia untuk akun Tendaku. Masuk atau daftar dulu, lalu pilih tanggal sewa.
-                </p>
-                <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-                    <a href="{{ route('login') }}"
-                       class="btn-tendaku-primary inline-flex flex-1 items-center justify-center rounded-xl px-4 py-2.5 text-center text-xs font-bold">
-                        Masuk
-                    </a>
-                    <a href="{{ route('register') }}"
-                       class="btn-tendaku-secondary inline-flex flex-1 items-center justify-center rounded-xl px-4 py-2.5 text-center text-xs font-bold">
-                        Daftar
-                    </a>
-                </div>
-            </div>
-        @endauth
 
         {{-- TRUST BADGES --}}
         <div class="pt-4 border-t border-wheat-200 space-y-2.5">

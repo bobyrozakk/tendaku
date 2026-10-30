@@ -4,16 +4,21 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Rental;
-use App\Services\MidtransService;
-use App\Services\RentalAccessGuard;
+use App\Services\Booking\BookingReceiptService;
+use App\Services\Payment\MidtransService;
+use App\Services\Booking\RentalAccessGuard;
+use App\Services\Booking\RentalService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
 
 class BookingController extends Controller
@@ -54,6 +59,7 @@ class BookingController extends Controller
             ->with([
                 'vendor:id,name,phone,city',
                 'details.masterItem',
+                'payments:id,rental_id,status',
             ])
             ->latest('id')
             ->paginate(self::PER_PAGE)
@@ -99,14 +105,20 @@ class BookingController extends Controller
     /**
      * Polling: sinkronkan status pembayaran dengan Midtrans.
      */
-    public function syncPayment(Request $request, string $code, MidtransService $midtrans): JsonResponse
+        public function syncPayment(Request $request, string $code, MidtransService $midtrans): JsonResponse
     {
         $rental = $this->findAuthorizedRental($request, $code);
 
+        // Ambil payment pending terakhir, atau payment paid terakhir jika sudah lunas
         $payment = $this->midtransPayments($rental)
             ->whereNotNull('order_id')
+            ->where('status', self::PAYMENT_PENDING)
             ->latest('id')
-            ->first();
+            ->first()
+            ?? $this->midtransPayments($rental)
+                ->whereNotNull('order_id')
+                ->latest('id')
+                ->first();
 
         if (! $payment) {
             return response()->json([
@@ -115,10 +127,15 @@ class BookingController extends Controller
             ], 404);
         }
 
-        $payment = $midtrans->syncStatus($payment);
+        // Jika payment belum 'paid', sinkronkan status dengan Midtrans API
+        if ($payment->status !== self::PAYMENT_PAID) {
+            $payment = $midtrans->syncStatus($payment);
+        }
+
         $rental->refresh();
 
-        $isPaid = $payment->status === self::PAYMENT_PAID;
+        $isPaid = $payment->status === self::PAYMENT_PAID
+            || $rental->payments()->where('status', self::PAYMENT_PAID)->exists();
 
         return response()->json([
             'status' => 'success',
@@ -126,7 +143,8 @@ class BookingController extends Controller
             'payment_status' => $payment->status,
             'rental_status' => $rental->status,
             'is_paid' => $isPaid,
-            'paid_at' => $payment->paid_at?->translatedFormat('d M Y, H:i T'),
+            'paid_at' => $payment->paid_at?->timezone(config('app.timezone', 'Asia/Jakarta'))->translatedFormat('d M Y, H:i T'),
+            'paid_at_text' => $payment->paid_at?->timezone(config('app.timezone', 'Asia/Jakarta'))->translatedFormat('d M, H:i'),
             'message' => $isPaid
                 ? 'Pembayaran berhasil diverifikasi! Pesanan Anda telah dikonfirmasi.'
                 : 'Status pembayaran saat ini: '.$payment->status,
@@ -166,15 +184,82 @@ class BookingController extends Controller
     }
 
     /**
-     * Tanda terima KTP digital.
+     * Receipt order. Secara default langsung diunduh sebagai PDF;
+     * tambahkan ?format=html untuk melihat versi halaman web.
      */
-    public function receipt(Request $request, string $code): View
+    public function receipt(
+        Request $request,
+        string $code,
+        BookingReceiptService $receiptService
+    ): View|Response {
+        $rental = $this->findAuthorizedRental($request, $code);
+
+        $rental->loadMissing([
+            'vendor',
+            'customer',
+            'pickedUpBy:id,name',
+            'pickedUpBy',
+            'details.masterItem.category',
+            'payments',
+        ]);
+
+        $receiptData = array_merge(
+            ['rental' => $rental],
+            $receiptService->build($rental)
+        );
+
+        if ($request->query('format') === 'html') {
+            return view('customer.booking.receipt', $receiptData);
+        }
+
+        return Pdf::loadView('customer.booking.receipt-pdf', $receiptData)
+            ->setPaper('a5')
+            ->download('receipt-'.$rental->booking_code.'.pdf');
+    }
+
+    /**
+     * Batalkan pesanan sebelum serah terima (form pop-up di langkah serah terima).
+     */
+    public function cancel(Request $request, string $code, RentalService $rentals, MidtransService $midtrans): RedirectResponse
     {
         $rental = $this->findAuthorizedRental($request, $code);
 
-        $rental->loadMissing(['vendor', 'customer', 'pickedUpBy']);
+        $validated = $request->validate([
+            'cancel_reason' => ['required', 'string', Rule::in(array_keys(config('booking.cancel_reasons', [])))],
+            'cancel_note' => [
+                'nullable', 'string', 'max:500',
+                Rule::requiredIf(fn () => $request->input('cancel_reason') === 'other'),
+            ],
+            'confirm_cancel' => ['accepted'],
+        ], [
+            'cancel_reason.required' => 'Pilih alasan pembatalan.',
+            'cancel_note.required' => 'Jelaskan alasan pembatalan Anda.',
+            'confirm_cancel.accepted' => 'Centang persetujuan pembatalan terlebih dahulu.',
+        ]);
 
-        return view('customer.booking.receipt', compact('rental'));
+        $hadPaidPayment = $rental->hasPaidPayment();
+        $pendingOnline = $this->midtransPayments($rental)
+            ->where('status', self::PAYMENT_PENDING)
+            ->whereNotNull('order_id')
+            ->get();
+
+        try {
+            $rentals->cancel($rental, $validated['cancel_reason'], $validated['cancel_note'] ?? null);
+        } catch (RuntimeException $exception) {
+            return redirect()
+                ->route('booking.status', $rental->booking_code)
+                ->with('error', $exception->getMessage());
+        }
+
+        foreach ($pendingOnline as $payment) {
+            $midtrans->cancelTransaction($payment);
+        }
+
+        return redirect()
+            ->route('booking.status', $rental->booking_code)
+            ->with('success', $hadPaidPayment
+                ? 'Pesanan dibatalkan. Karena pesanan sudah dibayar, silakan hubungi vendor untuk proses pengembalian dana.'
+                : 'Pesanan berhasil dibatalkan.');
     }
 
     /**

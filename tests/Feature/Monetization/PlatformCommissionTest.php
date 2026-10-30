@@ -6,7 +6,7 @@ use App\Models\Payment;
 use App\Models\PlatformCommission;
 use App\Models\Rental;
 use App\Models\Vendor;
-use App\Services\CommissionCalculator;
+use App\Services\Finance\CommissionCalculator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\CreatesMidtransFixtures;

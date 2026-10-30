@@ -4,8 +4,8 @@ namespace App\Livewire\Customer;
 
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
-use App\Services\AvailabilityService;
-use App\Services\CartService;
+use App\Services\Booking\AvailabilityService;
+use App\Services\Booking\CartService;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -14,26 +14,32 @@ use Livewire\Component;
 
 class ProductBooking extends Component
 {
+    /** Rentang kalender yang dicek ketersediaannya (hari ini + N hari ke depan). */
+    private const CALENDAR_AHEAD_DAYS = 60;
+
     /** Model produk yang di-mount dari halaman detail */
     public MasterItem $product;
 
     /** Tanggal pengambilan barang (default: besok) */
     public string $pickup_date = '';
 
-    /** Jam pengambilan barang (format HH:mm, default: 09:00) */
+    /** Jam pengambilan barang */
     public string $pickup_time = '09:00';
 
-    /** Durasi sewa yang dipilih (hari, default: 1 hari = 24 jam penuh) */
+    /** Durasi sewa dalam hari */
     public int $duration_days = 1;
 
     /** Tanggal pengembalian barang */
     public string $return_date = '';
 
-    /** Jam pengembalian barang (format HH:mm) */
+    /** Jam pengembalian barang */
     public string $return_time = '09:00';
 
-    /** Kuantitas unit yang disewa (default: 1) */
+    /** Kuantitas unit yang disewa */
     public int $quantity = 1;
+
+    /** True jika produk ini sudah ada di keranjang */
+    public bool $inCart = false;
 
     /**
      * Inisialisasi properti saat komponen dimuat.
@@ -44,16 +50,43 @@ class ProductBooking extends Component
         $this->quantity = 1;
         $this->duration_days = 1;
 
-        // Nilai default: pengambilan besok pukul 09:00
         $this->pickup_date = Carbon::tomorrow()->format('Y-m-d');
         $this->pickup_time = '09:00';
 
-        // Sinkronisasi batas pengembalian (24 jam per hari durasi)
         $this->syncReturnFromDuration();
+
+        // Cek produk pada keranjang multi-item maupun struktur lama.
+        $cart = app(CartService::class)->get(Auth::user());
+
+        $this->inCart = false;
+
+        if (is_array($cart)) {
+            $cartItems = $cart['items'] ?? [];
+
+            foreach ($cartItems as $item) {
+                if (
+                    (int) ($item['master_item_id'] ?? 0)
+                    === (int) $this->product->id
+                ) {
+                    $this->inCart = true;
+                    break;
+                }
+            }
+
+            // Kompatibilitas dengan struktur cart lama.
+            if (
+                ! $this->inCart
+                && ! empty($cart['master_item_id'])
+                && (int) $cart['master_item_id']
+                    === (int) $this->product->id
+            ) {
+                $this->inCart = true;
+            }
+        }
     }
 
     /**
-     * Hitung otomatis tanggal & waktu pengembalian berdasarkan durasi sewa (24 jam per hari).
+     * Hitung tanggal dan waktu pengembalian berdasarkan durasi.
      */
     public function syncReturnFromDuration(): void
     {
@@ -61,9 +94,15 @@ class ProductBooking extends Component
             return;
         }
 
-        $time = ! empty($this->pickup_time) ? $this->pickup_time : '09:00';
+        $time = ! empty($this->pickup_time)
+            ? $this->pickup_time
+            : '09:00';
+
         $pickup = Carbon::parse("{$this->pickup_date} {$time}");
-        $return = $pickup->copy()->addDays(max(1, $this->duration_days));
+
+        $return = $pickup->copy()->addDays(
+            max(1, $this->duration_days)
+        );
 
         $this->return_date = $return->format('Y-m-d');
         $this->return_time = $return->format('H:i');
@@ -71,52 +110,35 @@ class ProductBooking extends Component
         $this->resetErrorBag(['return_date', 'return_time']);
     }
 
-    /**
-     * Ketika pickup_date berubah, sesuaikan return_date sesuai durasi.
-     */
     public function updatedPickupDate(): void
     {
         $this->syncReturnFromDuration();
     }
 
-    /**
-     * Ketika pickup_time berubah, sesuaikan return_time sesuai durasi.
-     */
     public function updatedPickupTime(): void
     {
         $this->syncReturnFromDuration();
     }
 
-    /**
-     * Ketika durasi hari diubah, perbarui tanggal pengembalian.
-     */
     public function updatedDurationDays(): void
     {
         if ($this->duration_days < 1) {
             $this->duration_days = 1;
         }
+
         $this->syncReturnFromDuration();
     }
 
-    /**
-     * Ketika tanggal pengembalian diubah manual oleh customer.
-     */
     public function updatedReturnDate(): void
     {
         $this->validateReturnDateTime();
     }
 
-    /**
-     * Ketika waktu pengembalian diubah manual oleh customer.
-     */
     public function updatedReturnTime(): void
     {
         $this->validateReturnDateTime();
     }
 
-    /**
-     * Pastikan quantity minimal 1.
-     */
     public function updatedQuantity(): void
     {
         if ($this->quantity < 1) {
@@ -125,7 +147,7 @@ class ProductBooking extends Component
     }
 
     /**
-     * Validasi waktu pengembalian terhadap waktu pengambilan dan durasi sewa.
+     * Validasi waktu pengembalian.
      */
     public function validateReturnDateTime(): bool
     {
@@ -133,21 +155,37 @@ class ProductBooking extends Component
             return false;
         }
 
-        $pickupTime = ! empty($this->pickup_time) ? $this->pickup_time : '09:00';
-        $returnTime = ! empty($this->return_time) ? $this->return_time : '09:00';
+        $pickupTime = ! empty($this->pickup_time)
+            ? $this->pickup_time
+            : '09:00';
+
+        $returnTime = ! empty($this->return_time)
+            ? $this->return_time
+            : '09:00';
 
         $pickup = Carbon::parse("{$this->pickup_date} {$pickupTime}");
         $return = Carbon::parse("{$this->return_date} {$returnTime}");
 
         if ($return->lt($pickup)) {
-            $this->addError('return_date', 'Waktu pengembalian tidak boleh sebelum waktu pengambilan.');
+            $this->addError(
+                'return_date',
+                'Waktu pengembalian tidak boleh sebelum waktu pengambilan.'
+            );
 
             return false;
         }
 
-        $maxReturn = $pickup->copy()->addDays(max(1, $this->duration_days));
+        $maxReturn = $pickup->copy()->addDays(
+            max(1, $this->duration_days)
+        );
+
         if ($return->gt($maxReturn)) {
-            $this->addError('return_time', 'Waktu pengembalian tidak boleh melampaui durasi yang dipilih (maksimal '.$maxReturn->translatedFormat('d M Y, H:i').' WIB).');
+            $this->addError(
+                'return_time',
+                'Waktu pengembalian tidak boleh melampaui durasi yang dipilih (maksimal '
+                . $maxReturn->translatedFormat('d M Y, H:i')
+                . ' WIB).'
+            );
 
             return false;
         }
@@ -158,7 +196,7 @@ class ProductBooking extends Component
     }
 
     /**
-     * Computed: hitung total hari sewa berdasarkan durasi jam aktual (24 jam = 1 hari).
+     * Hitung total hari sewa berdasarkan durasi aktual.
      */
     #[Computed]
     public function totalDays(): int
@@ -167,33 +205,41 @@ class ProductBooking extends Component
             return 0;
         }
 
-        $pickupTime = ! empty($this->pickup_time) ? $this->pickup_time : '09:00';
-        $returnTime = ! empty($this->return_time) ? $this->return_time : '09:00';
+        $pickupTime = ! empty($this->pickup_time)
+            ? $this->pickup_time
+            : '09:00';
+
+        $returnTime = ! empty($this->return_time)
+            ? $this->return_time
+            : '09:00';
 
         $pickup = Carbon::parse("{$this->pickup_date} {$pickupTime}");
         $return = Carbon::parse("{$this->return_date} {$returnTime}");
 
         $hours = $pickup->floatDiffInHours($return, false);
+
         if ($hours < 0) {
             return 0;
         }
 
-        // Durasi <= 24 jam dihitung 1 hari penuh; lebih dari 24 jam dibulatkan ke atas per 24 jam.
         return max(1, (int) ceil($hours / 24));
     }
 
     /**
-     * Computed: hitung estimasi total harga sewa real-time (daily_rate × quantity × total_days).
+     * Hitung estimasi total harga.
      */
     #[Computed]
     public function totalPrice(): int
     {
-        return (int) ($this->product->daily_rate * $this->quantity * $this->totalDays);
+        return (int) (
+            $this->product->daily_rate
+            * $this->quantity
+            * $this->totalDays
+        );
     }
 
     /**
-     * Computed: cek sisa unit yang berstatus "available" (Tersedia di Toko).
-     * Sesuai dengan daftar unit fisik kasir untuk status "available" pada produk ini.
+     * Hitung stok unit yang tersedia.
      */
     #[Computed]
     public function availableStock(): int
@@ -205,7 +251,7 @@ class ProductBooking extends Component
     }
 
     /**
-     * Computed: tanggal yang habis total (stok = 0) untuk kalender picker.
+     * Tanggal yang habis total untuk kalender.
      *
      * @return array<int, string>
      */
@@ -218,7 +264,7 @@ class ProductBooking extends Component
             return $service->bookedDates(
                 $this->product->id,
                 Carbon::today(),
-                Carbon::today()->addDays(60)
+                Carbon::today()->addDays(self::CALENDAR_AHEAD_DAYS)
             );
         } catch (\Throwable) {
             return [];
@@ -226,7 +272,18 @@ class ProductBooking extends Component
     }
 
     /**
-     * Validasi form sewa.
+     * True jika SEMUA tanggal di rentang kalender habis (mis. tidak ada unit
+     * yang bisa disewa). Lebih jelas ditampilkan sebagai "Stok habis" daripada
+     * "61 tanggal stok habis".
+     */
+    #[Computed]
+    public function isOutOfStock(): bool
+    {
+        return count($this->fullyBookedDates) >= self::CALENDAR_AHEAD_DAYS + 1;
+    }
+
+    /**
+     * Aturan validasi form.
      *
      * @return array<string, array<int, string>>
      */
@@ -267,7 +324,7 @@ class ProductBooking extends Component
     }
 
     /**
-     * Pesan validasi dalam Bahasa Indonesia.
+     * Pesan validasi Bahasa Indonesia.
      *
      * @return array<string, string>
      */
@@ -289,17 +346,9 @@ class ProductBooking extends Component
 
     /**
      * Masukkan produk ke keranjang sewa.
-     * Validasi vendor agar 1 keranjang hanya dari 1 toko.
-     * Setelah berhasil, tampilkan toast dan tidak redirect ke checkout.
      */
     public function addToCart(): ?string
     {
-        if (Auth::guest()) {
-            $this->redirectRoute('login');
-
-            return null;
-        }
-
         $this->validate();
 
         if (! $this->validateReturnDateTime()) {
@@ -307,37 +356,25 @@ class ProductBooking extends Component
         }
 
         if ($this->totalDays <= 0) {
-            $this->addError('return_date', 'Durasi sewa harus minimal 1 hari.');
+            $this->addError(
+                'return_date',
+                'Durasi sewa harus minimal 1 hari.'
+            );
 
             return null;
         }
 
-        // Validasi ketersediaan stok fisik di server
+        // Validasi ketersediaan stok.
         if ($this->quantity > $this->availableStock) {
-            $this->addError('quantity', "Stok tidak mencukupi. Hanya tersedia {$this->availableStock} unit untuk tanggal yang dipilih.");
+            $this->addError(
+                'quantity',
+                "Stok tidak mencukupi. Hanya tersedia {$this->availableStock} unit untuk tanggal yang dipilih."
+            );
 
             return null;
         }
 
         $cartService = app(CartService::class);
-        $existingCart = $cartService->get(Auth::user());
-
-        // Validasi: barang di keranjang harus dari vendor yang sama
-        if (
-            is_array($existingCart)
-            && ! empty($existingCart['master_item_id'])
-            && isset($existingCart['vendor_id'])
-            && (int) $existingCart['vendor_id'] !== (int) $this->product->vendor_id
-        ) {
-            $existingVendor = $existingCart['vendor_name'] ?? 'toko sebelumnya';
-            $this->dispatch('notify', [
-                'type' => 'warning',
-                'title' => 'Keranjang Beda Toko',
-                'message' => "Keranjangmu masih berisi produk dari {$existingVendor}. Selesaikan atau kosongkan keranjang dahulu sebelum menambah dari toko berbeda.",
-            ]);
-
-            return null;
-        }
 
         $cartData = [
             'master_item_id' => $this->product->id,
@@ -359,10 +396,17 @@ class ProductBooking extends Component
             'category_name' => $this->product->category?->name,
         ];
 
-        $result = $cartService->addItem($cartData, Auth::user());
+        // Pengecekan vendor dan penambahan item ditangani CartService.
+        $result = $cartService->addItem(
+            $cartData,
+            Auth::user()
+        );
 
-        if ($result['status'] === 'diff_vendor') {
-            $existingVendor = $result['existing_vendor'] ?? 'toko sebelumnya';
+        // Tangani kondisi keranjang berasal dari vendor berbeda.
+        if (($result['status'] ?? null) === 'diff_vendor') {
+            $existingVendor = $result['existing_vendor']
+                ?? 'toko sebelumnya';
+
             $this->dispatch('notify', [
                 'type' => 'warning',
                 'title' => 'Keranjang Beda Toko',
@@ -372,9 +416,10 @@ class ProductBooking extends Component
             return null;
         }
 
+        $this->inCart = true;
+
         $totalCount = $result['total_count'] ?? $this->quantity;
 
-        // Emit toast sukses dan update badge keranjang
         $this->dispatch('notify', [
             'type' => 'success',
             'title' => 'Ditambahkan ke Keranjang! 🛒',
@@ -387,21 +432,14 @@ class ProductBooking extends Component
     }
 
     /**
-     * Backward-compatible alias yang langsung redirect ke checkout.
-     * Dipertahankan agar unit test yang memanggil proceedToBooking tidak rusak.
-     *
-     * @internal
+     * Alias kompatibilitas untuk proses booking lama.
      */
     public function proceedToBooking(): mixed
     {
-        if (Auth::guest()) {
-            return redirect()->route('login');
-        }
-
         $this->addToCart();
 
-        if ($this->getErrorBag()->isEmpty()) {
-            return redirect()->route('checkout.index');
+        if ($this->getErrorBag()->isEmpty() && $this->inCart) {
+            $this->redirectRoute('checkout.index');
         }
 
         return null;

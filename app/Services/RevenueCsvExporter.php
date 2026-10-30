@@ -58,7 +58,8 @@ class RevenueCsvExporter
     {
         return match ($paymentType) {
             'dp' => 'DP',
-            'settlement' => 'Pelunasan',
+            'full' => 'Bayar Penuh',
+            'remaining' => 'Pelunasan',
             'fine' => 'Denda',
             'deposit' => 'Deposit',
             'deposit_refund' => 'Refund Deposit',

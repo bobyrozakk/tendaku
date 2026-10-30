@@ -1,10 +1,13 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Booking;
 
+use App\Enums\PaymentStatus;
+use App\Enums\RentalStatus;
 use App\Exceptions\InsufficientStockException;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
+use App\Models\Payment;
 use App\Models\Rental;
 use Carbon\Carbon;
 use DateTimeInterface;
@@ -185,7 +188,8 @@ class RentalService
                 : $subtotal;
             $deliveryFee = (float) ($data['delivery_fee'] ?? 0.0);
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
-            $grandTotal = max(0.0, $subtotal + $deliveryFee - $discountAmount);
+            $adminFee = (float) app(\App\Services\Finance\CommissionCalculator::class)->commissionFor($subtotal);
+            $grandTotal = max(0.0, $subtotal + $deliveryFee + $adminFee - $discountAmount);
 
             if (isset($data['expires_at'])) {
                 $expiresAt = Carbon::parse($data['expires_at']);
@@ -194,15 +198,13 @@ class RentalService
                     (int) $data['expires_in_minutes']
                 );
             } else {
-                $expiresInHours = (int) (
-                    $data['expires_in_hours']
-                    ?? config('rental.payment_expiry_hours')
-                );
-
-                $expiresAt = Carbon::now()->addHours($expiresInHours);
+                $expiresAt = isset($data['expires_in_hours'])
+                    ? Carbon::now()->addHours((int) $data['expires_in_hours'])
+                    : Carbon::now()->addMinutes((int) config('booking.payment_expiry_minutes'));
             }
 
-            $bookingCode = $this->generateBookingCode();
+            $firstMasterItemId = (int) (array_key_first($itemRequirements) ?? 1);
+            $bookingCode = $this->generateBookingCode($vendorId, $firstMasterItemId);
 
             $rental = Rental::query()->create([
                 'vendor_id' => $vendorId,
@@ -241,24 +243,124 @@ class RentalService
     }
 
     /**
-     * Generate kode booking unik format TDK-YYYY-XXXXX (<= 20 karakter, retry jika bentrok).
+     * Satu-satunya logika expire. Rental pending yang lewat batas bayar
+     * jadi expired dan payment pending-nya jadi expired (bukan failed).
+     * Idempoten; rental yang sudah punya payment paid tidak disentuh.
      */
-    public function generateBookingCode(): string
+    public function expire(Rental $rental): bool
     {
-        $datePrefix = 'TDK'.date('Ymd');
-        $lastBooking = Rental::query()
-            ->where('booking_code', 'like', "{$datePrefix}%")
+        if (
+            $rental->status !== RentalStatus::Pending->value
+            || ! $rental->expires_at
+            || ! $rental->expires_at->isPast()
+        ) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($rental): bool {
+            $locked = Rental::query()->whereKey($rental->getKey())->lockForUpdate()->first();
+
+            if (
+                ! $locked
+                || $locked->status !== RentalStatus::Pending->value
+                || $locked->payments()->where('status', PaymentStatus::Paid->value)->exists()
+            ) {
+                return false;
+            }
+
+            $locked->update(['status' => RentalStatus::Expired->value]);
+
+            Payment::query()
+                ->where('rental_id', $locked->getKey())
+                ->where('status', PaymentStatus::Pending->value)
+                ->update(['status' => PaymentStatus::Expired->value]);
+
+            $rental->status = RentalStatus::Expired->value;
+
+            return true;
+        });
+    }
+
+    /**
+     * Expire semua rental pending yang lewat batas bayar (dipakai job).
+     */
+    public function expirePastDue(): int
+    {
+        $count = 0;
+
+        Rental::query()
+            ->where('status', RentalStatus::Pending->value)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->each(function (Rental $rental) use (&$count): void {
+                if ($this->expire($rental)) {
+                    $count++;
+                }
+            });
+
+        return $count;
+    }
+
+    //  Generate kode booking: TDK + Ymd + [ID Toko 2 digit] + [ID Barang 2 digit] + [No Urut 3 digit]
+    public function generateBookingCode(int $vendorId = 1, int $masterItemId = 1): string
+    {
+        $date = date('Ymd');
+        $vendorPart = str_pad((string) $vendorId, 2, '0', STR_PAD_LEFT);
+        $itemPart   = str_pad((string) $masterItemId, 2, '0', STR_PAD_LEFT);
+
+        $prefix = "TDK{$date}{$vendorPart}{$itemPart}";
+
+        $lastBooking = Rental::withoutGlobalScopes()
+            ->where('booking_code', 'like', "{$prefix}%")
             ->orderBy('booking_code', 'desc')
             ->value('booking_code');
 
-        $nextNumber = $lastBooking ? ((int) substr($lastBooking, -4) + 1) : 1;
+        $nextNumber = $lastBooking ? ((int) substr($lastBooking, -3) + 1) : 1;
 
         do {
-            $code = $datePrefix.str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+            $code = $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
             $nextNumber++;
-        } while (Rental::query()->where('booking_code', $code)->exists());
+        } while (Rental::withoutGlobalScopes()->where('booking_code', $code)->exists());
 
         return $code;
+    }
+
+    /**
+     * Batalkan pesanan sebelum serah terima (status pending atau confirmed).
+     * Stok langsung bebas karena AvailabilityService hanya menghitung
+     * pending/confirmed/picked_up. Payment yang masih pending ikut dibatalkan;
+     * payment yang sudah paid TIDAK diubah (refund ditangani di luar alur ini).
+     */
+    public function cancel(Rental $rental, string $reason, ?string $note = null): Rental
+    {
+        return DB::transaction(function () use ($rental, $reason, $note): Rental {
+            $locked = Rental::query()
+                ->whereKey($rental->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! in_array($locked->status, [RentalStatus::Pending->value, RentalStatus::Confirmed->value], true)) {
+                throw new RuntimeException("Pesanan dengan status '{$locked->status}' tidak dapat dibatalkan.");
+            }
+
+            $locked->update([
+                'status' => RentalStatus::Cancelled->value,
+                'cancelled_at' => Carbon::now(),
+                'cancel_reason' => $reason,
+                'cancel_note' => $note !== null && trim($note) !== '' ? trim($note) : null,
+            ]);
+
+            $locked->payments()
+                ->where('status', PaymentStatus::Pending->value)
+                ->get()
+                ->each(function (Payment $payment): void {
+                    if ($payment->transitionTo(PaymentStatus::Cancelled)) {
+                        $payment->save();
+                    }
+                });
+
+            return $locked->refresh();
+        });
     }
 
     /**
@@ -530,5 +632,16 @@ class RentalService
     public function parseRentalDates(string|DateTimeInterface $pickupDate, string|DateTimeInterface $returnDate): array
     {
         return $this->parseRentalDateTime($pickupDate, $returnDate);
+    }
+
+    public function calculateRentalDays(
+        string|DateTimeInterface $pickupDate,
+        string|DateTimeInterface $returnDate,
+        ?string $pickupTime = null,
+        ?string $returnTime = null
+    ): int {
+        [$start, $end] = $this->parseRentalDateTime($pickupDate, $returnDate, $pickupTime, $returnTime);
+
+        return max(1, (int) ceil($start->floatDiffInHours($end, false) / 24));
     }
 }

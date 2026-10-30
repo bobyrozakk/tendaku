@@ -40,11 +40,12 @@ Route::prefix('katalog/booking')->group(function () {
     Route::get('status/{code}', [BookingController::class, 'status'])->name('booking.status');
     Route::post('status/{code}/sync', [BookingController::class, 'syncPayment'])->name('booking.sync');
     Route::post('status/{code}/pay', [BookingController::class, 'pay'])->name('booking.pay');
+    Route::post('status/{code}/cancel', [BookingController::class, 'cancel'])->name('booking.cancel');
     Route::post('status/{code}/va', [BookingVaController::class, 'switch'])
         ->middleware('throttle:10,1')
         ->name('booking.va');
     Route::get('receipt/{code}', [BookingController::class, 'receipt'])->name('booking.receipt');
-    Route::get('receipt/{code}/photo', [BookingController::class, 'collateralPhoto'])->name('booking.receipt.photo');
+    Route::get('receipt/{code}/photo', [BookingController::class, 'collate                  ralPhoto'])->name('booking.receipt.photo');
 });
 
 // Riwayat Sewa Customer (Wajib Login)

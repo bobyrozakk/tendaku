@@ -8,9 +8,11 @@ use App\Models\Rental;
 use App\Models\RentalDetail;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\Payment\MidtransService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\URL;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class BookingStatusAndHistoryTest extends TestCase
@@ -30,6 +32,8 @@ class BookingStatusAndHistoryTest extends TestCase
         parent::setUp();
 
         Carbon::setTestNow('2026-10-10 10:00:00');
+
+        config(['services.midtrans.server_key' => 'test-midtrans-server-key']);
 
         $this->vendor = Vendor::create([
             'name' => 'Tendaku Vendor Store',
@@ -236,26 +240,37 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('Bayar denda');
     }
 
-    public function test_customer_can_view_ktp_receipt(): void
+    public function test_customer_downloads_order_receipt_as_pdf(): void
     {
-        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT01', 'picked_up');
-        $rental->update([
-            'ktp_collateral_status' => 'held',
-            'ktp_received_at' => Carbon::now(),
-            'ktp_collateral_notes' => 'Disimpan di Loker A-01',
-        ]);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT01', 'confirmed');
 
         $response = $this->actingAs($this->customer1)
             ->get(route('booking.receipt', $rental->booking_code));
 
         $response->assertStatus(200);
-        $response->assertSee('REC-TDK-2026-RCPT01');
-        $response->assertSee('Budi Penyewa');
-        $response->assertSee('Disimpan di Loker A-01');
-        $response->assertDontSee('Budi Santoso'); // Bukan data dummy
+        $response->assertHeader('content-type', 'application/pdf');
+        $this->assertStringContainsString(
+            'receipt-TDK-2026-RCPT01.pdf',
+            (string) $response->headers->get('content-disposition')
+        );
+        $this->assertStringStartsWith('%PDF', $response->getContent());
     }
 
-    public function test_get_snap_token_for_pending_rental(): void
+    public function test_order_receipt_html_view_still_available_with_format_html(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT02', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.receipt', ['code' => $rental->booking_code, 'format' => 'html']));
+
+        $response->assertStatus(200);
+        $response->assertSee('BUKTI TRANSAKSI PENYEWAAN');
+        $response->assertSee('TDK-2026-RCPT02');
+        $response->assertSee('Budi Penyewa');
+        $response->assertSee('Tendaku Vendor Store');
+    }
+
+    public function test_pay_returns_virtual_account_info_for_pending_rental(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-SNAP01', 'pending');
         $rental->payments()->create([
@@ -264,9 +279,20 @@ class BookingStatusAndHistoryTest extends TestCase
             'channel' => 'midtrans',
             'order_id' => 'TDK-2026-SNAP01-FULL-1',
             'amount' => 150000,
-            'snap_token' => 'snap-token-test-12345',
             'status' => 'pending',
         ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('chargeBankTransfer')
+                ->once()
+                ->with(\Mockery::type(\App\Models\Payment::class), 'bca')
+                ->andReturn([
+                    'bank' => 'bca',
+                    'va_number' => '1234567890',
+                    'biller_code' => null,
+                    'qr_code_url' => null,
+                ]);
+        });
 
         $response = $this->actingAs($this->customer1)
             ->postJson(route('booking.pay', $rental->booking_code));
@@ -275,8 +301,11 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertJson([
                 'status' => 'success',
                 'order_id' => 'TDK-2026-SNAP01-FULL-1',
-                'snap_token' => 'snap-token-test-12345',
                 'amount' => 150000,
+                'va_info' => [
+                    'bank' => 'bca',
+                    'va_number' => '1234567890',
+                ],
             ]);
     }
 
@@ -292,6 +321,13 @@ class BookingStatusAndHistoryTest extends TestCase
             'status' => 'pending',
         ]);
 
+        // Jangan menembak API Midtrans asli: status dikembalikan apa adanya.
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('syncStatus')
+                ->once()
+                ->andReturnUsing(fn ($payment) => $payment);
+        });
+
         $response = $this->actingAs($this->customer1)
             ->postJson(route('booking.sync', $rental->booking_code));
 
@@ -302,6 +338,73 @@ class BookingStatusAndHistoryTest extends TestCase
                 'payment_status' => 'pending',
                 'is_paid' => false,
             ]);
+    }
+
+    public function test_customer_can_cancel_confirmed_order_before_handover(): void
+    {
+        $this->mock(MidtransService::class);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-CNCL01', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->post(route('booking.cancel', $rental->booking_code), [
+                'cancel_reason' => 'schedule_changed',
+                'cancel_note' => 'Jadwal kantor bentrok',
+                'confirm_cancel' => '1',
+            ]);
+
+        $response->assertRedirect(route('booking.status', $rental->booking_code));
+        $response->assertSessionHas('success');
+
+        $rental->refresh();
+        $this->assertSame('cancelled', $rental->status);
+        $this->assertSame('schedule_changed', $rental->cancel_reason);
+        $this->assertSame('Jadwal kantor bentrok', $rental->cancel_note);
+        $this->assertNotNull($rental->cancelled_at);
+    }
+
+    public function test_cancel_requires_note_when_reason_is_other(): void
+    {
+        $this->mock(MidtransService::class);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-CNCL02', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->post(route('booking.cancel', $rental->booking_code), [
+                'cancel_reason' => 'other',
+                'confirm_cancel' => '1',
+            ]);
+
+        $response->assertSessionHasErrors('cancel_note');
+        $this->assertSame('confirmed', $rental->fresh()->status);
+    }
+
+    public function test_cannot_cancel_order_that_was_already_picked_up(): void
+    {
+        $this->mock(MidtransService::class);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-CNCL03', 'picked_up');
+
+        $response = $this->actingAs($this->customer1)
+            ->post(route('booking.cancel', $rental->booking_code), [
+                'cancel_reason' => 'wrong_order',
+                'confirm_cancel' => '1',
+            ]);
+
+        $response->assertSessionHas('error');
+        $this->assertSame('picked_up', $rental->fresh()->status);
+    }
+
+    public function test_other_customer_cannot_cancel_someone_elses_order(): void
+    {
+        $this->mock(MidtransService::class);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-CNCL04', 'confirmed');
+
+        $this->actingAs($this->customer2)
+            ->post(route('booking.cancel', $rental->booking_code), [
+                'cancel_reason' => 'wrong_order',
+                'confirm_cancel' => '1',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame('confirmed', $rental->fresh()->status);
     }
 
     private function createRental(int $userId, string $bookingCode, string $status): Rental

@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Services\CommissionCalculator;
+use App\Services\Finance\CommissionCalculator;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

@@ -1,32 +1,59 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Booking;
 
 use App\Models\Rental;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
-class GuestRentalAccess
+/**
+ * Satu aturan akses ke transaksi rental (login maupun guest).
+ */
+class RentalAccessGuard
 {
     private const LOCAL_PREFIX = '0';
 
     private const COUNTRY_CODE = '62';
 
     /**
+     * Memastikan request berhak mengakses transaksi rental.
+     * - Jika user login: harus pemilik rental (user_id cocok).
+     * - Jika guest: diverifikasi via session, signed URL, atau nomor telepon.
+     */
+    public function authorize(Request $request, Rental $rental): void
+    {
+        if ($rental->isGuest()) {
+            abort_unless(
+                $this->guestAllows($request, $rental),
+                403,
+                'FORBIDDEN'
+            );
+
+            return;
+        }
+
+        abort_unless(
+            Auth::check() && $rental->user_id === Auth::id(),
+            403,
+            'FORBIDDEN'
+        );
+    }
+
+    /**
      * Beri akses ke rental guest untuk session saat ini.
      */
-    public function grant(Rental $rental): void
+    public function grantGuest(Rental $rental): void
     {
         session([$this->sessionKey($rental) => true]);
     }
 
     /**
-     * Cek apakah request ini boleh mengakses rental guest.
      * Jika lolos lewat signature atau nomor telepon, akses disimpan ke session
      * supaya request lanjutan (AJAX pay/sync, receipt, dll) tidak ditolak.
      */
-    public function allows(Request $request, Rental $rental): bool
+    private function guestAllows(Request $request, Rental $rental): bool
     {
-        if ($this->hasSessionAccess($rental)) {
+        if (session()->has($this->sessionKey($rental))) {
             return true;
         }
 
@@ -34,14 +61,9 @@ class GuestRentalAccess
             return false;
         }
 
-        $this->grant($rental);
+        $this->grantGuest($rental);
 
         return true;
-    }
-
-    private function hasSessionAccess(Rental $rental): bool
-    {
-        return session()->has($this->sessionKey($rental));
     }
 
     private function phoneMatches(Request $request, Rental $rental): bool

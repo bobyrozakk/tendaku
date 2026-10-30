@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use App\Traits\BelongsToVendor;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\DB;
 
 class Rental extends Model
 {
@@ -31,6 +29,9 @@ class Rental extends Model
         'actual_return_date',
         'picked_up_at',
         'returned_at',
+        'cancelled_at',
+        'cancel_reason',
+        'cancel_note',
         'pickup_method',
         'delivery_address',
         'customer_address_id',
@@ -70,6 +71,7 @@ class Rental extends Model
 
             'picked_up_at' => 'datetime',
             'returned_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'ktp_received_at' => 'datetime',
             'ktp_returned_at' => 'datetime',
             'expires_at' => 'datetime',
@@ -153,48 +155,54 @@ class Rental extends Model
     }
 
     /**
-     * Periksa dan batalkan rental pending jika telah melewati batas waktu pembayaran (5 menit).
-     * Idempoten dan aman dari race condition.
+     * Expire rental ini jika pending dan lewat batas bayar.
+     * Logikanya ada di RentalService::expire().
      */
     public function expireIfPastDue(): bool
     {
-        if ($this->status !== 'pending' || ! $this->expires_at || ! $this->expires_at->isPast()) {
-            return false;
+        return app(\App\Services\Booking\RentalService::class)->expire($this);
+    }
+
+    /**
+     * Sudah ada pembayaran berstatus paid untuk rental ini.
+     * Memakai relasi yang sudah di-load bila ada (hindari N+1 di daftar).
+     */
+    public function hasPaidPayment(): bool
+    {
+        return $this->relationLoaded('payments')
+            ? $this->payments->contains(fn ($payment) => $payment->status === 'paid')
+            : $this->payments()->where('status', 'paid')->exists();
+    }
+
+    /**
+     * Label status untuk customer. Rental tetap 'pending' sampai kasir
+     * memvalidasi serah terima, jadi yang sudah dibayar tidak boleh
+     * ditampilkan sebagai "Menunggu Pembayaran".
+     */
+    public function displayStatusLabel(): string
+    {
+        if ($this->status === 'pending' && $this->hasPaidPayment()) {
+            return 'Menunggu Validasi Kasir';
         }
 
-        return DB::transaction(function () {
-            /** @var Rental|null $locked */
-            $locked = self::query()
-                ->whereKey($this->id)
-                ->lockForUpdate()
-                ->first();
+        return (string) config(
+            "booking.statuses.{$this->status}.label",
+            ucfirst(str_replace('_', ' ', (string) $this->status))
+        );
+    }
 
-            if (! $locked || $locked->status !== 'pending') {
-                return false;
-            }
-
-            // Jika ada pembayaran yang sudah lunas (paid), jangan batalkan
-            $hasPaid = $locked->payments()->where('status', 'paid')->exists();
-            if ($hasPaid) {
-                return false;
-            }
-
-            $now = Carbon::now();
-            $locked->update([
-                'status' => 'expired',
-                'updated_at' => $now,
-            ]);
-
-            $locked->payments()
-                ->where('status', 'pending')
-                ->update([
-                    'status' => 'failed',
-                    'updated_at' => $now,
-                ]);
-
-            $this->status = 'expired';
-
-            return true;
-        });
+    /**
+     * Biaya admin yang dibayar customer, diturunkan dari angka yang tersimpan
+     * (grand_total - subtotal - ongkir + diskon) agar tetap benar untuk
+     * booking lama yang dibuat dengan tarif berbeda.
+     */
+    public function adminFee(): float
+    {
+        return max(0.0, round(
+            (float) $this->grand_total
+            - (float) $this->subtotal
+            - (float) $this->delivery_fee
+            + (float) $this->discount_amount
+        ));
     }
 }

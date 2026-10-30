@@ -60,7 +60,7 @@ new #[Layout('layouts.guest')] class extends Component
         event(new Registered($user = User::create($validated)));
 
         Auth::login($user);
-        app(\App\Services\CartService::class)->syncOnLogin($user);
+        app(\App\Services\Booking\CartService::class)->syncOnLogin($user);
 
         $this->redirect(route('verification.notice', absolute: false), navigate: true);
     }

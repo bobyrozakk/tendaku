@@ -1,0 +1,240 @@
+.receipt-page {
+    padding: 32px 16px;
+}
+
+.receipt-paper {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 32px;
+    background: #fff;
+    color: #222;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.receipt-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.receipt-brand {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 3px;
+}
+
+.receipt-subtitle {
+    margin-top: 4px;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: #666;
+}
+
+.receipt-section {
+    margin-top: 22px;
+}
+
+.receipt-section-title {
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 6px 0;
+}
+
+.receipt-row > :last-child {
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.receipt-divider {
+    margin: 16px 0;
+    border-top: 1px dashed #bdbdbd;
+}
+
+.receipt-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px dashed #ddd;
+}
+
+.receipt-item-name {
+    min-width: 0;
+}
+
+.receipt-item-price {
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.receipt-muted {
+    margin-top: 4px;
+    color: #777;
+    font-size: 12px;
+}
+
+.receipt-grand-total {
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.receipt-footer {
+    margin-top: 28px;
+    text-align: center;
+}
+
+.receipt-footer p {
+    color: #666;
+    font-size: 12px;
+}
+
+.receipt-footer-brand {
+    margin-top: 20px;
+    color: #888;
+    font-size: 11px;
+}
+
+@media print {
+    .receipt-page {
+        padding: 0;
+        background: #fff;
+    }
+
+    .receipt-paper {
+        max-width: none;
+        padding: 12px;
+        border: none;
+        border-radius: 0;
+    }
+
+    body {
+        background: #fff;
+    }
+
+    @page {
+        margin: 10mm;
+    }
+}
+
+@media (max-width: 480px) {
+    .receipt-paper {
+        padding: 20px 16px;
+    }
+
+    .receipt-row {
+        gap: 12px;
+    }
+}
+
+.receipt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    max-width: 680px;
+    margin: 0 auto 20px;
+}
+
+.receipt-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.receipt-action-btn:hover {
+    background: #f3f4f6;
+}
+
+.receipt-action-print {
+    border-color: #166534;
+    background: #166534;
+    color: #fff;
+}
+
+.receipt-action-print:hover {
+    background: #14532d;
+}
+
+.receipt-action-contact {
+    border-color: #15803d;
+    background: #15803d;
+    color: #fff;
+}
+
+.receipt-action-contact:hover {
+    background: #166534;
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+}
+
+@media print {
+    header,
+    nav,
+    footer,
+    .no-print,
+    .receipt-actions,
+    [role="banner"],
+    .top-announcement-bar {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    @page {
+        margin: 0;
+        size: auto;
+    }
+
+    body {
+        background: #fff !important;
+        margin: 1.5cm !important;
+        padding: 0 !important;
+    }
+
+    .receipt-page {
+        padding: 0 !important;
+        margin: 0 auto !important;
+        background: transparent !important;
+    }
+
+    .receipt-paper {
+        max-width: 100% !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .receipt-divider {
+        margin: 12px 0 !important;
+        border-top: 1px dashed #777 !important;
+    }
+}

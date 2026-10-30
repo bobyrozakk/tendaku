@@ -10,7 +10,7 @@ use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Services\RentalService;
+use App\Services\Booking\RentalService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\Concerns\CreatesMidtransFixtures;
@@ -78,6 +78,13 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
         $this->service = app(RentalService::class);
     }
 
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
+
     /**
      * Skenario 1:
      * Sewa 24 jam dari pukul 05.00 sampai pukul 05.00 keesokan harinya tetap dihitung 1 hari.
@@ -85,6 +92,9 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
      */
     public function test_scenario_1_rental_24_hours_crossing_calendar_dates_is_calculated_as_one_day(): void
     {
+        // Bekukan waktu sebelum tanggal pickup agar validasi 'tanggal lampau' tidak gagal.
+        Carbon::setTestNow('2026-10-25 09:00:00');
+
         $pickupDate = '2026-10-26';
         $pickupTime = '05:00:00';
         $returnDate = '2026-10-27';
@@ -104,7 +114,8 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
 
         $this->assertSame(1, $rental->rental_days);
         $this->assertEquals(60000.0, (float) $rental->subtotal);
-        $this->assertEquals(60000.0, (float) $rental->grand_total);
+        // grand_total = subtotal + biaya layanan & admin 5%
+        $this->assertEquals(63000.0, (float) $rental->grand_total);
         $this->assertSame('2026-10-26', $rental->pickup_date->format('Y-m-d'));
         $this->assertSame('05:00:00', $rental->pickup_time);
         $this->assertSame('2026-10-27', $rental->return_date->format('Y-m-d'));
@@ -117,6 +128,9 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
      */
     public function test_scenario_2_rental_duration_exceeding_24_hours_is_billed_accordingly(): void
     {
+        // Bekukan waktu sebelum tanggal pickup agar validasi 'tanggal lampau' tidak gagal.
+        Carbon::setTestNow('2026-10-25 09:00:00');
+
         // 25 jam sewa (26 Okt 05:00 s/d 27 Okt 06:00): lebih 1 jam dari 24 jam => 2 hari
         $rental25Hours = $this->service->createBooking([
             'vendor_id' => $this->vendor->id,
@@ -132,7 +146,7 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
 
         $this->assertSame(2, $rental25Hours->rental_days);
         $this->assertEquals(120000.0, (float) $rental25Hours->subtotal);
-        $this->assertEquals(120000.0, (float) $rental25Hours->grand_total);
+        $this->assertEquals(126000.0, (float) $rental25Hours->grand_total);
 
         // 48 jam pas (26 Okt 05:00 s/d 28 Okt 05:00) => tepat 2 hari
         $rental48Hours = $this->service->createBooking([
@@ -186,18 +200,20 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
             ],
         ]);
 
-        // Verifikasi batas waktu tersimpan tepat 5 menit di server
-        $this->assertEquals(Carbon::now()->addMinutes(5), $rental->expires_at);
+        // Verifikasi batas waktu tersimpan di server sesuai config rental.payment_expiry_hours
+        $expiryHours = (int) config('rental.payment_expiry_hours');
+        $this->assertEquals(Carbon::now()->addHours($expiryHours), $rental->expires_at);
         $expectedTimestamp = (string) $rental->fresh()->expires_at->timestamp;
+        // View mengirim batas waktu ke Alpine (statusPage) dalam format ISO 8601
+        $expectedIso = $rental->fresh()->expires_at->toIso8601String();
 
         // Kunjungan awal saat T = 10:00:00
         $response1 = $this->actingAs($this->customer)
             ->get(route('booking.status', $rental->booking_code));
 
         $response1->assertOk();
-        $response1->assertSee('Selesaikan Pembayaran Sebelum Batas Waktu');
-        $response1->assertSee('countdown-timer');
-        $response1->assertSee($expectedTimestamp);
+        $response1->assertSee('Bayar sebelum');
+        $response1->assertSee($expectedIso);
 
         // Customer me-refresh halaman 2 menit kemudian (T = 10:02:00)
         Carbon::setTestNow('2026-10-26 10:02:00');
@@ -206,8 +222,8 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
             ->get(route('booking.status', $rental->booking_code));
 
         $response2->assertOk();
-        // Server tetap mengirim target timestamp yang sama, tidak ter-reset ke 5 menit baru
-        $response2->assertSee($expectedTimestamp);
+        // Server tetap mengirim batas waktu yang sama, tidak ter-reset
+        $response2->assertSee($expectedIso);
         $this->assertSame((int) $expectedTimestamp, $rental->fresh()->expires_at->timestamp);
 
         Carbon::setTestNow();
@@ -244,8 +260,12 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
         $this->assertSame('pending', $rental->status);
         $this->assertSame('pending', $payment->status);
 
-        // Majukan waktu melewati 5 menit (T = 10:05:01)
-        Carbon::setTestNow('2026-10-26 10:05:01');
+        // Majukan waktu sedikit melewati batas pembayaran (config rental.payment_expiry_hours)
+        Carbon::setTestNow(
+            Carbon::parse('2026-10-26 10:00:00')
+                ->addHours((int) config('rental.payment_expiry_hours'))
+                ->addSecond()
+        );
 
         // Jalankan Scheduler Job ExpirePendingRentals
         ExpirePendingRentals::dispatchSync();
