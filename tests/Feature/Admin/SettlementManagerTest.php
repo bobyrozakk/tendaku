@@ -6,7 +6,7 @@ use App\Livewire\Admin\SettlementManager;
 use App\Models\Settlement;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Services\SettlementService;
+use App\Services\Finance\SettlementService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;

@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use App\Services\MidtransService;
-use App\Services\PaymentService;
+use App\Services\Payment\MidtransService;
+use App\Services\Payment\PaymentService;
 use PHPUnit\Framework\TestCase;
 
 class MidtransServiceTest extends TestCase

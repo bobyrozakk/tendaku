@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Payment;
 use App\Models\User;
-use App\Services\MidtransService;
+use App\Services\Payment\MidtransService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery;
 use Mockery\MockInterface;

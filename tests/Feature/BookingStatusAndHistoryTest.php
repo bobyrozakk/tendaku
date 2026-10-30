@@ -8,7 +8,7 @@ use App\Models\Rental;
 use App\Models\RentalDetail;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Services\MidtransService;
+use App\Services\Payment\MidtransService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\URL;

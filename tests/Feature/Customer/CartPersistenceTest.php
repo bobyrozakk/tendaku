@@ -6,7 +6,7 @@ use App\Models\ItemCategory;
 use App\Models\MasterItem;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Services\CartService;
+use App\Services\Booking\CartService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Session;
 use Tests\TestCase;

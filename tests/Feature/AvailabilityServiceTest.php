@@ -8,7 +8,7 @@ use App\Models\MasterItem;
 use App\Models\Rental;
 use App\Models\RentalDetail;
 use App\Models\Vendor;
-use App\Services\AvailabilityService;
+use App\Services\Booking\AvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use InvalidArgumentException;

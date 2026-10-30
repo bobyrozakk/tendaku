@@ -10,7 +10,7 @@ use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Services\RentalService;
+use App\Services\Booking\RentalService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\Concerns\CreatesMidtransFixtures;

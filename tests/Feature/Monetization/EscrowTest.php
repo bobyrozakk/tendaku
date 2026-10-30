@@ -3,7 +3,7 @@
 namespace Tests\Feature\Monetization;
 
 use App\Models\Payment;
-use App\Services\EscrowService;
+use App\Services\Finance\EscrowService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\Concerns\CreatesMidtransFixtures;
 use Tests\TestCase;

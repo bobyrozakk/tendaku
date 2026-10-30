@@ -5,7 +5,7 @@ namespace Tests\Feature\Monetization;
 use App\Models\Settlement;
 use App\Models\SettlementItem;
 use App\Models\User;
-use App\Services\SettlementService;
+use App\Services\Finance\SettlementService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesRevenueFixtures;
