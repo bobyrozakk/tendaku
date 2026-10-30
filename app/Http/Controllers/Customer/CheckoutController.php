@@ -33,6 +33,28 @@ class CheckoutController extends Controller
      */
     public function index(Request $request): View|RedirectResponse
     {
+        // Mendukung parameter langsung produk/alat jika diarahkan langsung dari profil toko atau katalog
+        if ($request->filled('item_id') || $request->filled('product_id')) {
+            $itemId = (int) ($request->query('item_id') ?: $request->query('product_id'));
+            $masterItem = MasterItem::with('vendor', 'category')->find($itemId);
+            if ($masterItem) {
+                app(CartService::class)->addItem([
+                    'master_item_id' => $masterItem->id,
+                    'product_id' => $masterItem->id,
+                    'product_name' => $masterItem->name,
+                    'product_image' => $masterItem->image_url,
+                    'daily_rate' => (int) $masterItem->daily_rate,
+                    'quantity' => max(1, (int) $request->query('qty', 1)),
+                    'qty' => max(1, (int) $request->query('qty', 1)),
+                    'pickup_date' => $request->query('pickup_date') ?: now()->addDay()->toDateString(),
+                    'return_date' => $request->query('return_date') ?: now()->addDays(2)->toDateString(),
+                    'vendor_id' => $masterItem->vendor_id,
+                    'vendor_name' => $masterItem->vendor?->name ?? 'Vendor',
+                    'category_name' => $masterItem->category?->name,
+                ], Auth::user());
+            }
+        }
+
         $cart = $this->cart();
 
         if ($cart === null) {

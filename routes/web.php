@@ -12,6 +12,7 @@ use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PackageCheckoutController;
 use App\Http\Controllers\Customer\PaymentRetryController;
+use App\Http\Controllers\Customer\StoreController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
 use App\Http\Controllers\Vendor\CategoryController;
@@ -70,6 +71,9 @@ Route::get('/katalog', [CatalogController::class, 'index'])->name('customer.cata
 Route::get('/katalog/{id}', [CatalogController::class, 'show'])
     ->whereNumber('id')
     ->name('customer.product.show');
+
+// Profil Toko Vendor (Shopee-like, tamu akan melihat popup 'Login untuk Melanjutkan')
+Route::get('/toko/{vendor}', [StoreController::class, 'show'])->name('customer.stores.show');
 
 // Paket Camping (khusus customer yang terdaftar dan login)
 Route::middleware(['auth', 'role:customer'])->group(function () {
