@@ -19,28 +19,81 @@
         </div>
     </div>
 
-    <div class="p-6 space-y-5">
-
-        {{-- VENDOR BADGE & UMUR BARANG --}}
+    <div class="p-6 space-y-5">        {{-- VENDOR BADGE & UMUR BARANG --}}
         <div class="p-3.5 rounded-xl bg-wheat-50 border border-wheat-200 space-y-2">
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="w-9 h-9 rounded-lg bg-darkbrown-800 text-sunglow-300 flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="store" class="w-4 h-4"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <h4 class="text-xs font-bold text-darkbrown-900 truncate">
-                            {{ $this->product->vendor?->name ?? 'Tendaku Store' }}
-                        </h4>
-                        <p class="text-[10px] text-darkbrown-500 font-medium truncate">
-                            {{ $this->product->vendor?->city ?? 'Penyedia Resmi' }}
-                        </p>
-                    </div>
+                    @if($this->product->vendor)
+                        @auth
+                            <a href="{{ route('customer.stores.show', $this->product->vendor->slug ?? $this->product->vendor_id) }}" 
+                               class="w-9 h-9 rounded-lg bg-darkbrown-800 text-sunglow-300 flex items-center justify-center flex-shrink-0 hover:bg-darkbrown-900 transition"
+                               title="Kunjungi Profil Toko {{ $this->product->vendor->name }}">
+                                <i data-lucide="store" class="w-4 h-4"></i>
+                            </a>
+                        @else
+                            <button type="button" 
+                                    @click="$dispatch('open-guest-store-modal')" 
+                                    class="w-9 h-9 rounded-lg bg-darkbrown-800 text-sunglow-300 flex items-center justify-center flex-shrink-0 hover:bg-darkbrown-900 transition cursor-pointer"
+                                    title="Kunjungi Profil Toko {{ $this->product->vendor->name }}">
+                                <i data-lucide="store" class="w-4 h-4"></i>
+                            </button>
+                        @endauth
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-bold text-darkbrown-900 truncate">
+                                @auth
+                                    <a href="{{ route('customer.stores.show', $this->product->vendor->slug ?? $this->product->vendor_id) }}" 
+                                       class="hover:text-avocado-700 transition underline-offset-2 hover:underline">
+                                        {{ $this->product->vendor->name }}
+                                    </a>
+                                @else
+                                    <button type="button" 
+                                            @click="$dispatch('open-guest-store-modal')" 
+                                            class="hover:text-avocado-700 transition underline-offset-2 hover:underline cursor-pointer font-bold text-left truncate block max-w-full">
+                                        {{ $this->product->vendor->name }}
+                                    </button>
+                                @endauth
+                            </h4>
+                            <p class="text-[10px] text-darkbrown-500 font-medium truncate">
+                                {{ $this->product->vendor->city ?? 'Penyedia Resmi' }}
+                            </p>
+                        </div>
+                    @else
+                        <div class="w-9 h-9 rounded-lg bg-darkbrown-800 text-sunglow-300 flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="store" class="w-4 h-4"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-bold text-darkbrown-900 truncate">
+                                {{ $this->product->vendor?->name ?? 'Tendaku Store' }}
+                            </h4>
+                            <p class="text-[10px] text-darkbrown-500 font-medium truncate">
+                                {{ $this->product->vendor?->city ?? 'Penyedia Resmi' }}
+                            </p>
+                        </div>
+                    @endif
                 </div>
-                <span class="badge-avocado text-[10px] flex-shrink-0 inline-flex items-center gap-1">
-                    <i data-lucide="badge-check" class="w-3 h-3"></i>
-                    <span>Vendor Aktif</span>
-                </span>
+                @if($this->product->vendor)
+                    @auth
+                        <a href="{{ route('customer.stores.show', $this->product->vendor->slug ?? $this->product->vendor_id) }}" 
+                           class="badge-avocado text-[10px] flex-shrink-0 inline-flex items-center gap-1 hover:bg-avocado-200 transition"
+                           title="Kunjungi Profil Toko">
+                            <i data-lucide="store" class="w-3 h-3"></i>
+                            <span>Kunjungi Toko</span>
+                        </a>
+                    @else
+                        <button type="button" 
+                                @click="$dispatch('open-guest-store-modal')" 
+                                class="badge-avocado text-[10px] flex-shrink-0 inline-flex items-center gap-1 hover:bg-avocado-200 transition cursor-pointer"
+                                title="Kunjungi Profil Toko">
+                            <i data-lucide="store" class="w-3 h-3"></i>
+                            <span>Kunjungi Toko</span>
+                        </button>
+                    @endauth
+                @else
+                    <span class="badge-avocado text-[10px] flex-shrink-0 inline-flex items-center gap-1">
+                        <i data-lucide="badge-check" class="w-3 h-3"></i>
+                        <span>Vendor Aktif</span>
+                    </span>
+                @endif
             </div>
 
             <div class="pt-2 border-t border-wheat-200 flex items-center justify-between text-[11px] text-darkbrown-600 font-medium">
