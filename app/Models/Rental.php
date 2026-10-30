@@ -29,6 +29,9 @@ class Rental extends Model
         'actual_return_date',
         'picked_up_at',
         'returned_at',
+        'cancelled_at',
+        'cancel_reason',
+        'cancel_note',
         'pickup_method',
         'delivery_address',
         'customer_address_id',
@@ -68,6 +71,7 @@ class Rental extends Model
 
             'picked_up_at' => 'datetime',
             'returned_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'ktp_received_at' => 'datetime',
             'ktp_returned_at' => 'datetime',
             'expires_at' => 'datetime',
@@ -157,6 +161,34 @@ class Rental extends Model
     public function expireIfPastDue(): bool
     {
         return app(\App\Services\Booking\RentalService::class)->expire($this);
+    }
+
+    /**
+     * Sudah ada pembayaran berstatus paid untuk rental ini.
+     * Memakai relasi yang sudah di-load bila ada (hindari N+1 di daftar).
+     */
+    public function hasPaidPayment(): bool
+    {
+        return $this->relationLoaded('payments')
+            ? $this->payments->contains(fn ($payment) => $payment->status === 'paid')
+            : $this->payments()->where('status', 'paid')->exists();
+    }
+
+    /**
+     * Label status untuk customer. Rental tetap 'pending' sampai kasir
+     * memvalidasi serah terima, jadi yang sudah dibayar tidak boleh
+     * ditampilkan sebagai "Menunggu Pembayaran".
+     */
+    public function displayStatusLabel(): string
+    {
+        if ($this->status === 'pending' && $this->hasPaidPayment()) {
+            return 'Menunggu Validasi Kasir';
+        }
+
+        return (string) config(
+            "booking.statuses.{$this->status}.label",
+            ucfirst(str_replace('_', ' ', (string) $this->status))
+        );
     }
 
     /**

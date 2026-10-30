@@ -567,4 +567,28 @@ class MidtransService
             'phone' => $customer?->phone ?? '',
         ];
     }
+
+    /**
+     * Batalkan tagihan yang belum dibayar di Midtrans supaya VA/QRIS-nya
+     * tidak bisa dibayar setelah pesanan dibatalkan. Gagal = hanya dicatat.
+     */
+    public function cancelTransaction(Payment $payment): bool
+    {
+        if (empty($payment->order_id)) {
+            return false;
+        }
+
+        try {
+            Transaction::cancel($payment->order_id);
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Gagal membatalkan tagihan Midtrans saat pesanan dibatalkan.', [
+                'order_id' => $payment->order_id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
 }

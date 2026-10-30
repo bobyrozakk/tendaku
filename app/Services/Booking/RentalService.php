@@ -326,6 +326,44 @@ class RentalService
     }
 
     /**
+     * Batalkan pesanan sebelum serah terima (status pending atau confirmed).
+     * Stok langsung bebas karena AvailabilityService hanya menghitung
+     * pending/confirmed/picked_up. Payment yang masih pending ikut dibatalkan;
+     * payment yang sudah paid TIDAK diubah (refund ditangani di luar alur ini).
+     */
+    public function cancel(Rental $rental, string $reason, ?string $note = null): Rental
+    {
+        return DB::transaction(function () use ($rental, $reason, $note): Rental {
+            $locked = Rental::query()
+                ->whereKey($rental->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! in_array($locked->status, [RentalStatus::Pending->value, RentalStatus::Confirmed->value], true)) {
+                throw new RuntimeException("Pesanan dengan status '{$locked->status}' tidak dapat dibatalkan.");
+            }
+
+            $locked->update([
+                'status' => RentalStatus::Cancelled->value,
+                'cancelled_at' => Carbon::now(),
+                'cancel_reason' => $reason,
+                'cancel_note' => $note !== null && trim($note) !== '' ? trim($note) : null,
+            ]);
+
+            $locked->payments()
+                ->where('status', PaymentStatus::Pending->value)
+                ->get()
+                ->each(function (Payment $payment): void {
+                    if ($payment->transitionTo(PaymentStatus::Cancelled)) {
+                        $payment->save();
+                    }
+                });
+
+            return $locked->refresh();
+        });
+    }
+
+    /**
      * Proses serah terima / pickup barang oleh penyewa.
      */
     public function processPickup(

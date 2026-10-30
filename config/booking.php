@@ -8,10 +8,18 @@ return [
     'default_pickup_time' => '09:00',
     'default_return_time' => '09:00',
 
+    // Alasan pembatalan oleh customer (kunci disimpan di rentals.cancel_reason)
+    'cancel_reasons' => [
+        'schedule_changed' => 'Jadwal sewa berubah',
+        'wrong_order' => 'Salah memilih alat atau tanggal',
+        'found_alternative' => 'Sudah menemukan alternatif lain',
+        'other' => 'Lainnya',
+    ],
+
     'statuses' => [
         'pending' => [
             'label' => 'Menunggu Pembayaran',
-            'filter' => 'Menunggu Pembayaran',
+            'filter' => 'Menunggu Pembayaran / Validasi',
         ],
         'confirmed' => [
             'label' => 'Dikonfirmasi',

@@ -240,7 +240,7 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('Bayar denda');
     }
 
-    public function test_customer_can_view_order_receipt(): void
+    public function test_customer_downloads_order_receipt_as_pdf(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT01', 'confirmed');
 
@@ -248,11 +248,26 @@ class BookingStatusAndHistoryTest extends TestCase
             ->get(route('booking.receipt', $rental->booking_code));
 
         $response->assertStatus(200);
-        $response->assertSee('Bukti Pemesanan');
-        $response->assertSee('#TDK-2026-RCPT01');
+        $response->assertHeader('content-type', 'application/pdf');
+        $this->assertStringContainsString(
+            'receipt-TDK-2026-RCPT01.pdf',
+            (string) $response->headers->get('content-disposition')
+        );
+        $this->assertStringStartsWith('%PDF', $response->getContent());
+    }
+
+    public function test_order_receipt_html_view_still_available_with_format_html(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT02', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.receipt', ['code' => $rental->booking_code, 'format' => 'html']));
+
+        $response->assertStatus(200);
+        $response->assertSee('BUKTI TRANSAKSI PENYEWAAN');
+        $response->assertSee('TDK-2026-RCPT02');
         $response->assertSee('Budi Penyewa');
         $response->assertSee('Tendaku Vendor Store');
-        $response->assertDontSee('Budi Santoso'); // Bukan data dummy
     }
 
     public function test_pay_returns_virtual_account_info_for_pending_rental(): void
@@ -323,6 +338,73 @@ class BookingStatusAndHistoryTest extends TestCase
                 'payment_status' => 'pending',
                 'is_paid' => false,
             ]);
+    }
+
+    public function test_customer_can_cancel_confirmed_order_before_handover(): void
+    {
+        $this->mock(MidtransService::class);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-CNCL01', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->post(route('booking.cancel', $rental->booking_code), [
+                'cancel_reason' => 'schedule_changed',
+                'cancel_note' => 'Jadwal kantor bentrok',
+                'confirm_cancel' => '1',
+            ]);
+
+        $response->assertRedirect(route('booking.status', $rental->booking_code));
+        $response->assertSessionHas('success');
+
+        $rental->refresh();
+        $this->assertSame('cancelled', $rental->status);
+        $this->assertSame('schedule_changed', $rental->cancel_reason);
+        $this->assertSame('Jadwal kantor bentrok', $rental->cancel_note);
+        $this->assertNotNull($rental->cancelled_at);
+    }
+
+    public function test_cancel_requires_note_when_reason_is_other(): void
+    {
+        $this->mock(MidtransService::class);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-CNCL02', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->post(route('booking.cancel', $rental->booking_code), [
+                'cancel_reason' => 'other',
+                'confirm_cancel' => '1',
+            ]);
+
+        $response->assertSessionHasErrors('cancel_note');
+        $this->assertSame('confirmed', $rental->fresh()->status);
+    }
+
+    public function test_cannot_cancel_order_that_was_already_picked_up(): void
+    {
+        $this->mock(MidtransService::class);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-CNCL03', 'picked_up');
+
+        $response = $this->actingAs($this->customer1)
+            ->post(route('booking.cancel', $rental->booking_code), [
+                'cancel_reason' => 'wrong_order',
+                'confirm_cancel' => '1',
+            ]);
+
+        $response->assertSessionHas('error');
+        $this->assertSame('picked_up', $rental->fresh()->status);
+    }
+
+    public function test_other_customer_cannot_cancel_someone_elses_order(): void
+    {
+        $this->mock(MidtransService::class);
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-CNCL04', 'confirmed');
+
+        $this->actingAs($this->customer2)
+            ->post(route('booking.cancel', $rental->booking_code), [
+                'cancel_reason' => 'wrong_order',
+                'confirm_cancel' => '1',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame('confirmed', $rental->fresh()->status);
     }
 
     private function createRental(int $userId, string $bookingCode, string $status): Rental
