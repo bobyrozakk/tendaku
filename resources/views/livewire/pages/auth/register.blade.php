@@ -1,118 +1,67 @@
 <?php
 
-use App\Models\User;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rules;
+use App\Livewire\Forms\RegisterForm;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.guest')] class extends Component
 {
-    public string $name = '';
+    public RegisterForm $form;
 
-    public string $email = '';
-
-    public string $phone = '';
-
-    public string $nik = '';
-
-    public ?string $address = null;
-
-    public string $password = '';
-
-    public string $password_confirmation = '';
+    public function setAccountType(string $type): void
+    {
+        $this->form->account_type = in_array($type, ['customer', 'vendor'], true) ? $type : 'customer';
+        $this->resetErrorBag();
+    }
 
     /**
      * Handle an incoming registration request.
      */
     public function register(): void
     {
-        $this->email = Str::lower(trim($this->email));
-
-        $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required',
-                'string',
-                'lowercase',
-                'email',
-                'max:255',
-                'unique:'.User::class,
-                'ends_with:@gmail.com',
-            ],
-            'phone' => ['required', 'regex:/^08[0-9]{8,11}$/'],
-            'nik' => ['required', 'digits:16'],
-            'address' => ['nullable', 'string', 'max:500'],
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
-        ], [
-            'email.ends_with' => 'Email harus menggunakan @gmail.com.',
-            'phone.regex' => 'Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka.',
-            'nik.digits' => 'NIK harus terdiri dari 16 digit angka.',
-        ]);
-
-        $validated['address'] = filled($validated['address'] ?? null) ? trim($validated['address']) : null;
-        $validated['password'] = Hash::make($validated['password']);
-        $validated['role'] = 'customer';
-
-        event(new Registered($user = User::create($validated)));
-
-        Auth::login($user);
-        app(\App\Services\Booking\CartService::class)->syncOnLogin($user);
+        $this->form->store();
 
         $this->redirect(route('verification.notice', absolute: false), navigate: true);
     }
 }; ?>
 
 <div>
-    <x-slot:heading>Buat akun Tendaku</x-slot:heading>
-    <x-slot:subheading>Daftar sekali, lalu sewa tenda dan perlengkapan lain kapan saja.</x-slot:subheading>
+    <x-slot:heading>
+        {{ $form->account_type === 'vendor' ? 'Daftar Mitra Vendor' : 'Buat akun Tendaku' }}
+    </x-slot:heading>
 
-    <form wire:submit="register" class="space-y-5">
-        @csrf
+    <x-slot:subheading>
+        {{ $form->account_type === 'vendor'
+            ? 'Buka rental peralatan camping Anda dan jangkau ribuan penyewa.'
+            : 'Daftar sekali, lalu sewa tenda dan perlengkapan lain kapan saja.' }}
+    </x-slot:subheading>
 
-        <x-auth.field name="name" label="Nama lengkap"
-                      wire:model="name"
-                      placeholder="Nama Lengkap" autocomplete="name" required autofocus />
+    <!-- Switch Tipe Akun (Customer vs Vendor Owner) -->
+    <div class="mb-6 flex rounded-full bg-tendaku-wheat/60 p-1 border border-tendaku-brown/15 shadow-inner">
+        <button
+            type="button"
+            wire:click="setAccountType('customer')"
+            class="flex-1 rounded-full py-2.5 text-xs sm:text-sm font-bold transition-all {{ $form->account_type === 'customer' ? 'bg-tendaku-avocado text-white shadow-sm' : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}"
+        >
+            Penyewa (Customer)
+        </button>
 
-        <x-auth.field name="email" label="Email" type="email"
-                      wire:model="email"
-                      placeholder="nama@gmail.com" autocomplete="username" required />
+        <button
+            type="button"
+            wire:click="setAccountType('vendor')"
+            class="flex-1 rounded-full py-2.5 text-xs sm:text-sm font-bold transition-all {{ $form->account_type === 'vendor' ? 'bg-tendaku-avocado text-white shadow-sm' : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}"
+        >
+            Mitra Rental (Vendor)
+        </button>
+    </div>
 
-        <x-auth.field name="phone" label="Nomor telepon" type="tel"
-                      wire:model="phone"
-                      placeholder="08"
-                      pattern="08[0-9]{8,11}"
-                      maxlength="13"
-                      autocomplete="tel" required />
+    @include('livewire.pages.auth.partials.register-form')
 
-        <x-auth.field name="nik" label="NIK (Nomor Induk Kependudukan)"
-                      wire:model="nik"
-                      placeholder="Masukkan NIK"
-                      inputmode="numeric"
-                      maxlength="16"
-                      pattern="[0-9]{16}" required />
-
-        <x-auth.field name="address" label="Alamat"
-                      wire:model="address"
-                      placeholder="Alamat lengkap (opsional)" />
-
-        <x-auth.field name="password" label="Password" type="password"
-                      wire:model="password" placeholder="Password"
-                      autocomplete="new-password" required />
-
-        <x-auth.field name="password_confirmation" label="Ulangi password" type="password"
-                      wire:model="password_confirmation" placeholder="Password"
-                      autocomplete="new-password" required />
-
-        <x-auth.button class="w-full">Buat akun</x-auth.button>
-    </form>
-
-    @include('livewire.pages.auth.partials.google-auth-button', [
-        'label' => 'Daftar dengan Google',
-    ])
+    @if ($form->account_type === 'customer')
+        @include('livewire.pages.auth.partials.google-auth-button', [
+            'label' => 'Daftar dengan Google',
+        ])
+    @endif
 
     <p class="mt-8 text-sm text-tendaku-brown/70">
         Sudah punya akun?

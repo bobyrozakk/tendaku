@@ -33,14 +33,17 @@ class AppServiceProvider extends ServiceProvider
         Blade::anonymousComponentPath(resource_path('views/layouts'), 'layouts');
 
         VerifyEmail::createUrlUsing(function ($notifiable) {
-            return URL::temporarySignedRoute(
+            $relativeUrl = URL::temporarySignedRoute(
                 'verification.verify',
                 Carbon::now()->addMinutes(120),
                 [
                     'id' => $notifiable->getKey(),
                     'hash' => sha1($notifiable->getEmailForVerification()),
-                ]
+                ],
+                absolute: false
             );
+
+            return url($relativeUrl);
         });
     }
 

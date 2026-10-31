@@ -49,13 +49,13 @@ Route::prefix('katalog/booking')->group(function () {
     Route::get('receipt/{code}/photo', [BookingController::class, 'collate                  ralPhoto'])->name('booking.receipt.photo');
 });
 
-// Riwayat Sewa Customer (Wajib Login)
+// Riwayat Sewa Customer (Wajib Login & Email Terverifikasi)
 Route::get('riwayat-sewa', [BookingController::class, 'index'])
-    ->middleware(['auth'])
+    ->middleware(['auth', 'verified'])
     ->name('customer.booking.index');
 
-// Pengelolaan Alamat Lengkap Customer (Wajib Login)
-Route::middleware(['auth'])
+// Pengelolaan Alamat Lengkap Customer (Wajib Login & Email Terverifikasi)
+Route::middleware(['auth', 'verified'])
     ->prefix('customer/addresses')
     ->name('customer.addresses.')
     ->group(function () {
@@ -75,8 +75,8 @@ Route::get('/katalog/{id}', [CatalogController::class, 'show'])
 // Profil Toko Vendor (Shopee-like, tamu akan melihat popup 'Login untuk Melanjutkan')
 Route::get('/toko/{vendor}', [StoreController::class, 'show'])->name('customer.stores.show');
 
-// Paket Camping (khusus customer yang terdaftar dan login)
-Route::middleware(['auth', 'role:customer'])->group(function () {
+// Paket Camping (khusus customer yang terdaftar, login, dan verified)
+Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/paket-camping', [CustomerCampingPackageController::class, 'index'])
         ->name('customer.packages.index');
     Route::get('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'index'])
@@ -90,9 +90,9 @@ Route::middleware(['auth', 'role:customer'])->group(function () {
         ->name('customer.packages.show');
 });
 
-// Prakiraan Cuaca Spot Camping (wajib login)
+// Prakiraan Cuaca Spot Camping (wajib login & verified)
 Route::view('/cuaca', 'customer.weather.index')
-    ->middleware('auth')
+    ->middleware(['auth', 'verified'])
     ->name('customer.weather.index');
 
 // Alias Route URL langsung (untuk backward compatibility & kemudahan akses)
@@ -100,8 +100,8 @@ Route::get('checkout', fn () => redirect()->route('checkout.index'));
 Route::get('booking/status/{code}', fn ($code) => redirect()->route('booking.status', ['code' => $code]));
 Route::get('booking/receipt/{code}', fn ($code) => redirect()->route('booking.receipt', ['code' => $code]));
 
-// Pembayaran customer (Snap token pokok & denda), wajib login
-Route::middleware('auth')
+// Pembayaran customer (Snap token pokok & denda), wajib login & verified
+Route::middleware(['auth', 'verified'])
     ->prefix('rentals/{rental}')
     ->name('rentals.')
     ->group(function () {
@@ -111,7 +111,7 @@ Route::middleware('auth')
 
 // Retry tagihan baru jika lama expired/failed; throttle mencegah abuse
 Route::post('payments/{order_id}/retry', [PaymentRetryController::class, 'store'])
-    ->middleware(['auth', 'throttle:5,1'])
+    ->middleware(['auth', 'verified', 'throttle:5,1'])
     ->name('payments.retry');
 
 // Webhook Midtrans: tanpa auth/sesi, dikecualikan dari CSRF di bootstrap/app.php (signature SHA512 yang memvalidasi)
@@ -139,7 +139,7 @@ Route::get('dashboard', function () {
     ->name('dashboard');
 
 Route::view('profile', 'profile')
-    ->middleware(['auth'])
+    ->middleware(['auth', 'verified'])
     ->name('profile');
 
 // Rute Super Admin — laporan pendapatan platform (monetisasi).

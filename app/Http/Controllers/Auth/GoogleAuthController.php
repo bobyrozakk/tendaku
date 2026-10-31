@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\AuthRedirectService;
 use App\Services\Booking\CartService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -96,18 +97,9 @@ class GoogleAuthController extends Controller
         $request->session()->regenerate();
         app(CartService::class)->syncOnLogin($user);
 
-        $destination = match (true) {
-            $user->isVendorStaff() => route('dashboard'),
-            $user->isSuperAdmin() => route('dashboard'),
-            default => route('home'), // customer
-        };
-
-        $welcomeMessage = match (true) {
-            $user->isVendorOwner() => "Selamat datang Owner {$user->name}!",
-            $user->isVendorAdmin() => "Selamat datang Vendor {$user->name}!",
-            $user->isSuperAdmin() => "Hi Superadmin {$user->name}!",
-            default => "Selamat datang, {$user->name}!",
-        };
+        $redirectService = app(AuthRedirectService::class);
+        $destination = $redirectService->getDestination($user, absolute: false);
+        $welcomeMessage = $redirectService->getWelcomeMessage($user);
 
         $request->session()->flash('success', $welcomeMessage);
 
