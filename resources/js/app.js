@@ -4,6 +4,7 @@ import "./pages/customer/booking-create.js";
 import "../css/pages/customer/booking-status.css";
 import "../css/pages/customer/booking-receipt.css";
 import "../css/pages/customer/booking-create.css";
+import "../css/components/footer.css";
 
 let renderTimeout = null;
 
