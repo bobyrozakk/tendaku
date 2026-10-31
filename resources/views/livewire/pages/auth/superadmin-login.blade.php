@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Forms\LoginForm;
+use App\Services\Auth\AuthRedirectService;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -9,7 +10,7 @@ new #[Layout('layouts.guest')] class extends Component
 {
     public LoginForm $form;
 
-    public function login(): void
+    public function login(AuthRedirectService $redirectService): void
     {
         $this->validate();
 
@@ -18,8 +19,7 @@ new #[Layout('layouts.guest')] class extends Component
         Session::regenerate();
 
         $user = auth()->user();
-        $welcomeMessage = "Selamat datang Superadmin {$user->name}!";
-        Session::flash('success', $welcomeMessage);
+        Session::flash('success', $redirectService->getWelcomeMessage($user));
 
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
@@ -35,4 +35,3 @@ new #[Layout('layouts.guest')] class extends Component
         'showRegisterLink' => false,
     ])
 </div>
-
