@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureVendorOwner;
+use App\Http\Middleware\RedirectIfUnverified;
 use App\Http\Middleware\SetActiveVendor;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,6 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
             headers: Request::HEADER_X_FORWARDED_PROTO,
         );
         $middleware->validateCsrfTokens(except: ['webhook/midtrans']);
+        $middleware->web(append: [
+            RedirectIfUnverified::class,
+        ]);
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'vendor.owner' => EnsureVendorOwner::class,
