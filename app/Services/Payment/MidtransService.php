@@ -2,14 +2,15 @@
 
 namespace App\Services\Payment;
 
-use App\Services\Finance\CommissionCalculator;
-use App\Services\Finance\CommissionService;
-use App\Services\Finance\EscrowService;
-
 use App\Enums\PaymentStatus;
+use App\Enums\PaymentType;
 use App\Exceptions\InvalidMidtransSignatureException;
 use App\Models\Payment;
 use App\Models\Rental;
+use App\Services\Finance\CommissionCalculator;
+use App\Services\Finance\CommissionService;
+use App\Services\Finance\EscrowService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -287,6 +288,15 @@ class MidtransService
             $payment->method = (string) $data['payment_type'];
         }
 
+        if (isset($data['payment_type'])) {
+            // Channel mengikuti kanal aktual Midtrans, bukan pilihan UI checkout.
+            $payment->payment_channel = $this->resolvePaymentChannel(
+                (string) $data['payment_type'],
+                $data,
+                $payment->payment_channel,
+            );
+        }
+
         $payment->raw_notification = array_merge(
             $payment->raw_notification ?? [],
             $data
@@ -295,7 +305,7 @@ class MidtransService
         if ($newStatus === PaymentStatus::Paid) {
             $settlementTime = $data['settlement_time'] ?? $data['transaction_time'] ?? null;
             if ($settlementTime) {
-                $payment->paid_at = \Carbon\Carbon::parse($settlementTime, 'Asia/Jakarta');
+                $payment->paid_at = Carbon::parse($settlementTime, 'Asia/Jakarta');
             } else {
                 $payment->paid_at ??= now();
             }
@@ -325,10 +335,7 @@ class MidtransService
             $this->escrow->markHeld($payment);
             $this->commissions->accrueForPayment($payment);
 
-            if (
-                $payment->method === 'qris'
-                || ($payment->payment_channel ?? null) === 'qris'
-            ) {
+            if (str_contains((string) $payment->method, 'qris')) {
                 $payment->gateway_fee_amount =
                     $this->calculator->mdrFor((float) $payment->amount);
 
@@ -352,6 +359,25 @@ class MidtransService
         ], true)) {
             $this->escrow->markVoid($payment);
         }
+    }
+
+    /**
+     * Petakan payment_type Midtrans ke channel internal yang dipakai laporan.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function resolvePaymentChannel(string $paymentType, array $data, ?string $fallback): ?string
+    {
+        return match ($paymentType) {
+            'qris', 'other_qris' => 'qris',
+            'bank_transfer' => 'va_'.strtolower((string) (data_get($data, 'va_numbers.0.bank', 'bank'))),
+            'echannel' => 'va_mandiri',
+            'gopay' => 'gopay',
+            'shopeepay' => 'shopeepay',
+            'credit_card' => 'card',
+            'cstore' => 'cstore',
+            default => $fallback,
+        };
     }
 
     private function mapMidtransStatus(
@@ -491,7 +517,7 @@ class MidtransService
         $amount = (int) $payment->amount;
         $code = $rental->booking_code;
 
-        if ($payment->payment_type === 'dp') {
+        if ($payment->payment_type === PaymentType::Dp->value) {
             $dpPct = (int) config('payment.dp_percentage', 50);
 
             return [[
@@ -503,7 +529,7 @@ class MidtransService
         }
 
         if (
-            $payment->payment_type === 'full'
+            $payment->payment_type === PaymentType::Full->value
             && $rental->details->isNotEmpty()
         ) {
             return $this->itemizedDetails($rental, $amount);
@@ -514,8 +540,8 @@ class MidtransService
             'price' => $amount,
             'quantity' => 1,
             'name' => match ($payment->payment_type) {
-                'remaining' => "Pelunasan Sewa {$code}",
-                'fine' => "Denda Sewa {$code}",
+                PaymentType::Remaining->value => "Pelunasan Sewa {$code}",
+                PaymentType::Fine->value => "Denda Sewa {$code}",
                 default => "Pembayaran Sewa {$code}",
             },
         ]];
@@ -583,7 +609,7 @@ class MidtransService
 
             return true;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Gagal membatalkan tagihan Midtrans saat pesanan dibatalkan.', [
+            Log::warning('Gagal membatalkan tagihan Midtrans saat pesanan dibatalkan.', [
                 'order_id' => $payment->order_id,
                 'message' => $e->getMessage(),
             ]);

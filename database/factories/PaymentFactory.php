@@ -22,7 +22,7 @@ class PaymentFactory extends Factory
     {
         return [
             'rental_id' => Rental::factory(),
-            'payment_type' => 'settlement',
+            'payment_type' => 'full',
             'payment_method' => 'midtrans_snap',
             'amount' => 100000,
             'status' => 'pending',

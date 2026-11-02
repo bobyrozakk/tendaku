@@ -3,8 +3,10 @@
 namespace Tests\Feature\Monetization;
 
 use App\Models\PlatformCommission;
+use App\Models\User;
 use App\Services\Finance\CommissionService;
 use App\Services\Finance\EscrowService;
+use App\Services\Payment\PaymentService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\Concerns\CreatesMidtransFixtures;
 use Tests\TestCase;
@@ -41,6 +43,74 @@ class CommissionAccrualTest extends TestCase
 
         $this->assertSame('25000.00', $commission->amount);
         $this->assertSame('accrued', $commission->status);
+    }
+
+    public function test_remaining_payment_tops_up_commission_to_five_percent_of_rental(): void
+    {
+        [, $rental] = $this->createRentalWithPendingPayment();
+        $rental->update(['subtotal' => 1000000, 'grand_total' => 1000000]);
+
+        $dpPayment = $rental->payments()->create([
+            'vendor_id' => $rental->vendor_id,
+            'payment_type' => 'dp',
+            'payment_method' => 'midtrans_snap',
+            'payment_channel' => 'qris',
+            'amount' => 500000,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        $commissions = app(CommissionService::class);
+        $commissions->accrueForPayment($dpPayment);
+
+        $remainingPayment = $rental->payments()->create([
+            'vendor_id' => $rental->vendor_id,
+            'payment_type' => 'remaining',
+            'payment_method' => 'cash',
+            'payment_channel' => 'cash',
+            'amount' => 500000,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        $commissions->accrueForPayment($remainingPayment);
+
+        $this->assertSame(2, PlatformCommission::withoutGlobalScope('vendor')->count());
+        $this->assertSame(50000.0, (float) PlatformCommission::withoutGlobalScope('vendor')
+            ->where('rental_id', $rental->id)
+            ->sum('amount'));
+    }
+
+    public function test_cash_remaining_payment_accrues_the_commission_top_up(): void
+    {
+        [, $rental] = $this->createRentalWithPendingPayment();
+        $rental->update(['subtotal' => 1000000, 'grand_total' => 1000000]);
+
+        $dpPayment = $rental->payments()->create([
+            'vendor_id' => $rental->vendor_id,
+            'payment_type' => 'dp',
+            'payment_method' => 'midtrans_snap',
+            'payment_channel' => 'qris',
+            'amount' => 500000,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        app(CommissionService::class)->accrueForPayment($dpPayment);
+
+        $cashier = User::factory()->create([
+            'role' => 'vendor_admin',
+            'vendor_id' => $rental->vendor_id,
+        ]);
+
+        $remainingPayment = app(PaymentService::class)
+            ->createCashRemainingPayment($rental, $cashier->id);
+
+        $this->assertSame(500000, (int) $remainingPayment->amount);
+        $this->assertSame('cash', $remainingPayment->payment_method);
+        $this->assertSame('not_applicable', $remainingPayment->escrow_status);
+        $this->assertSame(50000.0, (float) PlatformCommission::withoutGlobalScope('vendor')
+            ->where('rental_id', $rental->id)
+            ->sum('amount'));
     }
 
     public function test_duplicate_settlement_notification_does_not_double_the_commission(): void

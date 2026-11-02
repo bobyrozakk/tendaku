@@ -65,7 +65,7 @@ class EscrowService
      */
     public function markVoid(Payment $payment): bool
     {
-        if ($payment->payment_method !== 'midtrans_snap' || $payment->status !== 'failed') {
+        if ($payment->payment_method !== 'midtrans_snap' || ! in_array($payment->status, ['failed', 'expired', 'cancelled'], true)) {
             return false;
         }
 

@@ -6,9 +6,7 @@ use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
-use App\Models\VendorPayout;
 use App\Services\Payment\MidtransService;
-use App\Services\Payment\PaymentService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Mockery\MockInterface;
 use Tests\Concerns\CreatesMidtransFixtures;
@@ -18,8 +16,10 @@ use Tests\TestCase;
  * Skenario 2: DP online → pelunasan sisa tunai di kasir.
  * Skenario 8: Retry setelah expired → order_id baru.
  * Skenario 11: 2 pelanggan checkout unit yang sama bersamaan (concurrency / lock).
- * Skenario 12: Batch payout marking → vendor_payout_id terisi, tidak bisa dua kali.
- * Skenario 14: DP kecil vs fee minimum → net_payout tidak negatif.
+ *
+ * Skenario 12 (batch payout marking) dan 14 (platform fee 2%) dihapus karena
+ * alur payout lama sudah digantikan settlement berbasis invoice dan komisi 5%
+ * per rental. Cakupannya ada di SettlementTest dan CommissionCalculatorTest.
  *
  * @see docs/TENDAKU_payment_spec.md §12
  * @see docs/contract.md §4.10, §4.11
@@ -99,8 +99,8 @@ class PaymentScenarioTest extends TestCase
             'signature_key' => $signature,
         ])->assertOk();
 
-        // Rental sekarang confirmed
-        $this->assertDatabaseHas('rentals', ['id' => $rental->id, 'status' => 'confirmed']);
+        // Rental tetap pending sampai kasir memvalidasi barcode unit di POS.
+        $this->assertDatabaseHas('rentals', ['id' => $rental->id, 'status' => 'pending']);
 
         // Langkah 2: Kasir terima pelunasan sisa tunai
         $kasir = User::factory()->create(['role' => 'vendor_admin', 'vendor_id' => $vendor->id]);
@@ -254,143 +254,5 @@ class PaymentScenarioTest extends TestCase
             'pickup_date' => '2026-11-01',
             'status' => 'confirmed',
         ]);
-    }
-
-    // ── Skenario 12: Batch payout marking ────────────────────────────────────
-
-    /**
-     * Skenario 12: Setelah payout dibuat, vendor_payout_id terisi di semua
-     * payments terkait, dan mereka tidak bisa masuk payout kedua kali.
-     *
-     * @see TENDAKU_payment_spec.md §12 Skenario 12
-     * @see docs/contract.md §4.11
-     */
-    public function test_batch_payout_marking_prevents_double_payout(): void
-    {
-        $vendor = Vendor::query()->create([
-            'name' => 'Vendor Payout',
-            'slug' => 'vendor-payout',
-            'phone' => '081200000004',
-            'address' => 'Payout address',
-            'status' => 'active',
-        ]);
-
-        $maker = User::factory()->create(['role' => 'vendor_admin', 'vendor_id' => $vendor->id]);
-        $approver = User::factory()->create(['role' => 'super_admin']);
-
-        // Buat 2 rental yang sudah picked_up dengan pembayaran midtrans paid
-        $rentals = [];
-        $payments = [];
-        for ($i = 1; $i <= 2; $i++) {
-            $rental = Rental::query()->create([
-                'vendor_id' => $vendor->id,
-                'booking_code' => "TDK-PAY-00{$i}",
-                'pickup_date' => '2026-11-01',
-                'return_date' => '2026-11-02',
-                'rental_days' => 1,
-                'subtotal' => 100000,
-                'grand_total' => 100000,
-                'status' => 'picked_up',
-            ]);
-
-            $payment = Payment::query()->create([
-                'rental_id' => $rental->id,
-                'vendor_id' => $vendor->id,
-                'payment_type' => 'full',
-                'channel' => 'midtrans',
-                'amount' => 100000,
-                'order_id' => "TDK-PAY-00{$i}-FULL-1",
-                'platform_fee' => 2000,
-                'status' => 'paid',
-                'paid_at' => now(),
-            ]);
-
-            $rentals[] = $rental;
-            $payments[] = $payment;
-        }
-
-        // Verifikasi semua masuk payoutEligible sebelum payout
-        $eligible = Payment::payoutEligible()->get();
-        $this->assertCount(2, $eligible);
-
-        // Buat vendor_payout record
-        $payoutService = app(PaymentService::class);
-        $grossAmount = $eligible->sum('amount');
-        $feeTotal = $eligible->sum('platform_fee');
-
-        $payout = VendorPayout::query()->create([
-            'vendor_id' => $vendor->id,
-            'reference_no' => 'PAY-REF-'.uniqid(),
-            'gross_amount' => $grossAmount,
-            'platform_fee_total' => $feeTotal,
-            'net_amount' => $grossAmount - $feeTotal,
-            'status' => 'pending_approval',
-            'bank_code' => 'BCA',
-            'account_name' => 'Vendor Payout',
-            'account_last4' => '1234',
-            'created_by' => $maker->id,
-        ]);
-
-        // Mark payments sebagai sudah dicairkan (dalam transaksi)
-        $payoutService->markPaymentsAsPaidOut(
-            $eligible->pluck('id')->toArray(),
-            $payout->id,
-        );
-
-        // Verifikasi: vendor_payout_id terisi di semua payments terkait
-        foreach ($payments as $payment) {
-            $this->assertDatabaseHas('payments', [
-                'id' => $payment->id,
-                'vendor_payout_id' => $payout->id,
-            ]);
-        }
-
-        // Verifikasi: setelah mark, tidak ada lagi di payoutEligible (tidak bisa double payout)
-        $eligibleAfter = Payment::payoutEligible()->get();
-        $this->assertCount(0, $eligibleAfter);
-    }
-
-    // ── Skenario 14: DP kecil vs fee minimum ─────────────────────────────────
-
-    /**
-     * Skenario 14: DP sangat kecil — fee platform tidak boleh melebihi DP.
-     * net_payout tidak boleh negatif.
-     *
-     * @see TENDAKU_payment_spec.md §12 Skenario 14
-     * @see docs/contract.md §4.10
-     */
-    public function test_platform_fee_capped_at_dp_amount_prevents_negative_net_payout(): void
-    {
-        $paymentService = app(PaymentService::class);
-
-        // DP sangat kecil: Rp500 (kurang dari minimum fee Rp1.000)
-        $smallDp = 500;
-        $fee = $paymentService->calculatePlatformFee($smallDp);
-
-        // Fee tidak boleh melebihi amount (net_payout >= 0)
-        $this->assertLessThanOrEqual($smallDp, $fee);
-        $this->assertGreaterThanOrEqual(0, $smallDp - $fee);
-
-        // DP normal: Rp150.000
-        $normalDp = 150000;
-        $normalFee = $paymentService->calculatePlatformFee($normalDp);
-
-        // Fee 2% dari 150.000 = 3.000, minimum 1.000 → hasilnya 3.000
-        $this->assertEquals(3000, $normalFee);
-
-        // DP tepat Rp1.000 (persis di batas minimum)
-        $borderDp = 1000;
-        $borderFee = $paymentService->calculatePlatformFee($borderDp);
-
-        // Min fee Rp1.000, 2% dari 1.000 = 20 → pakai minimum = 1.000
-        // Tapi tidak boleh melebihi amount (1.000) → capped = 1.000
-        $this->assertEquals(1000, $borderFee);
-        $this->assertGreaterThanOrEqual(0, $borderDp - $borderFee);
-
-        // Verifikasi: DP Rp10.000 → fee = max(200, 1000) = 1000
-        $this->assertEquals(1000, $paymentService->calculatePlatformFee(10000));
-
-        // Verifikasi: DP Rp100.000 → fee = max(2000, 1000) = 2000
-        $this->assertEquals(2000, $paymentService->calculatePlatformFee(100000));
     }
 }

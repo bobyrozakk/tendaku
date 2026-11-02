@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\PaymentStatus;
+use App\Enums\PaymentType;
 use App\Models\Payment;
 use App\Models\PlatformCommission;
 use App\Services\Finance\CommissionService;
@@ -59,17 +60,17 @@ class ReconcilePaidPayments extends Command
     }
 
     /**
-     * Lengkapi komisi untuk rental yang pembayaran pertamanya (dp/full)
-     * sudah lunas tetapi belum punya komisi aktif.
+     * Lengkapi komisi untuk setiap pembayaran sewa yang sudah lunas tetapi
+     * belum punya baris komisi sendiri. Pembayaran `remaining` ikut diproses
+     * agar kekurangan komisi (top-up) dari rental DP + pelunasan terisi.
      */
     private function backfillCommissions(CommissionService $commissions): int
     {
         $payments = Payment::withoutGlobalScopes()
             ->where('status', PaymentStatus::Paid->value)
-            ->whereIn('payment_type', ['dp', 'full'])
-            ->whereNotIn('rental_id', PlatformCommission::withoutGlobalScope('vendor')
-                ->where('status', '!=', 'void')
-                ->select('rental_id'))
+            ->whereIn('payment_type', PaymentType::rentalValues())
+            ->whereNotIn('id', PlatformCommission::withoutGlobalScope('vendor')
+                ->select('payment_id'))
             ->orderBy('paid_at')
             ->orderBy('id')
             ->get();

@@ -91,18 +91,31 @@ class CommissionCalculatorTest extends TestCase
     public static function commissionablePaymentTypes(): array
     {
         return [
+            'full' => ['full'],
             'dp' => ['dp'],
-            'pelunasan' => ['settlement'],
+            'pelunasan' => ['remaining'],
         ];
     }
 
     #[DataProvider('commissionablePaymentTypes')]
-    public function test_dp_and_settlement_payments_are_commissionable(string $paymentType): void
+    public function test_rental_payments_are_commissionable(string $paymentType): void
     {
         $this->assertSame(
             25000,
             $this->calculator()->commissionForPaymentType($paymentType, 500000),
         );
+    }
+
+    public function test_incremental_commission_tops_up_to_five_percent_of_total_rental(): void
+    {
+        // DP 500.000 -> 25.000; pelunasan 500.000 menambah 25.000 lagi.
+        $this->assertSame(25000, $this->calculator()->incrementalCommissionFor(1000000, 25000));
+    }
+
+    public function test_incremental_commission_applies_the_minimum_only_once_per_rental(): void
+    {
+        // DP 20.000 -> minimum 2.500; pelunasan 20.000 tidak menambah komisi.
+        $this->assertSame(0, $this->calculator()->incrementalCommissionFor(40000, 2500));
     }
 
     public function test_mdr_is_zero_at_the_100_000_threshold(): void

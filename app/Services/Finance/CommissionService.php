@@ -2,8 +2,10 @@
 
 namespace App\Services\Finance;
 
+use App\Enums\PaymentType;
 use App\Models\Payment;
 use App\Models\PlatformCommission;
+use Illuminate\Support\Facades\DB;
 
 class CommissionService
 {
@@ -12,7 +14,11 @@ class CommissionService
     ) {}
 
     /**
-     * Catat komisi untuk pembayaran DP/pelunasan yang sudah lunas.
+     * Catat komisi untuk pembayaran sewa yang sudah lunas.
+     *
+     * Komisi dihitung per rental, bukan per pembayaran: pembayaran pertama
+     * memakai tarif/minimum, lalu pelunasan hanya menambah selisih sampai
+     * total komisi setara max(5% x total pembayaran rental, minimum).
      *
      * Idempoten: satu pembayaran hanya boleh menghasilkan satu baris komisi.
      */
@@ -22,31 +28,50 @@ class CommissionService
             return null;
         }
 
-        $existing = PlatformCommission::withoutGlobalScope('vendor')
-            ->where('payment_id', $payment->getKey())
-            ->first();
+        return DB::transaction(function () use ($payment): ?PlatformCommission {
+            $existing = PlatformCommission::withoutGlobalScope('vendor')
+                ->where('payment_id', $payment->getKey())
+                ->lockForUpdate()
+                ->first();
 
-        if ($existing !== null) {
-            return $existing;
-        }
+            if ($existing !== null) {
+                return $existing;
+            }
 
-        $rate = $this->calculator->rateFor($this->vendorRate($payment));
-        $amount = $this->calculator->commissionFor((float) $payment->amount, $rate);
+            $rate = $this->calculator->rateFor($this->vendorRate($payment));
 
-        if ($amount <= 0) {
-            return null;
-        }
+            $alreadyAccrued = (float) PlatformCommission::withoutGlobalScope('vendor')
+                ->where('rental_id', $payment->rental_id)
+                ->where('status', '!=', 'void')
+                ->sum('amount');
 
-        return PlatformCommission::withoutGlobalScope('vendor')->create([
-            'payment_id' => $payment->getKey(),
-            'rental_id' => $payment->rental_id,
-            'vendor_id' => $payment->vendor_id,
-            'base_amount' => $payment->amount,
-            'rate' => $rate,
-            'amount' => $amount,
-            'status' => 'accrued',
-            'recognized_at' => $payment->paid_at ?? now(),
-        ]);
+            $totalRentalPaid = (float) Payment::withoutGlobalScope('vendor')
+                ->where('rental_id', $payment->rental_id)
+                ->where('status', 'paid')
+                ->whereIn('payment_type', PaymentType::rentalValues())
+                ->sum('amount');
+
+            $amount = $this->calculator->incrementalCommissionFor(
+                totalRentalPaid: $totalRentalPaid,
+                alreadyAccrued: $alreadyAccrued,
+                vendorRate: $rate,
+            );
+
+            if ($amount <= 0) {
+                return null;
+            }
+
+            return PlatformCommission::withoutGlobalScope('vendor')->create([
+                'payment_id' => $payment->getKey(),
+                'rental_id' => $payment->rental_id,
+                'vendor_id' => $payment->vendor_id,
+                'base_amount' => $payment->amount,
+                'rate' => $rate,
+                'amount' => $amount,
+                'status' => 'accrued',
+                'recognized_at' => $payment->paid_at ?? now(),
+            ]);
+        });
     }
 
     /**

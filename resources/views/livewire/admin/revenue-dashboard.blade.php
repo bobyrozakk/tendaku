@@ -115,7 +115,7 @@
                         class="w-full rounded-xl border-wheat-300 bg-wheat-50 py-2 pl-3 pr-8 text-xs font-semibold text-darkbrown-800 shadow-sm transition focus:border-goldenrod-500 focus:ring-goldenrod-500">
                     <option value="">Semua Tipe</option>
                     <option value="dp">DP</option>
-                    <option value="settlement">Pelunasan</option>
+                    <option value="remaining">Pelunasan</option>
                     <option value="fine">Denda</option>
                     <option value="deposit">Deposit</option>
                     <option value="deposit_refund">Refund Deposit</option>
@@ -502,7 +502,7 @@
                     Rp {{ number_format($kpis['payout_this_month'], 0, ',', '.') }}
                 </p>
                 <p class="mt-1 text-xs text-darkbrown-500">
-                    Setujui batch untuk mengunci pembayaran, lalu catat bukti transfer agar escrow dilepas dan invoice terbit.
+                    Setujui batch untuk menerbitkan invoice, lalu catat bukti transfer agar escrow dilepas dan invoice ditandai lunas.
                 </p>
             </div>
             <a href="{{ route('admin.settlements') }}" class="btn-tendaku-primary shrink-0 !px-3.5 !py-2 text-xs">

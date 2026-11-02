@@ -2,18 +2,18 @@
 
 namespace App\Services\Finance;
 
+use App\Enums\PaymentType;
 use InvalidArgumentException;
 
 class CommissionCalculator
 {
     /**
-     * Tipe pembayaran yang memicu komisi platform. Komisi dihitung dari total
-     * sewa dan dicatat sekali per rental, pada pembayaran pertama (dp atau
-     * full). Pelunasan (remaining) dan denda tidak dikenai komisi lagi.
+     * Tipe pembayaran yang membentuk basis komisi rental. Komisi dihitung
+     * secara inkremental per rental agar minimum hanya berlaku sekali.
      *
      * @var list<string>
      */
-    public const COMMISSIONABLE_PAYMENT_TYPES = ['dp', 'full'];
+    public const COMMISSIONABLE_PAYMENT_TYPES = ['full', 'dp', 'remaining'];
 
     public function __construct(
         private readonly float $defaultRate,
@@ -32,8 +32,8 @@ class CommissionCalculator
     public static function fromConfig(): self
     {
         return new self(
-            defaultRate: (float) config('booking.admin_fee_rate'),
-            minimumCommission: (int) config('booking.admin_fee_minimum'),
+            defaultRate: (float) config('monetization.commission.rate', 0.05),
+            minimumCommission: (int) config('monetization.commission.minimum', 2500),
             qrisMdrThreshold: (int) config('monetization.qris.mdr_threshold'),
             qrisMdrRateBelowThreshold: (float) config('monetization.qris.mdr_rate_below_threshold'),
             qrisMdrRateAboveThreshold: (float) config('monetization.qris.mdr_rate_above_threshold'),
@@ -54,6 +54,31 @@ class CommissionCalculator
         }
 
         return $this->commissionFor($amount, $vendorRate);
+    }
+
+    /**
+     * Hitung kekurangan komisi untuk mencapai tarif penuh atas total rental.
+     *
+     * Dipakai saat pelunasan: pembayaran pertama memakai minimum, lalu
+     * pembayaran berikutnya hanya menambah selisih sampai total komisi
+     * setara max(5% x total rental, minimum).
+     */
+    public function incrementalCommissionFor(
+        float $totalRentalPaid,
+        float $alreadyAccrued,
+        ?float $vendorRate = null,
+    ): int {
+        $target = $this->commissionFor($totalRentalPaid, $vendorRate);
+
+        return max(0, $target - (int) round($alreadyAccrued));
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function commissionablePaymentTypes(): array
+    {
+        return PaymentType::rentalValues();
     }
 
     /**
