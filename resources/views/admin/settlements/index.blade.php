@@ -11,11 +11,14 @@
                     Settlement &amp; Pencairan Vendor
                 </h1>
                 <p class="mt-1 max-w-2xl text-sm text-darkbrown-500">
-                    Tinjau draft batch mingguan, setujui, catat bukti transfer, dan terbitkan invoice settlement vendor.
+                    Tinjau draft batch mingguan, setujui untuk menerbitkan invoice, lalu catat bukti transfer vendor.
                 </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.monitoring') }}" class="btn-tendaku-primary !px-3.5 !py-2 text-xs">
+                    Monitoring Transaksi
+                </a>
                 <a href="{{ route('admin.pendapatan') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
                     Laporan Pendapatan
                 </a>

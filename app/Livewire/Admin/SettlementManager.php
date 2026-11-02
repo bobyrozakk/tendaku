@@ -38,6 +38,12 @@ class SettlementManager extends Component
     public function mount(): void
     {
         $this->ensureSuperAdmin();
+
+        $settlementId = (int) request()->query('settlement', 0);
+
+        if ($settlementId > 0 && Settlement::query()->whereKey($settlementId)->exists()) {
+            $this->selectedSettlementId = $settlementId;
+        }
     }
 
     public function updatedStatus(): void

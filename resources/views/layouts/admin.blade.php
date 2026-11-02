@@ -47,6 +47,13 @@
                         </svg>
                         Dashboard
                     </a>
+                    <a href="{{ route('admin.monitoring') }}"
+                       class="inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs transition {{ request()->routeIs('admin.monitoring*') ? 'bg-white font-bold text-darkbrown-900 shadow-sm border border-wheat-300/70' : 'font-medium text-darkbrown-600 hover:bg-white/60 hover:text-darkbrown-900' }}">
+                        <svg class="h-3.5 w-3.5 text-goldenrod-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Monitoring
+                    </a>
                     <a href="{{ route('admin.pendapatan') }}"
                        class="inline-flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs transition {{ request()->routeIs('admin.pendapatan*') ? 'bg-white font-bold text-darkbrown-900 shadow-sm border border-wheat-300/70' : 'font-medium text-darkbrown-600 hover:bg-white/60 hover:text-darkbrown-900' }}">
                         <svg class="h-3.5 w-3.5 text-goldenrod-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -92,6 +99,10 @@
                     <a href="{{ route('dashboard') }}"
                        class="shrink-0 rounded-xl px-3 py-1 text-xs transition {{ request()->routeIs('dashboard') ? 'bg-white font-bold text-darkbrown-900 border border-wheat-300/80 shadow-sm' : 'font-medium text-darkbrown-600' }}">
                         Dashboard
+                    </a>
+                    <a href="{{ route('admin.monitoring') }}"
+                       class="shrink-0 rounded-xl px-3 py-1 text-xs transition {{ request()->routeIs('admin.monitoring*') ? 'bg-white font-bold text-darkbrown-900 border border-wheat-300/80 shadow-sm' : 'font-medium text-darkbrown-600' }}">
+                        Monitoring
                     </a>
                     <a href="{{ route('admin.pendapatan') }}"
                        class="shrink-0 rounded-xl px-3 py-1 text-xs transition {{ request()->routeIs('admin.pendapatan*') ? 'bg-white font-bold text-darkbrown-900 border border-wheat-300/80 shadow-sm' : 'font-medium text-darkbrown-600' }}">
