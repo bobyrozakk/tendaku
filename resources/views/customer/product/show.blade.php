@@ -268,24 +268,24 @@
                         </div>
 
                         <h3 id="modal-guest-store-title" class="text-xl font-extrabold text-darkbrown-900 font-heading">
-                            Login untuk Melanjutkan
+                            Lanjut sebagai Tamu atau Masuk
                         </h3>
 
                         <p class="text-xs sm:text-sm text-darkbrown-600 mt-2 leading-relaxed">
-                            Masuk ke akun Anda untuk menyewa alat camping di <strong>{{ $vendorName }}</strong>, menyimpan ke keranjang, dan menikmati kemudahan booking tanpa deposit uang.
+                            Anda bisa checkout langsung tanpa membuat akun di <strong>{{ $vendorName }}</strong>. Masuk jika ingin menyimpan riwayat sewa dan memakai keranjang untuk booking berikutnya.
                         </p>
 
                         <div class="mt-6 flex flex-col gap-2.5">
                             <a href="{{ route('login') }}" 
                                class="btn-tendaku-primary w-full py-3 px-4 rounded-xl text-xs sm:text-sm font-bold text-center shadow-md hover:shadow-lg transition flex items-center justify-center gap-2">
                                 <i data-lucide="log-in" class="w-4 h-4"></i>
-                                <span>Login</span>
+                                <span>Masuk</span>
                             </a>
 
                             <button type="button" 
                                     @click="showGuestStoreModal = false" 
                                     class="btn-tendaku-secondary w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold text-center text-darkbrown-700 hover:bg-wheat-100 transition">
-                                Lewati
+                                Lanjut Tanpa Akun
                             </button>
                         </div>
                     </div>

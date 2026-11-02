@@ -183,8 +183,8 @@ class ProductBooking extends Component
             $this->addError(
                 'return_time',
                 'Waktu pengembalian tidak boleh melampaui durasi yang dipilih (maksimal '
-                . $maxReturn->translatedFormat('d M Y, H:i')
-                . ' WIB).'
+                .$maxReturn->translatedFormat('d M Y, H:i')
+                .' WIB).'
             );
 
             return false;
@@ -346,8 +346,59 @@ class ProductBooking extends Component
 
     /**
      * Masukkan produk ke keranjang sewa.
+     * Guest tidak memakai keranjang; pilihan langsung diarahkan ke checkout.
      */
     public function addToCart(): ?string
+    {
+        if (Auth::guest()) {
+            return $this->checkoutNow();
+        }
+
+        $result = $this->addSelectionToCart();
+
+        if ($result === null) {
+            return null;
+        }
+
+        $this->inCart = true;
+
+        $this->dispatch('notify', [
+            'type' => 'success',
+            'title' => 'Ditambahkan ke Keranjang! 🛒',
+            'message' => "{$this->product->name} ({$this->quantity} unit, {$this->totalDays} hari) berhasil masuk keranjang.",
+        ]);
+
+        $this->dispatch('cart-updated', count: $result['total_count']);
+
+        return null;
+    }
+
+    /**
+     * Tambahkan pilihan lalu langsung buka checkout.
+     * Guest memulai checkout dari pilihan saat ini tanpa melewati halaman keranjang.
+     */
+    public function checkoutNow(): ?string
+    {
+        $result = $this->addSelectionToCart(Auth::guest());
+
+        if ($result === null) {
+            return null;
+        }
+
+        $this->inCart = true;
+
+        $this->dispatch('cart-updated', count: $result['total_count']);
+        $this->redirectRoute('checkout.index');
+
+        return null;
+    }
+
+    /**
+     * Validasi pilihan lalu simpan ke keranjang.
+     *
+     * @return array{status: 'success', cart: array<string, mixed>, total_count: int}|null
+     */
+    private function addSelectionToCart(bool $replaceCart = false): ?array
     {
         $this->validate();
 
@@ -375,6 +426,10 @@ class ProductBooking extends Component
         }
 
         $cartService = app(CartService::class);
+
+        if ($replaceCart) {
+            $cartService->clear();
+        }
 
         $cartData = [
             'master_item_id' => $this->product->id,
@@ -416,19 +471,7 @@ class ProductBooking extends Component
             return null;
         }
 
-        $this->inCart = true;
-
-        $totalCount = $result['total_count'] ?? $this->quantity;
-
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'title' => 'Ditambahkan ke Keranjang! 🛒',
-            'message' => "{$this->product->name} ({$this->quantity} unit, {$this->totalDays} hari) berhasil masuk keranjang.",
-        ]);
-
-        $this->dispatch('cart-updated', count: $totalCount);
-
-        return null;
+        return $result;
     }
 
     /**
@@ -436,13 +479,13 @@ class ProductBooking extends Component
      */
     public function proceedToBooking(): mixed
     {
-        $this->addToCart();
-
-        if ($this->getErrorBag()->isEmpty() && $this->inCart) {
+        if (Auth::check() && $this->inCart) {
             $this->redirectRoute('checkout.index');
+
+            return null;
         }
 
-        return null;
+        return $this->checkoutNow();
     }
 
     public function render(): View

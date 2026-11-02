@@ -54,8 +54,9 @@ class StoreProfileTest extends TestCase
             'role' => 'customer',
             'phone' => '081234567890',
             'nik' => '3578012345670001',
-            'email_verified_at' => now(),
         ]);
+
+        $this->customer->forceFill(['email_verified_at' => now()])->save();
 
         // 2. Setup Vendor 1 (Aktif dengan Produk & Paket)
         $this->vendor1 = Vendor::create([
@@ -164,16 +165,16 @@ class StoreProfileTest extends TestCase
     }
 
     /**
-     * Skenario 1: Customer yang belum login melihat pop-up "Login untuk Melanjutkan" dengan opsi Login dan Lewati.
+     * Skenario 1: Customer yang belum login melihat pop-up pilihan masuk atau lanjut sebagai tamu.
      */
     public function test_guest_sees_login_popup_modal_when_accessing_store_profile(): void
     {
         $response = $this->get(route('customer.stores.show', $this->vendor1->slug));
 
         $response->assertOk()
-            ->assertSee('Login untuk Melanjutkan')
+            ->assertSee('Lanjut sebagai Tamu atau Masuk')
             ->assertSee(route('login'))
-            ->assertSee('Lewati')
+            ->assertSee('Lanjut Tanpa Akun')
             ->assertSee($this->vendor1->name);
     }
 
@@ -190,7 +191,7 @@ class StoreProfileTest extends TestCase
     }
 
     /**
-     * Customer yang belum login dapat melihat pop-up login di halaman detail produk saat ingin mengunjungi toko.
+     * Customer yang belum login dapat melihat pop-up pilihan masuk atau lanjut sebagai tamu di halaman detail produk.
      */
     public function test_guest_sees_login_popup_prompt_on_product_page(): void
     {
@@ -198,9 +199,9 @@ class StoreProfileTest extends TestCase
 
         $response->assertOk()
             ->assertSee('modal-guest-store-title')
-            ->assertSee('Login untuk Melanjutkan')
+            ->assertSee('Lanjut sebagai Tamu atau Masuk')
             ->assertSee(route('login'))
-            ->assertSee('Lewati');
+            ->assertSee('Lanjut Tanpa Akun');
     }
 
     /**

@@ -78,35 +78,61 @@ class ProductBookingTest extends TestCase
         ]);
     }
 
-    public function test_guest_product_detail_shows_login_call_to_action(): void
+    public function test_guest_product_detail_shows_direct_checkout_call_to_action(): void
     {
         $product = $this->createProduct();
+        $this->createUnit($product, 'TD-001');
 
         Livewire::test(ProductBooking::class, ['product' => $product])
-            ->assertSee('Masuk untuk menyewa alat ini')
+            ->assertSee('Checkout Sekarang')
             ->assertDontSee('Masukkan ke Keranjang');
     }
 
-    public function test_guest_cannot_add_product_to_cart(): void
+    public function test_guest_add_to_cart_redirects_directly_to_checkout(): void
     {
         $product = $this->createProduct();
+        $this->createUnit($product, 'TD-001');
 
         Livewire::test(ProductBooking::class, ['product' => $product])
             ->call('addToCart')
-            ->assertRedirect(route('login'));
+            ->assertHasNoErrors()
+            ->assertRedirect(route('checkout.index'));
 
-        $this->assertNull(session('booking_cart'));
+        $this->assertSame($product->id, session('booking_cart.master_item_id'));
+        $this->assertSame(1, session('booking_cart.qty'));
     }
 
-    public function test_guest_cannot_proceed_to_booking(): void
+    public function test_guest_checkout_now_uses_only_the_current_selection(): void
     {
         $product = $this->createProduct();
+        $this->createUnit($product, 'TD-001');
+        $this->createUnit($product, 'TD-002');
 
         Livewire::test(ProductBooking::class, ['product' => $product])
-            ->call('proceedToBooking')
-            ->assertRedirect(route('login'));
+            ->set('quantity', 2)
+            ->call('checkoutNow')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('checkout.index'));
 
-        $this->assertNull(session('booking_cart'));
+        $this->assertSame($product->id, session('booking_cart.master_item_id'));
+        $this->assertSame(2, session('booking_cart.qty'));
+        $this->assertCount(1, session('booking_cart.items'));
+    }
+
+    public function test_member_still_adds_product_to_cart_without_redirect(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $product = $this->createProduct();
+        $this->createUnit($product, 'TD-001');
+
+        Livewire::test(ProductBooking::class, ['product' => $product])
+            ->call('addToCart')
+            ->assertHasNoErrors()
+            ->assertNoRedirect()
+            ->assertSet('inCart', true);
+
+        $this->assertSame($product->id, session('booking_cart.master_item_id'));
     }
 
     public function test_it_mounts_with_default_pickup_tomorrow_and_return_day_after(): void
