@@ -54,6 +54,17 @@ return [
         'is_3ds' => true,
     ],
 
+    'midtrans_iris' => [
+        // Kredensial Payouts/Iris berbeda dari kredensial Snap/Core.
+        // Creator membuat payout, approver menyetujui payout.
+        'creator_key' => env('MIDTRANS_IRIS_CREATOR_KEY'),
+        'approver_key' => env('MIDTRANS_IRIS_APPROVER_KEY'),
+        'is_production' => (bool) env('MIDTRANS_IRIS_IS_PRODUCTION', false),
+        'base_url' => env('MIDTRANS_IRIS_BASE_URL'),
+        'connect_timeout' => (int) env('MIDTRANS_IRIS_CONNECT_TIMEOUT', 5),
+        'timeout' => (int) env('MIDTRANS_IRIS_TIMEOUT', 15),
+    ],
+
     'fonnte' => [
         // Token API Fonnte (WhatsApp API). Ambil dari dashboard Fonnte.
         // Paket gratis Fonnte: text-only, kuota per device, tanpa batas waktu.

@@ -21,6 +21,8 @@ class Settlement extends Model
         'adjustment_amount', 'net_payout',
         'bank_name', 'bank_account_number', 'bank_account_name',
         'reference_number', 'proof_url', 'approved_by', 'approved_at', 'paid_at', 'notes',
+        'iris_reference_no', 'iris_status', 'iris_idempotency_key', 'iris_bank_code',
+        'iris_error', 'iris_requested_at', 'iris_approved_at', 'iris_completed_at',
     ];
 
     protected $casts = [
@@ -37,6 +39,9 @@ class Settlement extends Model
         'net_payout' => 'decimal:2',
         'approved_at' => 'datetime',
         'paid_at' => 'datetime',
+        'iris_requested_at' => 'datetime',
+        'iris_approved_at' => 'datetime',
+        'iris_completed_at' => 'datetime',
     ];
 
     public function vendor(): BelongsTo
@@ -82,5 +87,18 @@ class Settlement extends Model
     public function isPaid(): bool
     {
         return $this->status === 'paid';
+    }
+
+    /**
+     * Payout Iris yang masih berjalan tidak boleh ditandai lunas secara manual.
+     *
+     * Status `requested`/`unknown` tanpa reference tetap dianggap aktif karena
+     * permintaan bisa saja sudah diterima Midtrans sebelum koneksi terputus.
+     */
+    public function hasActiveIrisPayout(): bool
+    {
+        return ! $this->isPaid()
+            && $this->iris_status !== null
+            && ! in_array($this->iris_status, ['failed', 'rejected'], true);
     }
 }

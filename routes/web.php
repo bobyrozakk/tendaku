@@ -121,6 +121,12 @@ Route::post('payments/{order_id}/retry', [PaymentRetryController::class, 'store'
 Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
     ->name('webhook.midtrans');
 
+// Bukti payout Midtrans Iris: dapat diakses Super Admin atau vendor pemilik batch.
+Route::get('settlements/{settlement}/payout-proof', [SettlementPayoutProofController::class, 'show'])
+    ->middleware(['auth'])
+    ->whereNumber('settlement')
+    ->name('settlements.payout-proof');
+
 // Design System Reference
 Route::view('design-system', 'design-system')->name('design-system');
 

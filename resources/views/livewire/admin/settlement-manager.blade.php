@@ -6,6 +6,16 @@
         'cancelled' => 'danger',
     ];
 
+    $irisStatusVariants = [
+        'requested' => 'wheat',
+        'queued' => 'wheat',
+        'approved' => 'sunglow',
+        'processed' => 'sunglow',
+        'completed' => 'avocado',
+        'failed' => 'danger',
+        'rejected' => 'danger',
+    ];
+
     $formatRupiah = fn (float $value): string => 'Rp '.number_format($value, 0, ',', '.');
 @endphp
 
@@ -62,7 +72,7 @@
         <x-stat-card
             title="Disetujui, Belum Dibayar"
             :value="$approvedCount.' batch'"
-            description="Escrow dilepas setelah bukti transfer dicatat"
+            description="Escrow dilepas setelah payout terkonfirmasi"
             color="sunglow"
         />
         <x-stat-card
@@ -218,11 +228,31 @@
                         </button>
                     @elseif ($detail->isApproved())
                         <button type="button"
-                                wire:click="openPayModal({{ $detail->id }})"
+                                wire:click="openIrisModal({{ $detail->id }})"
                                 class="btn-tendaku-primary !px-3.5 !py-2 text-xs">
-                            <i data-lucide="upload" class="h-4 w-4"></i>
-                            Tandai Sudah Dibayar
+                            <i data-lucide="send" class="h-4 w-4"></i>
+                            Cairkan via Midtrans Iris
                         </button>
+
+                        @if ($detail->iris_reference_no)
+                            <button type="button"
+                                    wire:click="syncIrisPayout({{ $detail->id }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="syncIrisPayout"
+                                    class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
+                                <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+                                Cek Status Iris
+                            </button>
+                        @endif
+
+                        @if (! $detail->hasActiveIrisPayout())
+                            <button type="button"
+                                    wire:click="openPayModal({{ $detail->id }})"
+                                    class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
+                                <i data-lucide="upload" class="h-4 w-4"></i>
+                                Catat Transfer Manual
+                            </button>
+                        @endif
                     @endif
 
                     <button type="button" wire:click="closeDetail" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
@@ -282,6 +312,31 @@
                         <a href="{{ $detail->proof_url }}" target="_blank" class="inline-flex font-bold text-avocado-700 underline">
                             Lihat bukti transfer
                         </a>
+                    @endif
+                    @if ($detail->iris_status || $detail->iris_reference_no || $detail->iris_error)
+                        <div class="rounded-xl border {{ in_array($detail->iris_status, ['failed', 'rejected'], true) ? 'border-red-200 bg-red-50' : 'border-wheat-200 bg-wheat-50/70' }} px-3 py-2">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Midtrans Iris</p>
+                            @if ($detail->iris_reference_no)
+                                <p class="mt-1 font-mono text-[11px] font-bold text-darkbrown-800">{{ $detail->iris_reference_no }}</p>
+                            @endif
+                            <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                                <x-badge :variant="$irisStatusVariants[$detail->iris_status] ?? 'wheat'" size="sm">
+                                    {{ $irisStatusLabels[$detail->iris_status] ?? ($detail->iris_status ? ucfirst((string) $detail->iris_status) : 'Belum terkonfirmasi') }}
+                                </x-badge>
+                                @if ($detail->hasActiveIrisPayout())
+                                    <span class="text-[10px] font-semibold text-goldenrod-700">Belum ditandai lunas</span>
+                                @endif
+                            </div>
+                            @if ($detail->iris_requested_at)
+                                <p class="mt-1 text-[10px] text-darkbrown-500">Diminta {{ $detail->iris_requested_at->isoFormat('D MMM Y HH:mm') }}</p>
+                            @endif
+                            @if ($detail->iris_completed_at)
+                                <p class="text-[10px] text-avocado-700">Selesai {{ $detail->iris_completed_at->isoFormat('D MMM Y HH:mm') }}</p>
+                            @endif
+                            @if ($detail->iris_error)
+                                <p class="mt-1 text-[10px] font-semibold text-red-600">{{ $detail->iris_error }}</p>
+                            @endif
+                        </div>
                     @endif
                     @if ($invoice)
                         @php
@@ -402,6 +457,133 @@
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                                 </svg>
                                 Menyimpan...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    @if ($showIrisModal && $selectedSettlement)
+        @php
+            $irisBankComplete = filled($selectedSettlement->bank_name)
+                && filled($selectedSettlement->bank_account_number)
+                && filled($selectedSettlement->bank_account_name);
+            $irisHasReference = filled($selectedSettlement->iris_reference_no);
+            $irisTerminalFailure = $irisHasReference
+                && in_array($selectedSettlement->iris_status, ['failed', 'rejected'], true);
+            $irisActive = $selectedSettlement->hasActiveIrisPayout();
+            $irisActionLabel = $irisHasReference
+                ? (in_array($selectedSettlement->iris_status, ['queued', 'requested'], true)
+                    ? 'Setujui & Cek Status'
+                    : 'Cek Status')
+                : 'Cairkan Sekarang';
+            $irisCanSubmit = $irisConfigured
+                && $irisBankComplete
+                && (float) $selectedSettlement->net_payout > 0
+                && ! $irisTerminalFailure;
+        @endphp
+
+        <div x-data
+             @keydown.escape.window="$wire.closeIrisModal()"
+             @click.self="$wire.closeIrisModal()"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-darkbrown-900/60 p-4 backdrop-blur-sm">
+            <div class="w-full max-w-xl rounded-2xl border border-wheat-200 bg-white shadow-tendaku">
+                <div class="border-b border-wheat-200 px-6 py-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-lg font-extrabold text-darkbrown-900">Cairkan via Midtrans Iris</h3>
+                            <p class="mt-1 text-xs text-darkbrown-500">
+                                Batch #{{ $selectedSettlement->id }} · {{ $selectedSettlement->vendor?->name }} ·
+                                {{ $formatRupiah((float) $selectedSettlement->net_payout) }}
+                            </p>
+                        </div>
+                        <x-badge variant="avocado" size="sm" :dot="true">Payouts</x-badge>
+                    </div>
+                </div>
+
+                <form wire:submit="startIrisPayout" class="space-y-4 px-6 py-5">
+                    <div class="rounded-xl border border-wheat-200 bg-wheat-50 px-3 py-3 text-xs text-darkbrown-600">
+                        <p class="font-bold text-darkbrown-800">Rekening tujuan</p>
+                        <p class="mt-1">{{ $selectedSettlement->bank_name ?: 'Bank belum diisi' }}</p>
+                        <p class="font-mono">{{ $selectedSettlement->bank_account_number ?: 'Nomor rekening belum diisi' }}</p>
+                        <p>a.n. {{ $selectedSettlement->bank_account_name ?: 'Nama pemilik belum diisi' }}</p>
+                    </div>
+
+                    @if (! $irisConfigured)
+                        <div class="rounded-xl border border-sunglow-300 bg-sunglow-50 px-3 py-2.5 text-xs text-goldenrod-800">
+                            <p class="font-bold">Kredensial Midtrans Iris belum lengkap.</p>
+                            <p class="mt-1">
+                                Isi <span class="font-mono">MIDTRANS_IRIS_CREATOR_KEY</span> dan
+                                <span class="font-mono">MIDTRANS_IRIS_APPROVER_KEY</span> di file <span class="font-mono">.env</span>.
+                            </p>
+                        </div>
+                    @endif
+
+                    @if (! $irisBankComplete)
+                        <div class="rounded-xl border border-sunglow-300 bg-sunglow-50 px-3 py-2.5 text-xs text-goldenrod-800">
+                            <p class="font-bold">Rekening tujuan belum lengkap.</p>
+                            <p class="mt-1">Minta vendor owner menyimpan nama bank, nomor rekening, dan nama pemilik rekening di halaman Pendapatan vendor.</p>
+                        </div>
+                    @endif
+
+                    @if ($irisTerminalFailure)
+                        <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
+                            <p class="font-bold">Payout Iris sebelumnya {{ $selectedSettlement->iris_status }}.</p>
+                            <p class="mt-1">Gunakan transfer manual atau proses ulang dari dashboard Midtrans. Payout lama tidak akan dibuat ulang otomatis.</p>
+                        </div>
+                    @endif
+
+                    @if ($irisHasReference && $irisActive)
+                        <div class="rounded-xl border border-wheat-300 bg-wheat-50 px-3 py-2.5 text-xs text-darkbrown-600">
+                            Payout <span class="font-mono font-bold">{{ $selectedSettlement->iris_reference_no }}</span>
+                            sudah dibuat. Tombol di bawah akan menyetujui bila perlu dan mengecek status terbaru.
+                        </div>
+                    @elseif ($irisActive && ! $irisHasReference)
+                        <div class="rounded-xl border border-sunglow-300 bg-sunglow-50 px-3 py-2.5 text-xs text-goldenrod-800">
+                            <p class="font-bold">Permintaan payout sebelumnya belum terkonfirmasi.</p>
+                            <p class="mt-1">Tombol di bawah akan mengulang permintaan dengan idempotency key yang sama, sehingga payout tidak dibuat dua kali bila Midtrans sudah menerimanya.</p>
+                        </div>
+                    @endif
+
+                    @if ($irisError)
+                        <div class="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
+                            {{ $irisError }}
+                        </div>
+                    @endif
+
+                    <label class="block">
+                        <span class="mb-1 block text-xs font-bold text-darkbrown-700">OTP Approver (opsional)</span>
+                        <input type="text" wire:model="irisOtp" inputmode="numeric" maxlength="6"
+                               class="w-full rounded-xl border border-wheat-300 bg-wheat-50 px-3 py-2.5 text-sm text-darkbrown-800 focus:border-avocado-400 focus:outline-none focus:ring-2 focus:ring-avocado-200"
+                               placeholder="6 digit, jika 2FA approver aktif">
+                        <span class="mt-1 block text-[11px] text-darkbrown-400">Kosongkan jika akun Approver tidak memakai OTP.</span>
+                        @error('irisOtp') <span class="mt-1 block text-xs font-semibold text-red-600">{{ $message }}</span> @enderror
+                    </label>
+
+                    <div class="rounded-xl border border-wheat-200 bg-white px-3 py-2.5 text-[11px] leading-relaxed text-darkbrown-500">
+                        Payout hanya akan menandai batch lunas setelah Midtrans mengembalikan status <span class="font-bold text-darkbrown-700">completed</span>.
+                        Status <span class="font-mono">queued</span>, <span class="font-mono">approved</span>, atau
+                        <span class="font-mono">processed</span> belum dianggap selesai.
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 border-t border-wheat-200 pt-4">
+                        <button type="button" wire:click="closeIrisModal" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
+                            Batal
+                        </button>
+                        <button type="submit" wire:loading.attr="disabled" wire:target="startIrisPayout"
+                                @disabled(! $irisCanSubmit)
+                                class="btn-tendaku-primary !px-3.5 !py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50">
+                            <span wire:loading.remove wire:target="startIrisPayout">
+                                {{ $irisActionLabel }}
+                            </span>
+                            <span wire:loading wire:target="startIrisPayout" class="inline-flex items-center gap-1.5">
+                                <svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                </svg>
+                                Memproses...
                             </span>
                         </button>
                     </div>
