@@ -78,6 +78,8 @@ class SettlementTest extends TestCase
         $this->createPaidRevenuePayment($vendor, 400000, [
             'booking_code' => 'TND-SET-OLD',
             'paid_at' => Carbon::parse('2026-10-12 10:00:00'),
+        ], [
+            'completed_at' => Carbon::parse('2026-10-28 10:00:00'),
         ]);
         $otherSettlement = Settlement::factory()->create([
             'vendor_id' => $vendor->id,
@@ -181,6 +183,57 @@ class SettlementTest extends TestCase
         }
     }
 
+    public function test_payment_is_caught_up_in_the_batch_after_the_rental_completes(): void
+    {
+        $vendor = $this->createRevenueVendor('Vendor Late Completion');
+
+        // Dibayar pada minggu pertama, tetapi rental baru selesai minggu berikutnya.
+        [, $payment] = $this->createPaidRevenuePayment($vendor, 500000, [
+            'paid_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ], [
+            'completed_at' => Carbon::parse('2026-10-27 10:00:00'),
+        ]);
+        $this->createRevenueCommission($payment, 25000);
+
+        $service = app(SettlementService::class);
+
+        $this->assertCount(0, $service->buildWeeklyDraft(Carbon::parse('2026-10-19')));
+
+        $created = $service->buildWeeklyDraft(Carbon::parse('2026-10-26'));
+
+        $this->assertCount(1, $created);
+        $this->assertDatabaseHas('settlement_items', [
+            'settlement_id' => $created->first()->id,
+            'payment_id' => $payment->id,
+        ]);
+    }
+
+    public function test_payment_is_caught_up_when_its_completion_week_batch_already_exists(): void
+    {
+        $vendor = $this->createRevenueVendor('Vendor Catch Up');
+
+        [, $payment] = $this->createPaidRevenuePayment($vendor, 500000, [
+            'paid_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ], [
+            'completed_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+        $this->createRevenueCommission($payment, 25000);
+
+        $service = app(SettlementService::class);
+
+        // Batch minggu completion sudah terbentuk untuk pembayaran lain.
+        Settlement::factory()->create([
+            'vendor_id' => $vendor->id,
+            'period_start' => '2026-10-19',
+            'period_end' => '2026-10-25',
+        ]);
+
+        $created = $service->buildWeeklyDraft(Carbon::parse('2026-10-26'));
+
+        $this->assertCount(1, $created);
+        $this->assertSame($payment->id, $created->first()->items()->value('payment_id'));
+    }
+
     public function test_building_the_same_week_twice_does_not_create_duplicate_batches(): void
     {
         $vendor = $this->createRevenueVendor();
@@ -227,7 +280,7 @@ class SettlementTest extends TestCase
         $this->assertSame($settlement->id, $commission->settlement_id);
     }
 
-    public function test_marking_paid_stores_proof_releases_escrow_and_issues_an_invoice(): void
+    public function test_marking_paid_stores_proof_releases_escrow_and_marks_the_invoice_paid(): void
     {
         $vendor = $this->createRevenueVendor();
         [, $payment] = $this->createPaidRevenuePayment($vendor, 1000000, [
@@ -238,6 +291,9 @@ class SettlementTest extends TestCase
         $service = app(SettlementService::class);
         $settlement = $service->buildWeeklyDraft(Carbon::parse('2026-10-19'))->first();
         $service->approve($settlement, $this->admin);
+
+        $invoice = $settlement->invoices()->first();
+        $this->assertSame('issued', $invoice->status);
 
         $invoice = $service->markPaid(
             $settlement,
@@ -259,10 +315,11 @@ class SettlementTest extends TestCase
         $this->assertSame('released', $payment->escrow_status);
 
         $this->assertSame('INV/'.$vendor->id.'/202610/1', $invoice->number);
-        $this->assertSame('issued', $invoice->status);
+        $this->assertSame('paid', $invoice->status);
         $this->assertSame((float) $settlement->net_payout, (float) $invoice->total);
         $this->assertSame((float) $settlement->commission_total, (float) $invoice->commission_amount);
         $this->assertNotNull($invoice->issued_at);
+        $this->assertNotNull($invoice->paid_at);
     }
 
     public function test_marking_a_draft_as_paid_is_rejected(): void
@@ -368,5 +425,6 @@ class SettlementTest extends TestCase
         $this->assertNull($payment->refresh()->settlement_id);
         $this->assertSame('accrued', $commission->refresh()->status);
         $this->assertNull($commission->settlement_id);
+        $this->assertSame('void', $settlement->invoices()->first()->status);
     }
 }

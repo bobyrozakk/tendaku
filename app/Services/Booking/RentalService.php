@@ -9,6 +9,7 @@ use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Models\Payment;
 use App\Models\Rental;
+use App\Services\Finance\CommissionCalculator;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -188,7 +189,7 @@ class RentalService
                 : $subtotal;
             $deliveryFee = (float) ($data['delivery_fee'] ?? 0.0);
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
-            $adminFee = (float) app(\App\Services\Finance\CommissionCalculator::class)->commissionFor($subtotal);
+            $adminFee = (float) app(CommissionCalculator::class)->commissionFor($subtotal);
             $grandTotal = max(0.0, $subtotal + $deliveryFee + $adminFee - $discountAmount);
 
             if (isset($data['expires_at'])) {
@@ -306,7 +307,7 @@ class RentalService
     {
         $date = date('Ymd');
         $vendorPart = str_pad((string) $vendorId, 2, '0', STR_PAD_LEFT);
-        $itemPart   = str_pad((string) $masterItemId, 2, '0', STR_PAD_LEFT);
+        $itemPart = str_pad((string) $masterItemId, 2, '0', STR_PAD_LEFT);
 
         $prefix = "TDK{$date}{$vendorPart}{$itemPart}";
 
@@ -318,7 +319,7 @@ class RentalService
         $nextNumber = $lastBooking ? ((int) substr($lastBooking, -3) + 1) : 1;
 
         do {
-            $code = $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
+            $code = $prefix.str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
             $nextNumber++;
         } while (Rental::withoutGlobalScopes()->where('booking_code', $code)->exists());
 
@@ -558,6 +559,7 @@ class RentalService
                 'status' => 'completed',
                 'actual_return_date' => $actualReturnDate->format('Y-m-d'),
                 'returned_at' => $actualReturnDate,
+                'completed_at' => $actualReturnDate,
                 'returned_by' => $staffUserId,
                 'total_late_fee' => $totalLateFee,
                 'total_damage_fee' => $totalDamageFee,

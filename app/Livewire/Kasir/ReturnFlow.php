@@ -272,6 +272,7 @@ class ReturnFlow extends Component
                 'status' => 'completed',
                 'actual_return_date' => Carbon::today(),
                 'returned_at' => Carbon::now(),
+                'completed_at' => Carbon::now(),
                 'returned_by' => $user->id,
                 'ktp_collateral_status' => 'returned',
                 'ktp_returned_at' => Carbon::now(),

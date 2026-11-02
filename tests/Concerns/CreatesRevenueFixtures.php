@@ -53,6 +53,7 @@ trait CreatesRevenueFixtures
         $bookingCode = $paymentAttributes['booking_code']
             ?? $rentalAttributes['booking_code']
             ?? 'TND-REV-'.fake()->unique()->numerify('######');
+        $paidAt = $paymentAttributes['paid_at'] ?? now();
 
         $rental = Rental::query()->create(array_merge([
             'vendor_id' => $vendor->id,
@@ -67,6 +68,7 @@ trait CreatesRevenueFixtures
             'grand_total' => $amount,
             'final_total' => $amount,
             'status' => 'completed',
+            'completed_at' => $paidAt,
         ], $rentalAttributes));
 
         unset($paymentAttributes['booking_code']);
@@ -74,7 +76,7 @@ trait CreatesRevenueFixtures
         $payment = Payment::query()->create(array_merge([
             'rental_id' => $rental->id,
             'vendor_id' => $vendor->id,
-            'payment_type' => 'settlement',
+            'payment_type' => 'full',
             'payment_method' => 'midtrans_snap',
             'payment_channel' => 'qris',
             'amount' => $amount,

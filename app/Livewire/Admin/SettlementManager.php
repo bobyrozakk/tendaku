@@ -105,7 +105,7 @@ class SettlementManager extends Component
 
         $this->selectedSettlementId = $settlement->getKey();
         $this->flashError = null;
-        $this->flashSuccess = 'Batch settlement #'.$settlement->getKey().' disetujui. Escrow akan dilepas saat pembayaran ditandai lunas.';
+        $this->flashSuccess = 'Batch settlement #'.$settlement->getKey().' disetujui. Invoice vendor sudah diterbitkan; escrow dilepas saat pembayaran ditandai lunas.';
         $this->dispatch('toast', [
             'type' => 'success',
             'title' => 'Berhasil!',
@@ -193,7 +193,7 @@ class SettlementManager extends Component
         $this->selectedSettlementId = $settlement->getKey();
         $this->resetPaymentForm();
         $this->flashError = null;
-        $this->flashSuccess = 'Pembayaran batch dicatat. Invoice '.$invoice->number.' telah diterbitkan.';
+        $this->flashSuccess = 'Pembayaran batch dicatat. Invoice '.$invoice->number.' telah diterbitkan dan sekarang ditandai lunas.';
         $this->dispatch('toast', [
             'type' => 'success',
             'title' => 'Berhasil!',

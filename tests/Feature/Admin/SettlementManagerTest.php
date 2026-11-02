@@ -119,7 +119,7 @@ class SettlementManagerTest extends TestCase
             ->assertSee('tidak dapat disetujui');
     }
 
-    public function test_marking_a_batch_paid_stores_the_proof_and_issues_an_invoice(): void
+    public function test_marking_a_batch_paid_stores_the_proof_and_marks_the_invoice_paid(): void
     {
         Storage::fake('public');
 
@@ -152,7 +152,7 @@ class SettlementManagerTest extends TestCase
         $this->assertDatabaseHas('vendor_invoices', [
             'settlement_id' => $settlement->id,
             'vendor_id' => $this->vendor->id,
-            'status' => 'issued',
+            'status' => 'paid',
             'total' => $settlement->net_payout,
         ]);
     }
@@ -187,7 +187,21 @@ class SettlementManagerTest extends TestCase
             ->assertSee('Total Net Payout');
     }
 
-    public function test_invoice_cannot_be_printed_before_the_batch_is_paid(): void
+    public function test_superadmin_can_print_an_issued_invoice_before_the_batch_is_paid(): void
+    {
+        $settlement = $this->createDraftSettlement();
+        app(SettlementService::class)->approve($settlement, $this->superAdmin);
+
+        $invoice = $settlement->invoices()->firstOrFail();
+
+        $this->actingAs($this->superAdmin)
+            ->get(route('admin.settlements.invoice', $settlement))
+            ->assertOk()
+            ->assertSee($invoice->number)
+            ->assertSee('Menunggu Transfer');
+    }
+
+    public function test_invoice_cannot_be_printed_before_the_batch_is_approved(): void
     {
         $settlement = $this->createDraftSettlement();
 

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
@@ -216,6 +217,11 @@ class Payment extends Model
     public function commission(): HasOne
     {
         return $this->hasOne(PlatformCommission::class);
+    }
+
+    public function settlementItems(): HasMany
+    {
+        return $this->hasMany(SettlementItem::class);
     }
 
     public function settlement(): BelongsTo

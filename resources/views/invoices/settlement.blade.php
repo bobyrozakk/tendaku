@@ -21,8 +21,8 @@
                 &larr; Kembali ke Settlement
             </a>
         @elseif (auth()->user()?->isVendorOwner())
-            <a href="{{ route('vendor.owner.dashboard') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
-                &larr; Kembali ke Dashboard
+            <a href="{{ route('vendor.pendapatan') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
+                &larr; Kembali ke Pendapatan
             </a>
         @else
             <a href="{{ url()->previous() }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
@@ -50,8 +50,17 @@
                 <p class="text-[11px] font-bold uppercase tracking-[0.2em] text-avocado-700">Invoice Settlement</p>
                 <h1 class="mt-1 font-mono text-xl font-extrabold text-darkbrown-900">{{ $invoice->number }}</h1>
                 <p class="mt-1 text-xs text-darkbrown-500">Terbit {{ $invoice->issued_at?->isoFormat('D MMMM Y HH:mm') ?? '-' }}</p>
-                <span class="mt-2 inline-flex rounded-full border border-avocado-300 bg-avocado-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-avocado-800">
-                    {{ $invoice->status === 'paid' ? 'Lunas' : ucfirst($invoice->status) }}
+                <span class="mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ match ($invoice->status) {
+                    'paid' => 'border-avocado-300 bg-avocado-100 text-avocado-800',
+                    'void' => 'border-red-200 bg-red-100 text-red-700',
+                    default => 'border-goldenrod-300 bg-goldenrod-100 text-goldenrod-900',
+                } }}">
+                    {{ match ($invoice->status) {
+                        'paid' => 'Sudah Ditransfer',
+                        'issued' => 'Menunggu Transfer',
+                        'void' => 'Dibatalkan',
+                        default => 'Draft',
+                    } }}
                 </span>
             </div>
         </header>
@@ -159,8 +168,8 @@
                 <div class="rounded-xl border border-wheat-200 bg-wheat-50 p-4 text-[11px] leading-relaxed text-darkbrown-600">
                     <p class="font-bold text-darkbrown-900">Catatan</p>
                     <p class="mt-1">
-                        Invoice ini diterbitkan otomatis saat batch settlement ditandai sudah dibayar.
-                        Dana QRIS dilepas dari escrow pada saat yang sama.
+                        Invoice ini diterbitkan otomatis saat batch settlement disetujui.
+                        Dana QRIS dilepas dari escrow setelah batch ditandai sudah dibayar.
                     </p>
                     <p class="mt-2">
                         Biaya transfer bank sebesar Rp {{ number_format((float) $settlement->transfer_fee, 0, ',', '.') }}

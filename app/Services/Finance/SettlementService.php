@@ -2,6 +2,7 @@
 
 namespace App\Services\Finance;
 
+use App\Enums\PaymentType;
 use App\Models\Payment;
 use App\Models\PlatformCommission;
 use App\Models\Settlement;
@@ -23,6 +24,10 @@ class SettlementService
      * Buat draft batch settlement mingguan untuk seluruh vendor yang punya
      * pembayaran/komisi belum masuk batch pada periode tersebut.
      *
+     * Periode mengikuti tanggal rental selesai (`completed_at`), bukan
+     * `paid_at`. Pembayaran yang belum sempat masuk batch sebelumnya ikut
+     * diambil sebagai catch-up selama rental selesai pada/sebelum periode ini.
+     *
      * Idempoten: kombinasi vendor + periode unik, dan hanya pembayaran yang
      * belum punya settlement_id yang diambil.
      *
@@ -36,9 +41,14 @@ class SettlementService
         $payments = Payment::withoutGlobalScope('vendor')
             ->where('status', 'paid')
             ->whereNull('settlement_id')
-            ->whereBetween('paid_at', [$periodStart, $periodEnd])
-            ->whereIn('payment_type', ['dp', 'full', 'remaining', 'fine'])
-            ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
+            ->whereIn('payment_type', PaymentType::values())
+            ->whereHas('rental', fn ($query) => $query
+                ->where('status', 'completed')
+                ->where(function ($completed) use ($periodEnd): void {
+                    // completed_at null = data lama; tetap ikut catch-up.
+                    $completed->whereNull('completed_at')
+                        ->orWhere('completed_at', '<=', $periodEnd);
+                }))
             ->where(function ($query): void {
                 $query->where(function ($cash): void {
                     $cash->where('payment_method', 'cash')
@@ -100,13 +110,17 @@ class SettlementService
 
             $this->assignItemsToSettlement($settlement, lockAsSettled: true);
 
+            // Invoice diterbitkan sebelum transfer agar vendor menerima nota
+            // pencairan lebih dulu. Escrow tetap ditahan sampai markPaid().
+            $this->generateInvoice($settlement);
+
             return true;
         });
     }
 
     /**
      * Tandai batch sudah dibayar: simpan bukti transfer, lepas escrow, dan
-     * terbitkan invoice. Hanya batch berstatus approved yang dapat dibayar.
+     * ubah invoice menjadi paid. Hanya batch approved yang dapat dibayar.
      */
     public function markPaid(
         Settlement $settlement,
@@ -135,8 +149,25 @@ class SettlementService
             $this->assignItemsToSettlement($settlement, lockAsSettled: true);
             $this->releaseEscrow($settlement);
 
-            return $this->generateInvoice($settlement);
+            return $this->markInvoicePaid($settlement);
         });
+    }
+
+    /**
+     * Tandai invoice batch sebagai paid, atau buat invoice legacy bila batch
+     * lama belum memilikinya.
+     */
+    public function markInvoicePaid(Settlement $settlement, ?string $notes = null): VendorInvoice
+    {
+        $invoice = $this->generateInvoice($settlement);
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => $settlement->paid_at ?? now(),
+            'notes' => $notes ?? $invoice->notes,
+        ]);
+
+        return $invoice->refresh();
     }
 
     /**
@@ -163,6 +194,11 @@ class SettlementService
             PlatformCommission::withoutGlobalScope('vendor')
                 ->where('settlement_id', $settlement->getKey())
                 ->update(['settlement_id' => null, 'status' => 'accrued']);
+
+            VendorInvoice::withoutGlobalScope('vendor')
+                ->where('settlement_id', $settlement->getKey())
+                ->where('status', '!=', 'paid')
+                ->update(['status' => 'void']);
 
             return true;
         });
@@ -200,6 +236,8 @@ class SettlementService
             + (float) $settlement->gross_fine_qris
             + (float) $settlement->adjustment_amount;
 
+        $isPaid = $settlement->isPaid();
+
         return VendorInvoice::withoutGlobalScope('vendor')->create([
             'vendor_id' => $settlement->vendor_id,
             'settlement_id' => $settlement->getKey(),
@@ -211,9 +249,9 @@ class SettlementService
             'commission_amount' => $settlement->commission_total,
             'fee_amount' => round((float) $settlement->fine_fee_total, 2),
             'total' => $settlement->net_payout,
-            'status' => 'issued',
+            'status' => $isPaid ? 'paid' : 'issued',
             'issued_at' => now(),
-            'paid_at' => $settlement->paid_at,
+            'paid_at' => $isPaid ? $settlement->paid_at : null,
         ]);
     }
 
@@ -269,7 +307,7 @@ class SettlementService
             $commission = $commissions->get($payment->getKey());
             $commissionAmount = (float) ($commission?->amount ?? 0);
             $feeAmount = (float) $payment->gateway_fee_amount;
-            $isFine = $payment->payment_type === 'fine';
+            $isFine = $payment->payment_type === PaymentType::Fine->value;
             $isCash = $payment->payment_method === 'cash';
 
             if ($isFine && $isCash) {

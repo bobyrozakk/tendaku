@@ -284,7 +284,33 @@
                         </a>
                     @endif
                     @if ($invoice)
-                        <p class="text-darkbrown-600"><span class="font-semibold">Invoice:</span> {{ $invoice->number }}</p>
+                        @php
+                            $invoiceStatusLabel = match ($invoice->status) {
+                                'issued' => 'Menunggu Transfer',
+                                'paid' => 'Lunas',
+                                'void' => 'Void',
+                                default => ucfirst($invoice->status),
+                            };
+                            $invoiceStatusVariant = match ($invoice->status) {
+                                'paid' => 'avocado',
+                                'issued' => 'goldenrod',
+                                'void' => 'danger',
+                                default => 'wheat',
+                            };
+                        @endphp
+                        <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 px-3 py-2">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Invoice Vendor</p>
+                            <p class="mt-1 font-mono text-[11px] font-bold text-darkbrown-800">{{ $invoice->number }}</p>
+                            <div class="mt-1">
+                                <x-badge :variant="$invoiceStatusVariant" size="sm">{{ $invoiceStatusLabel }}</x-badge>
+                            </div>
+                            <p class="mt-1 text-[10px] text-darkbrown-500">
+                                Terbit {{ $invoice->issued_at?->isoFormat('D MMM Y HH:mm') ?? '-' }}
+                            </p>
+                            @if ($invoice->paid_at)
+                                <p class="text-[10px] text-avocado-700">Lunas {{ $invoice->paid_at->isoFormat('D MMM Y HH:mm') }}</p>
+                            @endif
+                        </div>
                     @endif
                 </div>
             </div>
@@ -369,7 +395,7 @@
                         </button>
                         <button type="submit" wire:loading.attr="disabled" wire:target="markPaid,proof"
                                 class="btn-tendaku-primary !px-3.5 !py-2 text-xs">
-                            <span wire:loading.remove wire:target="markPaid">Simpan &amp; Terbitkan Invoice</span>
+                            <span wire:loading.remove wire:target="markPaid">Simpan &amp; Tandai Lunas</span>
                             <span wire:loading wire:target="markPaid" class="inline-flex items-center gap-1.5">
                                 <svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
