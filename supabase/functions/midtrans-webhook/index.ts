@@ -6,8 +6,20 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
  *
  * Menerima webhook langsung dari Midtrans Sandbox/Production,
  * memvalidasi SHA-512 signature, lalu mengupdate database Supabase
- * (tabel payments & rentals) secara realtime tanpa perlu tunnel ngrok.
+ * (tabel payments) secara realtime tanpa perlu tunnel ngrok.
+ *
+ * Escrow dan komisi TIDAK dibuat di sini, tapi oleh Laravel lewat
+ * command payments:reconcile.
  */
+
+const JSON_HEADERS = { "Content-Type": "application/json" };
+
+function json(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), {
+        status,
+        headers: JSON_HEADERS,
+    });
+}
 
 // Helper: Ubah ArrayBuffer menjadi hex string
 function buf2hex(buffer: ArrayBuffer): string {
@@ -62,8 +74,13 @@ function canTransition(current: string, next: string): boolean {
     return false;
 }
 
+function isMidtransDashboardPing(orderId: unknown): boolean {
+    return (
+        typeof orderId === "string" && orderId.startsWith("payment_notif_test_")
+    );
+}
+
 Deno.serve(async (req: Request) => {
-    // 1. Handle CORS preflight jika ada
     if (req.method === "OPTIONS") {
         return new Response("ok", {
             status: 200,
@@ -76,14 +93,15 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method !== "POST") {
-        return new Response(JSON.stringify({ message: "Method not allowed" }), {
-            status: 405,
-            headers: { "Content-Type": "application/json" },
-        });
+        return json({ message: "Method not allowed" }, 405);
     }
 
     try {
-        const payload = await req.json();
+        // Body kosong / bukan JSON -> 400, bukan 500
+        const payload = await req.json().catch(() => null);
+        if (!payload || typeof payload !== "object") {
+            return json({ message: "Bad request" }, 400);
+        }
 
         const {
             order_id,
@@ -103,28 +121,23 @@ Deno.serve(async (req: Request) => {
             !signature_key ||
             !transaction_status
         ) {
-            return new Response(
-                JSON.stringify({ message: "Payload webhook tidak lengkap" }),
-                {
-                    status: 422,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
+            return json({ message: "Payload webhook tidak lengkap" }, 422);
         }
 
-        // 2. Verifikasi SHA-512 Signature Midtrans
+        if (isMidtransDashboardPing(order_id)) {
+            console.log("Midtrans test ping received:", order_id);
+            return json({
+                status: "success",
+                message: "Test notification received successfully",
+            });
+        }
+
         const serverKey = Deno.env.get("MIDTRANS_SERVER_KEY");
         if (!serverKey) {
             console.error(
                 "MIDTRANS_SERVER_KEY secret belum diset di Supabase!",
             );
-            return new Response(
-                JSON.stringify({ message: "Konfigurasi server belum lengkap" }),
-                {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
+            return json({ message: "Konfigurasi server belum lengkap" }, 500);
         }
 
         const rawString = `${order_id}${status_code}${gross_amount}${serverKey}`;
@@ -134,21 +147,14 @@ Deno.serve(async (req: Request) => {
         );
         const expectedSignature = buf2hex(hashBuffer);
 
-        if (!constantTimeEquals(expectedSignature, signature_key)) {
+        if (!constantTimeEquals(expectedSignature, String(signature_key))) {
             console.warn(
                 "Signature Midtrans tidak valid untuk order:",
                 order_id,
             );
-            return new Response(
-                JSON.stringify({ message: "Invalid signature" }),
-                {
-                    status: 403,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
+            return json({ message: "Invalid signature" }, 403);
         }
 
-        // 3. Inisialisasi Supabase Client dengan Service Role Key
         const supabaseUrl = Deno.env.get("SUPABASE_URL");
         const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -156,38 +162,11 @@ Deno.serve(async (req: Request) => {
             console.error(
                 "SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY tidak ditemukan!",
             );
-            return new Response(
-                JSON.stringify({ message: "Database credential missing" }),
-                {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
+            return json({ message: "Database credential missing" }, 500);
         }
 
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-        // Handle Midtrans Dashboard "Test notification URL" ping
-        if (
-            typeof order_id === "string" &&
-            (order_id.toLowerCase().includes("test") ||
-                order_id.toLowerCase().includes("sample") ||
-                order_id.toLowerCase().includes("dummy"))
-        ) {
-            console.log("Midtrans test ping received successfully:", order_id);
-            return new Response(
-                JSON.stringify({
-                    status: "success",
-                    message: "Test notification received successfully",
-                }),
-                {
-                    status: 200,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
-        }
-
-        // 4. Cari data payment berdasarkan order_id
         const { data: payment, error: pError } = await supabase
             .from("payments")
             .select(
@@ -201,20 +180,9 @@ Deno.serve(async (req: Request) => {
                 "Payment tidak ditemukan di database untuk order_id:",
                 order_id,
             );
-            // Return 200 agar Midtrans test / unknown order tidak dianggap error 5xx/4xx
-            return new Response(
-                JSON.stringify({
-                    status: "ignored",
-                    message: "Payment not found",
-                }),
-                {
-                    status: 200,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
+            return json({ status: "ignored", message: "Payment not found" });
         }
 
-        // 5. Validasi kesesuaian nominal
         const notifGross = parseFloat(gross_amount);
         const payAmount = parseFloat(payment.amount);
         if (Math.abs(notifGross - payAmount) > 0.01) {
@@ -222,16 +190,9 @@ Deno.serve(async (req: Request) => {
                 notifGross,
                 payAmount,
             });
-            return new Response(
-                JSON.stringify({ message: "Nominal tidak cocok" }),
-                {
-                    status: 422,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
+            return json({ message: "Nominal tidak cocok" }, 422);
         }
 
-        // 6. Petakan status
         const internalStatus = mapMidtransStatus(
             transaction_status,
             fraud_status,
@@ -259,7 +220,6 @@ Deno.serve(async (req: Request) => {
             }
         }
 
-        // 7. Simpan pembaruan payment
         const { error: updateError } = await supabase
             .from("payments")
             .update(updateFields)
@@ -267,32 +227,20 @@ Deno.serve(async (req: Request) => {
 
         if (updateError) {
             console.error("Gagal mengupdate payment:", updateError);
-            return new Response(
-                JSON.stringify({ message: "Gagal mengupdate database" }),
-                {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" },
-                },
-            );
+            return json({ message: "Gagal mengupdate database" }, 500);
         }
 
         // Catatan: status rental TIDAK diubah di sini. Rental tetap pending sampai
         // kasir memvalidasi barang di POS. Komisi dan escrow dibuat oleh Laravel
         // lewat command payments:reconcile.
 
-        return new Response(
-            JSON.stringify({
-                status: "success",
-                order_id,
-                payment_status: updateFields.status ?? payment.status,
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-        );
+        return json({
+            status: "success",
+            order_id,
+            payment_status: updateFields.status ?? payment.status,
+        });
     } catch (err) {
         console.error("Unhandled error di Edge Function:", err);
-        return new Response(
-            JSON.stringify({ message: "Internal server error" }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-        );
+        return json({ message: "Internal server error" }, 500);
     }
 });
