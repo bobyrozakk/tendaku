@@ -93,7 +93,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
             <!-- Tren Pendapatan Harian (8 Kolom) -->
             <div class="lg:col-span-8 flex flex-col">
-                <x-card title="Tren Pendapatan Harian" subtitle="Performa omzet harian pada periode {{ $metrics['start_date'] }} hingga {{ $metrics['end_date'] }}" class="flex-1 flex flex-col justify-between">
+                <x-card title="Tren Pendapatan Harian">
                     <x-slot name="action">
                         <a href="{{ route('vendor.owner.dashboard.export', ['period' => $selectedPeriod]) }}"
                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-avocado-700 bg-avocado-50 border border-avocado-200 hover:bg-avocado-100 transition duration-150 whitespace-nowrap"

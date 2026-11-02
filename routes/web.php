@@ -13,11 +13,14 @@ use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PackageCheckoutController;
 use App\Http\Controllers\Customer\PaymentRetryController;
 use App\Http\Controllers\Customer\StoreController;
+use App\Http\Controllers\SettlementPayoutProofController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
 use App\Http\Controllers\Vendor\CategoryController;
 use App\Http\Controllers\Vendor\OwnerDashboardController;
 use App\Http\Controllers\Vendor\ProductController;
+use App\Http\Controllers\Vendor\RevenueController as VendorRevenueController;
+use App\Http\Controllers\Vendor\SettlementInvoiceController as VendorSettlementInvoiceController;
 use App\Http\Controllers\Vendor\UnitController;
 use App\Http\Controllers\Webhook\MidtransWebhookController;
 use App\Livewire\Kasir\ProfileKasir;
@@ -178,6 +181,11 @@ Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
 
         Route::get('owner/dashboard/export', [OwnerDashboardController::class, 'exportDailyRevenue'])
             ->name('owner.dashboard.export');
+
+        Route::get('pendapatan', [VendorRevenueController::class, 'index'])
+            ->name('pendapatan');
+        Route::get('pendapatan/{settlement}/invoice', [VendorSettlementInvoiceController::class, 'print'])
+            ->name('pendapatan.invoice');
 
         Route::resource('products', ProductController::class);
         Route::resource('packages', CampingPackageController::class)
