@@ -2,11 +2,48 @@
 
 **Tanggal:** 27 Oktober 2026  
 **Proyek:** TENDAKU  
-**Jenis dokumen:** Hasil review kode dan rekomendasi desain alur dana  
-**Status:** Read-only review — belum ada perubahan kode  
+**Jenis dokumen:** Hasil review kode, rekomendasi desain alur dana, dan catatan implementasi  
+**Status:** Sebagian diimplementasikan — lihat §0  
 **Ruang lingkup:** checkout customer, pembayaran Midtrans, escrow, komisi platform, batch settlement, invoice vendor
 
 > Dokumen ini disusun dari pembacaan kode dan data dev, bukan audit keuangan formal. Angka contoh dipakai untuk memperjelas logika, bukan nilai final produksi.
+
+---
+
+## 0. Status Implementasi (1 November 2026)
+
+Perubahan sudah di-commit ke **`develop`** dalam commit terpisah per fitur: komisi/pembayaran, settlement invoice-first, halaman pendapatan & rekening vendor, monitoring transaksi, Midtrans Iris, dan guest checkout. Tidak ada branch fitur terpisah. File bersama `routes/web.php` digabung per hunk sehingga perubahan tidak saling menimpa.
+
+### Sudah dikerjakan
+
+| Item | Perubahan | Bukti |
+|---|---|---|
+| P0 — tipe pembayaran | Enum `App\Enums\PaymentType` (`full`, `dp`, `remaining`, `fine`) menjadi sumber tunggal; komisi dan settlement memakai `full`/`dp`/`remaining` | `app/Enums/PaymentType.php`, `CommissionCalculator`, `SettlementService` |
+| P0 — komisi per rental | Komisi = `max(5% × total pembayaran rental, Rp2.500)`; minimum hanya sekali per rental dan pelunasan menambah selisih secara inkremental. Command `payments:reconcile` membackfill komisi per pembayaran, termasuk top-up `remaining` | `CommissionCalculator::incrementalCommissionFor()`, `CommissionService::accrueForPayment()`, `ReconcilePaidPayments` |
+| P0 — periode batch stabil | `rentals.completed_at` ditambahkan + backfill; eligibility memakai `completed_at` dengan catch-up untuk pembayaran yang belum ter-assign | migrasi `2026_10_30_171113_add_completed_at_to_rentals_table.php`, `SettlementService` |
+| P0 — invoice-first | Invoice diterbitkan saat `approve` (`issued`), menjadi `paid` saat `markPaid`, dan `void` saat `cancel` | `SettlementService::approve()`/`markPaid()`/`cancel()` |
+| P1 — satu take rate | Alur pembayaran aktif mengisi `platform_fee = 0`; metode payout lama (`calculatePlatformFee`, `payoutEligibleSummary`, `markPaymentsAsPaidOut`) dihapus | `PaymentService`, `MidtransService` |
+| P1 — halaman vendor | `/vendor/pendapatan` untuk owner: daftar invoice, status, rincian, dan cetak invoice dengan scope `vendor_id` | `Vendor\RevenueController`, `Vendor\SettlementInvoiceController`, `resources/views/vendor/revenue` |
+| P1 — pelunasan | Pembayaran `remaining` didukung online (Midtrans) maupun tunai; komisi tunai diakrukan saat kasir mencatat pembayaran | `PaymentService::createOnlinePayment()`/`createCashRemainingPayment()` |
+| P1 — rekening bank vendor | Vendor owner dapat menyimpan nama bank, nomor rekening, dan nama pemilik; data disinkronkan ke settlement yang belum dibayar | `App\Livewire\Vendor\BankAccountSettings`, `resources/views/livewire/vendor/bank-account-settings.blade.php` |
+| P1 — monitoring transaksi | Super Admin dapat melihat rantai pembayaran → escrow → komisi → invoice → settlement dan membuka batch terkait | `App\Livewire\Admin\TransactionMonitor`, `MonetizationMonitorService` |
+| P1 — Midtrans Iris | Payout memakai kredensial Creator/Approver terpisah, idempoten, dan hanya menandai lunas saat status `completed`; bukti payout di route terproteksi | `SettlementPayoutService`, `MidtransIrisService`, `SettlementPayoutProofController` |
+| P1 — guest checkout | Guest yang memilih produk langsung diarahkan ke checkout tanpa keranjang; customer terautentikasi tetap memakai keranjang | `App\Livewire\Customer\ProductBooking`, `resources/views/livewire/customer/product-booking.blade.php` |
+
+### Verifikasi
+
+- Suite terarah (komisi/pembayaran, settlement/invoice/Iris, monitoring, halaman vendor, guest checkout): **112 test / 513 assertion**; **110 lulus, 2 gagal**. Dua kegagalan berada di `ProductBookingTest` dan sudah ada sebelum perubahan ini (`availableStock` mengharapkan 1 sedangkan kode menghitung 2 unit tersedia; `booking_cart.product_id` tidak lagi disimpan oleh `CartService`).
+- Full suite terakhir: **483 test, 454 lulus, 28 gagal, 1.959 assertion**. Kegagalan yang tersisa berada di luar lingkup perubahan ini: ekspektasi status rental setelah webhook (alur sekarang menunggu scan barcode kasir), checkout/package yang masih memakai kontrak lama, durasi rental, `ZipArchive` tidak tersedia di lingkungan Windows, serta test profil/auth.
+- Dua skenario lama di `PaymentScenarioTest` (batch payout marking dan platform fee 2%) dihapus karena menguji alur yang sudah digantikan; cakupan penggantinya ada di `SettlementTest` dan `CommissionCalculatorTest`.
+
+### Belum dikerjakan (P1/P2)
+
+- Adjustment refund setelah settlement `paid` dan penahanan payout saat dispute/chargeback.
+- Kebijakan `minimum_payout` (bayar langsung atau carry-forward).
+- `payments.gateway_settled_at` + rekonsiliasi Midtrans.
+- Notifikasi WhatsApp/email dan audit trail approve/paid/cancel.
+- Penyimpanan bukti transfer di private disk.
+- Pembersihan total kolom legacy `platform_fee`/`vendor_payout_id` dan tabel `vendor_payouts`.
 
 ---
 
