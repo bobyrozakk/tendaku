@@ -12,6 +12,7 @@ use App\Http\Controllers\Customer\CatalogController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PackageCheckoutController;
 use App\Http\Controllers\Customer\PaymentRetryController;
+use App\Http\Controllers\Customer\RentalStatusLookupController;
 use App\Http\Controllers\Customer\StoreController;
 use App\Http\Controllers\SettlementPayoutProofController;
 use App\Http\Controllers\Vendor\CampingPackageController;
@@ -56,6 +57,20 @@ Route::prefix('katalog/booking')->group(function () {
 Route::get('riwayat-sewa', [BookingController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('customer.booking.index');
+
+// Cek Status Sewa (publik, guest maupun member) memakai kode pada receipt.
+Route::prefix('status-sewa')
+    ->name('customer.rental-status.')
+    ->group(function () {
+        Route::get('/', [RentalStatusLookupController::class, 'index'])->name('index');
+        Route::post('/', [RentalStatusLookupController::class, 'lookup'])
+            ->middleware('throttle:10,1')
+            ->name('lookup');
+        Route::get('{code}', [RentalStatusLookupController::class, 'show'])
+            ->where('code', '[A-Za-z0-9_-]+')
+            ->middleware('throttle:30,1')
+            ->name('show');
+    });
 
 // Pengelolaan Alamat Lengkap Customer (Wajib Login & Email Terverifikasi)
 Route::middleware(['auth', 'verified'])
