@@ -228,6 +228,12 @@
                               {{ request()->routeIs('customer.catalog.index', 'customer.product.show', 'checkout.index') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
                         Katalog Alat
                     </a>
+                    <a href="{{ route('customer.rental-status.index') }}"
+                       title="Cek status penyewaan dengan kode dari receipt"
+                       class="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all duration-150
+                              {{ request()->routeIs('customer.rental-status.*') ? 'text-avocado-700 bg-avocado-50 shadow-sm' : 'text-darkbrown-700 hover:text-darkbrown-900 hover:bg-wheat-100' }}">
+                        Status Sewa
+                    </a>
                     @auth
                         <a href="{{ route('customer.packages.index') }}"
                            title="Paket camping siap sewa"
@@ -264,6 +270,14 @@
 
             <!-- Right Actions -->
             <div class="flex items-center gap-2 sm:gap-2.5">
+                <!-- Status Sewa (akses cepat di layar kecil) -->
+                <a href="{{ route('customer.rental-status.index') }}"
+                   class="md:hidden p-2 text-avocado-700 bg-avocado-50 hover:bg-avocado-100 rounded-xl transition-all duration-150 flex items-center justify-center"
+                   title="Cek Status Sewa"
+                   aria-label="Cek Status Sewa">
+                    <i data-lucide="package-search" class="w-5 h-5"></i>
+                </a>
+
                 <!-- Search -->
                 <button class="p-2 text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 rounded-xl transition-all duration-150 flex items-center justify-center" title="Cari alat camping">
                     <i data-lucide="search" class="w-5 h-5"></i>
