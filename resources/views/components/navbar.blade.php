@@ -287,9 +287,7 @@
                 @auth
                     @php
                         $activeCart = app(\App\Services\Booking\CartService::class)->get(auth()->user());
-                        $cartQty = is_array($activeCart) && ! empty($activeCart['master_item_id'])
-                            ? (int) ($activeCart['qty'] ?? $activeCart['quantity'] ?? 1)
-                            : 0;
+                        $cartQty = is_array($activeCart) ? (int) ($activeCart['qty'] ?? 0) : 0;
                     @endphp
                     <div
                         x-data="{ qty: {{ $cartQty }} }"

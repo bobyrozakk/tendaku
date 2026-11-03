@@ -35,12 +35,6 @@
             </div>
         @endif
 
-        @if (session('success'))
-            <div class="mb-5 p-4 rounded-xl bg-avocado-50 border border-avocado-300 text-darkbrown-900 text-xs sm:text-sm flex items-center gap-3 shadow-sm">
-                <i data-lucide="check-circle-2" class="w-5 h-5 text-avocado-700 shrink-0"></i>
-                <div class="font-medium">{{ session('success') }}</div>
-            </div>
-        @endif
 
         @if (empty($items))
             {{-- State Keranjang Kosong --}}
@@ -135,34 +129,44 @@
                                         </span>
                                     </div>
 
-                                    {{-- Stepper Kuantitas --}}
-                                    <div class="col-span-1 md:col-span-2 flex flex-col md:items-center">
+                                    {{-- Stepper Kuantitas (AJAX) --}}
+                                    <div class="col-span-1 md:col-span-2 flex flex-col md:items-center"
+                                         x-data="cartStepper({
+                                             itemId: {{ $item['master_item_id'] }},
+                                             initialQty: {{ $item['qty'] }},
+                                             maxQty: {{ $item['max_qty'] }},
+                                             pricePerDay: {{ $item['price_per_day'] }},
+                                             durationDays: {{ $item['duration_days'] }}
+                                         })"
+                                    >
                                         <span class="md:hidden text-xs text-darkbrown-500 block mb-1 font-medium">Jumlah Unit:</span>
-                                        <form method="POST" action="{{ route('customer.cart.update') }}" class="flex items-center border border-wheat-300 rounded-lg overflow-hidden bg-white w-fit shadow-sm">
-                                            @csrf
-                                            <input type="hidden" name="master_item_id" value="{{ $item['master_item_id'] }}">
-                                            <button type="submit" name="qty" value="{{ max(0, $item['qty'] - 1) }}"
-                                                    class="w-8 h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition"
+                                        <div class="flex items-center border border-wheat-300 rounded-lg overflow-hidden bg-white w-fit shadow-sm">
+                                            <button type="button"
+                                                    @click="decrement"
+                                                    :disabled="loading || qty <= 0"
+                                                    class="w-8 h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                     title="Kurangi kuantitas">
                                                 −
                                             </button>
-                                            <span class="w-10 text-center font-bold text-xs text-darkbrown-900">
-                                                {{ $item['qty'] }}
-                                            </span>
-                                            <button type="submit" name="qty" value="{{ $item['qty'] + 1 }}"
-                                                    class="w-8 h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition"
+                                            <span class="w-10 text-center font-bold text-xs text-darkbrown-900" x-text="qty"></span>
+                                            <button type="button"
+                                                    @click="increment"
+                                                    :disabled="loading || qty >= maxQty"
+                                                    class="w-8 h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                     title="Tambah kuantitas">
                                                 +
                                             </button>
-                                        </form>
+                                        </div>
                                     </div>
 
                                     {{-- Subtotal --}}
-                                    <div class="col-span-1 md:col-span-2 text-left md:text-right">
+                                    <div class="col-span-1 md:col-span-2 text-left md:text-right"
+                                         x-data="{ total: {{ $item['total_price'] }} }"
+                                         @item-total-updated-{{ $item['master_item_id'] }}.window="total = $event.detail.total"
+                                    >
                                         <span class="md:hidden text-xs text-darkbrown-500 block font-medium">Subtotal:</span>
-                                        <span class="text-base sm:text-lg font-extrabold text-goldenrod-700 font-heading">
-                                            Rp {{ number_format($item['total_price'], 0, ',', '.') }}
-                                        </span>
+                                        <span class="text-base sm:text-lg font-extrabold text-goldenrod-700 font-heading"
+                                              x-text="'Rp ' + total.toLocaleString('id-ID')"></span>
                                     </div>
 
                                     {{-- Aksi Hapus --}}
@@ -196,12 +200,14 @@
                         </form>
                     </div>
 
-                    <div class="flex items-center justify-between sm:justify-end gap-5">
+                    <div class="flex items-center justify-between sm:justify-end gap-5"
+                         x-data="{ cartTotal: {{ $cartSummary['total_price'] ?? 0 }}, cartQty: {{ $cartSummary['total_qty'] ?? count($items) }} }"
+                         @cart-total-updated.window="cartTotal = $event.detail.total; cartQty = $event.detail.count"
+                    >
                         <div class="text-right">
-                            <span class="text-xs text-darkbrown-500 block">Total Sewa ({{ $cartSummary['total_qty'] ?? count($items) }} Unit):</span>
-                            <span class="text-xl sm:text-2xl font-extrabold text-goldenrod-700 font-heading">
-                                Rp {{ number_format($cartSummary['total_price'] ?? 0, 0, ',', '.') }}
-                            </span>
+                            <span class="text-xs text-darkbrown-500 block">Total Sewa (<span x-text="cartQty"></span> Unit):</span>
+                            <span class="text-xl sm:text-2xl font-extrabold text-goldenrod-700 font-heading"
+                                  x-text="'Rp ' + cartTotal.toLocaleString('id-ID')"></span>
                         </div>
 
                         <form method="POST" action="{{ route('customer.cart.checkout') }}">
@@ -216,4 +222,74 @@
             </div>
         @endif
     </div>
+
+    @push('scripts')
+    <script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('cartStepper', ({ itemId, initialQty, maxQty, pricePerDay, durationDays }) => ({
+            qty: initialQty,
+            maxQty: maxQty,
+            loading: false,
+            updateUrl: '{{ route('customer.cart.update') }}',
+            csrfToken: document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+
+            async sendUpdate(newQty) {
+                if (this.loading) { return; }
+                this.loading = true;
+                try {
+                    const res = await fetch(this.updateUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ master_item_id: itemId, qty: newQty }),
+                    });
+
+                    if (!res.ok) { throw new Error('Server error'); }
+
+                    const data = await res.json();
+                    if (data.ok) {
+                        if (data.removed) {
+                            // Reload jika item dihapus (qty jadi 0)
+                            window.location.reload();
+                            return;
+                        }
+                        this.qty = data.qty;
+
+                        // Update subtotal item ini
+                        window.dispatchEvent(new CustomEvent('item-total-updated-' + itemId, {
+                            detail: { total: data.item_total }
+                        }));
+
+                        // Update total keranjang & badge navbar
+                        window.dispatchEvent(new CustomEvent('cart-total-updated', {
+                            detail: { total: data.cart_total, count: data.cart_count }
+                        }));
+                        window.dispatchEvent(new CustomEvent('cart-updated', {
+                            detail: { count: data.cart_count }
+                        }));
+                    }
+                } catch (e) {
+                    // Fallback: reload halaman jika AJAX gagal
+                    window.location.reload();
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            increment() {
+                if (this.qty < this.maxQty) {
+                    this.sendUpdate(this.qty + 1);
+                }
+            },
+
+            decrement() {
+                this.sendUpdate(this.qty - 1);
+            },
+        }));
+    });
+    </script>
+    @endpush
 </x-layouts.customer>
