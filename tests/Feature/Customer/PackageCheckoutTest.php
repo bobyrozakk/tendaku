@@ -33,6 +33,8 @@ class PackageCheckoutTest extends TestCase
     {
         parent::setUp();
 
+        config(['services.midtrans.server_key' => 'test-midtrans-server-key']);
+
         $this->vendor = Vendor::create([
             'name' => 'Tendaku Active Vendor',
             'slug' => 'tendaku-active-vendor',
@@ -170,7 +172,7 @@ class PackageCheckoutTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertSame('600000.00', $rental->subtotal);
-        $this->assertSame('618000.00', $rental->grand_total);
+        $this->assertSame('630000.00', $rental->grand_total);
         $this->assertSame(2, $rental->rental_days);
         $this->assertSame('pending', $rental->status);
         $this->assertSame($this->customer->id, $rental->user_id);
@@ -236,7 +238,7 @@ class PackageCheckoutTest extends TestCase
         $this->assertSame('delivery', $rental->pickup_method);
         $this->assertSame('600000.00', $rental->subtotal);
         $this->assertSame('25000.00', $rental->delivery_fee);
-        $this->assertSame('643000.00', $rental->grand_total);
+        $this->assertSame('655000.00', $rental->grand_total);
         $this->assertSame($this->customer->address, $rental->delivery_address);
     }
 
@@ -299,7 +301,7 @@ class PackageCheckoutTest extends TestCase
         $response->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame(1, $rental->rental_days);
         $this->assertSame('300000.00', $rental->subtotal);
-        $this->assertSame('309000.00', $rental->grand_total);
+        $this->assertSame('315000.00', $rental->grand_total);
         $this->assertSame('2026-10-28', $rental->pickup_date->toDateString());
         $this->assertSame('2026-10-29', $rental->return_date->toDateString());
         $this->assertStringStartsWith('05:00', (string) $rental->pickup_time);
@@ -325,7 +327,7 @@ class PackageCheckoutTest extends TestCase
         $response->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame(2, $rental->rental_days);
         $this->assertSame('600000.00', $rental->subtotal);
-        $this->assertSame('618000.00', $rental->grand_total);
+        $this->assertSame('630000.00', $rental->grand_total);
     }
 
     public function test_scenario_3_rental_72_hours_is_calculated_as_three_days(): void
@@ -347,7 +349,7 @@ class PackageCheckoutTest extends TestCase
         $response->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame(3, $rental->rental_days);
         $this->assertSame('900000.00', $rental->subtotal);
-        $this->assertSame('927000.00', $rental->grand_total);
+        $this->assertSame('945000.00', $rental->grand_total);
     }
 
     public function test_scenario_4_rental_crossing_month_calculated_from_actual_duration(): void
@@ -369,7 +371,7 @@ class PackageCheckoutTest extends TestCase
         $response->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame(2, $rental->rental_days);
         $this->assertSame('600000.00', $rental->subtotal);
-        $this->assertSame('618000.00', $rental->grand_total);
+        $this->assertSame('630000.00', $rental->grand_total);
         $this->assertSame('2026-10-31', $rental->pickup_date->toDateString());
         $this->assertSame('2026-11-02', $rental->return_date->toDateString());
     }
@@ -393,7 +395,7 @@ class PackageCheckoutTest extends TestCase
         $response->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame(2, $rental->rental_days);
         $this->assertSame('600000.00', $rental->subtotal);
-        $this->assertSame('618000.00', $rental->grand_total);
+        $this->assertSame('630000.00', $rental->grand_total);
         $this->assertSame('2026-12-31', $rental->pickup_date->toDateString());
         $this->assertSame('2027-01-02', $rental->return_date->toDateString());
     }
@@ -530,6 +532,6 @@ class PackageCheckoutTest extends TestCase
         $responseStore->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame(2, $rental->rental_days);
         $this->assertSame('600000.00', $rental->subtotal);
-        $this->assertSame('618000.00', $rental->grand_total);
+        $this->assertSame('630000.00', $rental->grand_total);
     }
 }
