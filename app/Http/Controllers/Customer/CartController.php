@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MasterItem;
 use App\Services\Booking\CartService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -95,8 +96,9 @@ class CartController extends Controller
 
     /**
      * Update jumlah unit satu alat di keranjang.
+     * Mendukung AJAX (mengembalikan JSON) dan form biasa (redirect).
      */
-    public function updateQty(Request $request): RedirectResponse
+    public function updateQty(Request $request): JsonResponse|RedirectResponse
     {
         $request->validate([
             'master_item_id' => 'required|integer',
@@ -105,10 +107,31 @@ class CartController extends Controller
 
         $masterItemId = (int) $request->input('master_item_id');
         $qty = (int) $request->input('qty');
+        $user = Auth::user();
 
-        $this->cartService->updateItemQty($masterItemId, $qty, Auth::user());
+        $this->cartService->updateItemQty($masterItemId, $qty, $user);
 
-        return redirect()->route('customer.cart.index')->with('success', 'Jumlah alat berhasil diperbarui.');
+        if ($request->expectsJson() || $request->ajax()) {
+            $cart = $this->cartService->get($user);
+            $totalQty = is_array($cart) ? (int) ($cart['qty'] ?? 0) : 0;
+
+            /** @var int $newItemTotal */
+            $newItemTotal = 0;
+            if (is_array($cart) && isset($cart['items'][$masterItemId])) {
+                $newItemTotal = (int) ($cart['items'][$masterItemId]['total_price'] ?? 0);
+            }
+
+            return response()->json([
+                'ok' => true,
+                'qty' => $qty,
+                'item_total' => $newItemTotal,
+                'cart_total' => is_array($cart) ? (int) ($cart['total_price'] ?? 0) : 0,
+                'cart_count' => $totalQty,
+                'removed' => $qty <= 0,
+            ]);
+        }
+
+        return redirect()->route('customer.cart.index');
     }
 
     /**
