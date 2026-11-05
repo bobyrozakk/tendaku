@@ -18,13 +18,14 @@ class MasterItem extends Model
 
     protected $fillable = [
         'vendor_id', 'category_id', 'name', 'slug', 'description',
-        'daily_rate', 'deposit_amount', 'late_fee_per_day', 'image_url', 'is_active',
+        'daily_rate', 'deposit_amount', 'late_fee_per_day', 'weight_kg', 'image_url', 'is_active',
     ];
 
     protected $casts = [
         'daily_rate' => 'decimal:2',
         'deposit_amount' => 'decimal:2',
         'late_fee_per_day' => 'decimal:2',
+        'weight_kg' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 

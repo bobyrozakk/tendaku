@@ -70,7 +70,7 @@
                         </h3>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <x-input-label for="daily_rate" value="Tarif Sewa Per Hari (Rp) *" class="font-bold text-xs text-darkbrown-800" />
                             <div class="relative mt-1.5">
@@ -87,6 +87,15 @@
                                 <x-text-input id="late_fee_per_day" name="late_fee_per_day" type="number" min="0" step="1000" class="w-full pl-10 text-xs font-bold text-red-600" :value="old('late_fee_per_day')" required placeholder="Contoh: 25000" />
                             </div>
                             <x-input-error :messages="$errors->get('late_fee_per_day')" class="mt-1" />
+                        </div>
+
+                        <div>
+                            <x-input-label for="weight_kg" value="Berat Produk (kg) *" class="font-bold text-xs text-darkbrown-800" />
+                            <div class="relative mt-1.5">
+                                <x-text-input id="weight_kg" name="weight_kg" type="number" min="0.01" step="0.01" class="w-full pr-10 text-xs font-bold text-darkbrown-800" :value="old('weight_kg')" required placeholder="Contoh: 2.5" />
+                                <span class="absolute inset-y-0 right-0 pr-3 flex items-center font-bold text-xs text-darkbrown-500 pointer-events-none">kg</span>
+                            </div>
+                            <x-input-error :messages="$errors->get('weight_kg')" class="mt-1" />
                         </div>
                     </div>
                 </div>

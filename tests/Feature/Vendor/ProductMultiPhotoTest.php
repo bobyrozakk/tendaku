@@ -58,6 +58,7 @@ class ProductMultiPhotoTest extends TestCase
             'category_id' => $this->category->id,
             'daily_rate' => 60000,
             'late_fee_per_day' => 20000,
+            'weight_kg' => 2.2,
             'description' => 'Tenda 2 orang ringan dan kokoh.',
             'images' => [$file],
             'is_active' => '1',
@@ -95,6 +96,7 @@ class ProductMultiPhotoTest extends TestCase
             'category_id' => $this->category->id,
             'daily_rate' => 150000,
             'late_fee_per_day' => 50000,
+            'weight_kg' => 6.5,
             'description' => 'Tenda glamping mewah 6 orang.',
             'images' => $files,
             'is_active' => '1',
@@ -138,6 +140,7 @@ class ProductMultiPhotoTest extends TestCase
             'category_id' => $this->category->id,
             'daily_rate' => 40000,
             'late_fee_per_day' => 15000,
+            'weight_kg' => 2.5,
             'images' => $files,
         ]);
 
@@ -160,6 +163,7 @@ class ProductMultiPhotoTest extends TestCase
             'category_id' => $this->category->id,
             'daily_rate' => 40000,
             'late_fee_per_day' => 15000,
+            'weight_kg' => 2.5,
             'images' => [$invalidFile],
         ]);
 
@@ -182,6 +186,7 @@ class ProductMultiPhotoTest extends TestCase
             'category_id' => $this->category->id,
             'daily_rate' => 40000,
             'late_fee_per_day' => 15000,
+            'weight_kg' => 2.5,
             'images' => [$oversizedFile],
         ]);
 
@@ -289,6 +294,7 @@ class ProductMultiPhotoTest extends TestCase
             'category_id' => $this->category->id,
             'daily_rate' => 25000,
             'late_fee_per_day' => 10000,
+            'weight_kg' => 1.2,
             'is_active' => '1',
             'deleted_images' => [$img1->id],
             'images' => [$newFile1, $newFile2],
