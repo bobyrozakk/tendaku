@@ -4,6 +4,7 @@ namespace App\Livewire\Kasir;
 
 use App\Models\ItemUnit;
 use App\Models\Rental;
+use App\Services\Payment\PaymentService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -105,7 +106,7 @@ class Pickup extends Component
                 'details:id,rental_id,master_item_id,item_unit_id',
                 'details.masterItem:id,name',
                 'details.itemUnit:id,unit_code,barcode',
-                'payments' => fn ($p) => $p->where('status', 'paid')->select(['id', 'rental_id', 'payment_method', 'status']),
+                'payments' => fn ($p) => $p->where('status', 'paid'),
             ])
             ->first();
 
@@ -123,11 +124,53 @@ class Pickup extends Component
 
     public function getIsPickupReadyProperty()
     {
+        $selected = $this->selectedOrder;
+        $isFullyPaid = $selected ? ($selected['is_fully_paid'] ?? false) : false;
+
         return $this->isPhotoVerified
             && $this->tenantKtpUploaded
             && $this->checkIdentity
             && $this->checkUnits
-            && $this->checkHandover;
+            && $this->checkHandover
+            && $isFullyPaid;
+    }
+
+    public function acceptCashPayment(PaymentService $paymentService): void
+    {
+        if (! $this->selectedPickupId) {
+            return;
+        }
+
+        $vendorId = Auth::user()?->vendor_id;
+
+        $rental = Rental::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'confirmed')
+            ->where(function ($q) {
+                if (is_numeric($this->selectedPickupId)) {
+                    $q->where('id', $this->selectedPickupId);
+                } else {
+                    $q->where('booking_code', $this->selectedPickupId);
+                }
+            })
+            ->first();
+
+        if (! $rental) {
+            return;
+        }
+
+        $remaining = $paymentService->calculateRemainingAmount($rental);
+        if ($remaining <= 0) {
+            return;
+        }
+
+        $paymentService->createCashRemainingPayment($rental, Auth::id());
+
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'title' => 'Pelunasan Berhasil',
+            'message' => 'Pelunasan tunai sebesar Rp '.number_format($remaining, 0, ',', '.').' berhasil dicatat.',
+        ]);
     }
 
     public function confirmPickup()
@@ -153,6 +196,17 @@ class Pickup extends Component
             ->first();
 
         if (! $rental) {
+            return;
+        }
+
+        $paymentService = app(PaymentService::class);
+        if ($paymentService->calculateRemainingAmount($rental) > 0) {
+            $this->dispatch('toast', [
+                'type' => 'danger',
+                'title' => 'Tagihan Belum Lunas',
+                'message' => 'Tagihan sewa belum lunas. Terima pelunasan tunai di kasir terlebih dahulu.',
+            ]);
+
             return;
         }
 
@@ -222,7 +276,7 @@ class Pickup extends Component
                 'details:id,rental_id,master_item_id,item_unit_id',
                 'details.masterItem:id,name',
                 'details.itemUnit:id,unit_code,barcode',
-                'payments' => fn ($p) => $p->where('status', 'paid')->select(['id', 'rental_id', 'payment_method', 'status']),
+                'payments' => fn ($p) => $p->where('status', 'paid'),
             ])
             ->orderBy('pickup_date', 'asc')
             ->orderBy('id', 'asc');
@@ -234,17 +288,32 @@ class Pickup extends Component
         $phone = $rental->customer?->phone ?? $rental->guest_phone ?? '-';
         $period = $rental->pickup_date->format('d M Y').' - '.$rental->return_date->format('d M Y').' ('.$rental->rental_days.' Hari)';
 
-        $paymentStatus = 'Lunas';
-        $paidPayment = $rental->payments->first();
+        $grandTotal = (int) $rental->grand_total;
+        $paidAmount = (int) $rental->payments
+            ->where('status', 'paid')
+            ->filter(fn ($p) => in_array($p->payment_type, ['full', 'dp', 'remaining'], true))
+            ->sum('amount');
+
+        $remainingAmount = max(0, $grandTotal - $paidAmount);
+        $isFullyPaid = $remainingAmount === 0;
+
+        $paidPayment = $rental->payments->where('status', 'paid')->first();
+        $methodName = 'Online';
         if ($paidPayment) {
-            $methodName = match ($paidPayment->payment_method) {
+            $rawMethod = $paidPayment->payment_method ?? $paidPayment->channel ?? 'online';
+            $methodName = match ($rawMethod) {
                 'midtrans_snap' => 'Midtrans/Online',
                 'qris' => 'QRIS',
                 'cash' => 'Tunai/Cash',
                 'transfer' => 'Transfer Bank',
-                default => strtoupper($paidPayment->payment_method),
+                default => strtoupper((string) $rawMethod),
             };
+        }
+
+        if ($isFullyPaid) {
             $paymentStatus = "Lunas ({$methodName})";
+        } else {
+            $paymentStatus = 'DP (Sisa Rp '.number_format($remainingAmount, 0, ',', '.').')';
         }
 
         $allocatedUnits = [];
@@ -264,6 +333,10 @@ class Pickup extends Component
             'customer_name' => $customerName,
             'phone' => $phone,
             'rental_period' => $period,
+            'grand_total' => $grandTotal,
+            'paid_amount' => $paidAmount,
+            'remaining_amount' => $remainingAmount,
+            'is_fully_paid' => $isFullyPaid,
             'payment_status' => $paymentStatus,
             'status' => 'Siap Pickup',
             'allocated_units' => $allocatedUnits,

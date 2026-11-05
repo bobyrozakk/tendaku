@@ -63,6 +63,21 @@
                             <span x-text="formError"></span>
                         </div>
 
+                        <!-- Ketentuan Pembatalan & Pelunasan Sewa -->
+                        <div class="rounded-xl border border-amber-300 bg-amber-50/80 p-3.5 text-xs text-amber-950 space-y-2">
+                            <div class="flex items-center gap-2 font-bold text-amber-900">
+                                <svg class="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                <span>Ketentuan Pembatalan &amp; Pelunasan:</span>
+                            </div>
+                            <ul class="list-disc list-inside space-y-1 text-amber-900/90 leading-relaxed">
+                                <li><strong>Pembayaran DP:</strong> Uang DP bersifat mengikat &amp; <span class="font-bold text-red-700">hangus 100%</span> jika pesanan dibatalkan oleh penyewa.</li>
+                                <li><strong>Pelunasan Sisa:</strong> Sisa tagihan sewa wajib dilunasi di toko kasir saat serah terima barang (pickup).</li>
+                                <li><strong>Bayar Lunas (100%):</strong> Pembatalan bebas biaya hanya berlaku maksimal <span class="font-bold">1 jam (60 menit)</span> setelah pembayaran. Melebihi 1 jam, pesanan tidak dapat dibatalkan &amp; dana hangus.</li>
+                            </ul>
+                        </div>
+
                         <div>
                             <button type="button" x-on:click="submitBooking()" :disabled="isProcessing || expired"
                                     :class="(isProcessing || expired) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"

@@ -85,7 +85,7 @@
                     <div class="flex items-center gap-4 shrink-0">
                         <div class="text-right hidden sm:block">
                             <p class="text-xs font-bold text-darkbrown-800">{{ count($order['allocated_units']) }} Unit Fisik</p>
-                            <p class="text-[10px] text-avocado-700 font-semibold">{{ $order['payment_status'] }}</p>
+                            <p class="text-[10px] font-semibold {{ ($order['is_fully_paid'] ?? true) ? 'text-avocado-700' : 'text-amber-700 font-bold' }}">{{ $order['payment_status'] }}</p>
                         </div>
                         <x-badge variant="sunglow" size="sm" :dot="true">
                             {{ $order['status'] }}
@@ -161,10 +161,17 @@
                                 <x-badge variant="sunglow" :dot="true">
                                     {{ $this->selectedOrder['status'] }}
                                 </x-badge>
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                    {{ $this->selectedOrder['payment_status'] }}
-                                </span>
+                                @if($this->selectedOrder['is_fully_paid'] ?? true)
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                        {{ $this->selectedOrder['payment_status'] }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
+                                        {{ $this->selectedOrder['payment_status'] }}
+                                    </span>
+                                @endif
                             </div>
                             <h2 class="text-xl font-extrabold text-darkbrown-900 tracking-tight">
                                 Serah Terima: {{ $this->selectedOrder['customer_name'] }}
@@ -213,6 +220,43 @@
                                 </span>
                             </div>
                         </div>
+
+                        {{-- Alert Pelunasan Tunai jika status sewa masih DP --}}
+                        @if(!($this->selectedOrder['is_fully_paid'] ?? true))
+                            <div class="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-tendaku-sm">
+                                <div class="flex items-start sm:items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                                        <i data-lucide="wallet" class="w-5 h-5 text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-extrabold text-sm text-darkbrown-900">Tagihan Belum Lunas (Sisa: Rp {{ number_format($this->selectedOrder['remaining_amount'] ?? 0, 0, ',', '.') }})</h4>
+                                        <p class="text-xs text-darkbrown-600 mt-0.5">
+                                            DP dibayar: <span class="font-bold text-darkbrown-800">Rp {{ number_format($this->selectedOrder['paid_amount'] ?? 0, 0, ',', '.') }}</span> dari total <span class="font-bold text-darkbrown-800">Rp {{ number_format($this->selectedOrder['grand_total'] ?? 0, 0, ',', '.') }}</span>. Terima sisa pembayaran tunai sebelum serah terima.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    wire:click="acceptCashPayment"
+                                    wire:confirm="Terima pelunasan tunai sebesar Rp {{ number_format($this->selectedOrder['remaining_amount'] ?? 0, 0, ',', '.') }} dari penyewa?"
+                                    wire:loading.attr="disabled"
+                                    wire:target="acceptCashPayment"
+                                    class="px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-avocado-600 hover:bg-avocado-700 active:scale-95 transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                    <span wire:loading.remove wire:target="acceptCashPayment" class="flex items-center gap-1.5">
+                                        <i data-lucide="hand-coins" class="w-4 h-4"></i>
+                                        Terima Pelunasan Tunai
+                                    </span>
+                                    <span wire:loading wire:target="acceptCashPayment" class="flex items-center gap-1.5">
+                                        <svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                        </svg>
+                                        Memproses...
+                                    </span>
+                                </button>
+                            </div>
+                        @endif
 
                         <!-- 1. Unit yang Akan Diserahkan -->
                         <div class="space-y-3">
@@ -434,7 +478,12 @@
                     <!-- Sticky Modal Footer (Melayang di Bawah Modal) -->
                     <div class="sticky bottom-0 bg-white/95 backdrop-blur-md px-6 py-4 border-t border-wheat-200 rounded-b-2xl shadow-lg z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
                         <div class="w-full sm:w-auto">
-                            @if(!$this->isPickupReady)
+                            @if(!($this->selectedOrder['is_fully_paid'] ?? true))
+                                <div class="text-[11px] font-semibold text-red-800 bg-red-50 px-3 py-1.5 rounded-xl border border-red-200 flex items-center gap-1.5">
+                                    <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 shrink-0"></i>
+                                    <span>Tagihan belum lunas. Terima pelunasan tunai sebelum serah terima.</span>
+                                </div>
+                            @elseif(!$this->isPickupReady)
                                 <div class="text-[11px] font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
                                     <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
                                     <span>Lengkapi foto, KTP, dan 3 checklist untuk konfirmasi.</span>
