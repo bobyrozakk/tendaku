@@ -1,7 +1,7 @@
 document.addEventListener("alpine:init", () => {
     Alpine.data("checkoutPage", (cfg) => ({
         ...cfg,
-        selectedChannel: "qris",
+        selectedChannel: "bca_va",
         paymentOption: "full",
         isProcessing: false,
         formError: "",

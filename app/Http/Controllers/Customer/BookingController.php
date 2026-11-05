@@ -212,6 +212,14 @@ class BookingController extends Controller
             return view('customer.booking.receipt', $receiptData);
         }
 
+        // Pembayaran sudah lunas/DP dan punya bukti: receipt memakai link payment proof.
+        $proofUrl = $receiptData['paidPayment']?->payment_proof_url;
+
+        if (is_string($proofUrl) && preg_match('#^https?://#i', $proofUrl)
+            && filter_var($proofUrl, FILTER_VALIDATE_URL)) {
+            return redirect()->away($proofUrl);
+        }
+
         return Pdf::loadView('customer.booking.receipt-pdf', $receiptData)
             ->setPaper('a5')
             ->download('receipt-'.$rental->booking_code.'.pdf');

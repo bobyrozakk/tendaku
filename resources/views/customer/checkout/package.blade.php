@@ -583,8 +583,11 @@
                     </label>
                     <select id="payment_channel" name="payment_channel"
                             class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                        <option value="bca_va" @selected(old('payment_channel') === 'bca_va')>BCA Virtual Account</option>
-                        <option value="bri_va" @selected(old('payment_channel') === 'bri_va')>BRI Virtual Account (BRIVA)</option>
+                        <option value="bca_va" @selected(old('payment_channel', 'bca_va') === 'bca_va')>BCA Virtual Account</option>
+                        <option value="bni_va" @selected(old('payment_channel') === 'bni_va')>BNI Virtual Account</option>
+                        <option value="bri_va" @selected(old('payment_channel') === 'bri_va')>BRI Virtual Account</option>
+                        <option value="permata_va" @selected(old('payment_channel') === 'permata_va')>Permata Virtual Account</option>
+                        <option value="cimb_va" @selected(old('payment_channel') === 'cimb_va')>CIMB Niaga Virtual Account</option>
                     </select>
                     <p class="text-[11px] text-darkbrown-400 mt-1">
                         Instruksi pembayaran tampil pada halaman status setelah pesanan dibuat.

@@ -18,14 +18,21 @@ return [
 
     // pembayaran
     'enabled_channels' => [
-        // 'other_qris',
-        'bank_transfer',
         'bca_va',
         'bni_va',
         'bri_va',
-        'echannel',
         'permata_va',
         'cimb_va',
-        'other_va',
     ],
+
+    // Bank VA yang didukung: kode Midtrans => label tampilan.
+    'va_banks' => [
+        'bca' => 'BCA',
+        'bni' => 'BNI',
+        'bri' => 'BRI',
+        'permata' => 'Permata',
+        'cimb' => 'CIMB Niaga',
+    ],
+
+    'default_bank' => 'bca',
 ];

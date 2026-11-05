@@ -72,6 +72,9 @@
     <table>
         <tr class="total"><td>TOTAL TRANSAKSI</td><td class="r">Rp {{ number_format($grandTotal, 0, ',', '.') }}</td></tr>
         <tr><td>Metode Pembayaran</td><td class="r">{{ $paymentMethod }}</td></tr>
+        @if (! empty($paidPayment?->paid_at))
+        <tr><td>Waktu Pembayaran</td><td class="r">{{ $paidPayment->paid_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB</td></tr>
+        @endif
         <tr><td>Sudah Dibayar</td><td class="r">Rp {{ number_format($amountPaid, 0, ',', '.') }}</td></tr>
         <tr><td>Sisa Tagihan</td><td class="r"><strong>Rp {{ number_format($balance, 0, ',', '.') }}</strong></td></tr>
     </table>

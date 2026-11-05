@@ -31,6 +31,20 @@
         <span>{{ $paymentMethod ?? 'Belum tersedia' }}</span>
     </div>
 
+    @if (! empty($paidPayment?->paid_at))
+        <div class="receipt-row">
+            <span>Waktu Pembayaran</span>
+            <span>{{ $paidPayment->paid_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB</span>
+        </div>
+    @endif
+
+    @if (! empty($paidPayment?->payment_proof_url))
+        <div class="receipt-row">
+            <span>Bukti Pembayaran</span>
+            <a href="{{ $paidPayment->payment_proof_url }}" target="_blank" rel="noopener noreferrer">Lihat bukti</a>
+        </div>
+    @endif
+
     <div class="receipt-row">
         <span>Sudah Dibayar</span>
         <span>Rp {{ number_format($amountPaid ?? 0, 0, ',', '.') }}</span>

@@ -337,11 +337,20 @@ class CheckoutController extends Controller
      */
     protected function paymentChannel(?string $channel): string
     {
-        return in_array(
-            $channel,
-            ['qris', 'bca_va', 'mandiri_va', 'bri_va'],
-            true
-        ) ? $channel : 'qris';
+        return in_array($channel, $this->vaChannelIds(), true)
+            ? $channel
+            : 'bca_va';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function vaChannelIds(): array
+    {
+        return array_map(
+            fn (string $bank) => $bank.'_va',
+            array_keys(config('payment.va_banks', []))
+        );
     }
 
     /**
@@ -351,32 +360,15 @@ class CheckoutController extends Controller
      */
     protected function paymentMethods(): array
     {
-        return [
-            [
-                'id' => 'qris',
-                'name' => 'QRIS Realtime',
-                'desc' => 'GoPay, OVO, Dana, ShopeePay, BCA Mobile, & Livin Mandiri',
-                'badge' => 'Verifikasi Otomatis',
-            ],
-            [
-                'id' => 'bca_va',
-                'name' => 'BCA Virtual Account',
-                'desc' => 'Konfirmasi pembayaran instan 24 jam',
+        return collect(config('payment.va_banks', []))
+            ->map(fn (string $label, string $bank) => [
+                'id' => $bank.'_va',
+                'name' => $label.' Virtual Account',
+                'desc' => 'Konfirmasi pembayaran otomatis 24 jam',
                 'badge' => 'Otomatis',
-            ],
-            [
-                'id' => 'mandiri_va',
-                'name' => 'Mandiri Bill Payment',
-                'desc' => 'Transfer via Livin by Mandiri / ATM',
-                'badge' => 'Otomatis',
-            ],
-            [
-                'id' => 'bri_va',
-                'name' => 'BRI Virtual Account (BRIVA)',
-                'desc' => 'Transfer via BRImo / ATM',
-                'badge' => 'Otomatis',
-            ],
-        ];
+            ])
+            ->values()
+            ->all();
     }
 
     /**
