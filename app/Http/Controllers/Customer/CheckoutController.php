@@ -2,7 +2,17 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Customer\StoreCheckoutRequest;
+use App\Models\MasterItem;
+use App\Models\Rental;
+use App\Models\User;
+use App\Services\Booking\CartService;
+use App\Services\Booking\CheckoutService;
+use App\Services\Booking\CheckoutSummaryBuilder;
+use App\Services\Booking\RentalAccessGuard;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,170 +20,409 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    /**
-     * Halaman checkout booking untuk Customer (Role 3).
-     */
-    public function index(Request $request): View
-    {
-        $isLoggedIn = Auth::check();
-        $user = Auth::user();
+    private const CART_SESSION_KEY = 'booking_cart';
 
-        // Aturan Bisnis TENDAKU:
-        // - User tanpa login (Guest) HANYA BISA ambil barang di tempat (self_pickup).
-        // - User yang login/register BISA memilih ambil di tempat (self_pickup) atau diantar (delivery).
-        $requestedMethod = $request->query('pickup_method');
-        if (! $isLoggedIn) {
-            $pickupMethod = 'self_pickup';
-        } else {
-            $pickupMethod = in_array($requestedMethod, ['self_pickup', 'delivery']) ? $requestedMethod : 'delivery';
+    public function __construct(
+        private readonly CheckoutSummaryBuilder $summary,
+        private readonly RentalAccessGuard $accessGuard,
+    ) {}
+
+    /**
+     * Halaman checkout.
+     * Data keranjang dibaca dari session('booking_cart').
+     */
+    public function index(Request $request): View|RedirectResponse
+    {
+        // Mendukung parameter langsung produk/alat jika diarahkan langsung dari profil toko atau katalog
+        if ($request->filled('item_id') || $request->filled('product_id')) {
+            $itemId = (int) ($request->query('item_id') ?: $request->query('product_id'));
+            $masterItem = MasterItem::with('vendor', 'category')->find($itemId);
+            if ($masterItem) {
+                app(CartService::class)->addItem([
+                    'master_item_id' => $masterItem->id,
+                    'product_id' => $masterItem->id,
+                    'product_name' => $masterItem->name,
+                    'product_image' => $masterItem->image_url,
+                    'daily_rate' => (int) $masterItem->daily_rate,
+                    'quantity' => max(1, (int) $request->query('qty', 1)),
+                    'qty' => max(1, (int) $request->query('qty', 1)),
+                    'pickup_date' => $request->query('pickup_date') ?: now()->addDay()->toDateString(),
+                    'return_date' => $request->query('return_date') ?: now()->addDays(2)->toDateString(),
+                    'vendor_id' => $masterItem->vendor_id,
+                    'vendor_name' => $masterItem->vendor?->name ?? 'Vendor',
+                    'category_name' => $masterItem->category?->name,
+                ], Auth::user());
+            }
         }
 
-        $subtotal = 310000;
-        $deposit = 100000;
-        $deliveryFee = $pickupMethod === 'delivery' ? 25000 : 0;
-        $discount = 0;
-        $grandTotal = $subtotal + $deposit + $deliveryFee - $discount;
+        $cart = $this->cart();
 
-        $booking = [
-            'booking_code' => 'TDK-2026-B8921',
-            'status' => 'pending',
-            'status_label' => 'Menunggu Pembayaran',
-            'created_at' => '02 Oktober 2026, 19:30 WIB',
-            'expires_at' => '03 Oktober 2026, 07:30 WIB',
-            'is_guest' => ! $isLoggedIn,
-            'vendor' => [
-                'name' => 'Mahameru Outdoor Equipment & Rental',
-                'badge' => 'Official Partner',
-                'city' => 'Kota Batu, Jawa Timur',
-                'address' => 'Jl. Oro-Oro Ombo No. 42, Temas, Kec. Batu, Kota Batu',
-                'phone' => '0812-9876-5432',
-                'rating' => '4.9',
-                'total_reviews' => 148,
-                'pickup_location' => 'Store Offline Mahameru Outdoor (Kav. B4)',
-                'operational_hours' => 'Senin - Minggu, 07:00 - 21:00 WIB',
-            ],
-            'customer' => [
-                'name' => $isLoggedIn ? ($user->name ?? 'Pelanggan Terdaftar') : 'Tamu (Guest)',
-                'phone' => $isLoggedIn ? ($user->phone ?? '0857-8901-2345') : '',
-                'email' => $isLoggedIn ? ($user->email ?? 'budi.santoso@example.com') : '',
-            ],
-            'pickup_date' => 'Sabtu, 03 Oktober 2026',
-            'pickup_time' => '09:00 WIB',
-            'return_date' => 'Senin, 05 Oktober 2026',
-            'return_time' => '17:00 WIB',
-            'rental_days' => 2,
-            'pickup_method' => $pickupMethod,
-            'delivery_address' => 'Jl. Candi Mendut No. 18, Kel. Mojolangu, Kec. Lowokwaru, Kota Malang, Jawa Timur 65141',
-            'delivery_notes' => 'Hubungi via WhatsApp 30 menit sebelum pengantaran ke lokasi.',
-            'items' => [
-                [
-                    'id' => 1,
-                    'name' => 'Tenda Dome Arpenaz 4.1 Fresh & Black',
-                    'category' => 'Tenda Camping',
-                    'variant' => 'Kapasitas 4 Orang',
-                    'specs' => 'Double layer waterproof 2000mm, frame alloy kokoh & ventilasi sejuk',
-                    'price_per_day' => 75000,
-                    'deposit_per_unit' => 50000,
-                    'qty' => 1,
-                    'subtotal' => 150000,
-                    'icon' => 'tent',
-                ],
-                [
-                    'id' => 2,
-                    'name' => 'Sleeping Bag Bulu Angsa Ultralight 800FP',
-                    'category' => 'Perlengkapan Tidur',
-                    'variant' => 'Comfort Limit -5°C',
-                    'specs' => 'Bulu angsa alami ultra-hangat & compression sack kedap air',
-                    'price_per_day' => 25000,
-                    'deposit_per_unit' => 15000,
-                    'qty' => 2,
-                    'subtotal' => 100000,
-                    'icon' => 'sleeping_bag',
-                ],
-                [
-                    'id' => 3,
-                    'name' => 'Kompor Camping Portable Windproof + Adapter',
-                    'category' => 'Peralatan Masak',
-                    'variant' => 'Model Bunga Anti Angin',
-                    'specs' => 'Pemantik piezo otomatis & adapter tabung gas hi-cook',
-                    'price_per_day' => 20000,
-                    'deposit_per_unit' => 10000,
-                    'qty' => 1,
-                    'subtotal' => 40000,
-                    'icon' => 'stove',
-                ],
-                [
-                    'id' => 4,
-                    'name' => 'Lampu Tenda LED Camping Rechargeable 3000mAh',
-                    'category' => 'Penerangan & Kelistrikan',
-                    'variant' => 'Warm White 300 Lumens',
-                    'specs' => 'Baterai tahan hingga 18 jam & hook gantung fleksibel anti air IPX4',
-                    'price_per_day' => 10000,
-                    'deposit_per_unit' => 10000,
-                    'qty' => 1,
-                    'subtotal' => 20000,
-                    'icon' => 'lamp',
-                ],
-            ],
-            'subtotal' => $subtotal,
-            'deposit' => $deposit,
-            'delivery_fee' => $deliveryFee,
-            'discount' => $discount,
-            'grand_total' => $grandTotal,
-            'payment_methods' => [
-                [
-                    'id' => 'qris',
-                    'name' => 'QRIS Realtime',
-                    'desc' => 'GoPay, OVO, Dana, ShopeePay, BCA Mobile, & Livin Mandiri',
-                    'badge' => 'Verifikasi Otomatis',
-                ],
-                [
-                    'id' => 'bca_va',
-                    'name' => 'BCA Virtual Account',
-                    'desc' => 'Konfirmasi pembayaran instan 24 jam',
-                    'badge' => 'Otomatis',
-                ],
-                [
-                    'id' => 'mandiri_va',
-                    'name' => 'Mandiri Virtual Account',
-                    'desc' => 'Transfer via Livin by Mandiri / ATM',
-                    'badge' => 'Otomatis',
-                ],
-                [
-                    'id' => 'bri_va',
-                    'name' => 'BRI Virtual Account (BRIVA)',
-                    'desc' => 'Transfer via BRImo / ATM BRI',
-                    'badge' => 'Otomatis',
-                ],
-            ],
-        ];
+        if ($cart === null) {
+            return redirect()
+                ->route('customer.catalog.index')
+                ->with(
+                    'warning',
+                    'Silakan pilih alat camping yang ingin disewa terlebih dahulu.'
+                );
+        }
 
-        return view('customer.checkout.index', compact('booking', 'isLoggedIn'));
+        $booking = $this->summary->build(
+            $cart,
+            Auth::user(),
+            $request->query('pickup_method')
+        );
+
+        $isLoggedIn = Auth::check();
+        $user = Auth::user();
+        $addresses = $user ? $user->addresses()->orderByDesc('is_default')->latest('id')->get() : collect();
+        $defaultAddress = $user ? $user->defaultAddress() : null;
+
+        return view(
+            'customer.booking.create',
+            compact('booking', 'isLoggedIn', 'addresses', 'defaultAddress')
+        );
     }
 
     /**
-     * Proses pemesanan/checkout rental & simulasi pembayaran Midtrans.
+     * Membuat rental dan pembayaran Midtrans Snap (via CheckoutService).
+     * Nilai transaksi harus dihitung dan divalidasi di server.
      */
-    public function store(Request $request): RedirectResponse
-    {
-        $pickupMethod = $request->input('pickup_method', 'self_pickup');
-        $paymentChannel = $request->input('payment_channel', 'qris');
+    public function store(
+        StoreCheckoutRequest $request,
+        CheckoutService $checkout,
+    ): JsonResponse|RedirectResponse {
+        $cart = $this->cart();
 
-        // Validasi aturan: Opsi delivery hanya diizinkan bagi user yang telah login
-        if ($pickupMethod === 'delivery' && ! Auth::check()) {
-            return redirect()->route('login')->with('warning', 'Layanan pengantaran (delivery) mengharuskan Anda memiliki akun terverifikasi. Silakan masuk atau daftar akun terlebih dahulu.');
+        if ($cart === null) {
+            return $this->failure(
+                $request,
+                'Sesi booking tidak ditemukan. Mulai ulang dari halaman produk.',
+                422,
+                'customer.catalog.index',
+            );
         }
 
-        $methodLabel = $pickupMethod === 'delivery' ? 'Diantar ke Lokasi (Kurir Vendor)' : 'Ambil di Tempat (Self-Pickup)';
+        $pickupMethod = $request->validated('pickup_method');
 
-        $channelNames = [
-            'qris' => 'QRIS Realtime',
-            'bca_va' => 'BCA Virtual Account',
-            'mandiri_va' => 'Mandiri Bill Payment',
-            'bri_va' => 'BRI Virtual Account (BRIVA)',
+        // Pertahankan aturan dari versi anggota tim:
+        // delivery hanya diperbolehkan bagi pengguna yang login.
+        if (
+            $pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY
+            && ! Auth::check()
+        ) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Layanan delivery mengharuskan Anda masuk atau mendaftar akun terlebih dahulu.',
+                    'redirect_url' => route('login'),
+                ], 403);
+            }
+
+            return redirect()
+                ->route('login')
+                ->with(
+                    'warning',
+                    'Layanan pengantaran (delivery) mengharuskan Anda memiliki akun terverifikasi. Silakan masuk atau daftar akun terlebih dahulu.'
+                );
+        }
+
+        if ($request->user() === null) {
+            $request->validate([
+                'guest_name' => ['required', 'string', 'max:100'],
+                'guest_phone' => ['required', 'string', 'max:20'],
+                'guest_id_number' => ['required', 'string', 'max:30'],
+            ], [
+                'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
+                'guest_phone.required' => 'Nomor telepon wajib diisi untuk pemesanan tanpa akun.',
+                'guest_id_number.required' => 'Nomor KTP wajib diisi untuk pemesanan tanpa akun.',
+            ]);
+        }
+
+        try {
+            $firstCartItem = $cart['items'][0] ?? $cart;
+
+            $masterItemId = (int) (
+                $firstCartItem['master_item_id'] ?? 0
+            );
+
+            $masterItem = MasterItem::with('vendor')
+                ->findOrFail($masterItemId);
+
+            $bookingData = $this->bookingData(
+                $request,
+                $cart,
+                $masterItem
+            );
+
+            // Rental + payment + token Snap lewat satu pintu.
+            // Jika Midtrans gagal, rental dibatalkan dan stok langsung bebas.
+            $result = $checkout->checkout(
+                $bookingData,
+                $request->validated('payment_option') ?: 'full',
+                $this->paymentChannel($request->validated('payment_channel')),
+                true,
+                $request->input('booking_code'),
+            );
+
+            $rental = $result['rental'];
+            $payment = $result['payment'];
+            $snapToken = $result['snap_token'];
+
+            // Pertahankan akses status booking untuk guest.
+            if ($request->user() === null) {
+                $this->accessGuard->grantGuest($rental);
+            }
+
+            // Keranjang dibersihkan setelah checkout berhasil diproses
+            app(CartService::class)->clear(Auth::user());
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'snap_token' => $snapToken,
+                    'booking_code' => $rental->booking_code,
+                    'redirect_url' => $this->statusUrl($request, $rental),
+                    'payment_type' => $payment->payment_type,
+                    'payment_amount' => (int) $payment->amount,
+                ]);
+            }
+
+            $methodLabel = $pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY
+                ? 'Diantar ke Lokasi (Kurir Vendor)'
+                : 'Ambil di Tempat (Self-Pickup)';
+
+            $isGuest = $request->user() === null;
+            $successMessage = $isGuest
+                ? "Booking #{$rental->booking_code} ({$methodLabel}) berhasil dibuat. Tunjukkan kode booking saat pengambilan; pembayaran diselesaikan di outlet vendor."
+                : "Booking #{$rental->booking_code} ({$methodLabel}) berhasil dibuat. Selesaikan pembayaran sebelum batas waktu.";
+
+            return redirect()->route('booking.status', $rental->booking_code)
+                ->with('success', $successMessage);
+        } catch (InsufficientStockException $e) {
+            return $this->failure(
+                $request,
+                'Stok tidak tersedia: '.$e->getMessage()
+            );
+        } catch (\InvalidArgumentException $e) {
+            return $this->failure($request, $e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->failure(
+                $request,
+                'Terjadi kesalahan saat memproses pembayaran. Silakan coba lagi.',
+                500,
+            );
+        }
+    }
+
+    /**
+     * Menyusun data yang dibutuhkan RentalService.
+     */
+    private function bookingData(
+        StoreCheckoutRequest $request,
+        array $cart,
+        MasterItem $masterItem,
+    ): array {
+        $user = $request->user();
+        $pickupMethod = $request->validated('pickup_method');
+        $pickupDate = $request->validated('pickup_date') ?: ($cart['pickup_date'] ?? null);
+        $returnDate = $request->validated('return_date') ?: ($cart['return_date'] ?? null);
+
+        // jam balik = jam ambil
+        $pickupTime = $request->validated('pickup_time')
+            ?: ($masterItem->vendor->pickup_time ?: config('booking.default_pickup_time'));
+
+        $rawItems = ! empty($cart['items']) && is_array($cart['items'])
+            ? array_values($cart['items'])
+            : [
+                [
+                    'master_item_id' => $masterItem->id,
+                    'qty' => $this->summary->quantityOf($cart),
+                ],
+            ];
+
+        $requestedQty = [];
+        foreach ((array) $request->input('items', []) as $requested) {
+            $requestedId = (int) ($requested['id'] ?? 0);
+
+            if ($requestedId > 0 && isset($requested['qty'])) {
+                $requestedQty[$requestedId] = max(1, (int) $requested['qty']);
+            }
+        }
+
+        $itemsList = array_map(function ($it) use ($requestedQty) {
+            $itemId = (int) ($it['master_item_id'] ?? 0);
+
+            $qty = $requestedQty[$itemId]
+                ?? max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1));
+
+            return [
+                'master_item_id' => $itemId,
+                'quantity' => $qty,
+                'qty' => $qty,
+            ];
+        }, $rawItems);
+
+        $data = [
+            'vendor_id' => $masterItem->vendor_id,
+            'pickup_date' => $pickupDate,
+            'pickup_time' => $pickupTime,
+            'return_date' => $returnDate,
+            'return_time' => $pickupTime,
+            'expires_in_minutes' => (int) config('booking.payment_expiry_minutes'),
+            'pickup_method' => $pickupMethod,
+            'delivery_fee' => $this->summary->deliveryFee(
+                $masterItem->vendor,
+                $pickupMethod,
+                $user !== null
+            ),
+            'notes' => $request->validated('notes'),
+            'items' => $itemsList,
         ];
-        $channelLabel = $channelNames[$paymentChannel] ?? 'Midtrans Sandbox';
 
-        return redirect()->route('booking.status', 'TDK-2026-B8921')->with('success', "Pembayaran booking #TDK-2026-B8921 ({$methodLabel}) via simulasi {$channelLabel} berhasil diverifikasi! Vendor Mahameru Outdoor telah menerima konfirmasi.");
+        if ($user === null) {
+            return $data + [
+                'guest_name' => $request->validated('guest_name'),
+                'guest_phone' => $request->validated('guest_phone'),
+                'guest_id_number' => $request->validated('guest_id_number') ?? '',
+            ];
+        }
+
+        $data['user_id'] = $user->id;
+
+        // Lengkapi profil user jika ada data yang dikirim dan belum tersimpan di akun
+        $userUpdates = [];
+        if ($request->filled('name') && blank($user->name)) {
+            $userUpdates['name'] = $request->validated('name');
+        }
+        if ($request->filled('phone') && blank($user->phone)) {
+            $userUpdates['phone'] = $request->validated('phone');
+        }
+        if ($request->filled('nik') && blank($user->nik)) {
+            $userUpdates['nik'] = $request->validated('nik');
+        }
+        if (! empty($userUpdates)) {
+            $user->update($userUpdates);
+        }
+
+        if (
+            $pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY
+        ) {
+            $selectedAddress = null;
+            $customerAddressId = $request->validated('customer_address_id');
+
+            if ($customerAddressId) {
+                // Pastikan alamat milik customer yang login (tidak dapat dimanipulasi)
+                $selectedAddress = $user->addresses()->where('id', $customerAddressId)->first();
+            }
+
+            if (! $selectedAddress) {
+                $selectedAddress = $user->defaultAddress();
+            }
+
+            if ($selectedAddress) {
+                $data['customer_address_id'] = $selectedAddress->id;
+                $data['delivery_address'] = $selectedAddress->toDeliverySnapshot();
+            } else {
+                $data['delivery_address'] =
+                    $request->validated('delivery_address')
+                    ?: ($user->address ?? '');
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Kanal pembayaran yang didukung halaman checkout.
+     */
+    protected function paymentChannel(?string $channel): string
+    {
+        return in_array($channel, $this->vaChannelIds(), true)
+            ? $channel
+            : 'bca_va';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function vaChannelIds(): array
+    {
+        return array_map(
+            fn (string $bank) => $bank.'_va',
+            array_keys(config('payment.va_banks', []))
+        );
+    }
+
+    /**
+     * Metode pembayaran untuk ditampilkan di halaman checkout.
+     *
+     * @return array<int, array<string, string>>
+     */
+    protected function paymentMethods(): array
+    {
+        return collect(config('payment.va_banks', []))
+            ->map(fn (string $label, string $bank) => [
+                'id' => $bank.'_va',
+                'name' => $label.' Virtual Account',
+                'desc' => 'Konfirmasi pembayaran otomatis 24 jam',
+                'badge' => 'Otomatis',
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * URL halaman status booking.
+     * Guest membawa nomor telepon sebagai bukti akses sesuai
+     * mekanisme status yang sudah digunakan aplikasi.
+     */
+    private function statusUrl(Request $request, Rental $rental): string
+    {
+        $url = route(
+            'booking.status',
+            $rental->booking_code,
+            false
+        );
+
+        if (
+            $request->user() === null
+            && ! empty($rental->guest_phone)
+        ) {
+            $url .= '?phone='.urlencode($rental->guest_phone);
+        }
+
+        return $url;
+    }
+
+    /**
+     * Membaca keranjang booking dari CartService (session atau database user).
+     */
+    private function cart(): ?array
+    {
+        return app(CartService::class)->get(Auth::user());
+    }
+
+    /**
+     * JSON untuk AJAX, redirect untuk form biasa.
+     */
+    private function failure(
+        Request $request,
+        string $message,
+        int $status = 422,
+        ?string $redirectRoute = null,
+    ): JsonResponse|RedirectResponse {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+            ], $status);
+        }
+
+        return $redirectRoute
+            ? redirect()
+                ->route($redirectRoute)
+                ->with('warning', $message)
+            : redirect()
+                ->back()
+                ->with('error', $message);
     }
 }

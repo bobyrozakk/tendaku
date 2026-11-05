@@ -1,88 +1,70 @@
 <?php
 
-use App\Models\User;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
+use App\Livewire\Forms\RegisterForm;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.guest')] class extends Component
 {
-    public string $name = '';
-    public string $email = '';
-    public string $password = '';
-    public string $password_confirmation = '';
+    public RegisterForm $form;
+
+    public function setAccountType(string $type): void
+    {
+        $this->form->account_type = in_array($type, ['customer', 'vendor'], true) ? $type : 'customer';
+        $this->resetErrorBag();
+    }
 
     /**
      * Handle an incoming registration request.
      */
     public function register(): void
     {
-        $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
-        ]);
+        $this->form->store();
 
-        $validated['password'] = Hash::make($validated['password']);
-
-        event(new Registered($user = User::create($validated)));
-
-        Auth::login($user);
-
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
+        $this->redirect(route('verification.notice', absolute: false), navigate: true);
     }
 }; ?>
 
 <div>
-    <form wire:submit="register">
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input wire:model="name" id="name" class="block mt-1 w-full" type="text" name="name" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
-        </div>
+    <x-slot:heading>
+        {{ $form->account_type === 'vendor' ? 'Daftar Mitra Vendor' : 'Buat akun Tendaku' }}
+    </x-slot:heading>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+    <x-slot:subheading>
+        {{ $form->account_type === 'vendor'
+            ? 'Buka rental peralatan camping Anda dan jangkau ribuan penyewa.'
+            : 'Daftar sekali, lalu sewa tenda dan perlengkapan lain kapan saja.' }}
+    </x-slot:subheading>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+    <!-- Switch Tipe Akun (Customer vs Vendor Owner) -->
+    <div class="mb-6 flex rounded-full bg-tendaku-wheat/60 p-1 border border-tendaku-brown/15 shadow-inner">
+        <button
+            type="button"
+            wire:click="setAccountType('customer')"
+            class="flex-1 rounded-full py-2.5 text-xs sm:text-sm font-bold transition-all {{ $form->account_type === 'customer' ? 'bg-tendaku-avocado text-white shadow-sm' : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}"
+        >
+            Penyewa (Customer)
+        </button>
 
-            <x-text-input wire:model="password" id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
+        <button
+            type="button"
+            wire:click="setAccountType('vendor')"
+            class="flex-1 rounded-full py-2.5 text-xs sm:text-sm font-bold transition-all {{ $form->account_type === 'vendor' ? 'bg-tendaku-avocado text-white shadow-sm' : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}"
+        >
+            Mitra Rental (Vendor)
+        </button>
+    </div>
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+    @include('livewire.pages.auth.partials.register-form')
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
+    @if ($form->account_type === 'customer')
+        @include('livewire.pages.auth.partials.google-auth-button', [
+            'label' => 'Daftar dengan Google',
+        ])
+    @endif
 
-            <x-text-input wire:model="password_confirmation" id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}" wire:navigate>
-                {{ __('Already registered?') }}
-            </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
-        </div>
-    </form>
+    <p class="mt-8 text-sm text-tendaku-brown/70">
+        Sudah punya akun?
+        <a href="{{ route('login') }}" wire:navigate class="font-semibold text-tendaku-moss underline-offset-4 hover:underline">Masuk</a>
+    </p>
 </div>

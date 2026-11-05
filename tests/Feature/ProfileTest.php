@@ -46,6 +46,7 @@ class ProfileTest extends TestCase
         $this->assertNull($user->email_verified_at);
     }
 
+    // TODO NEXT, BAGIAN INI
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void
     {
         $user = User::factory()->create();
@@ -79,7 +80,7 @@ class ProfileTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertGuest();
-        $this->assertNull($user->fresh());
+        $this->assertSoftDeleted($user);
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void

@@ -1,0 +1,603 @@
+<?php
+
+namespace App\Services\Finance;
+
+use App\Enums\PaymentType;
+use App\Models\Payment;
+use App\Models\PlatformCommission;
+use App\Models\Settlement;
+use App\Models\SettlementItem;
+use App\Models\User;
+use App\Models\Vendor;
+use App\Models\VendorInvoice;
+use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+class SettlementService
+{
+    public function __construct(
+        private readonly EscrowService $escrowService,
+    ) {}
+
+    /**
+     * Buat draft batch settlement mingguan untuk seluruh vendor yang punya
+     * pembayaran/komisi belum masuk batch pada periode tersebut.
+     *
+     * Periode mengikuti tanggal rental selesai (`completed_at`), bukan
+     * `paid_at`. Pembayaran yang belum sempat masuk batch sebelumnya ikut
+     * diambil sebagai catch-up selama rental selesai pada/sebelum periode ini.
+     *
+     * Idempoten: kombinasi vendor + periode unik, dan hanya pembayaran yang
+     * belum punya settlement_id yang diambil.
+     *
+     * @return Collection<int, Settlement>
+     */
+    public function buildWeeklyDraft(Carbon $weekStart): Collection
+    {
+        $periodStart = $weekStart->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();
+        $periodEnd = $periodStart->copy()->endOfWeek(Carbon::SUNDAY)->endOfDay();
+
+        $payments = Payment::withoutGlobalScope('vendor')
+            ->where('status', 'paid')
+            ->whereNull('settlement_id')
+            ->whereIn('payment_type', PaymentType::values())
+            ->whereHas('rental', fn ($query) => $query
+                ->where('status', 'completed')
+                ->where(function ($completed) use ($periodEnd): void {
+                    // completed_at null = data lama; tetap ikut catch-up.
+                    $completed->whereNull('completed_at')
+                        ->orWhere('completed_at', '<=', $periodEnd);
+                }))
+            ->where(function ($query): void {
+                $query->where(function ($cash): void {
+                    $cash->where('payment_method', 'cash')
+                        ->where('payment_type', '!=', 'fine');
+                })->orWhere('escrow_status', 'held');
+            })
+            ->orderBy('id')
+            ->get();
+
+        if ($payments->isEmpty()) {
+            return collect();
+        }
+
+        $commissions = PlatformCommission::withoutGlobalScope('vendor')
+            ->whereIn('payment_id', $payments->pluck('id'))
+            ->where('status', 'accrued')
+            ->get()
+            ->keyBy('payment_id');
+
+        $created = collect();
+
+        foreach ($payments->groupBy('vendor_id') as $vendorId => $vendorPayments) {
+            $settlement = $this->createDraftForVendor(
+                (int) $vendorId,
+                $periodStart,
+                $periodEnd,
+                $vendorPayments,
+                $commissions,
+            );
+
+            if ($settlement !== null) {
+                $created->push($settlement);
+            }
+        }
+
+        return $created;
+    }
+
+    /**
+     * Hitung ringkasan saldo yang siap ditarik oleh vendor.
+     *
+     * @return array{
+     *     eligible_count: int,
+     *     gross_total: float,
+     *     estimated_commission: float,
+     *     estimated_net: float
+     * }
+     */
+    public function getWithdrawableSummary(int $vendorId): array
+    {
+        $payments = Payment::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'paid')
+            ->whereNull('settlement_id')
+            ->whereIn('payment_type', PaymentType::values())
+            ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
+            ->where(function ($query): void {
+                $query->where(function ($cash): void {
+                    $cash->where('payment_method', 'cash')
+                        ->where('payment_type', '!=', 'fine');
+                })->orWhere('escrow_status', 'held');
+            })
+            ->get();
+
+        $gross = 0.0;
+        $commissionsTotal = 0.0;
+
+        if ($payments->isNotEmpty()) {
+            $commissions = PlatformCommission::withoutGlobalScope('vendor')
+                ->whereIn('payment_id', $payments->pluck('id'))
+                ->where('status', 'accrued')
+                ->get()
+                ->keyBy('payment_id');
+
+            foreach ($payments as $payment) {
+                if ($payment->payment_type === PaymentType::Fine->value && $payment->payment_method === 'cash') {
+                    continue;
+                }
+                $comm = (float) ($commissions->get($payment->getKey())?->amount ?? 0);
+                $gross += (float) $payment->amount;
+                $commissionsTotal += $comm;
+            }
+        }
+
+        return [
+            'eligible_count' => $payments->count(),
+            'gross_total' => $gross,
+            'estimated_commission' => $commissionsTotal,
+            'estimated_net' => max(0.0, $gross - $commissionsTotal),
+        ];
+    }
+
+    /**
+     * Vendor mengajukan permohonan penarikan dana / pencairan (on-demand settlement).
+     */
+    public function requestPayoutForVendor(int $vendorId): Settlement
+    {
+        $vendor = Vendor::query()->with('paymentSetting')->findOrFail($vendorId);
+        $setting = $vendor->paymentSetting;
+
+        if (blank($setting?->bank_name) || blank($setting?->bank_account_number) || blank($setting?->bank_account_name)) {
+            throw new \InvalidArgumentException('Silakan lengkapi informasi rekening bank Anda terlebih dahulu di menu Pengaturan Rekening sebelum mengajukan pencairan.');
+        }
+
+        $activeSettlement = Settlement::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->whereIn('status', ['draft', 'approved'])
+            ->first();
+
+        if ($activeSettlement !== null) {
+            throw new \RuntimeException('Anda sudah memiliki pengajuan pencairan yang sedang diproses (Batch #'.$activeSettlement->id.'). Tunggu hingga proses transfer selesai.');
+        }
+
+        $payments = Payment::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'paid')
+            ->whereNull('settlement_id')
+            ->whereIn('payment_type', PaymentType::values())
+            ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
+            ->where(function ($query): void {
+                $query->where(function ($cash): void {
+                    $cash->where('payment_method', 'cash')
+                        ->where('payment_type', '!=', 'fine');
+                })->orWhere('escrow_status', 'held');
+            })
+            ->orderBy('id')
+            ->get();
+
+        if ($payments->isEmpty()) {
+            throw new \RuntimeException('Tidak ada saldo pembayaran sewa selesai yang siap dicairkan saat ini.');
+        }
+
+        $commissions = PlatformCommission::withoutGlobalScope('vendor')
+            ->whereIn('payment_id', $payments->pluck('id'))
+            ->where('status', 'accrued')
+            ->get()
+            ->keyBy('payment_id');
+
+        $pStart = Carbon::today()->startOfWeek(Carbon::MONDAY);
+        $pEnd = Carbon::today()->endOfWeek(Carbon::SUNDAY);
+
+        if (Settlement::withoutGlobalScope('vendor')->where('vendor_id', $vendorId)->whereDate('period_start', $pStart->toDateString())->whereDate('period_end', $pEnd->toDateString())->exists()) {
+            $pStart = Carbon::now()->startOfDay();
+            $pEnd = Carbon::now()->endOfDay();
+        }
+
+        $settlement = $this->createDraftForVendor(
+            $vendorId,
+            $pStart,
+            $pEnd,
+            $payments,
+            $commissions,
+        );
+
+        if ($settlement === null) {
+            throw new \RuntimeException('Gagal membuat pengajuan pencairan. Silakan coba beberapa saat lagi.');
+        }
+
+        return $settlement;
+    }
+
+    /**
+     * Setujui draft: kunci pembayaran & komisi ke batch, tetapi dana escrow
+     * baru dilepas saat batch ditandai paid.
+     */
+    public function approve(Settlement $settlement, User $admin): bool
+    {
+        return DB::transaction(function () use ($settlement, $admin): bool {
+            $settlement = Settlement::withoutGlobalScope('vendor')
+                ->lockForUpdate()
+                ->find($settlement->getKey());
+
+            if ($settlement === null || ! $settlement->isDraft()) {
+                return false;
+            }
+
+            $settlement->update([
+                'status' => 'approved',
+                'approved_by' => $admin->getKey(),
+                'approved_at' => now(),
+            ]);
+
+            $this->assignItemsToSettlement($settlement, lockAsSettled: true);
+
+            // Invoice diterbitkan sebelum transfer agar vendor menerima nota
+            // pencairan lebih dulu. Escrow tetap ditahan sampai markPaid().
+            $this->generateInvoice($settlement);
+
+            return true;
+        });
+    }
+
+    /**
+     * Tandai batch sudah dibayar: simpan bukti transfer, lepas escrow, dan
+     * ubah invoice menjadi paid. Hanya batch approved yang dapat dibayar.
+     */
+    public function markPaid(
+        Settlement $settlement,
+        User $admin,
+        string $referenceNumber,
+        string $proofUrl,
+        ?string $notes = null,
+    ): ?VendorInvoice {
+        return DB::transaction(function () use ($settlement, $referenceNumber, $proofUrl, $notes): ?VendorInvoice {
+            $settlement = Settlement::withoutGlobalScope('vendor')
+                ->lockForUpdate()
+                ->find($settlement->getKey());
+
+            if ($settlement === null || ! $settlement->isApproved()) {
+                return null;
+            }
+
+            $settlement->update([
+                'status' => 'paid',
+                'reference_number' => $referenceNumber,
+                'proof_url' => $proofUrl,
+                'paid_at' => now(),
+                'notes' => $notes,
+            ]);
+
+            $this->assignItemsToSettlement($settlement, lockAsSettled: true);
+            $this->releaseEscrow($settlement);
+
+            return $this->markInvoicePaid($settlement);
+        });
+    }
+
+    /**
+     * Tandai invoice batch sebagai paid, atau buat invoice legacy bila batch
+     * lama belum memilikinya.
+     */
+    public function markInvoicePaid(Settlement $settlement, ?string $notes = null): VendorInvoice
+    {
+        $invoice = $this->generateInvoice($settlement);
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => $settlement->paid_at ?? now(),
+            'notes' => $notes ?? $invoice->notes,
+        ]);
+
+        return $invoice->refresh();
+    }
+
+    /**
+     * Batalkan draft/approved yang belum dibayar. Pembayaran dan komisi
+     * dikembalikan agar bisa masuk batch berikutnya.
+     */
+    public function cancel(Settlement $settlement): bool
+    {
+        return DB::transaction(function () use ($settlement): bool {
+            $settlement = Settlement::withoutGlobalScope('vendor')
+                ->lockForUpdate()
+                ->find($settlement->getKey());
+
+            if ($settlement === null || $settlement->isPaid() || $settlement->status === 'cancelled') {
+                return false;
+            }
+
+            $settlement->update(['status' => 'cancelled']);
+
+            Payment::withoutGlobalScope('vendor')
+                ->where('settlement_id', $settlement->getKey())
+                ->update(['settlement_id' => null]);
+
+            PlatformCommission::withoutGlobalScope('vendor')
+                ->where('settlement_id', $settlement->getKey())
+                ->update(['settlement_id' => null, 'status' => 'accrued']);
+
+            VendorInvoice::withoutGlobalScope('vendor')
+                ->where('settlement_id', $settlement->getKey())
+                ->where('status', '!=', 'paid')
+                ->update(['status' => 'void']);
+
+            return true;
+        });
+    }
+
+    /**
+     * Terbitkan invoice settlement. Idempoten per batch.
+     */
+    public function generateInvoice(Settlement $settlement): VendorInvoice
+    {
+        $existing = VendorInvoice::withoutGlobalScope('vendor')
+            ->where('settlement_id', $settlement->getKey())
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $prefix = sprintf(
+            'INV/%d/%s/',
+            $settlement->vendor_id,
+            $settlement->period_end->format('Ym'),
+        );
+
+        $lastNumber = VendorInvoice::withoutGlobalScope('vendor')
+            ->where('number', 'like', $prefix.'%')
+            ->orderByDesc('id')
+            ->value('number');
+
+        $sequence = $lastNumber === null
+            ? 1
+            : ((int) substr((string) $lastNumber, strlen($prefix))) + 1;
+
+        $subtotal = (float) $settlement->gross_qris
+            + (float) $settlement->gross_fine_qris
+            + (float) $settlement->adjustment_amount;
+
+        $isPaid = $settlement->isPaid();
+
+        return VendorInvoice::withoutGlobalScope('vendor')->create([
+            'vendor_id' => $settlement->vendor_id,
+            'settlement_id' => $settlement->getKey(),
+            'number' => $prefix.$sequence,
+            'type' => 'settlement',
+            'period_start' => $settlement->period_start,
+            'period_end' => $settlement->period_end,
+            'subtotal' => round($subtotal, 2),
+            'commission_amount' => $settlement->commission_total,
+            'fee_amount' => round((float) $settlement->fine_fee_total, 2),
+            'total' => $settlement->net_payout,
+            'status' => $isPaid ? 'paid' : 'issued',
+            'issued_at' => now(),
+            'paid_at' => $isPaid ? $settlement->paid_at : null,
+        ]);
+    }
+
+    /**
+     * @param  Collection<int, Payment>  $payments
+     * @param  Collection<int, PlatformCommission>  $commissions
+     */
+    private function createDraftForVendor(
+        int $vendorId,
+        Carbon $periodStart,
+        Carbon $periodEnd,
+        Collection $payments,
+        Collection $commissions,
+    ): ?Settlement {
+        $alreadyExists = Settlement::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->whereDate('period_start', $periodStart->toDateString())
+            ->whereDate('period_end', $periodEnd->toDateString())
+            ->exists();
+
+        if ($alreadyExists) {
+            return null;
+        }
+
+        $vendor = Vendor::query()->with('paymentSetting')->find($vendorId);
+
+        if ($vendor === null) {
+            return null;
+        }
+
+        $previous = Settlement::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('period_end', '<', $periodStart->toDateString())
+            ->whereIn('status', ['draft', 'approved', 'paid'])
+            ->orderByDesc('period_end')
+            ->orderByDesc('id')
+            ->first();
+
+        $adjustment = $previous !== null && (float) $previous->net_payout < 0
+            ? (float) $previous->net_payout
+            : 0.0;
+
+        $grossQris = 0.0;
+        $grossFineQris = 0.0;
+        $commissionTotal = 0.0;
+        $gatewayFeeTotal = 0.0;
+        $fineFeeTotal = 0.0;
+        $cashCommissionOffset = 0.0;
+        $items = [];
+        $hasNonCashPayment = $payments->contains(fn (Payment $payment): bool => $payment->payment_method !== 'cash');
+
+        foreach ($payments as $payment) {
+            $commission = $commissions->get($payment->getKey());
+            $commissionAmount = (float) ($commission?->amount ?? 0);
+            $feeAmount = (float) $payment->gateway_fee_amount;
+            $isFine = $payment->payment_type === PaymentType::Fine->value;
+            $isCash = $payment->payment_method === 'cash';
+
+            if ($isFine && $isCash) {
+                // Denda tunai sudah diterima vendor; tidak masuk remitansi platform.
+                continue;
+            }
+
+            if ($isFine) {
+                $grossFineQris += (float) $payment->amount;
+                $fineFeeTotal += $feeAmount;
+
+                $items[] = [
+                    'payment_id' => $payment->getKey(),
+                    'platform_commission_id' => null,
+                    'type' => 'fine',
+                    'gross_amount' => $payment->amount,
+                    'commission_amount' => 0,
+                    'fee_amount' => $feeAmount,
+                    'net_amount' => round((float) $payment->amount - $feeAmount, 2),
+                ];
+
+                continue;
+            }
+
+            if ($isCash) {
+                $commissionTotal += $commissionAmount;
+                $cashCommissionOffset += $commissionAmount;
+
+                $items[] = [
+                    'payment_id' => $payment->getKey(),
+                    'platform_commission_id' => $commission?->getKey(),
+                    'type' => 'cash_commission',
+                    'gross_amount' => $payment->amount,
+                    'commission_amount' => $commissionAmount,
+                    'fee_amount' => 0,
+                    'net_amount' => -$commissionAmount,
+                ];
+
+                continue;
+            }
+
+            $grossQris += (float) $payment->amount;
+            $commissionTotal += $commissionAmount;
+            $gatewayFeeTotal += $feeAmount;
+
+            $items[] = [
+                'payment_id' => $payment->getKey(),
+                'platform_commission_id' => $commission?->getKey(),
+                'type' => 'payment',
+                'gross_amount' => $payment->amount,
+                'commission_amount' => $commissionAmount,
+                'fee_amount' => $feeAmount,
+                'net_amount' => round((float) $payment->amount - $commissionAmount, 2),
+            ];
+        }
+
+        if (! $hasNonCashPayment && $commissionTotal <= 0 && $adjustment === 0.0) {
+            return null;
+        }
+
+        if ($adjustment !== 0.0) {
+            $items[] = [
+                'payment_id' => null,
+                'platform_commission_id' => null,
+                'type' => 'adjustment',
+                'gross_amount' => 0,
+                'commission_amount' => 0,
+                'fee_amount' => 0,
+                'net_amount' => round($adjustment, 2),
+            ];
+        }
+
+        $transferFee = $hasNonCashPayment
+            ? (float) config('monetization.settlement.transfer_fee', 3500)
+            : 0.0;
+
+        // Biaya transfer adalah beban platform (PRD §4.4), bukan potongan hak vendor.
+        $netPayout = round(
+            $grossQris + $grossFineQris - $commissionTotal - $fineFeeTotal + $adjustment,
+            2,
+        );
+
+        return DB::transaction(function () use (
+            $vendorId,
+            $vendor,
+            $periodStart,
+            $periodEnd,
+            $items,
+            $grossQris,
+            $grossFineQris,
+            $commissionTotal,
+            $gatewayFeeTotal,
+            $fineFeeTotal,
+            $cashCommissionOffset,
+            $transferFee,
+            $adjustment,
+            $netPayout,
+            $previous,
+        ): Settlement {
+            $settlement = Settlement::withoutGlobalScope('vendor')->create([
+                'vendor_id' => $vendorId,
+                'period_start' => $periodStart->toDateString(),
+                'period_end' => $periodEnd->toDateString(),
+                'status' => 'draft',
+                'gross_qris' => round($grossQris, 2),
+                'gross_fine_qris' => round($grossFineQris, 2),
+                'commission_total' => round($commissionTotal, 2),
+                'gateway_fee_total' => round($gatewayFeeTotal, 2),
+                'fine_fee_total' => round($fineFeeTotal, 2),
+                'cash_commission_offset' => round($cashCommissionOffset, 2),
+                'transfer_fee' => round($transferFee, 2),
+                'adjustment_amount' => round($adjustment, 2),
+                'net_payout' => $netPayout,
+                'bank_name' => $vendor->paymentSetting?->bank_name,
+                'bank_account_number' => $vendor->paymentSetting?->bank_account_number,
+                'bank_account_name' => $vendor->paymentSetting?->bank_account_name,
+                'notes' => $previous !== null && $adjustment !== 0.0
+                    ? 'Carry-forward saldo negatif dari settlement #'.$previous->getKey()
+                    : null,
+            ]);
+
+            foreach ($items as $item) {
+                SettlementItem::withoutGlobalScope('vendor')->create(array_merge($item, [
+                    'settlement_id' => $settlement->getKey(),
+                    'vendor_id' => $vendorId,
+                ]));
+            }
+
+            return $settlement;
+        });
+    }
+
+    private function assignItemsToSettlement(Settlement $settlement, bool $lockAsSettled): void
+    {
+        $items = SettlementItem::withoutGlobalScope('vendor')
+            ->where('settlement_id', $settlement->getKey())
+            ->get();
+
+        $paymentIds = $items->pluck('payment_id')->filter()->unique()->values();
+        $commissionIds = $items->pluck('platform_commission_id')->filter()->unique()->values();
+
+        if ($paymentIds->isNotEmpty()) {
+            Payment::withoutGlobalScope('vendor')
+                ->whereIn('id', $paymentIds)
+                ->update(['settlement_id' => $settlement->getKey()]);
+        }
+
+        if ($commissionIds->isNotEmpty()) {
+            $attributes = ['settlement_id' => $settlement->getKey()];
+
+            if ($lockAsSettled) {
+                $attributes['status'] = 'settled';
+            }
+
+            PlatformCommission::withoutGlobalScope('vendor')
+                ->whereIn('id', $commissionIds)
+                ->update($attributes);
+        }
+    }
+
+    private function releaseEscrow(Settlement $settlement): void
+    {
+        Payment::withoutGlobalScope('vendor')
+            ->where('settlement_id', $settlement->getKey())
+            ->where('payment_method', 'midtrans_snap')
+            ->where('escrow_status', 'held')
+            ->get()
+            ->each(fn (Payment $payment) => $this->escrowService->markReleased($payment));
+    }
+}
