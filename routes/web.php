@@ -14,7 +14,6 @@ use App\Http\Controllers\Customer\PackageCheckoutController;
 use App\Http\Controllers\Customer\PaymentRetryController;
 use App\Http\Controllers\Customer\RentalStatusLookupController;
 use App\Http\Controllers\Customer\StoreController;
-use App\Http\Controllers\SettlementPayoutProofController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
 use App\Http\Controllers\Vendor\CategoryController;
@@ -135,12 +134,6 @@ Route::post('payments/{order_id}/retry', [PaymentRetryController::class, 'store'
 // Webhook Midtrans: tanpa auth/sesi, dikecualikan dari CSRF di bootstrap/app.php (signature SHA512 yang memvalidasi)
 Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
     ->name('webhook.midtrans');
-
-// Bukti payout Midtrans Iris: dapat diakses Super Admin atau vendor pemilik batch.
-Route::get('settlements/{settlement}/payout-proof', [SettlementPayoutProofController::class, 'show'])
-    ->middleware(['auth'])
-    ->whereNumber('settlement')
-    ->name('settlements.payout-proof');
 
 // Design System Reference
 Route::view('design-system', 'design-system')->name('design-system');
