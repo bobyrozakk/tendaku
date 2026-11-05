@@ -83,7 +83,8 @@ class OwnerProductCrudTest extends TestCase
 
         $this->get(route('vendor.products.create'))
             ->assertOk()
-            ->assertSee('Tambah Produk Owner');
+            ->assertSee('Tambah Produk Owner')
+            ->assertSee('Berat Produk (kg)');
     }
 
     public function test_owner_can_store_valid_product(): void
@@ -97,6 +98,7 @@ class OwnerProductCrudTest extends TestCase
             'category_id' => $this->cat1->id,
             'daily_rate' => 50000,
             'late_fee_per_day' => 25000,
+            'weight_kg' => 2.5,
             'description' => 'Tenda keluarga 4 orang dengan ruang santai luas.',
             'image' => $file,
             'is_active' => '1',
@@ -112,25 +114,40 @@ class OwnerProductCrudTest extends TestCase
             'category_id' => $this->cat1->id,
             'daily_rate' => 50000,
             'late_fee_per_day' => 25000,
+            'weight_kg' => 2.50,
             'is_active' => true,
         ]);
+
+        $product = MasterItem::where('slug', 'tenda-dome-arpenaz-41')->firstOrFail();
+        $this->assertSame('2.50', $product->weight_kg);
 
         Storage::disk('public')->assertExists('products/'.$file->hashName());
     }
 
-    public function test_product_validation_rejects_negative_prices_and_invalid_category(): void
+    public function test_product_validation_rejects_negative_prices_non_positive_weight_and_invalid_category(): void
     {
         $this->actingAs($this->owner1);
 
-        // Kategori milik vendor 2 tidak boleh dipakai oleh vendor 1
+        // Kategori milik vendor 2 tidak boleh dipakai oleh vendor 1, harga tidak boleh negatif, berat harus positif (> 0)
         $response = $this->post(route('vendor.products.store'), [
             'name' => 'Barang Ilegal',
             'category_id' => $this->cat2->id,
             'daily_rate' => -10000,
             'late_fee_per_day' => -5000,
+            'weight_kg' => 0,
         ]);
 
-        $response->assertSessionHasErrors(['category_id', 'daily_rate', 'late_fee_per_day']);
+        $response->assertSessionHasErrors(['category_id', 'daily_rate', 'late_fee_per_day', 'weight_kg']);
+
+        $negativeWeightResponse = $this->post(route('vendor.products.store'), [
+            'name' => 'Barang Berat Negatif',
+            'category_id' => $this->cat1->id,
+            'daily_rate' => 25000,
+            'late_fee_per_day' => 10000,
+            'weight_kg' => -1.5,
+        ]);
+
+        $negativeWeightResponse->assertSessionHasErrors(['weight_kg']);
     }
 
     public function test_owner_can_update_product(): void
@@ -144,13 +161,20 @@ class OwnerProductCrudTest extends TestCase
             'slug' => 'tenda-lama',
             'daily_rate' => 30000,
             'late_fee_per_day' => 15000,
+            'weight_kg' => 2.5,
         ]);
+
+        $this->get(route('vendor.products.edit', $product))
+            ->assertOk()
+            ->assertSee('Berat Produk (kg)')
+            ->assertSee('value="2.5"', false);
 
         $response = $this->put(route('vendor.products.update', $product), [
             'name' => 'Tenda Baru Diupdate',
             'category_id' => $this->cat1->id,
             'daily_rate' => 35000,
             'late_fee_per_day' => 20000,
+            'weight_kg' => 3.75,
             'description' => 'Deskripsi baru.',
             'is_active' => '1',
         ]);
@@ -163,6 +187,7 @@ class OwnerProductCrudTest extends TestCase
             'name' => 'Tenda Baru Diupdate',
             'daily_rate' => 35000,
             'late_fee_per_day' => 20000,
+            'weight_kg' => 3.75,
         ]);
     }
 
