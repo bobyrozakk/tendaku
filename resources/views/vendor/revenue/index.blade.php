@@ -15,6 +15,69 @@
     </x-slot>
 
     <div class="space-y-6">
+        @if (session('success'))
+            <div class="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-xs font-semibold text-emerald-900 flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+                <span>{{ session('success') }}</span>
+            </div>
+        @endif
+        @if (session('error'))
+            <div class="rounded-xl border border-red-300 bg-red-50 p-4 text-xs font-semibold text-red-900 flex items-center gap-2">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 shrink-0"></i>
+                <span>{{ session('error') }}</span>
+            </div>
+        @endif
+
+        {{-- Card Penarikan Saldo (Vendor Request Payout) --}}
+        <div class="rounded-2xl border-2 border-avocado-600/30 bg-gradient-to-br from-avocado-50 via-white to-wheat-100/50 p-5 sm:p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-avocado-600 text-white shadow-xs">
+                            <i data-lucide="wallet" class="w-4 h-4"></i>
+                        </span>
+                        <h2 class="text-base font-extrabold text-darkbrown-900">Saldo Siap Ditarik</h2>
+                    </div>
+                    <div class="flex items-baseline gap-2 pt-1">
+                        <span class="text-3xl font-extrabold text-avocado-800 font-heading">
+                            Rp {{ number_format($withdrawableSummary['estimated_net'], 0, ',', '.') }}
+                        </span>
+                        <span class="text-xs text-darkbrown-500 font-medium">
+                            ({{ $withdrawableSummary['eligible_count'] }} transaksi sewa selesai)
+                        </span>
+                    </div>
+                    <p class="text-xs text-darkbrown-600 leading-relaxed pt-0.5">
+                        Estimasi bersih setelah potongan komisi platform 5%. Rekening tujuan:
+                        <strong>{{ $vendor->paymentSetting?->bank_name ?: '-' }} · {{ $vendor->paymentSetting?->bank_account_number ?: '-' }}</strong> (a.n. {{ $vendor->paymentSetting?->bank_account_name ?: '-' }}).
+                    </p>
+                </div>
+
+                <div class="shrink-0 flex flex-col sm:items-end gap-2">
+                    @if ($activeSettlement)
+                        <div class="rounded-xl border border-goldenrod-300 bg-goldenrod-50 px-4 py-2.5 text-xs text-goldenrod-900 text-left sm:text-right">
+                            <p class="font-bold flex items-center gap-1.5 sm:justify-end">
+                                <span class="w-2 h-2 rounded-full bg-goldenrod-500 animate-pulse"></span>
+                                Pengajuan Sedang Diproses
+                            </p>
+                            <p class="text-[11px] text-goldenrod-800 mt-0.5">
+                                Batch #{{ $activeSettlement->id }} ({{ $activeSettlement->isApproved() ? 'Disetujui - Menunggu Transfer' : 'Menunggu Review Admin' }})
+                            </p>
+                        </div>
+                    @else
+                        <form method="POST" action="{{ route('vendor.pendapatan.request') }}" onsubmit="return confirm('Apakah Anda yakin ingin mengajukan penarikan saldo sebesar Rp {{ number_format($withdrawableSummary['estimated_net'], 0, ',', '.') }} ke rekening bank Anda?');">
+                            @csrf
+                            <button type="submit"
+                                    @disabled($withdrawableSummary['estimated_net'] <= 0)
+                                    class="btn-tendaku-primary !px-5 !py-3 text-sm font-extrabold shadow-tendaku transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer">
+                                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                                <span>Tarik Dana ke Rekening</span>
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <x-card variant="dark">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-wheat-300">Sudah Dicairkan</p>

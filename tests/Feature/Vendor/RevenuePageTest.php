@@ -120,6 +120,39 @@ class RevenuePageTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_vendor_owner_can_request_payout_when_balance_available(): void
+    {
+        $this->vendor->paymentSetting()->create([
+            'bank_name' => 'BCA',
+            'bank_account_number' => '1234567890',
+            'bank_account_name' => 'Owner Vendor',
+        ]);
+
+        [, $payment] = $this->createPaidRevenuePayment($this->vendor, 500000, [
+            'paid_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+        $this->createRevenueCommission($payment, 25000, [
+            'base_amount' => 500000,
+            'recognized_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+
+        $this->actingAs($this->owner)
+            ->post(route('vendor.pendapatan.request'))
+            ->assertRedirect(route('vendor.pendapatan'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('settlements', [
+            'vendor_id' => $this->vendor->id,
+            'status' => 'draft',
+        ]);
+
+        // Request kedua harus ditolak karena ada draft aktif
+        $this->actingAs($this->owner)
+            ->post(route('vendor.pendapatan.request'))
+            ->assertRedirect(route('vendor.pendapatan'))
+            ->assertSessionHas('error');
+    }
+
     private function createIssuedInvoice(): VendorInvoice
     {
         [, $payment] = $this->createPaidRevenuePayment($this->vendor, 1000000, [

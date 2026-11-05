@@ -200,6 +200,8 @@ Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
 
         Route::get('pendapatan', [VendorRevenueController::class, 'index'])
             ->name('pendapatan');
+        Route::post('pendapatan/tarik-dana', [VendorRevenueController::class, 'requestPayout'])
+            ->name('pendapatan.request');
         Route::get('pendapatan/{settlement}/invoice', [VendorSettlementInvoiceController::class, 'print'])
             ->name('pendapatan.invoice');
 

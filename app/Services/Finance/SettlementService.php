@@ -88,6 +88,129 @@ class SettlementService
     }
 
     /**
+     * Hitung ringkasan saldo yang siap ditarik oleh vendor.
+     *
+     * @return array{
+     *     eligible_count: int,
+     *     gross_total: float,
+     *     estimated_commission: float,
+     *     estimated_net: float
+     * }
+     */
+    public function getWithdrawableSummary(int $vendorId): array
+    {
+        $payments = Payment::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'paid')
+            ->whereNull('settlement_id')
+            ->whereIn('payment_type', PaymentType::values())
+            ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
+            ->where(function ($query): void {
+                $query->where(function ($cash): void {
+                    $cash->where('payment_method', 'cash')
+                        ->where('payment_type', '!=', 'fine');
+                })->orWhere('escrow_status', 'held');
+            })
+            ->get();
+
+        $gross = 0.0;
+        $commissionsTotal = 0.0;
+
+        if ($payments->isNotEmpty()) {
+            $commissions = PlatformCommission::withoutGlobalScope('vendor')
+                ->whereIn('payment_id', $payments->pluck('id'))
+                ->where('status', 'accrued')
+                ->get()
+                ->keyBy('payment_id');
+
+            foreach ($payments as $payment) {
+                if ($payment->payment_type === PaymentType::Fine->value && $payment->payment_method === 'cash') {
+                    continue;
+                }
+                $comm = (float) ($commissions->get($payment->getKey())?->amount ?? 0);
+                $gross += (float) $payment->amount;
+                $commissionsTotal += $comm;
+            }
+        }
+
+        return [
+            'eligible_count' => $payments->count(),
+            'gross_total' => $gross,
+            'estimated_commission' => $commissionsTotal,
+            'estimated_net' => max(0.0, $gross - $commissionsTotal),
+        ];
+    }
+
+    /**
+     * Vendor mengajukan permohonan penarikan dana / pencairan (on-demand settlement).
+     */
+    public function requestPayoutForVendor(int $vendorId): Settlement
+    {
+        $vendor = Vendor::query()->with('paymentSetting')->findOrFail($vendorId);
+        $setting = $vendor->paymentSetting;
+
+        if (blank($setting?->bank_name) || blank($setting?->bank_account_number) || blank($setting?->bank_account_name)) {
+            throw new \InvalidArgumentException('Silakan lengkapi informasi rekening bank Anda terlebih dahulu di menu Pengaturan Rekening sebelum mengajukan pencairan.');
+        }
+
+        $activeSettlement = Settlement::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->whereIn('status', ['draft', 'approved'])
+            ->first();
+
+        if ($activeSettlement !== null) {
+            throw new \RuntimeException('Anda sudah memiliki pengajuan pencairan yang sedang diproses (Batch #'.$activeSettlement->id.'). Tunggu hingga proses transfer selesai.');
+        }
+
+        $payments = Payment::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'paid')
+            ->whereNull('settlement_id')
+            ->whereIn('payment_type', PaymentType::values())
+            ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
+            ->where(function ($query): void {
+                $query->where(function ($cash): void {
+                    $cash->where('payment_method', 'cash')
+                        ->where('payment_type', '!=', 'fine');
+                })->orWhere('escrow_status', 'held');
+            })
+            ->orderBy('id')
+            ->get();
+
+        if ($payments->isEmpty()) {
+            throw new \RuntimeException('Tidak ada saldo pembayaran sewa selesai yang siap dicairkan saat ini.');
+        }
+
+        $commissions = PlatformCommission::withoutGlobalScope('vendor')
+            ->whereIn('payment_id', $payments->pluck('id'))
+            ->where('status', 'accrued')
+            ->get()
+            ->keyBy('payment_id');
+
+        $pStart = Carbon::today()->startOfWeek(Carbon::MONDAY);
+        $pEnd = Carbon::today()->endOfWeek(Carbon::SUNDAY);
+
+        if (Settlement::withoutGlobalScope('vendor')->where('vendor_id', $vendorId)->whereDate('period_start', $pStart->toDateString())->whereDate('period_end', $pEnd->toDateString())->exists()) {
+            $pStart = Carbon::now()->startOfDay();
+            $pEnd = Carbon::now()->endOfDay();
+        }
+
+        $settlement = $this->createDraftForVendor(
+            $vendorId,
+            $pStart,
+            $pEnd,
+            $payments,
+            $commissions,
+        );
+
+        if ($settlement === null) {
+            throw new \RuntimeException('Gagal membuat pengajuan pencairan. Silakan coba beberapa saat lagi.');
+        }
+
+        return $settlement;
+    }
+
+    /**
      * Setujui draft: kunci pembayaran & komisi ke batch, tetapi dana escrow
      * baru dilepas saat batch ditandai paid.
      */
