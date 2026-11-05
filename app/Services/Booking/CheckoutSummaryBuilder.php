@@ -5,6 +5,7 @@ namespace App\Services\Booking;
 use App\Models\MasterItem;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\Payment\PaymentService;
 use Carbon\Carbon;
 
 /**
@@ -24,6 +25,14 @@ class CheckoutSummaryBuilder
         return max(1, (int) ($cart['quantity'] ?? $cart['qty'] ?? 1));
     }
 
+    public function deliveryFeeAmount(Vendor $vendor): int
+    {
+        return (int) (
+            $vendor->delivery_fee
+            ?: config('booking.delivery_fee', 20000)
+        );
+    }
+
     /**
      * Ongkir hanya untuk user login yang memilih delivery.
      */
@@ -36,10 +45,7 @@ class CheckoutSummaryBuilder
             return 0;
         }
 
-        return (int) (
-            $vendor->delivery_fee
-            ?: config('booking.delivery_fee', 20000)
-        );
+        return $this->deliveryFeeAmount($vendor);
     }
 
     /**
@@ -115,27 +121,19 @@ class CheckoutSummaryBuilder
 
         $returnTime = $pickupTime;
 
-        // Hitung durasi sewa.
-        if (isset($cart['total_days']) && (int) $cart['total_days'] > 0) {
-            $rentalDays = max(1, (int) $cart['total_days']);
-        } else {
-            $rentalDays = app(\App\Services\Booking\RentalService::class)
-                ->calculateRentalDays(
-                    Carbon::parse($cart['pickup_date'])->toDateString(),
-                    Carbon::parse($cart['return_date'])->toDateString(),
-                    $pickupTime,
-                    $returnTime
-                );
-        }
-
-        $rentalDays = max(1, (int) $rentalDays);
+        $rentalDays = max(1, (int) app(RentalService::class)
+            ->calculateRentalDays(
+                Carbon::parse($cart['pickup_date'])->toDateString(),
+                Carbon::parse($cart['return_date'])->toDateString(),
+                $pickupTime,
+                $returnTime
+            ));
 
         $discount = 0;
 
-        // Hitung subtotal dan deposit seluruh item.
+        // Hitung subtotal seluruh item.
         $itemsData = [];
         $totalSubtotal = 0;
-        $totalDeposit = 0;
 
         foreach ($rawItems as $rawItem) {
             $itemId = (int) ($rawItem['master_item_id'] ?? 0);
@@ -147,32 +145,37 @@ class CheckoutSummaryBuilder
                 );
             }
 
-            $qty = max(
+            $requestedQty = max(
                 1,
                 (int) ($rawItem['qty'] ?? $rawItem['quantity'] ?? 1)
             );
 
+            $stock = $this->stockFor(
+                $itemModel,
+                Carbon::parse($cart['pickup_date'])->toDateString(),
+                Carbon::parse($cart['return_date'])->toDateString()
+            );
+
+            // Jumlah yang ditagih = jumlah yang ditampilkan (tidak melebihi stok).
+            $qty = min($requestedQty, $stock);
+
             $dailyRate = (int) $itemModel->daily_rate;
             $depositPerUnit = (int) $itemModel->deposit_amount;
 
+            // Pengali harga = jumlah unit x jumlah hari.
             $subtotal = $dailyRate * $qty * $rentalDays;
 
             $totalSubtotal += $subtotal;
-            $totalDeposit += $depositPerUnit * $qty;
 
             $itemsData[] = $this->itemData(
                 $itemModel,
                 $qty,
                 $dailyRate,
                 $depositPerUnit,
-                $subtotal
+                $subtotal,
+                $stock
             );
         }
-
-        // Hitung komisi berdasarkan total subtotal seluruh produk.
-        $adminFee = app(
-            \App\Services\Finance\CommissionCalculator::class
-        )->commissionFor((float) $totalSubtotal);
 
         $deliveryFee = $this->deliveryFee(
             $vendor,
@@ -180,21 +183,14 @@ class CheckoutSummaryBuilder
             $isLoggedIn
         );
 
-        // Total pembayaran mencakup subtotal, deposit, admin, dan ongkir.
-        $grandTotal = $totalSubtotal
-            + $totalDeposit
-            + $adminFee
-            + $deliveryFee
-            - $discount;
+        $grandTotal = max(0, $totalSubtotal + $deliveryFee - $discount);
 
-        // Perhitungan DP tetap mengikuti aturan versi sebelumnya.
-        $dpPercentage = (int) (
-            $vendor->dp_percentage
-            ?: config('payment.dp_percentage', 50)
-        );
+        $payments = app(PaymentService::class);
+        $dpPercentage = $payments->resolveDpPercentage($vendor->dp_percentage);
 
-        $dpAmount = (int) ceil(
-            ($totalSubtotal * $dpPercentage / 100) + $adminFee
+        $dpAmount = intdiv(
+            max(0, $totalSubtotal + $deliveryFee - $discount) * $dpPercentage + 99,
+            100
         );
 
         return [
@@ -237,9 +233,10 @@ class CheckoutSummaryBuilder
             'items' => $itemsData,
 
             'subtotal' => $totalSubtotal,
-            'admin_fee' => $adminFee,
-            'deposit' => $totalDeposit,
+            'admin_fee' => 0,
+            'deposit' => 0,
             'delivery_fee' => $deliveryFee,
+            'delivery_fee_amount' => $this->deliveryFeeAmount($vendor),
             'discount' => $discount,
             'grand_total' => $grandTotal,
 
@@ -281,21 +278,9 @@ class CheckoutSummaryBuilder
         int $qty,
         int $dailyRate,
         int $depositPerUnit,
-        int $subtotal
+        int $subtotal,
+        int $realStock
     ): array {
-        $stock = app(AvailabilityService::class)->checkAvailability(
-            $item->id,
-            request('pickup_date', now()->toDateString()),
-            request('return_date', now()->addDay()->toDateString())
-        );
-
-        $realStock = max(
-            1,
-            $stock ?: $item->units()
-                ->where('status', '!=', 'retired')
-                ->count()
-        );
-
         return [
             'id' => $item->id,
             'name' => $item->name,
@@ -304,12 +289,31 @@ class CheckoutSummaryBuilder
             'specs' => $item->description ?? '',
             'price_per_day' => $dailyRate,
             'deposit_per_unit' => $depositPerUnit,
-            'qty' => min($qty, $realStock),
+            'qty' => $qty,
             'stock' => $realStock,
             'max_qty' => $realStock,
             'subtotal' => $subtotal,
             'icon' => $item->category?->icon,
         ];
+    }
+
+    /**
+     * Stok unit yang bisa disewa untuk rentang tanggal keranjang (minimal 1).
+     */
+    private function stockFor(MasterItem $item, string $pickupDate, string $returnDate): int
+    {
+        $available = app(AvailabilityService::class)->checkAvailability(
+            $item->id,
+            $pickupDate,
+            $returnDate
+        );
+
+        return max(
+            1,
+            $available ?: $item->units()
+                ->where('status', '!=', 'retired')
+                ->count()
+        );
     }
 
     private function paymentMethods(): array

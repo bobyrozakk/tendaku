@@ -227,14 +227,7 @@ class CheckoutController extends Controller
         $pickupDate = $request->validated('pickup_date') ?: ($cart['pickup_date'] ?? null);
         $returnDate = $request->validated('return_date') ?: ($cart['return_date'] ?? null);
 
-        $requestedItems = $request->input('items');
-        $qty = 1;
-        if (is_array($requestedItems) && isset($requestedItems[0]['qty'])) {
-            $qty = max(1, (int) $requestedItems[0]['qty']);
-        } else {
-            $qty = $this->summary->quantityOf($cart);
-        }
-        // Jam ambil dipilih customer; jam kembali selalu sama dengan jam ambil.
+        // jam balik = jam ambil
         $pickupTime = $request->validated('pickup_time')
             ?: ($masterItem->vendor->pickup_time ?: config('booking.default_pickup_time'));
 
@@ -247,11 +240,25 @@ class CheckoutController extends Controller
                 ],
             ];
 
-        $itemsList = array_map(function ($it) {
+        $requestedQty = [];
+        foreach ((array) $request->input('items', []) as $requested) {
+            $requestedId = (int) ($requested['id'] ?? 0);
+
+            if ($requestedId > 0 && isset($requested['qty'])) {
+                $requestedQty[$requestedId] = max(1, (int) $requested['qty']);
+            }
+        }
+
+        $itemsList = array_map(function ($it) use ($requestedQty) {
+            $itemId = (int) ($it['master_item_id'] ?? 0);
+
+            $qty = $requestedQty[$itemId]
+                ?? max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1));
+
             return [
-                'master_item_id' => (int) ($it['master_item_id'] ?? 0),
-                'quantity' => max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1)),
-                'qty' => max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1)),
+                'master_item_id' => $itemId,
+                'quantity' => $qty,
+                'qty' => $qty,
             ];
         }, $rawItems);
 

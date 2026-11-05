@@ -405,9 +405,6 @@ document.addEventListener("alpine:init", () => {
                 ) * this.rentalDays
             );
         },
-        get adminFee() {
-            return Math.max(2000, Math.round(this.subtotal * 0.03));
-        },
         get deposit() {
             return 0;
         },
@@ -419,14 +416,15 @@ document.addEventListener("alpine:init", () => {
         get grandTotal() {
             return Math.max(
                 0,
-                this.subtotal +
-                    this.adminFee +
-                    this.deliveryFee -
-                    this.discount,
+                this.subtotal + this.deliveryFee - this.discount,
             );
         },
         get dpAmount() {
-            return Math.round((this.grandTotal * this.dpPercentage) / 100);
+            const base = Math.max(
+                0,
+                this.subtotal + this.deliveryFee - this.discount,
+            );
+            return Math.floor((base * this.dpPercentage + 99) / 100);
         },
         get payableAmount() {
             return this.paymentOption === "dp"

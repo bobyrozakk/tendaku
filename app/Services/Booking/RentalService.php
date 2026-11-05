@@ -189,8 +189,7 @@ class RentalService
                 : $subtotal;
             $deliveryFee = (float) ($data['delivery_fee'] ?? 0.0);
             $discountAmount = (float) ($data['discount_amount'] ?? 0.0);
-            $adminFee = (float) app(CommissionCalculator::class)->commissionFor($subtotal);
-            $grandTotal = max(0.0, $subtotal + $deliveryFee + $adminFee - $discountAmount);
+            $grandTotal = max(0.0, $subtotal + $deliveryFee - $discountAmount);
 
             if (isset($data['expires_at'])) {
                 $expiresAt = Carbon::parse($data['expires_at']);

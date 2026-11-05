@@ -518,7 +518,8 @@ class MidtransService
         $code = $rental->booking_code;
 
         if ($payment->payment_type === PaymentType::Dp->value) {
-            $dpPct = (int) config('payment.dp_percentage', 50);
+            $dpPct = app(PaymentService::class)
+                ->resolveDpPercentage($rental->vendor?->dp_percentage);
 
             return [[
                 'id' => "DP-{$code}",
@@ -549,13 +550,41 @@ class MidtransService
 
     private function itemizedDetails(Rental $rental, int $amount): array
     {
-        $items = $rental->details->map(fn ($detail) => [
-            'id' => "ITEM-{$detail->master_item_id}",
-            'price' => (int) $detail->daily_rate_snapshot,
-            'quantity' => $rental->rental_days,
-            'name' => $detail->masterItem?->name
-                ?? "Item #{$detail->master_item_id}",
-        ])->all();
+        $days = max(1, (int) $rental->rental_days);
+
+        $items = $rental->details
+            ->groupBy('master_item_id')
+            ->map(fn ($group) => [
+                'id' => "ITEM-{$group->first()->master_item_id}",
+                'price' => (int) $group->first()->daily_rate_snapshot,
+                'quantity' => $group->count() * $days,
+                'name' => mb_substr(
+                    (string) ($group->first()->masterItem?->name
+                        ?? "Item #{$group->first()->master_item_id}"),
+                    0,
+                    50
+                ),
+            ])
+            ->values()
+            ->all();
+
+        if ((int) $rental->delivery_fee > 0) {
+            $items[] = [
+                'id' => 'DELIVERY',
+                'price' => (int) $rental->delivery_fee,
+                'quantity' => 1,
+                'name' => 'Ongkos Kirim',
+            ];
+        }
+
+        if ((int) $rental->discount_amount > 0) {
+            $items[] = [
+                'id' => 'DISCOUNT',
+                'price' => -(int) $rental->discount_amount,
+                'quantity' => 1,
+                'name' => 'Diskon',
+            ];
+        }
 
         $itemTotal = array_sum(array_map(
             fn ($item) => $item['price'] * $item['quantity'],

@@ -8,11 +8,6 @@
     </div>
 
     <div class="receipt-row">
-        <span>Biaya Admin</span>
-        <span>Rp {{ number_format($adminFee ?? 0, 0, ',', '.') }}</span>
-    </div>
-
-    <div class="receipt-row">
         <span>Biaya Pengantaran</span>
         <span>Rp {{ number_format($deliveryFee ?? 0, 0, ',', '.') }}</span>
     </div>

@@ -63,7 +63,6 @@
     <div class="section-title">RINCIAN PEMBAYARAN</div>
     <table>
         <tr><td>Subtotal Sewa</td><td class="r">Rp {{ number_format($subtotal, 0, ',', '.') }}</td></tr>
-        <tr><td>Biaya Admin</td><td class="r">Rp {{ number_format($adminFee, 0, ',', '.') }}</td></tr>
         <tr><td>Biaya Pengantaran</td><td class="r">Rp {{ number_format($deliveryFee, 0, ',', '.') }}</td></tr>
         @if ($discount > 0)
             <tr><td>Diskon</td><td class="r">- Rp {{ number_format($discount, 0, ',', '.') }}</td></tr>

@@ -22,10 +22,24 @@ class PaymentService
         return (int) config('payment.dp_percentage', 50);
     }
 
-    //  Nominal DP, dibulatkan ke atas agar selalu bilangan bulat rupiah.
-    public function calculateDpAmount(int $grandTotal): int
+    public function resolveDpPercentage(int|float|string|null $vendorPercentage = null): int
     {
-        return (int) ceil($grandTotal * $this->defaultDpPercentage() / 100);
+        $percentage = (int) $vendorPercentage;
+
+        return ($percentage >= 1 && $percentage <= 100)
+            ? $percentage
+            : $this->defaultDpPercentage();
+    }
+
+    public function calculateDpAmount(
+        int|float $subtotal,
+        int|float $deliveryFee = 0,
+        int|float $discount = 0,
+        ?int $percentage = null,
+    ): int {
+        $base = max(0, (int) round($subtotal) + (int) round($deliveryFee) - (int) round($discount));
+
+        return intdiv($base * $this->defaultDpPercentage() + 99, 100);
     }
 
     //  order_id Midtrans unik berprefix TDK.
@@ -68,7 +82,12 @@ class PaymentService
 
         $grandTotal = (int) $rental->grand_total;
         $amount = match ($paymentType) {
-            PaymentType::Dp->value => $this->calculateDpAmount($grandTotal),
+            PaymentType::Dp->value => min($grandTotal, $this->calculateDpAmount(
+                (float) $rental->subtotal,
+                (float) $rental->delivery_fee,
+                (float) $rental->discount_amount,
+                (int) ($rental->vendor?->dp_percentage ?? 0)
+            )),
             PaymentType::Remaining->value => $this->remainingAmountOrFail($rental),
             default => $grandTotal,
         };
