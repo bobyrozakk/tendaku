@@ -413,9 +413,8 @@ class MidtransService
             ->where('status', PaymentStatus::Paid->value)
             ->count();
 
-        if ($paidCount === 1) {
-            // Biarkan status rental tetap 'pending' agar kasir toko memvalidasi dan scan barcode fisik unit terlebih dahulu di POS Kasir
-            // Status pembayaran (Payment) sudah 'paid'. Setelah kasir memvalidasi barcode, status rental akan disetujui menjadi 'confirmed' (Siap Pickup).
+        if ($paidCount === 1 && $payment->payment_type !== 'dp') {
+            $rental->update(['status' => 'confirmed']);
         }
     }
 

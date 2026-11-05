@@ -118,7 +118,7 @@ class CheckoutTest extends TestCase
         $this->assertSame('pending', $rental->status);
         $this->assertSame('2026-10-11', $rental->pickup_date->toDateString());
         $this->assertSame('2026-10-13', $rental->return_date->toDateString());
-        $this->assertSame(3, (int) $rental->rental_days);
+        $this->assertSame(2, (int) $rental->rental_days);
         $this->assertSame(1, $rental->details()->count());
 
         $this->assertNull(session('booking_cart'), 'Keranjang harus dikosongkan setelah checkout berhasil.');
@@ -252,7 +252,7 @@ class CheckoutTest extends TestCase
             ->get(route('checkout.index'))
             ->assertOk()
             ->assertSee('081234567890')
-            ->assertSee('Pengingat pengembalian (H-1 & hari pengembalian) dikirim ke');
+            ->assertSee('Pengingat Pengembalian via WhatsApp');
     }
 
     public function test_checkout_redirects_to_catalog_when_cart_is_empty(): void

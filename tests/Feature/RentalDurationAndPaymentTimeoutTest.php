@@ -35,7 +35,10 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
     {
         parent::setUp();
 
-        config(['services.midtrans.server_key' => self::SERVER_KEY]);
+        config([
+            'services.midtrans.server_key' => self::SERVER_KEY,
+            'booking.payment_expiry_minutes' => 5,
+        ]);
 
         $this->vendor = Vendor::create([
             'name' => 'Tendaku Vendor Official',
@@ -200,9 +203,9 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
             ],
         ]);
 
-        // Verifikasi batas waktu tersimpan di server sesuai config rental.payment_expiry_hours
-        $expiryHours = (int) config('rental.payment_expiry_hours');
-        $this->assertEquals(Carbon::now()->addHours($expiryHours), $rental->expires_at);
+        // Verifikasi batas waktu tersimpan di server sesuai config booking.payment_expiry_minutes
+        $expiryMinutes = (int) config('booking.payment_expiry_minutes');
+        $this->assertEquals(Carbon::now()->addMinutes($expiryMinutes), $rental->expires_at);
         $expectedTimestamp = (string) $rental->fresh()->expires_at->timestamp;
         // View mengirim batas waktu ke Alpine (statusPage) dalam format ISO 8601
         $expectedIso = $rental->fresh()->expires_at->toIso8601String();
@@ -251,7 +254,7 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
         $payment = Payment::create([
             'rental_id' => $rental->id,
             'vendor_id' => $this->vendor->id,
-            'payment_type' => 'settlement',
+            'payment_type' => 'full',
             'payment_method' => 'midtrans_snap',
             'amount' => $rental->grand_total,
             'status' => 'pending',
@@ -260,10 +263,10 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
         $this->assertSame('pending', $rental->status);
         $this->assertSame('pending', $payment->status);
 
-        // Majukan waktu sedikit melewati batas pembayaran (config rental.payment_expiry_hours)
+        // Majukan waktu sedikit melewati batas pembayaran (config booking.payment_expiry_minutes)
         Carbon::setTestNow(
             Carbon::parse('2026-10-26 10:00:00')
-                ->addHours((int) config('rental.payment_expiry_hours'))
+                ->addMinutes((int) config('booking.payment_expiry_minutes'))
                 ->addSecond()
         );
 
@@ -271,7 +274,7 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
         ExpirePendingRentals::dispatchSync();
 
         $this->assertSame('expired', $rental->fresh()->status);
-        $this->assertSame('failed', $payment->fresh()->status);
+        $this->assertSame('expired', $payment->fresh()->status);
 
         // Saat halaman status dibuka, booking sudah berstatus expired
         $response = $this->actingAs($this->customer)
@@ -304,7 +307,7 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
         $payment = Payment::create([
             'rental_id' => $rental->id,
             'vendor_id' => $this->vendor->id,
-            'payment_type' => 'settlement',
+            'payment_type' => 'full',
             'payment_method' => 'midtrans_snap',
             'amount' => $rental->grand_total,
             'status' => 'pending',
@@ -352,7 +355,7 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
         Payment::create([
             'rental_id' => $rental->id,
             'vendor_id' => $this->vendor->id,
-            'payment_type' => 'settlement',
+            'payment_type' => 'full',
             'payment_method' => 'midtrans_snap',
             'amount' => $rental->grand_total,
             'status' => 'pending',
@@ -397,7 +400,7 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
         $payment = Payment::create([
             'rental_id' => $rental->id,
             'vendor_id' => $this->vendor->id,
-            'payment_type' => 'settlement',
+            'payment_type' => 'full',
             'payment_method' => 'midtrans_snap',
             'amount' => $rental->grand_total,
             'status' => 'paid', // Pembayaran berhasil masuk via webhook

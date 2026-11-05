@@ -63,8 +63,8 @@ class GoogleAuthenticationTest extends TestCase
 
         $response = $this->get(route('google.callback'));
 
-        // Vendor diarahkan ke dashboard
-        $response->assertRedirect(route('dashboard'));
+        // Vendor admin (kasir) diarahkan ke dashboard kasir
+        $response->assertRedirect(route('kasir.dashboard'));
         $this->assertDatabaseCount('users', 1);
         $this->assertSame('google-user-123', $vendorAdmin->fresh()->google_id);
         $this->assertSame('vendor_admin', $vendorAdmin->fresh()->role);

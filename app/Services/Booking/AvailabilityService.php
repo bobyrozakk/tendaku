@@ -264,7 +264,7 @@ class AvailabilityService
             ->withoutGlobalScope('vendor')
             ->where('master_item_id', $masterItemId)
             ->whereNotIn('status', ['maintenance', 'retired', 'lost'])
-            ->where('condition', '!=', 'lost');
+            ->whereNotIn('condition', ['damaged', 'lost']);
     }
 
     /**

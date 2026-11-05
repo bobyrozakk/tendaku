@@ -244,10 +244,25 @@ class ProductBooking extends Component
     #[Computed]
     public function availableStock(): int
     {
-        return ItemUnit::withoutGlobalScope('vendor')
-            ->where('master_item_id', $this->product->id)
-            ->where('status', 'available')
-            ->count();
+        if (empty($this->pickup_date) || empty($this->return_date)) {
+            return ItemUnit::withoutGlobalScope('vendor')
+                ->where('master_item_id', $this->product->id)
+                ->where('status', 'available')
+                ->count();
+        }
+
+        try {
+            return app(AvailabilityService::class)->checkAvailability(
+                $this->product->id,
+                $this->pickup_date,
+                $this->return_date
+            );
+        } catch (\Throwable) {
+            return ItemUnit::withoutGlobalScope('vendor')
+                ->where('master_item_id', $this->product->id)
+                ->where('status', 'available')
+                ->count();
+        }
     }
 
     /**

@@ -302,6 +302,7 @@ class CartService
 
         if ($firstItem) {
             $cart['master_item_id'] = $firstItem['master_item_id'];
+            $cart['product_id'] = $firstItem['master_item_id'];
             $cart['product_name'] = $firstItem['product_name'];
             $cart['product_image'] = $firstItem['product_image'];
             $cart['daily_rate'] = $firstItem['daily_rate'];

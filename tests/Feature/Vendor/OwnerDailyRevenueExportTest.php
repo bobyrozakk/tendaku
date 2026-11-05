@@ -8,9 +8,12 @@ use App\Models\Vendor;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\Attributes\RequiresPhpExtension;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
 use ZipArchive;
 
+#[RequiresPhpExtension('zip')]
 class OwnerDailyRevenueExportTest extends TestCase
 {
     use RefreshDatabase;
@@ -150,7 +153,9 @@ class OwnerDailyRevenueExportTest extends TestCase
 
     private function readSheetXml(TestResponse $response): string
     {
-        $path = $response->baseResponse->getFile()->getPathname();
+        /** @var BinaryFileResponse $baseResponse */
+        $baseResponse = $response->baseResponse;
+        $path = $baseResponse->getFile()->getPathname();
 
         $zip = new ZipArchive;
         $this->assertTrue($zip->open($path) === true, 'File Excel tidak dapat dibuka sebagai arsip XLSX.');
