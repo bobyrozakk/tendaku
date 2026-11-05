@@ -124,6 +124,7 @@ class ProductController extends Controller
                 'daily_rate' => $request->daily_rate,
                 'deposit_amount' => 0, // Tanpa deposit moneter sesuai revisi bisnis
                 'late_fee_per_day' => $request->late_fee_per_day,
+                'weight_kg' => $request->weight_kg,
                 'image_url' => null,
                 'is_active' => $request->boolean('is_active', true),
             ]);
@@ -280,6 +281,7 @@ class ProductController extends Controller
                 'description' => $request->description,
                 'daily_rate' => $request->daily_rate,
                 'late_fee_per_day' => $request->late_fee_per_day,
+                'weight_kg' => $request->weight_kg,
                 'image_url' => $imageUrl,
                 'is_active' => $request->boolean('is_active', true),
             ]);
