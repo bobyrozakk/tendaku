@@ -112,7 +112,13 @@ class MidtransService
      */
     public function chargeBankTransfer(Payment $payment, string $bank = 'bca'): ?array
     {
-        $bank = strtolower(trim($bank ?: 'bca'));
+        $bank = strtolower(trim($bank ?: config('payment.default_bank', 'bca')));
+
+        if (! array_key_exists($bank, config('payment.va_banks', []))) {
+            throw new InvalidArgumentException(
+                'Bank tidak tersedia. Pilih salah satu: BCA, BNI, BRI, Permata, atau CIMB Niaga.'
+            );
+        }
 
         if ($payment->raw_notification && ! empty($payment->va_details)) {
             if (strtolower($payment->va_details['bank'] ?? '') === $bank) {
@@ -122,12 +128,6 @@ class MidtransService
             $baseOrderId = explode('-', $payment->order_id)[0];
             $payment->order_id = $baseOrderId.'-'.substr(str_shuffle('123456789'), 0, 3);
             $payment->save();
-        }
-
-        if ($bank === 'mandiri') {
-            throw new InvalidArgumentException(
-                'Metode pembayaran Mandiri tidak tersedia.'
-            );
         }
 
         $rental = $this->rentalFor($payment);
@@ -335,13 +335,6 @@ class MidtransService
             $this->escrow->markHeld($payment);
             $this->commissions->accrueForPayment($payment);
 
-            if (str_contains((string) $payment->method, 'qris')) {
-                $payment->gateway_fee_amount =
-                    $this->calculator->mdrFor((float) $payment->amount);
-
-                $payment->save();
-            }
-
             return;
         }
 
@@ -368,16 +361,19 @@ class MidtransService
      */
     private function resolvePaymentChannel(string $paymentType, array $data, ?string $fallback): ?string
     {
-        return match ($paymentType) {
-            'qris', 'other_qris' => 'qris',
-            'bank_transfer' => 'va_'.strtolower((string) (data_get($data, 'va_numbers.0.bank', 'bank'))),
-            'echannel' => 'va_mandiri',
-            'gopay' => 'gopay',
-            'shopeepay' => 'shopeepay',
-            'credit_card' => 'card',
-            'cstore' => 'cstore',
-            default => $fallback,
-        };
+        if ($paymentType !== 'bank_transfer') {
+            return $fallback;
+        }
+
+        if (! empty($data['permata_va_number'])) {
+            return 'va_permata';
+        }
+
+        $bank = strtolower((string) data_get($data, 'va_numbers.0.bank', ''));
+
+        return array_key_exists($bank, config('payment.va_banks', []))
+            ? 'va_'.$bank
+            : $fallback;
     }
 
     private function mapMidtransStatus(
@@ -518,7 +514,8 @@ class MidtransService
         $code = $rental->booking_code;
 
         if ($payment->payment_type === PaymentType::Dp->value) {
-            $dpPct = (int) config('payment.dp_percentage', 50);
+            $dpPct = app(PaymentService::class)
+                ->resolveDpPercentage($rental->vendor?->dp_percentage);
 
             return [[
                 'id' => "DP-{$code}",
@@ -549,13 +546,41 @@ class MidtransService
 
     private function itemizedDetails(Rental $rental, int $amount): array
     {
-        $items = $rental->details->map(fn ($detail) => [
-            'id' => "ITEM-{$detail->master_item_id}",
-            'price' => (int) $detail->daily_rate_snapshot,
-            'quantity' => $rental->rental_days,
-            'name' => $detail->masterItem?->name
-                ?? "Item #{$detail->master_item_id}",
-        ])->all();
+        $days = max(1, (int) $rental->rental_days);
+
+        $items = $rental->details
+            ->groupBy('master_item_id')
+            ->map(fn ($group) => [
+                'id' => "ITEM-{$group->first()->master_item_id}",
+                'price' => (int) $group->first()->daily_rate_snapshot,
+                'quantity' => $group->count() * $days,
+                'name' => mb_substr(
+                    (string) ($group->first()->masterItem?->name
+                        ?? "Item #{$group->first()->master_item_id}"),
+                    0,
+                    50
+                ),
+            ])
+            ->values()
+            ->all();
+
+        if ((int) $rental->delivery_fee > 0) {
+            $items[] = [
+                'id' => 'DELIVERY',
+                'price' => (int) $rental->delivery_fee,
+                'quantity' => 1,
+                'name' => 'Ongkos Kirim',
+            ];
+        }
+
+        if ((int) $rental->discount_amount > 0) {
+            $items[] = [
+                'id' => 'DISCOUNT',
+                'price' => -(int) $rental->discount_amount,
+                'quantity' => 1,
+                'name' => 'Diskon',
+            ];
+        }
 
         $itemTotal = array_sum(array_map(
             fn ($item) => $item['price'] * $item['quantity'],

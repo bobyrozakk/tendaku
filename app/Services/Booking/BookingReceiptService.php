@@ -28,14 +28,7 @@ class BookingReceiptService
 
         $days = max(1, (int) $rental->rental_days);
 
-        $vaBanks = [
-            'bca' => 'BCA',
-            'bni' => 'BNI',
-            'bri' => 'BRI',
-            'permata' => 'Permata',
-            'cimb' => 'CIMB Niaga',
-            'mandiri' => 'Mandiri',
-        ];
+        $vaBanks = config('payment.va_banks', []);
 
         $channel = strtolower((string) (
             $activePayment?->payment_channel
@@ -63,11 +56,8 @@ class BookingReceiptService
         $bankName = $bankCode ? $vaBanks[$bankCode] : null;
 
         $paymentMethod = $bankName
-            ? ($bankName === 'Mandiri'
-                ? 'Mandiri Bill Payment'
-                : "{$bankName} Virtual Account")
+            ? "{$bankName} Virtual Account"
             : match ($channel) {
-                'qris' => 'QRIS Realtime',
                 'cash' => 'Tunai di Kasir Vendor',
                 default => $activePayment
                     ? 'Pembayaran online'

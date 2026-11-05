@@ -8,11 +8,6 @@
     </div>
 
     <div class="receipt-row">
-        <span>Biaya Admin</span>
-        <span>Rp {{ number_format($adminFee ?? 0, 0, ',', '.') }}</span>
-    </div>
-
-    <div class="receipt-row">
         <span>Biaya Pengantaran</span>
         <span>Rp {{ number_format($deliveryFee ?? 0, 0, ',', '.') }}</span>
     </div>
@@ -35,6 +30,20 @@
         <span>Metode Pembayaran</span>
         <span>{{ $paymentMethod ?? 'Belum tersedia' }}</span>
     </div>
+
+    @if (! empty($paidPayment?->paid_at))
+        <div class="receipt-row">
+            <span>Waktu Pembayaran</span>
+            <span>{{ $paidPayment->paid_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') }} WIB</span>
+        </div>
+    @endif
+
+    @if (! empty($paidPayment?->payment_proof_url))
+        <div class="receipt-row">
+            <span>Bukti Pembayaran</span>
+            <a href="{{ $paidPayment->payment_proof_url }}" target="_blank" rel="noopener noreferrer">Lihat bukti</a>
+        </div>
+    @endif
 
     <div class="receipt-row">
         <span>Sudah Dibayar</span>

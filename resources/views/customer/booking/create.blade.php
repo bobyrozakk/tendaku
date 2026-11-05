@@ -95,7 +95,7 @@
             'minDate'           => now()->toDateString(),
             'initialDays'       => (int) $booking['rental_days'],
             'discount'          => (int) ($booking['discount'] ?? 0),
-            'deliveryFeeAmount' => 20000,
+            'deliveryFeeAmount' => (int) ($booking['delivery_fee_amount'] ?? 0),
             'serverDpAmount'    => (int) ($booking['dp_amount'] ?? 0),
             'dpPercentage'      => (int) ($booking['dp_percentage'] ?? 50),
             'expiresAtIso'      => $booking['expires_at_iso'] ?? null,

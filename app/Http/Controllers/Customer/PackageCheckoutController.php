@@ -26,7 +26,10 @@ class PackageCheckoutController extends Controller
      */
     private const CHANNEL_LABELS = [
         'bca_va' => 'BCA Virtual Account',
-        'bri_va' => 'BRI Virtual Account (BRIVA)',
+        'bni_va' => 'BNI Virtual Account',
+        'bri_va' => 'BRI Virtual Account',
+        'permata_va' => 'Permata Virtual Account',
+        'cimb_va' => 'CIMB Niaga Virtual Account',
     ];
 
     /**
@@ -95,7 +98,10 @@ class PackageCheckoutController extends Controller
         $package = $this->findPackage((int) $request->input('package_id'));
 
         $pickupMethod = $request->input('pickup_method', 'self_pickup');
-        $paymentChannel = $request->input('payment_channel', 'qris');
+        $paymentChannel = $request->input('payment_channel');
+        if (! array_key_exists((string) $paymentChannel, self::CHANNEL_LABELS)) {
+            $paymentChannel = 'bca_va';
+        }
         $user = Auth::user();
 
         $isGuest = ! Auth::check();

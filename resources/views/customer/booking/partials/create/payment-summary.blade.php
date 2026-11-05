@@ -1,4 +1,3 @@
-            <!-- ============ KOLOM KANAN: RINGKASAN & BAYAR ============ -->
             <div class="lg:col-span-5 xl:col-span-4 space-y-5 lg:sticky lg:top-24">
 
                 <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm overflow-hidden">
@@ -11,11 +10,6 @@
                             <div class="flex items-center justify-between text-darkbrown-600">
                                 <span x-text="'Sewa alat (' + totalUnits + ' unit, ' + rentalDays + ' hari)'"></span>
                                 <span class="font-bold text-darkbrown-900" x-text="formatRupiah(subtotal)"></span>
-                            </div>
-
-                            <div class="flex items-center justify-between text-darkbrown-600">
-                                <span>Biaya admin</span>
-                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(adminFee)"></span>
                             </div>
 
                             <div class="flex items-start justify-between text-darkbrown-600">

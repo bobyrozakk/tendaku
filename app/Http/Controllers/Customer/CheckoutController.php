@@ -227,14 +227,7 @@ class CheckoutController extends Controller
         $pickupDate = $request->validated('pickup_date') ?: ($cart['pickup_date'] ?? null);
         $returnDate = $request->validated('return_date') ?: ($cart['return_date'] ?? null);
 
-        $requestedItems = $request->input('items');
-        $qty = 1;
-        if (is_array($requestedItems) && isset($requestedItems[0]['qty'])) {
-            $qty = max(1, (int) $requestedItems[0]['qty']);
-        } else {
-            $qty = $this->summary->quantityOf($cart);
-        }
-        // Jam ambil dipilih customer; jam kembali selalu sama dengan jam ambil.
+        // jam balik = jam ambil
         $pickupTime = $request->validated('pickup_time')
             ?: ($masterItem->vendor->pickup_time ?: config('booking.default_pickup_time'));
 
@@ -247,11 +240,25 @@ class CheckoutController extends Controller
                 ],
             ];
 
-        $itemsList = array_map(function ($it) {
+        $requestedQty = [];
+        foreach ((array) $request->input('items', []) as $requested) {
+            $requestedId = (int) ($requested['id'] ?? 0);
+
+            if ($requestedId > 0 && isset($requested['qty'])) {
+                $requestedQty[$requestedId] = max(1, (int) $requested['qty']);
+            }
+        }
+
+        $itemsList = array_map(function ($it) use ($requestedQty) {
+            $itemId = (int) ($it['master_item_id'] ?? 0);
+
+            $qty = $requestedQty[$itemId]
+                ?? max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1));
+
             return [
-                'master_item_id' => (int) ($it['master_item_id'] ?? 0),
-                'quantity' => max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1)),
-                'qty' => max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1)),
+                'master_item_id' => $itemId,
+                'quantity' => $qty,
+                'qty' => $qty,
             ];
         }, $rawItems);
 
@@ -330,11 +337,20 @@ class CheckoutController extends Controller
      */
     protected function paymentChannel(?string $channel): string
     {
-        return in_array(
-            $channel,
-            ['qris', 'bca_va', 'mandiri_va', 'bri_va'],
-            true
-        ) ? $channel : 'qris';
+        return in_array($channel, $this->vaChannelIds(), true)
+            ? $channel
+            : 'bca_va';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function vaChannelIds(): array
+    {
+        return array_map(
+            fn (string $bank) => $bank.'_va',
+            array_keys(config('payment.va_banks', []))
+        );
     }
 
     /**
@@ -344,32 +360,15 @@ class CheckoutController extends Controller
      */
     protected function paymentMethods(): array
     {
-        return [
-            [
-                'id' => 'qris',
-                'name' => 'QRIS Realtime',
-                'desc' => 'GoPay, OVO, Dana, ShopeePay, BCA Mobile, & Livin Mandiri',
-                'badge' => 'Verifikasi Otomatis',
-            ],
-            [
-                'id' => 'bca_va',
-                'name' => 'BCA Virtual Account',
-                'desc' => 'Konfirmasi pembayaran instan 24 jam',
+        return collect(config('payment.va_banks', []))
+            ->map(fn (string $label, string $bank) => [
+                'id' => $bank.'_va',
+                'name' => $label.' Virtual Account',
+                'desc' => 'Konfirmasi pembayaran otomatis 24 jam',
                 'badge' => 'Otomatis',
-            ],
-            [
-                'id' => 'mandiri_va',
-                'name' => 'Mandiri Bill Payment',
-                'desc' => 'Transfer via Livin by Mandiri / ATM',
-                'badge' => 'Otomatis',
-            ],
-            [
-                'id' => 'bri_va',
-                'name' => 'BRI Virtual Account (BRIVA)',
-                'desc' => 'Transfer via BRImo / ATM',
-                'badge' => 'Otomatis',
-            ],
-        ];
+            ])
+            ->values()
+            ->all();
     }
 
     /**
