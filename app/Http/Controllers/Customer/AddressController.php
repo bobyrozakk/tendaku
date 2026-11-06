@@ -150,11 +150,13 @@ class AddressController extends Controller
     }
 
     /**
-     * Validasi input data alamat lengkap.
+     * Validasi input data alamat lengkap beserta koordinat opsional.
+     *
+     * @return array<string, mixed>
      */
     private function validateAddress(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'label' => ['required', 'string', 'max:50'],
             'recipient_name' => ['required', 'string', 'max:150'],
             'phone_number' => ['required', 'regex:/^08[0-9]{8,11}$/'],
@@ -165,6 +167,8 @@ class AddressController extends Controller
             'village' => ['nullable', 'string', 'max:100'],
             'postal_code' => ['nullable', 'string', 'max:10'],
             'notes' => ['nullable', 'string', 'max:500'],
+            'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
         ], [
             'label.required' => 'Label alamat (cth: Rumah, Kantor, Kos) wajib diisi.',
@@ -175,7 +179,23 @@ class AddressController extends Controller
             'province.required' => 'Provinsi wajib diisi.',
             'city.required' => 'Kota atau kabupaten wajib diisi.',
             'district.required' => 'Kecamatan wajib diisi.',
+            'latitude.required_with' => 'Titik koordinat latitude wajib diisi jika longitude disertakan.',
+            'latitude.numeric' => 'Koordinat latitude harus berupa angka yang valid.',
+            'latitude.between' => 'Koordinat latitude harus berada antara -90 dan 90.',
+            'longitude.required_with' => 'Titik koordinat longitude wajib diisi jika latitude disertakan.',
+            'longitude.numeric' => 'Koordinat longitude harus berupa angka yang valid.',
+            'longitude.between' => 'Koordinat longitude harus berada antara -180 dan 180.',
         ]);
+
+        if (array_key_exists('latitude', $validated) && $validated['latitude'] !== null && $validated['latitude'] !== '') {
+            $validated['latitude'] = round((float) $validated['latitude'], 7);
+        }
+
+        if (array_key_exists('longitude', $validated) && $validated['longitude'] !== null && $validated['longitude'] !== '') {
+            $validated['longitude'] = round((float) $validated['longitude'], 7);
+        }
+
+        return $validated;
     }
 
     /**

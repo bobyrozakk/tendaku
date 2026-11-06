@@ -483,12 +483,12 @@ export function createLocationPickerState(config = {}) {
                 this.$refs.longitudeInput.dispatchEvent(new Event("change", { bubbles: true }));
             }
 
-            if (this.$wire) {
+            if (this.$wire && typeof this.$wire.set === "function") {
                 if (this.wireLatitudeModel) {
-                    this.$wire.set(this.wireLatitudeModel, this.selectedLatitude);
+                    this.$wire.set(this.wireLatitudeModel, this.selectedLatitude, false);
                 }
                 if (this.wireLongitudeModel) {
-                    this.$wire.set(this.wireLongitudeModel, this.selectedLongitude);
+                    this.$wire.set(this.wireLongitudeModel, this.selectedLongitude, false);
                 }
             }
 
