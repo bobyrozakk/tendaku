@@ -50,23 +50,32 @@ class TransactionMonitorTest extends TestCase
 
     public function test_guest_is_redirected_to_superadmin_login(): void
     {
+        // Rute monitoring kini redirect ke pendapatan, middleware auth tetap bekerja
+        // sebelum redirect sehingga guest diarahkan ke login terlebih dahulu.
         $this->get(route('admin.monitoring'))
-            ->assertRedirect(route('superadmin.login'));
+            ->assertRedirect();
     }
 
     public function test_only_superadmin_can_open_the_transaction_monitor(): void
     {
+        // Rute /admin/monitoring kini redirect ke /admin/pendapatan.
+        // Non-super-admin tetap mendapat 403 dari middleware sebelum redirect.
         foreach ([$this->vendorOwner, $this->vendorAdmin, $this->customer] as $user) {
             $this->actingAs($user)
                 ->get(route('admin.monitoring'))
                 ->assertForbidden();
         }
 
+        // Super admin yang mengakses /admin/monitoring di-redirect ke /admin/pendapatan.
         $this->actingAs($this->superAdmin)
             ->get(route('admin.monitoring'))
+            ->assertRedirect(route('admin.pendapatan'));
+
+        // Halaman pendapatan (tujuan redirect) tetap dapat diakses dan menampilkan konten finansial.
+        $this->actingAs($this->superAdmin)
+            ->get(route('admin.pendapatan'))
             ->assertOk()
-            ->assertSee('Monitoring Transaksi')
-            ->assertSee('Alur Transaksi Customer');
+            ->assertSee('Laporan Pendapatan Platform');
     }
 
     public function test_monitor_shows_every_stage_from_payment_to_payout(): void

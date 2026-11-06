@@ -434,8 +434,16 @@
                                     <span class="text-[11px] text-darkbrown-400">Tidak berlaku</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3.5 text-center text-[11px] text-darkbrown-500">
-                                {{ $transaction['settlement_id'] ? '#'.$transaction['settlement_id'] : '—' }}
+                            <td class="px-4 py-3.5 text-center text-[11px]">
+                                @if ($transaction['settlement_id'])
+                                    <a href="{{ route('admin.settlements', ['settlement' => $transaction['settlement_id']]) }}"
+                                       class="inline-flex items-center gap-1 font-semibold text-avocado-700 hover:text-avocado-900 hover:underline"
+                                       title="Lihat batch settlement">
+                                        #{{ $transaction['settlement_id'] }}
+                                    </a>
+                                @else
+                                    <span class="text-darkbrown-300">—</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3.5 text-[11px] text-darkbrown-500">
                                 {{ $transaction['paid_at']?->isoFormat('D MMM Y HH:mm') ?? '—' }}

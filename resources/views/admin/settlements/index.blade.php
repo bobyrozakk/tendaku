@@ -16,10 +16,7 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('admin.monitoring') }}" class="btn-tendaku-primary !px-3.5 !py-2 text-xs">
-                    Monitoring Transaksi
-                </a>
-                <a href="{{ route('admin.pendapatan') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">
+                <a href="{{ route('admin.pendapatan') }}" class="btn-tendaku-primary !px-3.5 !py-2 text-xs">
                     Laporan Pendapatan
                 </a>
                 <a href="{{ route('dashboard') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">

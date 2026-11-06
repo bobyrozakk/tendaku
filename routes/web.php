@@ -165,7 +165,7 @@ Route::middleware(['super_admin', 'verified'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
-        Route::view('monitoring', 'admin.monitoring.index')->name('monitoring');
+        Route::redirect('monitoring', '/admin/pendapatan')->name('monitoring');
 
         Route::view('pendapatan', 'admin.revenue.index')->name('pendapatan');
         Route::get('pendapatan/export', [RevenueExportController::class, 'csv'])
