@@ -140,100 +140,14 @@
         @endif
     </div>
 
-    <!-- KPI Cards -->
+    <!-- KPI Cards (Sederhana, Fokus & Terstruktur) -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <x-stat-card
-            title="Komisi Hari Ini"
-            :value="'Rp ' . number_format($kpis['commission_today'], 0, ',', '.')"
-            :trend="($kpis['commission_today_delta'] >= 0 ? '+' : '') . $kpis['commission_today_delta'] . '% vs kemarin'"
-            :trendUp="$kpis['commission_today_delta'] >= 0"
-            description="Akrual komisi DP/pelunasan hari ini"
-            color="avocado"
-        >
-            <x-slot name="icon">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </x-slot>
-        </x-stat-card>
-
-        <x-stat-card
-            title="Komisi 7 Hari"
-            :value="'Rp ' . number_format($kpis['commission_7_days'], 0, ',', '.')"
-            :trend="($kpis['commission_7_days_delta'] >= 0 ? '+' : '') . $kpis['commission_7_days_delta'] . '% vs 7 hari sebelumnya'"
-            :trendUp="$kpis['commission_7_days_delta'] >= 0"
-            description="Akumulasi komisi tujuh hari terakhir"
-            color="goldenrod"
-        >
-            <x-slot name="icon">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-            </x-slot>
-        </x-stat-card>
-
-        <x-stat-card
-            title="Komisi Bulan Ini"
-            :value="'Rp ' . number_format($kpis['commission_this_month'], 0, ',', '.')"
-            :trend="($kpis['commission_this_month_delta'] >= 0 ? '+' : '') . $kpis['commission_this_month_delta'] . '% vs bulan lalu'"
-            :trendUp="$kpis['commission_this_month_delta'] >= 0"
-            :description="now()->isoFormat('MMMM Y')"
-            color="sunglow"
-        >
-            <x-slot name="icon">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-            </x-slot>
-        </x-stat-card>
-
-        <x-stat-card
-            title="Komisi Tahun Ini"
-            :value="'Rp ' . number_format($kpis['commission_this_year'], 0, ',', '.')"
-            :trend="($kpis['commission_this_year_delta'] >= 0 ? '+' : '') . $kpis['commission_this_year_delta'] . '% vs tahun lalu'"
-            :trendUp="$kpis['commission_this_year_delta'] >= 0"
-            :description="now()->format('Y')"
-            color="dark"
-        >
-            <x-slot name="icon">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                </svg>
-            </x-slot>
-        </x-stat-card>
-
-        <x-stat-card
-            title="Escrow Ditahan"
-            :value="'Rp ' . number_format($kpis['escrow_held_total'], 0, ',', '.')"
-            description="Dana QRIS yang masih ditahan (semua periode)"
-            color="goldenrod"
-        >
-            <x-slot name="icon">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-            </x-slot>
-        </x-stat-card>
-
-        <x-stat-card
-            title="Piutang Komisi Tunai"
-            :value="'Rp ' . number_format($kpis['cash_receivable'], 0, ',', '.')"
-            description="Komisi tunai accrued yang belum di-net-off"
-            color="sunglow"
-        >
-            <x-slot name="icon">
-                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-            </x-slot>
-        </x-stat-card>
-
-        <x-stat-card
-            title="Laba Platform (Periode)"
+            title="Laba Bersih Platform"
             :value="'Rp ' . number_format($current['platform_net'], 0, ',', '.')"
             :trend="($delta['platform_net'] >= 0 ? '+' : '') . $delta['platform_net'] . '% vs periode sebelumnya'"
             :trendUp="$delta['platform_net'] >= 0"
-            description="Komisi - MDR standar - estimasi biaya transfer"
+            description="Setelah MDR gateway & beban transfer vendor"
             color="avocado"
         >
             <x-slot name="icon">
@@ -244,9 +158,37 @@
         </x-stat-card>
 
         <x-stat-card
-            title="Batch Menunggu Approval"
-            :value="$kpis['pending_batches'] . ' Batch'"
-            :description="'Payout bulan ini Rp ' . number_format($kpis['payout_this_month'], 0, ',', '.')"
+            title="Komisi Platform"
+            :value="'Rp ' . number_format($current['commission'], 0, ',', '.')"
+            :trend="($delta['commission'] >= 0 ? '+' : '') . $delta['commission'] . '% vs periode lalu'"
+            :trendUp="$delta['commission'] >= 0"
+            :description="'Bulan ini Rp ' . number_format($kpis['commission_this_month'], 0, ',', '.') . ' · Hari ini Rp ' . number_format($kpis['commission_today'], 0, ',', '.')"
+            color="goldenrod"
+        >
+            <x-slot name="icon">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </x-slot>
+        </x-stat-card>
+
+        <x-stat-card
+            title="Escrow Ditahan"
+            :value="'Rp ' . number_format($kpis['escrow_held_total'], 0, ',', '.')"
+            :description="'Piutang tunai: Rp ' . number_format($kpis['cash_receivable'], 0, ',', '.')"
+            color="sunglow"
+        >
+            <x-slot name="icon">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            </x-slot>
+        </x-stat-card>
+
+        <x-stat-card
+            title="Pencairan Vendor (Payout)"
+            :value="'Rp ' . number_format($kpis['payout_this_month'], 0, ',', '.')"
+            :description="$kpis['pending_batches'] . ' batch menunggu approval'"
             color="dark"
         >
             <x-slot name="icon">
@@ -257,50 +199,68 @@
         </x-stat-card>
     </div>
 
-    <!-- Ringkasan periode terpilih -->
-    <x-card title="Ringkasan Periode Terpilih" subtitle="Angka mengikuti seluruh filter aktif, termasuk metode, escrow, dan tipe pembayaran.">
-        <x-slot name="action">
-            <x-badge variant="wheat" size="sm">
-                {{ $summary['range']['start']?->isoFormat('D MMM Y') ?? 'Awal' }}
-                –
-                {{ $summary['range']['end']?->isoFormat('D MMM Y') ?? 'Sekarang' }}
-            </x-badge>
-        </x-slot>
+    <!-- Ringkasan Alur Finansial Periode Terpilih -->
+    <div class="card-tendaku p-5">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-wheat-200 pb-4">
+            <div>
+                <h3 class="text-sm font-extrabold uppercase tracking-wider text-darkbrown-800">
+                    Kalkulasi Aliran Dana Periode Terpilih
+                </h3>
+                <p class="text-xs text-darkbrown-500">
+                    Transparansi pembagian dari pendapatan kotor ke komisi hingga laba bersih platform.
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <x-badge variant="wheat" size="sm">
+                    {{ $summary['range']['start']?->isoFormat('D MMM Y') ?? 'Awal' }}
+                    –
+                    {{ $summary['range']['end']?->isoFormat('D MMM Y') ?? 'Sekarang' }}
+                </x-badge>
+            </div>
+        </div>
 
-        <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <div class="rounded-xl border border-wheat-200 bg-wheat-50/60 p-3">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Pendapatan Kotor</p>
+        <!-- Ledger Flow -->
+        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 items-stretch">
+            <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 p-3.5">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Pendapatan Kotor (GMV)</p>
                 <p class="mt-1 text-lg font-extrabold text-darkbrown-900">Rp {{ number_format($current['gross_revenue'], 0, ',', '.') }}</p>
-                <p class="text-[10px] text-darkbrown-400">Tanpa denda</p>
+                <p class="text-[10px] text-darkbrown-400">Total nilai booking sewa</p>
             </div>
-            <div class="rounded-xl border border-wheat-200 bg-wheat-50/60 p-3">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Komisi</p>
+
+            <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 p-3.5">
+                <div class="flex items-center justify-between">
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Komisi Platform</p>
+                    <span class="rounded bg-avocado-100 px-1.5 py-0.5 text-[9px] font-extrabold text-avocado-800">{{ $current['transaction_count'] }} trx</span>
+                </div>
                 <p class="mt-1 text-lg font-extrabold text-avocado-700">Rp {{ number_format($current['commission'], 0, ',', '.') }}</p>
-                <p class="text-[10px] text-darkbrown-400">{{ $current['transaction_count'] }} transaksi</p>
+                <p class="text-[10px] text-darkbrown-400">Total fee platform yang diakui</p>
             </div>
-            <div class="rounded-xl border border-wheat-200 bg-wheat-50/60 p-3">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">MDR Standar</p>
+
+            <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 p-3.5">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">MDR Standar Gateway</p>
                 <p class="mt-1 text-lg font-extrabold text-goldenrod-700">Rp {{ number_format($current['gateway_fee_total'], 0, ',', '.') }}</p>
-                <p class="text-[10px] text-darkbrown-400">Beban platform</p>
+                <p class="text-[10px] text-darkbrown-400">Beban transaksi payment gateway</p>
             </div>
-            <div class="rounded-xl border border-wheat-200 bg-wheat-50/60 p-3">
+
+            <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 p-3.5">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Escrow Ditahan</p>
-                <p class="mt-1 text-lg font-extrabold text-darkbrown-900">Rp {{ number_format($current['escrow_held'], 0, ',', '.') }}</p>
-                <p class="text-[10px] text-darkbrown-400">Sesuai filter</p>
+                <p class="mt-1 text-lg font-extrabold text-darkbrown-800">Rp {{ number_format($current['escrow_held'], 0, ',', '.') }}</p>
+                <p class="text-[10px] text-darkbrown-400">Dana QRIS dalam pengamanan</p>
             </div>
-            <div class="rounded-xl border border-wheat-200 bg-wheat-50/60 p-3">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Laba Platform</p>
-                <p class="mt-1 text-lg font-extrabold {{ $current['platform_net'] < 0 ? 'text-red-600' : 'text-darkbrown-900' }}">
+
+            <div class="rounded-xl border border-avocado-200 bg-avocado-50/60 p-3.5">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-avocado-800">Laba Bersih Platform</p>
+                <p class="mt-1 text-lg font-extrabold {{ $current['platform_net'] < 0 ? 'text-red-600' : 'text-avocado-900' }}">
                     Rp {{ number_format($current['platform_net'], 0, ',', '.') }}
                 </p>
-                <p class="text-[10px] text-darkbrown-400">Transfer Rp {{ number_format($current['transfer_fee_total'], 0, ',', '.') }}</p>
+                <p class="text-[10px] text-avocado-700">Transfer Rp {{ number_format($current['transfer_fee_total'], 0, ',', '.') }} ({{ $current['vendor_count'] }} vendor)</p>
             </div>
         </div>
 
         <p class="mt-3 text-[11px] text-darkbrown-400">
-            Laba platform = komisi - MDR standar - (biaya transfer {{ 'Rp ' . number_format($current['transfer_fee'], 0, ',', '.') }} × {{ $current['vendor_count'] }} vendor). Angka batch final tersedia di halaman settlement.
+            Rumus: Laba platform = komisi platform – MDR standar – estimasi biaya transfer bank (Rp {{ number_format($current['transfer_fee'], 0, ',', '.') }} × {{ $current['vendor_count'] }} vendor).
         </p>
-    </x-card>
+    </div>
 
     <!-- Chart -->
     <x-card title="Tren Komisi Platform" subtitle="Komisi diakui berdasarkan waktu pembayaran. Chart mengikuti filter vendor/metode/tipe, bukan periode tabel.">

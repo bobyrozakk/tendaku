@@ -1,7 +1,7 @@
-<div id="kelola-vendor" class="scroll-mt-24 space-y-5" wire:poll.15s>
-    <!-- Header Section -->
-    <div class="card-tendaku p-5">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+<div id="kelola-vendor" class="scroll-mt-24 card-tendaku overflow-hidden" wire:poll.15s>
+    <!-- Header, Status Tabs, & Search Bar Terpadu -->
+    <div class="border-b border-wheat-200 bg-white p-5">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <div class="mb-1 flex flex-wrap items-center gap-2">
                     <x-badge variant="wheat" :dot="true">Administrasi Tenant</x-badge>
@@ -9,55 +9,11 @@
                 </div>
                 <h2 class="text-lg font-extrabold tracking-tight text-darkbrown-900">Kelola &amp; Approval Vendor</h2>
                 <p class="mt-0.5 text-xs text-darkbrown-500">
-                    Setujui toko baru, tangguhkan operasional, atau hapus data vendor yang tidak lagi aktif.
+                    Setujui toko baru, tangguhkan operasional, atau kelola status mitra vendor terdaftar.
                 </p>
             </div>
 
-            <x-badge variant="wheat">{{ $totalCount }} Toko Terdaftar</x-badge>
-        </div>
-    </div>
-
-
-    <!-- Filter & Search -->
-    <div class="card-tendaku p-4">
-        <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div class="flex flex-wrap items-center gap-2">
-                <button wire:click="$set('filterStatus', 'all')"
-                        class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition {{ $filterStatus === 'all' ? 'bg-darkbrown-800 text-white shadow-sm' : 'bg-wheat-100 text-darkbrown-700 hover:bg-wheat-200' }}">
-                    Semua Status
-                    <span class="rounded-full px-1.5 text-[10px] {{ $filterStatus === 'all' ? 'bg-darkbrown-700 text-wheat-200' : 'bg-white text-darkbrown-600' }}">
-                        {{ $totalCount }}
-                    </span>
-                </button>
-
-                <button wire:click="$set('filterStatus', 'pending')"
-                        class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition {{ $filterStatus === 'pending' ? 'bg-goldenrod-500 text-white shadow-sm' : 'border border-goldenrod-200 bg-goldenrod-50 text-goldenrod-800 hover:bg-goldenrod-100' }}">
-                    Menunggu Persetujuan
-                    @if ($pendingCount > 0)
-                        <span class="rounded-full bg-goldenrod-700 px-1.5 text-[10px] font-extrabold text-goldenrod-50">
-                            {{ $pendingCount }}
-                        </span>
-                    @endif
-                </button>
-
-                <button wire:click="$set('filterStatus', 'active')"
-                        class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition {{ $filterStatus === 'active' ? 'bg-avocado-500 text-white shadow-sm' : 'border border-avocado-200 bg-avocado-50 text-avocado-800 hover:bg-avocado-100' }}">
-                    Aktif Beroperasi
-                    <span class="rounded-full px-1.5 text-[10px] {{ $filterStatus === 'active' ? 'bg-avocado-600 text-white' : 'bg-white text-avocado-800' }}">
-                        {{ $activeCount }}
-                    </span>
-                </button>
-
-                <button wire:click="$set('filterStatus', 'suspended')"
-                        class="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition {{ $filterStatus === 'suspended' ? 'bg-red-600 text-white shadow-sm' : 'border border-red-200 bg-red-50 text-red-800 hover:bg-red-100' }}">
-                    Ditangguhkan
-                    <span class="rounded-full px-1.5 text-[10px] {{ $filterStatus === 'suspended' ? 'bg-red-700 text-white' : 'bg-white text-red-800' }}">
-                        {{ $suspendedCount }}
-                    </span>
-                </button>
-            </div>
-
-            <div class="relative w-full xl:w-72">
+            <div class="relative w-full lg:w-72">
                 <input type="text" wire:model.live.debounce.300ms="search" placeholder="Cari nama, kota, telepon..."
                        class="input-tendaku pl-9 text-xs font-semibold">
                 <svg class="absolute left-3 top-2.5 h-4 w-4 text-darkbrown-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,10 +21,47 @@
                 </svg>
             </div>
         </div>
+
+        <!-- Filter Status Pills -->
+        <div class="mt-4 flex flex-wrap items-center gap-2 pt-2 border-t border-wheat-100">
+            <button wire:click="$set('filterStatus', 'all')"
+                    class="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition {{ $filterStatus === 'all' ? 'bg-darkbrown-800 text-white shadow-sm' : 'bg-wheat-100 text-darkbrown-700 hover:bg-wheat-200' }}">
+                Semua Status
+                <span class="rounded-full px-1.5 text-[10px] {{ $filterStatus === 'all' ? 'bg-darkbrown-700 text-wheat-200' : 'bg-white text-darkbrown-600' }}">
+                    {{ $totalCount }}
+                </span>
+            </button>
+
+            <button wire:click="$set('filterStatus', 'pending')"
+                    class="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition {{ $filterStatus === 'pending' ? 'bg-goldenrod-500 text-white shadow-sm' : 'border border-goldenrod-200 bg-goldenrod-50 text-goldenrod-800 hover:bg-goldenrod-100' }}">
+                Menunggu Persetujuan
+                @if ($pendingCount > 0)
+                    <span class="rounded-full bg-goldenrod-700 px-1.5 text-[10px] font-extrabold text-goldenrod-50">
+                        {{ $pendingCount }}
+                    </span>
+                @endif
+            </button>
+
+            <button wire:click="$set('filterStatus', 'active')"
+                    class="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition {{ $filterStatus === 'active' ? 'bg-avocado-500 text-white shadow-sm' : 'border border-avocado-200 bg-avocado-50 text-avocado-800 hover:bg-avocado-100' }}">
+                Aktif Beroperasi
+                <span class="rounded-full px-1.5 text-[10px] {{ $filterStatus === 'active' ? 'bg-avocado-600 text-white' : 'bg-white text-avocado-800' }}">
+                    {{ $activeCount }}
+                </span>
+            </button>
+
+            <button wire:click="$set('filterStatus', 'suspended')"
+                    class="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition {{ $filterStatus === 'suspended' ? 'bg-red-600 text-white shadow-sm' : 'border border-red-200 bg-red-50 text-red-800 hover:bg-red-100' }}">
+                Ditangguhkan
+                <span class="rounded-full px-1.5 text-[10px] {{ $filterStatus === 'suspended' ? 'bg-red-700 text-white' : 'bg-white text-red-800' }}">
+                    {{ $suspendedCount }}
+                </span>
+            </button>
+        </div>
     </div>
 
     <!-- Vendor Table -->
-    <div class="card-tendaku overflow-hidden">
+    <div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
                 <thead class="border-b border-wheat-200 bg-wheat-50 font-bold uppercase tracking-wider text-darkbrown-600">
