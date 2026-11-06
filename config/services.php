@@ -64,4 +64,16 @@ return [
         'retry_sleep_ms' => (int) env('FONNTE_RETRY_SLEEP_MS', 300),
     ],
 
+    'openrouteservice' => [
+        // API Key OpenRouteService untuk perhitungan jarak pengiriman (Directions API).
+        'api_key' => env('OPENROUTESERVICE_API_KEY', env('ORS_API_KEY')),
+        'key' => env('OPENROUTESERVICE_API_KEY', env('ORS_API_KEY')),
+        'base_url' => env('OPENROUTESERVICE_BASE_URL', 'https://api.openrouteservice.org'),
+        'profile' => env('OPENROUTESERVICE_PROFILE', 'driving-car'),
+        'timeout' => (int) env('OPENROUTESERVICE_TIMEOUT', 10),
+        'retry_times' => (int) env('OPENROUTESERVICE_RETRY_TIMES', 2),
+        'retry_sleep_ms' => (int) env('OPENROUTESERVICE_RETRY_SLEEP_MS', 300),
+        'cache_ttl_minutes' => (int) env('OPENROUTESERVICE_CACHE_TTL', 60),
+    ],
+
 ];
