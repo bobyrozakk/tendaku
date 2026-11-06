@@ -29,6 +29,8 @@ class CustomerAddressFactory extends Factory
             'district' => 'Coblong',
             'village' => 'Dago',
             'postal_code' => fake()->numerify('#####'),
+            'latitude' => null,
+            'longitude' => null,
             'notes' => 'Pagar hitam, dekat minimarket',
             'is_default' => false,
         ];
@@ -38,6 +40,17 @@ class CustomerAddressFactory extends Factory
     {
         return $this->state(fn () => [
             'is_default' => true,
+        ]);
+    }
+
+    /**
+     * State koordinat dummy untuk keperluan pengujian.
+     */
+    public function withCoordinates(float $latitude = -7.9797000, float $longitude = 112.6304000): static
+    {
+        return $this->state(fn () => [
+            'latitude' => $latitude,
+            'longitude' => $longitude,
         ]);
     }
 }
