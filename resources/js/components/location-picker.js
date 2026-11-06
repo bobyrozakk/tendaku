@@ -226,6 +226,7 @@ export function createLocationPickerState(config = {}) {
         resizeObserver: null,
         intersectionObserver: null,
         invalidateTimer: null,
+        boundRefreshHandler: null,
 
         get hasSelectedCoordinates() {
             return isValidCoordinatePair(this.selectedLatitude, this.selectedLongitude);
@@ -244,6 +245,11 @@ export function createLocationPickerState(config = {}) {
         },
 
         init() {
+            this.boundRefreshHandler = () => {
+                this.scheduleInvalidateSize();
+            };
+            window.addEventListener("location-picker:refresh", this.boundRefreshHandler);
+
             this.initializeMap();
             this.refreshIcons();
         },
@@ -531,6 +537,11 @@ export function createLocationPickerState(config = {}) {
         },
 
         destroy() {
+            if (this.boundRefreshHandler) {
+                window.removeEventListener("location-picker:refresh", this.boundRefreshHandler);
+                this.boundRefreshHandler = null;
+            }
+
             if (this.invalidateTimer) {
                 clearTimeout(this.invalidateTimer);
                 this.invalidateTimer = null;
