@@ -30,11 +30,24 @@ class VendorFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'address' => fake()->address(),
             'city' => fake()->city(),
+            'latitude' => null,
+            'longitude' => null,
             'logo_url' => null,
             'status' => 'active',
             'commission_rate' => null,
             'approved_at' => now(),
             'approved_by' => null,
         ];
+    }
+
+    /**
+     * State koordinat dummy untuk keperluan pengujian.
+     */
+    public function withCoordinates(float $latitude = -7.9553000, float $longitude = 112.6145000): static
+    {
+        return $this->state(fn () => [
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+        ]);
     }
 }

@@ -15,10 +15,13 @@ class Vendor extends Model
 
     protected $fillable = [
         'name', 'slug', 'description', 'phone', 'email', 'address',
-        'city', 'logo_url', 'status', 'commission_rate', 'approved_at', 'approved_by',
+        'city', 'latitude', 'longitude', 'logo_url', 'status', 'commission_rate',
+        'approved_at', 'approved_by',
     ];
 
     protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
         'commission_rate' => 'decimal:4',
         'approved_at' => 'datetime',
     ];
@@ -51,6 +54,31 @@ class Vendor extends Model
     public function isShippingConfigured(): bool
     {
         return $this->hasShippingSetting();
+    }
+
+    /**
+     * Periksa apakah toko vendor memiliki titik koordinat lokasi yang tersedia dan valid.
+     */
+    public function hasCoordinates(): bool
+    {
+        $rawLatitude = $this->getAttributes()['latitude'] ?? null;
+        $rawLongitude = $this->getAttributes()['longitude'] ?? null;
+
+        if ($rawLatitude === null || $rawLongitude === null || ! is_numeric($rawLatitude) || ! is_numeric($rawLongitude)) {
+            return false;
+        }
+
+        $latitude = (float) $rawLatitude;
+        $longitude = (float) $rawLongitude;
+
+        if (! is_finite($latitude) || ! is_finite($longitude)) {
+            return false;
+        }
+
+        return $latitude >= -90.0
+            && $latitude <= 90.0
+            && $longitude >= -180.0
+            && $longitude <= 180.0;
     }
 
     public function categories(): HasMany

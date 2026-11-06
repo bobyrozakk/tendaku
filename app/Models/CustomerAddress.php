@@ -23,6 +23,8 @@ class CustomerAddress extends Model
         'district',
         'village',
         'postal_code',
+        'latitude',
+        'longitude',
         'notes',
         'is_default',
     ];
@@ -35,6 +37,8 @@ class CustomerAddress extends Model
     protected function casts(): array
     {
         return [
+            'latitude' => 'float',
+            'longitude' => 'float',
             'is_default' => 'boolean',
         ];
     }
@@ -47,6 +51,31 @@ class CustomerAddress extends Model
     public function rentals(): HasMany
     {
         return $this->hasMany(Rental::class, 'customer_address_id');
+    }
+
+    /**
+     * Periksa apakah alamat pelanggan memiliki titik koordinat lokasi yang tersedia dan valid.
+     */
+    public function hasCoordinates(): bool
+    {
+        $rawLatitude = $this->getAttributes()['latitude'] ?? null;
+        $rawLongitude = $this->getAttributes()['longitude'] ?? null;
+
+        if ($rawLatitude === null || $rawLongitude === null || ! is_numeric($rawLatitude) || ! is_numeric($rawLongitude)) {
+            return false;
+        }
+
+        $latitude = (float) $rawLatitude;
+        $longitude = (float) $rawLongitude;
+
+        if (! is_finite($latitude) || ! is_finite($longitude)) {
+            return false;
+        }
+
+        return $latitude >= -90.0
+            && $latitude <= 90.0
+            && $longitude >= -180.0
+            && $longitude <= 180.0;
     }
 
     /**
