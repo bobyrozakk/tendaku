@@ -38,6 +38,21 @@ class Vendor extends Model
         return $this->hasOne(VendorPaymentSetting::class);
     }
 
+    public function shippingSetting(): HasOne
+    {
+        return $this->hasOne(VendorShippingSetting::class);
+    }
+
+    public function hasShippingSetting(): bool
+    {
+        return $this->shippingSetting()->exists();
+    }
+
+    public function isShippingConfigured(): bool
+    {
+        return $this->hasShippingSetting();
+    }
+
     public function categories(): HasMany
     {
         return $this->hasMany(ItemCategory::class);
