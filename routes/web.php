@@ -224,6 +224,10 @@ Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
             ->name('shipping.store');
         Route::put('shipping-settings', [ShippingSettingController::class, 'update'])
             ->name('shipping.update');
+        Route::post('shipping-settings/location', [ShippingSettingController::class, 'updateLocation'])
+            ->name('shipping.location.store');
+        Route::put('shipping-settings/location', [ShippingSettingController::class, 'updateLocation'])
+            ->name('shipping.location.update');
     });
 
 // Backward compatibility redirect untuk rute lama /vendor/*

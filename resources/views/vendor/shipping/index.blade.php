@@ -2,10 +2,20 @@
     $vendor = $vendor ?? auth()->user()?->vendor;
     $shippingSetting = $shippingSetting ?? $vendor?->shippingSetting;
     $isConfigured = $shippingSetting !== null;
+    $hasCoordinates = $vendor !== null && $vendor->hasCoordinates();
+
     $hasOldInput = session()->hasOldInput();
-    $ratePerKmValue = $hasOldInput ? old('rate_per_km') : $shippingSetting?->rate_per_km;
-    $weightThresholdKgValue = $hasOldInput ? old('weight_threshold_kg') : $shippingSetting?->weight_threshold_kg;
-    $extraWeightFeePerKgValue = $hasOldInput ? old('extra_weight_fee_per_kg') : $shippingSetting?->extra_weight_fee_per_kg;
+    $hasTariffErrors = $errors->hasAny(['rate_per_km', 'weight_threshold_kg', 'extra_weight_fee_per_kg']);
+    $hasLocationErrors = $errors->hasAny(['address', 'city', 'latitude', 'longitude']);
+
+    $ratePerKmValue = $hasOldInput && $hasTariffErrors ? old('rate_per_km') : $shippingSetting?->rate_per_km;
+    $weightThresholdKgValue = $hasOldInput && $hasTariffErrors ? old('weight_threshold_kg') : $shippingSetting?->weight_threshold_kg;
+    $extraWeightFeePerKgValue = $hasOldInput && $hasTariffErrors ? old('extra_weight_fee_per_kg') : $shippingSetting?->extra_weight_fee_per_kg;
+
+    $storeAddressValue = $hasOldInput && $hasLocationErrors ? old('address', $vendor?->address) : $vendor?->address;
+    $storeCityValue = $hasOldInput && $hasLocationErrors ? old('city', $vendor?->city) : $vendor?->city;
+    $storeLatitudeValue = $hasOldInput && $hasLocationErrors ? old('latitude', $vendor?->latitude) : $vendor?->latitude;
+    $storeLongitudeValue = $hasOldInput && $hasLocationErrors ? old('longitude', $vendor?->longitude) : $vendor?->longitude;
 @endphp
 
 <x-layouts.vendor title="Tendaku - Pengaturan Pengiriman Owner">
@@ -16,11 +26,17 @@
                     Pengaturan Pengiriman
                 </h1>
                 <p class="text-xs text-darkbrown-500 mt-0.5">
-                    Konfigurasi tarif pengantaran pesanan berdasarkan jarak kilometer dan batas berat muatan toko Anda.
+                    Konfigurasi titik lokasi toko dan tarif pengantaran pesanan berdasarkan jarak kilometer serta batas berat muatan.
                 </p>
             </div>
 
-            <div class="self-start sm:self-auto">
+            <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                @if ($hasCoordinates)
+                    <x-badge variant="avocado" :dot="true">Lokasi Toko Tersimpan</x-badge>
+                @else
+                    <x-badge variant="goldenrod" :dot="true">Titik Lokasi Toko Belum Diatur</x-badge>
+                @endif
+
                 @if ($isConfigured)
                     <x-badge variant="avocado" :dot="true">Tarif Terkonfigurasi</x-badge>
                 @else
@@ -32,7 +48,7 @@
 
     <div
         class="max-w-4xl space-y-6"
-        x-data="{ showEditModal: {{ $isConfigured && $errors->any() ? 'true' : 'false' }} }"
+        x-data="{ showEditModal: {{ $isConfigured && $hasTariffErrors ? 'true' : 'false' }} }"
         @keydown.escape.window="showEditModal = false"
     >
         @if (session('success'))
@@ -56,9 +72,298 @@
             </div>
         @endif
 
+        {{-- ==============================================================
+             SECTION 1: LOKASI TOKO (KOORDINAT ASAL PENGIRIMAN)
+             ============================================================== --}}
+        <section
+            aria-labelledby="section-store-location-heading"
+            x-data="{
+                showLocationModal: {{ $hasCoordinates && $hasLocationErrors ? 'true' : 'false' }},
+                openLocationModal() {
+                    this.showLocationModal = true;
+                    this.$nextTick(() => {
+                        window.dispatchEvent(new CustomEvent('location-picker:refresh'));
+                    });
+                },
+                closeLocationModal() {
+                    this.showLocationModal = false;
+                }
+            }"
+            @keydown.escape.window="closeLocationModal()"
+            class="space-y-4"
+        >
+            @if ($hasCoordinates)
+                {{-- Ringkasan Lokasi Toko Tersimpan --}}
+                <x-card class="border-wheat-200 bg-white">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-wheat-200/80">
+                        <div class="flex items-center gap-3">
+                            <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-avocado-600 text-white shrink-0">
+                                <i data-lucide="map-pin" class="w-5 h-5"></i>
+                            </span>
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h2 id="section-store-location-heading" class="text-base font-extrabold text-darkbrown-900">
+                                        Lokasi Toko
+                                    </h2>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-avocado-100 text-avocado-800 border border-avocado-200">
+                                        Lokasi Toko Tersimpan
+                                    </span>
+                                </div>
+                                <p class="text-xs text-darkbrown-500 mt-0.5">
+                                    Titik koordinat asal perhitungan jarak pengantaran untuk toko <strong>{{ $vendor?->name ?? 'Vendor' }}</strong>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="self-start sm:self-auto">
+                            <button
+                                type="button"
+                                @click="openLocationModal()"
+                                class="btn-tendaku-outline !px-4 !py-2 text-xs font-bold cursor-pointer"
+                            >
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                                <span>Edit Lokasi</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div class="sm:col-span-2 rounded-xl border border-wheat-200 bg-wheat-50/40 p-4">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">
+                                Alamat & Kota Toko
+                            </p>
+                            <p class="mt-1.5 text-sm font-bold text-darkbrown-900 leading-relaxed">
+                                {{ filled($vendor?->address) ? $vendor->address : 'Alamat toko belum diisi' }}
+                            </p>
+                            <p class="mt-1 text-xs font-semibold text-darkbrown-600">
+                                Kota: <span class="text-darkbrown-900">{{ filled($vendor?->city) ? $vendor->city : '-' }}</span>
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border border-wheat-200 bg-wheat-50/40 p-4 flex flex-col justify-between">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">
+                                    Koordinat Peta
+                                </p>
+                                <div class="mt-1.5 space-y-1 font-mono text-xs text-darkbrown-800">
+                                    <p>
+                                        <span class="text-darkbrown-500">Lat:</span>
+                                        <strong class="font-bold text-darkbrown-900">{{ number_format((float) $vendor->latitude, 7, '.', '') }}</strong>
+                                    </p>
+                                    <p>
+                                        <span class="text-darkbrown-500">Lng:</span>
+                                        <strong class="font-bold text-darkbrown-900">{{ number_format((float) $vendor->longitude, 7, '.', '') }}</strong>
+                                    </p>
+                                </div>
+                            </div>
+                            <p class="mt-2 text-[11px] text-avocado-700 font-medium">
+                                Siap digunakan untuk perhitungan rute.
+                            </p>
+                        </div>
+                    </div>
+                </x-card>
+
+                {{-- Modal Edit Lokasi Toko --}}
+                <div
+                    x-show="showLocationModal"
+                    x-cloak
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    @click.self="closeLocationModal()"
+                    class="fixed inset-0 z-[80] flex items-center justify-center bg-darkbrown-950/60 p-4 overflow-y-auto"
+                    style="display: none;"
+                >
+                    <div
+                        x-show="showLocationModal"
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 scale-100"
+                        x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                        class="w-full max-w-2xl rounded-xl border border-wheat-200 bg-white shadow-tendaku my-8 overflow-hidden"
+                    >
+                        <div class="flex items-start justify-between gap-4 border-b border-wheat-200 px-6 py-4 bg-wheat-50/60">
+                            <div class="flex items-center gap-3">
+                                <span class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-avocado-100 text-avocado-700 border border-avocado-200 shrink-0">
+                                    <i data-lucide="map-pin" class="w-4 h-4"></i>
+                                </span>
+                                <div>
+                                    <h3 class="text-base font-extrabold text-darkbrown-900">
+                                        Edit Lokasi Toko
+                                    </h3>
+                                    <p class="mt-0.5 text-xs text-darkbrown-500">
+                                        Perbarui detail alamat atau geser pin pada peta untuk menyesuaikan titik koordinat toko.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                @click="closeLocationModal()"
+                                class="rounded-lg p-1.5 text-darkbrown-400 transition hover:bg-wheat-200/60 hover:text-darkbrown-700 cursor-pointer"
+                                title="Tutup"
+                            >
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <form action="{{ route('vendor.shipping.location.update') }}" method="POST" class="space-y-4 px-6 py-5">
+                            @csrf
+                            @method('PUT')
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div class="sm:col-span-2">
+                                    <x-input-label for="modal_vendor_address" value="Alamat Lengkap Toko" class="font-bold text-xs text-darkbrown-900" />
+                                    <x-text-input
+                                        id="modal_vendor_address"
+                                        name="address"
+                                        type="text"
+                                        class="mt-1.5 w-full text-sm bg-white"
+                                        :value="$storeAddressValue"
+                                        placeholder="Contoh: Jl. Soekarno Hatta No. 9, Kec. Lowokwaru"
+                                    />
+                                    <x-input-error :messages="$errors->get('address')" class="mt-1" />
+                                </div>
+
+                                <div>
+                                    <x-input-label for="modal_vendor_city" value="Kota / Kabupaten" class="font-bold text-xs text-darkbrown-900" />
+                                    <x-text-input
+                                        id="modal_vendor_city"
+                                        name="city"
+                                        type="text"
+                                        class="mt-1.5 w-full text-sm bg-white"
+                                        :value="$storeCityValue"
+                                        placeholder="Contoh: Kota Malang"
+                                    />
+                                    <x-input-error :messages="$errors->get('city')" class="mt-1" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <x-location-picker
+                                    id="vendor-store-location-modal-picker"
+                                    :latitude="$storeLatitudeValue"
+                                    :longitude="$storeLongitudeValue"
+                                    latitude-name="latitude"
+                                    longitude-name="longitude"
+                                    label="Titik Koordinat Lokasi Toko"
+                                    help-text="Klik pada peta atau geser pin ke posisi toko Anda. Menggeser pin tidak akan mengubah teks alamat di atas."
+                                    :required="true"
+                                />
+                            </div>
+
+                            <div class="flex items-center justify-end gap-2.5 border-t border-wheat-200 pt-4">
+                                <button
+                                    type="button"
+                                    @click="closeLocationModal()"
+                                    class="btn-tendaku-secondary !px-4 !py-2.5 text-xs font-bold cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    class="btn-tendaku-primary !px-5 !py-2.5 text-xs font-extrabold cursor-pointer"
+                                >
+                                    <i data-lucide="save" class="w-4 h-4"></i>
+                                    <span>Simpan Lokasi Toko</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            @else
+                {{-- State Belum Ada Koordinat Lokasi Toko --}}
+                <x-card
+                    title="Lokasi Toko"
+                    subtitle="Tentukan titik koordinat lokasi toko Anda sebagai titik asal perhitungan jarak pengiriman."
+                    :headerBorder="true"
+                >
+                    <x-slot name="action">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-goldenrod-100 text-goldenrod-900 border border-goldenrod-300">
+                            Titik Lokasi Toko Belum Diatur
+                        </span>
+                    </x-slot>
+
+                    <form action="{{ route('vendor.shipping.location.update') }}" method="POST" class="space-y-5">
+                        @csrf
+                        @method('PUT')
+
+                        <div class="rounded-xl border border-wheat-200 bg-wheat-50/50 p-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div class="sm:col-span-2">
+                                    <x-input-label for="vendor_address" value="Alamat Lengkap Toko" class="font-bold text-xs text-darkbrown-900" />
+                                    <x-text-input
+                                        id="vendor_address"
+                                        name="address"
+                                        type="text"
+                                        class="mt-1.5 w-full text-sm bg-white"
+                                        :value="$storeAddressValue"
+                                        placeholder="Contoh: Jl. Soekarno Hatta No. 9, Kec. Lowokwaru"
+                                    />
+                                    <p class="mt-1 text-[11px] text-darkbrown-500">
+                                        Alamat tertulis toko Anda saat ini: <strong>{{ filled($vendor?->address) ? $vendor->address : 'Belum diisi' }}</strong>
+                                    </p>
+                                    <x-input-error :messages="$errors->get('address')" class="mt-1" />
+                                </div>
+
+                                <div>
+                                    <x-input-label for="vendor_city" value="Kota / Kabupaten" class="font-bold text-xs text-darkbrown-900" />
+                                    <x-text-input
+                                        id="vendor_city"
+                                        name="city"
+                                        type="text"
+                                        class="mt-1.5 w-full text-sm bg-white"
+                                        :value="$storeCityValue"
+                                        placeholder="Contoh: Kota Malang"
+                                    />
+                                    <p class="mt-1 text-[11px] text-darkbrown-500">
+                                        Kota tersimpan: <strong>{{ filled($vendor?->city) ? $vendor->city : 'Belum diisi' }}</strong>
+                                    </p>
+                                    <x-input-error :messages="$errors->get('city')" class="mt-1" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <x-location-picker
+                            id="vendor-store-location-picker"
+                            :latitude="$storeLatitudeValue"
+                            :longitude="$storeLongitudeValue"
+                            latitude-name="latitude"
+                            longitude-name="longitude"
+                            label="Pilih Titik Koordinat Lokasi Toko"
+                            help-text="Klik pada peta, geser pin, atau gunakan tombol Gunakan Lokasi Saya untuk menandai lokasi fisik toko Anda."
+                            :required="true"
+                        />
+
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-wheat-200">
+                            <p class="text-[11px] text-darkbrown-500">
+                                Titik koordinat hanya disimpan ketika Anda memilih lokasi pada peta dan menekan tombol simpan.
+                            </p>
+
+                            <button
+                                type="submit"
+                                class="btn-tendaku-primary !px-6 !py-2.5 text-xs font-extrabold cursor-pointer w-full sm:w-auto"
+                            >
+                                <i data-lucide="save" class="w-4 h-4"></i>
+                                <span>Simpan Lokasi Toko</span>
+                            </button>
+                        </div>
+                    </form>
+                </x-card>
+            @endif
+        </section>
+
+        {{-- ==============================================================
+             SECTION 2: KONFIGURASI TARIF PENGIRIMAN
+             ============================================================== --}}
         @if ($isConfigured)
             {{-- Ringkasan Tarif Pengiriman Aktif + Tombol Edit Pop-up --}}
-            <x-card class="border-avocado-300/80 bg-gradient-to-br from-avocado-50/70 via-white to-wheat-50/60">
+            <x-card class="border-avocado-300/80 bg-white">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-wheat-200/80">
                     <div class="flex items-center gap-3">
                         <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-avocado-600 text-white shadow-sm shrink-0">
@@ -159,7 +464,7 @@
                     x-transition:leave-start="opacity-100"
                     x-transition:leave-end="opacity-0"
                     @click.self="showEditModal = false"
-                    class="fixed inset-0 z-[80] flex items-center justify-center bg-darkbrown-950/60 p-4 backdrop-blur-sm"
+                    class="fixed inset-0 z-[80] flex items-center justify-center bg-darkbrown-950/60 p-4"
                     style="display: none;"
                 >
                     <div
@@ -201,7 +506,7 @@
                             @csrf
                             @method('PUT')
 
-                            @if ($errors->any())
+                            @if ($hasTariffErrors)
                                 <div class="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-800">
                                     <p class="font-bold">Periksa kembali input tarif Anda:</p>
                                     <ul class="mt-1 list-disc list-inside space-y-0.5">
@@ -317,7 +622,7 @@
                 </div>
             </template>
         @else
-            {{-- Empty State + Form Konfigurasi Awal (ketika belum diatur) --}}
+            {{-- Empty State + Form Konfigurasi Awal Tarif (ketika belum diatur) --}}
             <x-card variant="warm" class="border-wheat-300">
                 <div class="flex flex-col sm:flex-row items-start gap-4">
                     <div class="w-11 h-11 rounded-2xl bg-avocado-100 border border-avocado-200 text-avocado-700 flex items-center justify-center shrink-0">
