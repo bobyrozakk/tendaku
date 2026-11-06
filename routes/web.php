@@ -21,6 +21,7 @@ use App\Http\Controllers\Vendor\OwnerDashboardController;
 use App\Http\Controllers\Vendor\ProductController;
 use App\Http\Controllers\Vendor\RevenueController as VendorRevenueController;
 use App\Http\Controllers\Vendor\SettlementInvoiceController as VendorSettlementInvoiceController;
+use App\Http\Controllers\Vendor\ShippingSettingController;
 use App\Http\Controllers\Vendor\UnitController;
 use App\Http\Controllers\Webhook\MidtransWebhookController;
 use App\Livewire\Kasir\ProfileKasir;
@@ -216,6 +217,13 @@ Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])
 
         Route::get('cashiers', [CashierController::class, 'index'])
             ->name('cashiers.index');
+
+        Route::get('shipping-settings', [ShippingSettingController::class, 'index'])
+            ->name('shipping.index');
+        Route::post('shipping-settings', [ShippingSettingController::class, 'update'])
+            ->name('shipping.store');
+        Route::put('shipping-settings', [ShippingSettingController::class, 'update'])
+            ->name('shipping.update');
     });
 
 // Backward compatibility redirect untuk rute lama /vendor/*
