@@ -126,6 +126,20 @@
                     <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Manajemen Kasir</span>
                 </a>
+
+                <!-- Pengaturan Pengiriman -->
+                <a href="{{ route('vendor.shipping.index') }}"
+                   wire:navigate
+                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
+                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
+                   style="{{ request()->routeIs('vendor.shipping.*')
+                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
+                       : 'color: rgba(245,233,200,0.65);' }}"
+                   onmouseover="if (!{{ request()->routeIs('vendor.shipping.*') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
+                   onmouseout="if (!{{ request()->routeIs('vendor.shipping.*') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
+                    <i data-lucide="truck" class="w-5 h-5 shrink-0"></i>
+                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Pengaturan Pengiriman</span>
+                </a>
             @else
                 <!-- Dashboard Kasir -->
                 <a href="{{ route('kasir.dashboard') }}"
