@@ -150,7 +150,7 @@
         $descs = [
             'created' => ['todo' => 'Pesanan tercatat', 'active' => 'Pesanan tercatat', 'done' => 'Pesanan tercatat dengan kode #' . $rental->booking_code],
             'payment' => ['todo' => 'Menunggu tagihan', 'active' => 'Menunggu pembayaran', 'done' => 'Pembayaran terverifikasi'],
-            'pickup'  => ['todo' => 'Disiapkan setelah pembayaran', 'active' => 'Alat siap diserahkan', 'done' => 'Alat telah diserahkan'],
+            'pickup'  => ['todo' => 'Disiapkan setelah pembayaran', 'active' => ($rental->status === 'pending' ? 'Alat sedang divalidasi kasir' : 'Alat siap diserahkan (Tervalidasi)'), 'done' => 'Alat telah diserahkan'],
             'rental'  => ['todo' => 'Dimulai setelah serah terima', 'active' => 'Alat sedang dipakai', 'done' => 'Masa sewa selesai'],
             'return'  => ['todo' => 'Setelah alat dikembalikan', 'active' => 'Alat diperiksa vendor', 'done' => 'Alat dikembalikan dan diperiksa'],
             'done'    => ['todo' => 'Setelah semua kewajiban selesai', 'active' => 'Menyelesaikan transaksi', 'done' => 'Seluruh kewajiban sewa selesai'],
