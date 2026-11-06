@@ -1,9 +1,94 @@
-<div x-show="isPaid || (status !== 'pending' && !['cancelled', 'expired'].includes(status))"
-     class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200">
-    <div class="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-avocado-900">
-        <i data-lucide="circle-check" class="h-4 w-4"></i>
-        <span>Pembayaran lunas terverifikasi</span>
+<div class="space-y-3">
+    {{-- Banner Status Pembayaran --}}
+    <div x-show="isPaid || (status !== 'pending' && !['cancelled', 'expired'].includes(status))"
+         class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200">
+        <div class="flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-avocado-900">
+            <i data-lucide="circle-check" class="h-4 w-4 text-avocado-600"></i>
+            <span>Pembayaran lunas terverifikasi</span>
+        </div>
     </div>
+
+    {{-- Banner Status Validasi Alat oleh Kasir --}}
+    @if($rental->status === 'pending')
+        <div class="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 text-amber-900 shadow-sm">
+            <div class="p-1 rounded-lg bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+                <i data-lucide="hourglass" class="h-4 w-4 text-amber-700 animate-pulse"></i>
+            </div>
+            <div class="space-y-0.5 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs sm:text-sm font-extrabold text-amber-950">Status Alat: Pending Validasi Kasir</span>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200/70 text-amber-900 border border-amber-300">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                        Menunggu Pengecekan
+                    </span>
+                </div>
+                <p class="text-xs text-amber-800 leading-relaxed">
+                    Kasir toko sedang memeriksa dan memvalidasi unit fisik alat camping yang Anda sewa. Pesanan akan otomatis berubah status menjadi <strong>Tervalidasi (Siap Pickup)</strong> setelah kasir selesai melakukan pencocokan barcode alat.
+                </p>
+            </div>
+        </div>
+    @elseif(in_array($rental->status, ['confirmed', 'picked_up', 'returned', 'completed']))
+        <div class="flex items-start gap-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 shadow-sm">
+            <div class="p-1 rounded-lg bg-emerald-100 text-emerald-800 shrink-0 mt-0.5">
+                <i data-lucide="check-check" class="h-4 w-4 text-emerald-700"></i>
+            </div>
+            <div class="space-y-0.5 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs sm:text-sm font-extrabold text-emerald-950">Status Alat: Tervalidasi Kasir</span>
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-200/80 text-emerald-900 border border-emerald-300">
+                        <i data-lucide="check" class="w-3 h-3 text-emerald-700"></i>
+                        Siap Diambil
+                    </span>
+                </div>
+                <p class="text-xs text-emerald-800 leading-relaxed">
+                    Semua unit fisik alat telah selesai divalidasi dan dicocokkan barcode-nya oleh kasir toko. Alat siap diserahterimakan saat Anda tiba di outlet!
+                </p>
+            </div>
+        </div>
+    @endif
+
+    {{-- Daftar Rincian Unit / Alat yang Divalidasi --}}
+    @if($rental->details && $rental->details->isNotEmpty())
+        <div class="rounded-xl border border-wheat-200 bg-white overflow-hidden">
+            <div class="px-3.5 py-2.5 bg-wheat-50 border-b border-wheat-200 flex items-center justify-between">
+                <span class="text-xs font-bold text-darkbrown-800 flex items-center gap-1.5">
+                    <i data-lucide="boxes" class="w-3.5 h-3.5 text-avocado-600"></i>
+                    Daftar Alat Pesanan ({{ $rental->details->count() }} Unit)
+                </span>
+                <span class="text-[11px] font-semibold text-darkbrown-600">
+                    {{ $rental->status === 'pending' ? 'Menunggu Kasir' : 'Alat Siap' }}
+                </span>
+            </div>
+            <ul class="divide-y divide-wheat-100 text-xs">
+                @foreach($rental->details as $detail)
+                    <li class="px-3.5 py-2.5 flex items-center justify-between gap-3">
+                        <div class="min-w-0 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full {{ $rental->status === 'pending' ? 'bg-amber-400' : 'bg-emerald-500' }}"></span>
+                            <div>
+                                <span class="font-bold text-darkbrown-900 block truncate">{{ $detail->masterItem?->name ?? 'Item Alat' }}</span>
+                                @if($detail->itemUnit)
+                                    <span class="text-[10px] text-darkbrown-500 font-mono">Kode Unit: {{ $detail->itemUnit->unit_code }}</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="shrink-0 text-right">
+                            @if($rental->status === 'pending')
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                    <i data-lucide="clock" class="w-2.5 h-2.5"></i>
+                                    Pending
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    <i data-lucide="check" class="w-2.5 h-2.5 text-emerald-600"></i>
+                                    Tervalidasi
+                                </span>
+                            @endif
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 </div>
 
 <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">

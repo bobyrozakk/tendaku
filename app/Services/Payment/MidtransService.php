@@ -397,25 +397,15 @@ class MidtransService
 
     /**
      * Konfirmasi rental saat pembayaran paid pertama.
+     *
+     * Catatan alur bisnis: Setelah pembayaran lunas, status rental TETAP 'pending'
+     * agar kasir toko dapat memvalidasi dan mencocokkan barcode unit fisik alat secara manual di POS.
+     * Status rental baru berubah menjadi 'confirmed' (Tervalidasi / Siap Pickup) setelah kasir
+     * menyelesaikan validasi barcode dan mengklik "Setujui Pesanan".
      */
     private function confirmRentalIfFirstPayment(Payment $payment): void
     {
-        $rental = Rental::query()
-            ->lockForUpdate()
-            ->find($payment->rental_id);
-
-        if (! $rental || $rental->status !== 'pending') {
-            return;
-        }
-
-        $paidCount = Payment::query()
-            ->where('rental_id', $rental->id)
-            ->where('status', PaymentStatus::Paid->value)
-            ->count();
-
-        if ($paidCount === 1 && $payment->payment_type !== 'dp') {
-            $rental->update(['status' => 'confirmed']);
-        }
+        // Status rental tetap 'pending' sampai kasir menyetujui pesanan via POS
     }
 
     /**
