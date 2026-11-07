@@ -398,4 +398,69 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $resPhone->assertStatus(422)
             ->assertJsonValidationErrors(['phone_number']);
     }
+
+    /**
+     * Skenario 10: Checkout Reguler dan Checkout Paket Camping merender reusable modal Tambah Alamat tanpa nested form.
+     */
+    public function test_scenario_10_both_checkouts_render_shared_add_address_modal_without_nested_form(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'name' => 'Budi Santoso',
+            'phone' => '081234567890',
+            'nik' => '3273012345670001',
+        ]);
+
+        $item = $this->package->packageItems()->first()->masterItem;
+
+        $regularResponse = $this->actingAs($customer)
+            ->withSession([
+                'booking_cart' => [
+                    'master_item_id' => $item->id,
+                    'product_id' => $item->id,
+                    'product_name' => $item->name,
+                    'daily_rate' => 50000,
+                    'quantity' => 1,
+                    'qty' => 1,
+                    'pickup_date' => '2026-10-29',
+                    'return_date' => '2026-10-30',
+                    'total_days' => 1,
+                    'total_price' => 50000,
+                    'vendor_id' => $this->vendor->id,
+                    'category_name' => 'Tenda Dome',
+                ],
+            ])
+            ->get(route('checkout.index'));
+
+        $packageResponse = $this->actingAs($customer)
+            ->get(route('customer.packages.checkout', $this->package));
+
+        foreach ([$regularResponse, $packageResponse] as $response) {
+            $response->assertOk()
+                ->assertSee('id="modal-title"', false)
+                ->assertSee('Tambah Alamat Pengantaran')
+                ->assertSee('Alamat otomatis tersimpan ke akun Anda untuk sewa berikutnya.')
+                ->assertSee('x-model="newAddressForm.label"', false)
+                ->assertSee('x-model="newAddressForm.recipient_name"', false)
+                ->assertSee('x-model="newAddressForm.phone_number"', false)
+                ->assertSee('x-model="newAddressForm.full_address"', false)
+                ->assertSee('x-model="newAddressForm.province"', false)
+                ->assertSee('x-model="newAddressForm.city"', false)
+                ->assertSee('x-model="newAddressForm.district"', false)
+                ->assertSee('x-model="newAddressForm.village"', false)
+                ->assertSee('x-model="newAddressForm.postal_code"', false)
+                ->assertSee('x-model="newAddressForm.notes"', false)
+                ->assertSee('id="modal_is_default"', false)
+                ->assertSee('type="button" @click="saveNewAddress()"', false)
+                ->assertDontSee('<form @submit.prevent="saveNewAddress()"', false);
+
+            $dom = new \DOMDocument;
+            @$dom->loadHTML($response->getContent());
+            $xpath = new \DOMXPath($dom);
+
+            // Pastikan modal berada di dalam scope x-data yang sama dengan section-identity checkout
+            $modalInsideXData = $xpath->query('//*[@x-data][.//*[@id="section-identity"]]//*[@id="modal-title"]');
+            $this->assertSame(1, $modalInsideXData->length, 'Modal Tambah Alamat harus berada di dalam scope x-data yang sama dengan form checkout.');
+        }
+    }
 }

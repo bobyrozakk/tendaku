@@ -1,4 +1,4 @@
-            <div class="lg:col-span-5 xl:col-span-4 space-y-5 lg:sticky lg:top-24">
+            <div class="space-y-5 lg:sticky lg:top-24">
 
                 <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm overflow-hidden">
                     <div class="px-5 sm:px-6 py-4 bg-wheat-100 border-b border-wheat-200">
@@ -102,4 +102,3 @@
                     <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 font-bold text-avocado-700 hover:text-avocado-800">WhatsApp CS</a>
                 </div>
             </div>
-        </div>
