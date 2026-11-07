@@ -47,9 +47,7 @@
         ])->values();
     @endphp
 
-    <form method="POST" action="{{ route('customer.packages.checkout.store', $package) }}"
-          class="grid grid-cols-1 lg:grid-cols-12 gap-8 py-2"
-          x-data="{
+    <div x-data="{
               method: '{{ $pickupMethod }}',
               deliveryFee: {{ $deliveryFeeAmount }},
               packagePrice: {{ $price }},
@@ -253,8 +251,10 @@
                   return `${parts[2]}/${parts[1]}/${parts[0]}`;
               }
           }">
-        @csrf
-        <input type="hidden" name="package_id" value="{{ $package->id }}" />
+        <form method="POST" action="{{ route('customer.packages.checkout.store', $package) }}"
+              class="grid grid-cols-1 lg:grid-cols-12 gap-8 py-2">
+            @csrf
+            <input type="hidden" name="package_id" value="{{ $package->id }}" />
 
         <!-- Kolom Kiri: Form Data Penyewa -->
         <div class="lg:col-span-7 space-y-6">
@@ -681,136 +681,8 @@
                 </div>
             </div>
         </div>
+        </form>
 
-        <!-- Modal Tambah Alamat Baru -->
-        <div x-show="showAddAddressModal" x-cloak
-             class="fixed inset-0 z-50 overflow-y-auto"
-             role="dialog" aria-modal="true">
-            <div class="fixed inset-0 bg-darkbrown-950/60 backdrop-blur-sm transition-opacity"
-                 @click="closeAddAddressModal()"></div>
-
-            <div class="min-h-full flex items-center justify-center p-4">
-                <div class="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-wheat-200 text-left transition-all"
-                     @click.away="closeAddAddressModal()">
-                    <div class="flex items-center justify-between border-b border-wheat-200 pb-3">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="map-pin" class="w-5 h-5 text-avocado-700"></i>
-                            <h3 class="text-base font-bold text-darkbrown-900 font-heading">Tambah Alamat Pengantaran</h3>
-                        </div>
-                        <button type="button" @click="closeAddAddressModal()" class="text-darkbrown-400 hover:text-darkbrown-700 p-1.5 rounded-lg hover:bg-wheat-100 transition">
-                            <i data-lucide="x" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-
-                    <div x-show="newAddressErrors.general" x-cloak class="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700" x-text="newAddressErrors.general"></div>
-
-                    <div class="mt-4 space-y-4" @keydown.enter.prevent="saveNewAddress()">
-                        <!-- Label Alamat -->
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1.5">Label Alamat *</label>
-                            <div class="flex items-center gap-2 mb-2">
-                                <template x-for="l in ['Rumah', 'Kos', 'Kantor']" :key="l">
-                                    <button type="button" @click="newAddressForm.label = l"
-                                            :class="newAddressForm.label === l ? 'bg-avocado-700 text-white border-avocado-700' : 'bg-wheat-50 text-darkbrown-700 border-wheat-300 hover:bg-wheat-100'"
-                                            class="px-3 py-1 text-xs font-semibold rounded-lg border transition" x-text="l"></button>
-                                </template>
-                            </div>
-                            <input type="text" x-model="newAddressForm.label" required placeholder="Cth: Rumah, Kos, Kantor, Villa"
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                            <p x-show="newAddressErrors.label" x-text="newAddressErrors.label[0]" class="text-[11px] text-red-600 mt-1"></p>
-                        </div>
-
-                        <!-- Nama Penerima & Telepon -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Nama Penerima *</label>
-                                <input type="text" x-model="newAddressForm.recipient_name" required placeholder="Nama lengkap penerima"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                                <p x-show="newAddressErrors.recipient_name" x-text="newAddressErrors.recipient_name[0]" class="text-[11px] text-red-600 mt-1"></p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">No. WhatsApp Penerima *</label>
-                                <input type="tel" x-model="newAddressForm.phone_number" required placeholder="08xxxxxxxxxx"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                                <p x-show="newAddressErrors.phone_number" x-text="newAddressErrors.phone_number[0]" class="text-[11px] text-red-600 mt-1"></p>
-                            </div>
-                        </div>
-
-                        <!-- Alamat Lengkap -->
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Alamat Lengkap (Jalan, No, RT/RW) *</label>
-                            <textarea rows="2" x-model="newAddressForm.full_address" required placeholder="Nama jalan, nomor rumah/gedung, RT/RW"
-                                      class="input-tendaku w-full py-2 px-3 rounded-xl resize-none text-xs font-medium border-wheat-300"></textarea>
-                            <p x-show="newAddressErrors.full_address" x-text="newAddressErrors.full_address[0]" class="text-[11px] text-red-600 mt-1"></p>
-                        </div>
-
-                        <!-- Provinsi & Kota -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Provinsi *</label>
-                                <input type="text" x-model="newAddressForm.province" required placeholder="Cth: Jawa Timur"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                                <p x-show="newAddressErrors.province" x-text="newAddressErrors.province[0]" class="text-[11px] text-red-600 mt-1"></p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kota / Kabupaten *</label>
-                                <input type="text" x-model="newAddressForm.city" required placeholder="Cth: Malang"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                                <p x-show="newAddressErrors.city" x-text="newAddressErrors.city[0]" class="text-[11px] text-red-600 mt-1"></p>
-                            </div>
-                        </div>
-
-                        <!-- Kecamatan & Kelurahan -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kecamatan *</label>
-                                <input type="text" x-model="newAddressForm.district" required placeholder="Cth: Lowokwaru"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                                <p x-show="newAddressErrors.district" x-text="newAddressErrors.district[0]" class="text-[11px] text-red-600 mt-1"></p>
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kelurahan / Desa</label>
-                                <input type="text" x-model="newAddressForm.village" placeholder="Cth: Ketawanggede"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                            </div>
-                        </div>
-
-                        <!-- Kode Pos & Patokan -->
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kode Pos</label>
-                                <input type="text" x-model="newAddressForm.postal_code" placeholder="65145" maxlength="10"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                            </div>
-                            <div class="sm:col-span-2">
-                                <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Patokan Lokasi</label>
-                                <input type="text" x-model="newAddressForm.notes" placeholder="Cth: Seberang minimarket, pagar hitam"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                            </div>
-                        </div>
-
-                        <!-- Jadikan Utama -->
-                        <div class="flex items-center gap-2 pt-1">
-                            <input type="checkbox" id="modal_pkg_is_default" x-model="newAddressForm.is_default"
-                                   class="rounded border-wheat-300 text-avocado-700 focus:ring-avocado-600">
-                            <label for="modal_pkg_is_default" class="text-xs text-darkbrown-800 font-medium">Jadikan alamat utama untuk pengantaran berikutnya</label>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-wheat-200">
-                            <button type="button" @click="closeAddAddressModal()"
-                                    class="px-4 py-2 text-xs font-bold text-darkbrown-700 bg-white border border-wheat-300 hover:bg-wheat-100 rounded-xl transition">
-                                Batal
-                            </button>
-                            <button type="button" @click="saveNewAddress()" :disabled="newAddressSubmitting"
-                                    class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 rounded-xl shadow-sm disabled:opacity-50 transition">
-                                <span x-show="!newAddressSubmitting">Simpan & Gunakan</span>
-                                <span x-show="newAddressSubmitting">Menyimpan...</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </form>
+        @include('customer.booking.partials.create.add-address-modal')
+    </div>
 </x-layouts.customer>
