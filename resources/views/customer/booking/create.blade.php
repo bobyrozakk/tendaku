@@ -42,6 +42,8 @@
             'village' => $addr->village,
             'postal_code' => $addr->postal_code,
             'notes' => $addr->notes,
+            'latitude' => $addr->latitude,
+            'longitude' => $addr->longitude,
             'is_default' => (bool) $addr->is_default,
             'formatted_address' => $addr->formatted_address,
             'delivery_snapshot' => $addr->toDeliverySnapshot(),

@@ -226,7 +226,10 @@ export function createLocationPickerState(config = {}) {
         resizeObserver: null,
         intersectionObserver: null,
         invalidateTimer: null,
+        invalidateTimers: [],
+        hasRenderedVisibleCanvas: false,
         boundRefreshHandler: null,
+        boundResetHandler: null,
 
         get hasSelectedCoordinates() {
             return isValidCoordinatePair(this.selectedLatitude, this.selectedLongitude);
@@ -245,10 +248,30 @@ export function createLocationPickerState(config = {}) {
         },
 
         init() {
-            this.boundRefreshHandler = () => {
+            this.boundRefreshHandler = (event) => {
+                if (event?.detail?.pickerId && event.detail.pickerId !== this.pickerId) {
+                    return;
+                }
+                if (!this.mapInstance) {
+                    this.initializeMap();
+                }
                 this.scheduleInvalidateSize();
             };
+
+            this.boundResetHandler = (event) => {
+                if (event?.detail?.pickerId && event.detail.pickerId !== this.pickerId) {
+                    return;
+                }
+                this.resetLocation();
+            };
+
+            if (this.$el && typeof this.$el.addEventListener === "function") {
+                this.$el.addEventListener("location-picker:refresh", this.boundRefreshHandler);
+                this.$el.addEventListener("location-picker:reset", this.boundResetHandler);
+            }
+
             window.addEventListener("location-picker:refresh", this.boundRefreshHandler);
+            window.addEventListener("location-picker:reset", this.boundResetHandler);
 
             this.initializeMap();
             this.refreshIcons();
@@ -418,6 +441,26 @@ export function createLocationPickerState(config = {}) {
             this.syncExternalState();
         },
 
+        resetLocation(options = {}) {
+            this.selectedLatitude = null;
+            this.selectedLongitude = null;
+            this.removeMarker();
+            this.clearFeedback();
+
+            if (this.mapInstance) {
+                this.mapInstance.setView(
+                    [this.viewCenterLatitude, this.viewCenterLongitude],
+                    this.defaultZoom,
+                    { animate: false },
+                );
+                this.scheduleInvalidateSize();
+            }
+
+            if (options.emitEvents !== false) {
+                this.syncExternalState();
+            }
+        },
+
         useCurrentLocation() {
             if (this.disabled || this.isLocating) {
                 return;
@@ -524,28 +567,78 @@ export function createLocationPickerState(config = {}) {
             }
         },
 
-        scheduleInvalidateSize() {
-            if (this.invalidateTimer) {
-                clearTimeout(this.invalidateTimer);
-            }
-
-            this.invalidateTimer = setTimeout(() => {
-                if (this.mapInstance) {
-                    this.mapInstance.invalidateSize({ pan: false });
-                }
-            }, 120);
-        },
-
-        destroy() {
-            if (this.boundRefreshHandler) {
-                window.removeEventListener("location-picker:refresh", this.boundRefreshHandler);
-                this.boundRefreshHandler = null;
-            }
-
+        clearInvalidateTimers() {
             if (this.invalidateTimer) {
                 clearTimeout(this.invalidateTimer);
                 this.invalidateTimer = null;
             }
+
+            if (Array.isArray(this.invalidateTimers) && this.invalidateTimers.length > 0) {
+                this.invalidateTimers.forEach((timerId) => clearTimeout(timerId));
+                this.invalidateTimers = [];
+            }
+        },
+
+        performInvalidateSize() {
+            if (!this.mapInstance) {
+                return;
+            }
+
+            const mapElement = this.$refs?.mapCanvas;
+            const isVisible =
+                mapElement && mapElement.clientWidth > 0 && mapElement.clientHeight > 0;
+
+            if (!this.hasRenderedVisibleCanvas && isVisible) {
+                this.hasRenderedVisibleCanvas = true;
+                this.mapInstance.invalidateSize({ animate: false });
+
+                const targetCenter = this.hasSelectedCoordinates
+                    ? [this.selectedLatitude, this.selectedLongitude]
+                    : [this.viewCenterLatitude, this.viewCenterLongitude];
+                const targetZoom = this.hasSelectedCoordinates
+                    ? this.selectedZoom
+                    : this.defaultZoom;
+
+                this.mapInstance.setView(targetCenter, targetZoom, { animate: false });
+                return;
+            }
+
+            this.mapInstance.invalidateSize({ pan: false });
+        },
+
+        scheduleInvalidateSize() {
+            this.clearInvalidateTimers();
+
+            const delays = [60, 180, 340];
+            this.invalidateTimers = delays.map((delay) =>
+                setTimeout(() => {
+                    this.performInvalidateSize();
+                }, delay),
+            );
+            this.invalidateTimer = this.invalidateTimers[0] || null;
+        },
+
+        destroy() {
+            if (this.boundRefreshHandler) {
+                if (this.$el && typeof this.$el.removeEventListener === "function") {
+                    this.$el.removeEventListener(
+                        "location-picker:refresh",
+                        this.boundRefreshHandler,
+                    );
+                }
+                window.removeEventListener("location-picker:refresh", this.boundRefreshHandler);
+                this.boundRefreshHandler = null;
+            }
+
+            if (this.boundResetHandler) {
+                if (this.$el && typeof this.$el.removeEventListener === "function") {
+                    this.$el.removeEventListener("location-picker:reset", this.boundResetHandler);
+                }
+                window.removeEventListener("location-picker:reset", this.boundResetHandler);
+                this.boundResetHandler = null;
+            }
+
+            this.clearInvalidateTimers();
 
             if (this.resizeObserver) {
                 this.resizeObserver.disconnect();
@@ -566,6 +659,43 @@ export function createLocationPickerState(config = {}) {
             }
         },
     };
+}
+
+export function refreshLocationPicker(pickerId) {
+    if (!pickerId || typeof document === "undefined") {
+        return;
+    }
+
+    const pickerElement = document.getElementById(pickerId);
+    if (pickerElement) {
+        pickerElement.dispatchEvent(
+            new CustomEvent("location-picker:refresh", {
+                detail: { pickerId },
+                bubbles: false,
+            }),
+        );
+    }
+}
+
+export function resetLocationPicker(pickerId) {
+    if (!pickerId || typeof document === "undefined") {
+        return;
+    }
+
+    const pickerElement = document.getElementById(pickerId);
+    if (pickerElement) {
+        pickerElement.dispatchEvent(
+            new CustomEvent("location-picker:reset", {
+                detail: { pickerId },
+                bubbles: false,
+            }),
+        );
+    }
+}
+
+if (typeof window !== "undefined") {
+    window.refreshLocationPicker = refreshLocationPicker;
+    window.resetLocationPicker = resetLocationPicker;
 }
 
 function registerLocationPickerAlpineComponent() {

@@ -46,7 +46,7 @@
 
                     <div x-show="newAddressErrors.general" x-cloak class="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700" x-text="newAddressErrors.general"></div>
 
-                    <div class="mt-4 space-y-4" @keydown.enter.prevent="if ($event.target.tagName !== 'TEXTAREA') saveNewAddress()">
+                    <div class="mt-4 space-y-4" @keydown.enter="if ($event.target.tagName === 'INPUT' && $event.target.type !== 'checkbox') { $event.preventDefault(); saveNewAddress(); }">
                         <!-- Label Alamat -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1.5">Label Alamat *</label>
@@ -129,6 +129,18 @@
                                 <input type="text" x-model="newAddressForm.notes" placeholder="Cth: Depan minimarket, pagar hitam"
                                        class="{{ $inputBase }} text-xs">
                             </div>
+                        </div>
+
+                        <!-- Titik Lokasi Pengantaran (Peta) -->
+                        <div class="pt-1" @location-picker:change="syncNewAddressCoordinates($event.detail)">
+                            <x-location-picker
+                                id="checkout-add-address-location-picker"
+                                label="Titik Lokasi Pengantaran"
+                                help-text="Pilih titik lokasi pada peta agar pengantaran lebih akurat."
+                                height-class="h-56 sm:h-64"
+                            />
+                            <p x-show="newAddressErrors.latitude" x-text="newAddressErrors.latitude?.[0]" class="text-[11px] text-red-600 mt-1"></p>
+                            <p x-show="newAddressErrors.longitude" x-text="newAddressErrors.longitude?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                         </div>
 
                         <!-- Jadikan Utama -->

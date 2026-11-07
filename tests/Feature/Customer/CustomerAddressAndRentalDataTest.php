@@ -450,6 +450,13 @@ class CustomerAddressAndRentalDataTest extends TestCase
                 ->assertSee('x-model="newAddressForm.village"', false)
                 ->assertSee('x-model="newAddressForm.postal_code"', false)
                 ->assertSee('x-model="newAddressForm.notes"', false)
+                ->assertSee('id="checkout-add-address-location-picker"', false)
+                ->assertSee('Titik Lokasi Pengantaran')
+                ->assertSee('Pilih titik lokasi pada peta agar pengantaran lebih akurat.')
+                ->assertSee('Gunakan Lokasi Saya')
+                ->assertSee('syncNewAddressCoordinates($event.detail)', false)
+                ->assertSee('newAddressErrors.latitude?.[0]', false)
+                ->assertSee('newAddressErrors.longitude?.[0]', false)
                 ->assertSee('id="modal_is_default"', false)
                 ->assertSee('type="button" @click="saveNewAddress()"', false)
                 ->assertDontSee('<form @submit.prevent="saveNewAddress()"', false);
@@ -458,9 +465,92 @@ class CustomerAddressAndRentalDataTest extends TestCase
             @$dom->loadHTML($response->getContent());
             $xpath = new \DOMXPath($dom);
 
-            // Pastikan modal berada di dalam scope x-data yang sama dengan section-identity checkout
+            // Pastikan modal dan Location Picker berada di dalam scope x-data yang sama dengan section-identity checkout
             $modalInsideXData = $xpath->query('//*[@x-data][.//*[@id="section-identity"]]//*[@id="modal-title"]');
             $this->assertSame(1, $modalInsideXData->length, 'Modal Tambah Alamat harus berada di dalam scope x-data yang sama dengan form checkout.');
+
+            $pickerInsideModal = $xpath->query('//*[@x-data][.//*[@id="section-identity"]]//*[@id="checkout-add-address-location-picker"]');
+            $this->assertSame(1, $pickerInsideModal->length, 'Location Picker harus berada di dalam modal Tambah Alamat pada scope x-data checkout.');
+
+            // Pastikan tidak ada nested <form> di seluruh halaman checkout
+            $nestedForms = $xpath->query('//form//form');
+            $this->assertSame(0, $nestedForms->length, 'Tidak boleh ada nested <form> pada halaman checkout.');
         }
+    }
+
+    /**
+     * Skenario 11: Penyimpanan alamat dari modal checkout menyimpan koordinat ke database, mengembalikan koordinat di JSON, serta memvalidasi pasangan koordinat.
+     */
+    public function test_scenario_11_store_address_from_checkout_modal_saves_coordinates_and_validates_coordinate_pairs(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'name' => 'Rina Checkout',
+            'phone' => '081234567890',
+            'nik' => '3273012345670009',
+        ]);
+
+        // 1. Validasi gagal jika hanya salah satu koordinat dikirim atau di luar rentang
+        $invalidCoordRes = $this->actingAs($customer)->postJson(route('customer.addresses.store'), [
+            'label' => 'Rumah',
+            'recipient_name' => 'Rina Checkout',
+            'phone_number' => '081234567890',
+            'full_address' => 'Jl. Soekarno Hatta No. 9',
+            'province' => 'Jawa Timur',
+            'city' => 'Malang',
+            'district' => 'Lowokwaru',
+            'latitude' => -7.9432109,
+            'longitude' => null,
+        ]);
+
+        $invalidCoordRes->assertStatus(422)
+            ->assertJsonValidationErrors(['longitude']);
+        $this->assertDatabaseCount('customer_addresses', 0);
+
+        // 2. Simpan alamat lengkap beserta titik lokasi dari modal checkout
+        $storeRes = $this->actingAs($customer)->postJson(route('customer.addresses.store'), [
+            'label' => 'Basecamp Pendakian',
+            'recipient_name' => 'Rina Checkout',
+            'phone_number' => '081234567890',
+            'full_address' => 'Jl. Soekarno Hatta No. 9',
+            'province' => 'Jawa Timur',
+            'city' => 'Malang',
+            'district' => 'Lowokwaru',
+            'village' => 'Mojolangu',
+            'postal_code' => '65142',
+            'notes' => 'Sebelah minimarket',
+            'latitude' => -7.9432109,
+            'longitude' => 112.6210987,
+            'is_default' => true,
+        ]);
+
+        $storeRes->assertCreated()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.label', 'Basecamp Pendakian')
+            ->assertJsonPath('data.is_default', true);
+
+        $createdId = (int) $storeRes->json('data.id');
+        $address = CustomerAddress::findOrFail($createdId);
+
+        $this->assertTrue($address->hasCoordinates());
+        $this->assertEqualsWithDelta(-7.9432109, (float) $address->latitude, 0.0000001);
+        $this->assertEqualsWithDelta(112.6210987, (float) $address->longitude, 0.0000001);
+
+        // 3. Alamat baru yang terpilih dapat langsung dipakai pada checkout paket camping
+        $checkoutRes = $this->actingAs($customer)->post(route('customer.packages.checkout.store', $this->package), [
+            'package_id' => $this->package->id,
+            'pickup_date' => '2026-10-29',
+            'pickup_time' => '09:00',
+            'return_date' => '2026-10-30',
+            'return_time' => '09:00',
+            'pickup_method' => 'delivery',
+            'customer_address_id' => $address->id,
+            'payment_channel' => 'bca_va',
+        ]);
+
+        $rental = Rental::withoutGlobalScopes()->latest('id')->firstOrFail();
+        $checkoutRes->assertRedirect(route('booking.status', $rental->booking_code));
+        $this->assertSame($address->id, (int) $rental->customer_address_id);
+        $this->assertStringContainsString('Jl. Soekarno Hatta No. 9', (string) $rental->delivery_address);
     }
 }
