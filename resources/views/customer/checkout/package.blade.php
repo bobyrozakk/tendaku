@@ -41,6 +41,8 @@
             'village' => $a->village,
             'postal_code' => $a->postal_code,
             'notes' => $a->notes,
+            'latitude' => $a->latitude,
+            'longitude' => $a->longitude,
             'formatted_address' => $a->formatted_address,
             'delivery_snapshot' => $a->toDeliverySnapshot(),
             'is_default' => (bool) $a->is_default,
@@ -63,6 +65,7 @@
 
               csrf: '{{ csrf_token() }}',
               storeAddressUrl: '{{ route('customer.addresses.store') }}',
+              addressPickerId: 'checkout-add-address-location-picker',
               addresses: @js($addressListJson),
               selectedAddressId: {{ $selectedAddrId ?: 'null' }},
               showAddAddressModal: false,
@@ -79,6 +82,8 @@
                   village: '',
                   postal_code: '',
                   notes: '',
+                  latitude: null,
+                  longitude: null,
                   is_default: false,
               },
               nikInput: '{{ old('nik', $user?->nik ?? '') }}',
@@ -95,10 +100,28 @@
                   }
               },
 
+              syncNewAddressCoordinates(detail) {
+                  if (!detail || (detail.pickerId && detail.pickerId !== this.addressPickerId)) {
+                      return;
+                  }
+                  this.newAddressForm.latitude = detail.latitude ?? null;
+                  this.newAddressForm.longitude = detail.longitude ?? null;
+              },
+
               openAddAddressModal() {
                   this.newAddressErrors = {};
+                  if (
+                      this.newAddressForm.latitude === null &&
+                      this.newAddressForm.longitude === null &&
+                      typeof window.resetLocationPicker === 'function'
+                  ) {
+                      window.resetLocationPicker(this.addressPickerId);
+                  }
                   this.showAddAddressModal = true;
                   this.$nextTick(() => {
+                      if (typeof window.refreshLocationPicker === 'function') {
+                          window.refreshLocationPicker(this.addressPickerId);
+                      }
                       if (typeof window.renderLucideIcons === 'function') {
                           window.renderLucideIcons();
                       }
@@ -111,6 +134,7 @@
               },
 
               async saveNewAddress() {
+                  if (this.newAddressSubmitting) return;
                   this.newAddressSubmitting = true;
                   this.newAddressErrors = {};
                   try {
@@ -151,8 +175,14 @@
                           village: '',
                           postal_code: '',
                           notes: '',
+                          latitude: null,
+                          longitude: null,
                           is_default: false,
                       };
+
+                      if (typeof window.resetLocationPicker === 'function') {
+                          window.resetLocationPicker(this.addressPickerId);
+                      }
 
                       this.$nextTick(() => {
                           if (typeof window.renderLucideIcons === 'function') {

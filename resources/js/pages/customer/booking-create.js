@@ -19,6 +19,7 @@ document.addEventListener("alpine:init", () => {
         addresses: cfg.addresses || [],
         selectedAddressId: cfg.selectedAddressId || null,
         storeAddressUrl: cfg.storeAddressUrl || "",
+        addressPickerId: "checkout-add-address-location-picker",
         showAddressPicker: false,
         showAddAddressModal: false,
         newAddressSubmitting: false,
@@ -34,6 +35,8 @@ document.addEventListener("alpine:init", () => {
             village: "",
             postal_code: "",
             notes: "",
+            latitude: null,
+            longitude: null,
             is_default: true,
         },
 
@@ -312,6 +315,17 @@ document.addEventListener("alpine:init", () => {
             if (this.errors.address) delete this.errors.address;
         },
 
+        syncNewAddressCoordinates(detail) {
+            if (
+                !detail ||
+                (detail.pickerId && detail.pickerId !== this.addressPickerId)
+            ) {
+                return;
+            }
+            this.newAddressForm.latitude = detail.latitude ?? null;
+            this.newAddressForm.longitude = detail.longitude ?? null;
+        },
+
         openAddAddressModal() {
             this.newAddressErrors = {};
             if (!this.newAddressForm.recipient_name && this.name) {
@@ -320,8 +334,18 @@ document.addEventListener("alpine:init", () => {
             if (!this.newAddressForm.phone_number && this.phone) {
                 this.newAddressForm.phone_number = this.phone;
             }
+            if (
+                this.newAddressForm.latitude === null &&
+                this.newAddressForm.longitude === null &&
+                typeof window.resetLocationPicker === "function"
+            ) {
+                window.resetLocationPicker(this.addressPickerId);
+            }
             this.showAddAddressModal = true;
             this.$nextTick(() => {
+                if (typeof window.refreshLocationPicker === "function") {
+                    window.refreshLocationPicker(this.addressPickerId);
+                }
                 if (typeof window.renderLucideIcons === "function") {
                     window.renderLucideIcons();
                 }
@@ -334,6 +358,7 @@ document.addEventListener("alpine:init", () => {
         },
 
         async saveNewAddress() {
+            if (this.newAddressSubmitting) return;
             this.newAddressSubmitting = true;
             this.newAddressErrors = {};
             try {
@@ -363,9 +388,9 @@ document.addEventListener("alpine:init", () => {
                 }
                 this.addresses.unshift(created);
                 this.selectAddress(created.id);
-                this.showAddAddressModal = false;
+                this.closeAddAddressModal();
 
-                // Reset form
+                // Reset form dan titik lokasi pada peta
                 this.newAddressForm = {
                     label: "Rumah",
                     recipient_name: this.name || "",
@@ -377,8 +402,14 @@ document.addEventListener("alpine:init", () => {
                     village: "",
                     postal_code: "",
                     notes: "",
+                    latitude: null,
+                    longitude: null,
                     is_default: false,
                 };
+
+                if (typeof window.resetLocationPicker === "function") {
+                    window.resetLocationPicker(this.addressPickerId);
+                }
             } catch (err) {
                 this.newAddressErrors = {
                     general: "Terjadi gangguan jaringan saat menyimpan alamat.",
