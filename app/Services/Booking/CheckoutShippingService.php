@@ -11,6 +11,7 @@ use App\Models\Vendor;
 use App\Models\VendorShippingSetting;
 use App\Services\OpenRouteService;
 use App\Services\ShippingCalculator;
+use Carbon\Carbon;
 
 class CheckoutShippingService
 {
@@ -22,8 +23,8 @@ class CheckoutShippingService
     ) {}
 
     /**
-     * @param  array{checkout_type: string, pickup_method: string, customer_address_id?: int, package_id?: int, items?: array<int, array{id: int, qty: int}>, pickup_date?: string, return_date?: string, pickup_time?: string}  $input
-     * @return array{success: bool, status: string, pickup_method: string, distance_km: float|null, total_weight_kg: float, distance_fee: int, weight_fee: int, delivery_fee: int, items?: array<int, array{id: int, qty: int, price_per_day: float, weight_kg: float}>, subtotal?: float, grand_total?: float, customer_address_id?: int|null, delivery_address?: string|null, shipping_context?: string}
+     * @param  array{checkout_type: string, pickup_method: string, customer_address_id?: int|null, package_id?: int, items?: array<int, array{id: int, qty: int}>, pickup_date?: string, return_date?: string, pickup_time?: string, return_time?: string}  $input
+     * @return array{success: bool, status: string, pickup_method: string, distance_km: float|null, total_weight_kg: float, distance_fee: int, weight_fee: int, delivery_fee: int, items: array<int, array{id: int, qty: int, price_per_day: float, weight_kg: float, name?: string}>, subtotal: float, grand_total: float, customer_address_id: int|null, delivery_address: string|null, shipping_context: string, package_id?: int, package_name?: string, package_price?: float, vendor_id?: int, pickup_date?: string|null, return_date?: string|null, pickup_time?: string|null, return_time?: string|null, rental_days?: int, total_hours?: float}
      */
     public function preview(array $input, ?User $customer): array
     {
@@ -40,7 +41,8 @@ class CheckoutShippingService
         }
         $context = null;
         if ($package) {
-            [$vendor, $weight] = $this->packageContext((int) $input['package_id']);
+            [$vendor, $weight, $context] = $this->packageContext((int) $input['package_id'], $input);
+            $context['customer_id'] = $customer?->id;
         } else {
             [$vendor, $weight, $context] = $this->regularContext($input, $customer);
             $context['customer_id'] = $customer?->id;
@@ -48,7 +50,7 @@ class CheckoutShippingService
 
         $result = ['success' => true, 'status' => 'ready', 'pickup_method' => $input['pickup_method'], 'distance_km' => null, 'total_weight_kg' => $weight, 'distance_fee' => 0, 'weight_fee' => 0, 'delivery_fee' => 0];
         if (! $delivery) {
-            return $context === null ? $result : $this->regularResult($result, $context);
+            return $this->checkoutResult($result, $context);
         }
         $address = $customer->addresses()->whereKey($input['customer_address_id'] ?? 0)->first();
         if ($address === null) {
@@ -83,7 +85,7 @@ class CheckoutShippingService
         $result['weight_fee'] = $shipping['weight_fee'];
         $result['delivery_fee'] = $shipping['total_fee'];
 
-        return $context === null ? $result : $this->regularResult($result, $context, $address, $setting);
+        return $this->checkoutResult($result, $context, $address, $setting);
     }
 
     /**
@@ -152,13 +154,18 @@ class CheckoutShippingService
      * @param  array<string, mixed>  $context
      * @return array<string, mixed>
      */
-    private function regularResult(array $result, array $context, ?CustomerAddress $address = null, ?VendorShippingSetting $setting = null): array
+    private function checkoutResult(array $result, array $context, ?CustomerAddress $address = null, ?VendorShippingSetting $setting = null): array
     {
         $result['items'] = $context['items'];
         $result['subtotal'] = $context['subtotal'];
         $result['grand_total'] = $context['subtotal'] + $result['delivery_fee'];
         $result['customer_address_id'] = $address?->id;
         $result['delivery_address'] = $address?->toDeliverySnapshot();
+        if (isset($context['package_id'])) {
+            foreach (['package_id', 'package_name', 'package_price', 'vendor_id', 'pickup_date', 'return_date', 'pickup_time', 'return_time', 'rental_days', 'total_hours'] as $field) {
+                $result[$field] = $context[$field];
+            }
+        }
         $result['shipping_context'] = hash_hmac('sha256', json_encode([
             $context, $result,
             $address ? [$address->id, $address->latitude, $address->longitude, $address->toDeliverySnapshot()] : null,
@@ -168,8 +175,11 @@ class CheckoutShippingService
         return $result;
     }
 
-    /** @return array{Vendor, float} */
-    private function packageContext(int $packageId): array
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array{Vendor, float, array<string, mixed>}
+     */
+    private function packageContext(int $packageId, array $input): array
     {
         $package = CampingPackage::publicCatalog()->with(['vendor', 'packageItems.masterItem'])->find($packageId);
         if ($package === null || $package->packageItems->isEmpty()) {
@@ -183,7 +193,35 @@ class CheckoutShippingService
             $this->validateWeight($product, $component->quantity);
         }
 
-        return [$package->vendor, $this->calculator->calculatePackageWeight($package)];
+        $pickup = isset($input['pickup_date'])
+            ? Carbon::parse($input['pickup_date'].' '.($input['pickup_time'] ?? '09:00')) : null;
+        $return = $pickup !== null
+            ? Carbon::parse(($input['return_date'] ?? $pickup->copy()->addDays(max(1, (int) $package->duration_days))->toDateString()).' '.($input['return_time'] ?? $input['pickup_time'] ?? '09:00')) : null;
+        if ($pickup !== null && $pickup->lt(now()->subMinute())) {
+            throw new ShippingPreviewException('invalid_schedule', 'Waktu pengambilan tidak boleh di masa lalu.');
+        }
+        if ($return !== null && $return->lte($pickup)) {
+            throw new ShippingPreviewException('invalid_schedule', 'Waktu pengembalian harus setelah waktu pengambilan.');
+        }
+        $hours = $pickup !== null ? $pickup->floatDiffInHours($return, false) : 24;
+        $days = max(1, (int) ceil($hours / 24));
+        $items = $package->packageItems->sortBy('master_item_id')->map(fn ($component): array => [
+            'id' => (int) $component->master_item_id,
+            'qty' => (int) $component->quantity,
+            'name' => $component->masterItem->name,
+            'weight_kg' => (float) $component->masterItem->weight_kg,
+            'price_per_day' => (float) $component->masterItem->daily_rate,
+        ])->values()->all();
+
+        return [$package->vendor, $this->calculator->calculatePackageWeight($package), [
+            'package_id' => $package->id, 'package_name' => $package->name,
+            'package_price' => (float) $package->price, 'vendor_id' => $package->vendor_id,
+            'vendor_coordinates' => [$package->vendor->latitude, $package->vendor->longitude],
+            'pickup_date' => $pickup?->toDateString(), 'return_date' => $return?->toDateString(),
+            'pickup_time' => $pickup?->format('H:i'), 'return_time' => $return?->format('H:i'),
+            'rental_days' => $days, 'total_hours' => $hours,
+            'items' => $items, 'subtotal' => (float) $package->price * $days,
+        ]];
     }
 
     private function validateWeight(MasterItem $product, int $quantity): void
