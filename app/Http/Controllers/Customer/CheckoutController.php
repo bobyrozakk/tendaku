@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CheckoutController extends Controller
@@ -35,6 +36,15 @@ class CheckoutController extends Controller
      */
     public function index(Request $request): View|RedirectResponse
     {
+        $cartService = app(CartService::class);
+        if ($request->hasAny(['pickup_date', 'return_date'])) {
+            try {
+                $cartService->validateRentalDates($request->only(['pickup_date', 'return_date']));
+            } catch (ValidationException $exception) {
+                return redirect()->route('customer.cart.index')->withErrors($exception->errors())
+                    ->with('warning', 'Periksa dan perbarui jadwal sewa sebelum melanjutkan checkout.');
+            }
+        }
         // Mendukung parameter langsung produk/alat jika diarahkan langsung dari profil toko atau katalog
         if ($request->filled('item_id') || $request->filled('product_id')) {
             $itemId = (int) ($request->query('item_id') ?: $request->query('product_id'));
@@ -48,8 +58,7 @@ class CheckoutController extends Controller
                     'daily_rate' => (int) $masterItem->daily_rate,
                     'quantity' => max(1, (int) $request->query('qty', 1)),
                     'qty' => max(1, (int) $request->query('qty', 1)),
-                    'pickup_date' => $request->query('pickup_date') ?: now()->addDay()->toDateString(),
-                    'return_date' => $request->query('return_date') ?: now()->addDays(2)->toDateString(),
+                    ...$request->only(['pickup_date', 'return_date']),
                     'vendor_id' => $masterItem->vendor_id,
                     'vendor_name' => $masterItem->vendor?->name ?? 'Vendor',
                     'category_name' => $masterItem->category?->name,
@@ -66,6 +75,21 @@ class CheckoutController extends Controller
                     'warning',
                     'Silakan pilih alat camping yang ingin disewa terlebih dahulu.'
                 );
+        }
+
+        if ($request->has(['pickup_date', 'return_date'])) {
+            $cartService->updateDates($request->only(['pickup_date', 'return_date']), Auth::user());
+            $cart = $this->cart();
+        }
+
+        try {
+            $cartService->validateRentalDates([
+                'pickup_date' => $cart['pickup_date'] ?? null,
+                'return_date' => $cart['return_date'] ?? null,
+            ]);
+        } catch (ValidationException $exception) {
+            return redirect()->route('customer.cart.index')->withErrors($exception->errors())
+                ->with('warning', 'Jadwal sewa di keranjang tidak valid atau sudah lewat. Silakan perbarui tanggal sewa.');
         }
 
         $booking = $this->summary->build(

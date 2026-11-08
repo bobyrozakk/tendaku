@@ -45,6 +45,7 @@ Route::prefix('katalog/booking')->group(function () {
     Route::post('shipping-preview', ShippingPreviewController::class)
         ->withoutMiddleware(RedirectIfUnverified::class)
         ->middleware('throttle:10,1')
+        ->block(120, 5)
         ->name('checkout.shipping.preview');
     Route::get('/', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/', [CheckoutController::class, 'store'])->block(120, 5)->name('checkout.store');

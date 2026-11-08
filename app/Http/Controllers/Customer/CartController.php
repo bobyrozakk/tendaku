@@ -162,7 +162,7 @@ class CartController extends Controller
     /**
      * Lanjut dari keranjang ke Checkout.
      */
-    public function checkout(): RedirectResponse
+    public function checkout(Request $request): RedirectResponse
     {
         $user = Auth::user();
         $cart = $this->cartService->get($user);
@@ -172,6 +172,12 @@ class CartController extends Controller
                 ->route('customer.cart.index')
                 ->with('warning', 'Keranjang sewa Anda masih kosong.');
         }
+
+        $dates = $request->hasAny(['pickup_date', 'return_date'])
+            ? $request->only(['pickup_date', 'return_date'])
+            : ['pickup_date' => $cart['pickup_date'] ?? null, 'return_date' => $cart['return_date'] ?? null];
+        $dates = $this->cartService->validateRentalDates($dates);
+        $this->cartService->updateDates($dates, $user);
 
         return redirect()->route('checkout.index');
     }

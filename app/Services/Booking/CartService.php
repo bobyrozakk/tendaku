@@ -5,6 +5,7 @@ namespace App\Services\Booking;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Validator;
 
 class CartService
 {
@@ -73,6 +74,10 @@ class CartService
             ];
         }
 
+        if (array_key_exists('pickup_date', $itemData) || array_key_exists('return_date', $itemData)) {
+            $cart = $this->withDates($cart, $itemData);
+        }
+
         $durationDays = max(1, (int) ($cart['total_days'] ?? 1));
         $dailyRate = (int) ($itemData['daily_rate'] ?? 0);
 
@@ -135,6 +140,59 @@ class CartService
             $cart = $this->recalculateSummary($cart);
             $this->set($cart, $user);
         }
+    }
+
+    /**
+     * @param  array{pickup_date?: mixed, return_date?: mixed, pickup_time?: mixed, return_time?: mixed}  $dates
+     * @return array{pickup_date: string, return_date: string, pickup_time?: string, return_time?: string}
+     */
+    public function validateRentalDates(array $dates): array
+    {
+        return Validator::make($dates, [
+            'pickup_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'return_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:pickup_date'],
+            'pickup_time' => ['sometimes', 'date_format:H:i'],
+            'return_time' => ['sometimes', 'date_format:H:i'],
+        ], [
+            'pickup_date.required' => 'Pilih tanggal mulai sewa terlebih dahulu.',
+            'pickup_date.date_format' => 'Tanggal mulai sewa tidak valid.',
+            'pickup_date.after_or_equal' => 'Tanggal mulai sewa sudah lewat. Silakan pilih tanggal hari ini atau setelahnya.',
+            'return_date.required' => 'Pilih tanggal pengembalian terlebih dahulu.',
+            'return_date.date_format' => 'Tanggal pengembalian tidak valid.',
+            'return_date.after_or_equal' => 'Tanggal pengembalian tidak boleh sebelum tanggal mulai sewa.',
+        ])->validate();
+    }
+
+    /** @param array{pickup_date: string, return_date: string, pickup_time?: string, return_time?: string} $dates */
+    public function updateDates(array $dates, ?User $user = null): void
+    {
+        $cart = $this->get($user);
+        if ($cart !== null) {
+            $this->set($this->withDates($cart, $dates), $user);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $cart
+     * @param  array<string, mixed>  $dates
+     * @return array<string, mixed>
+     */
+    private function withDates(array $cart, array $dates): array
+    {
+        $cart = array_replace($cart, $this->validateRentalDates($dates));
+        $days = app(RentalService::class)->calculateRentalDays(
+            $cart['pickup_date'], $cart['return_date'],
+            $cart['pickup_time'] ?? null, $cart['return_time'] ?? null,
+        );
+        $cart['duration_days'] = $days;
+        $cart['total_days'] = $days;
+        foreach ($cart['items'] as &$item) {
+            $item['duration_days'] = $days;
+            $item['total_price'] = (int) ($item['daily_rate'] ?? 0) * (int) ($item['qty'] ?? $item['quantity'] ?? 1) * $days;
+        }
+        unset($item);
+
+        return $cart;
     }
 
     /**
