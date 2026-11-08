@@ -11,6 +11,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -20,6 +21,43 @@ class OpenRouteServiceTest extends TestCase
     use RefreshDatabase;
 
     private OpenRouteService $service;
+
+    public function test_http_error_does_not_log_or_return_raw_response_credentials(): void
+    {
+        $credential = 'synthetic-ors-credential-for-test';
+        config(['services.openrouteservice.api_key' => $credential]);
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['error' => 'Rejected '.$credential], 403),
+        ]);
+        Log::shouldReceive('warning')->once()->withArgs(fn (string $message, array $context): bool => ! array_key_exists('body', $context) && ! str_contains(json_encode([$message, $context]), $credential));
+
+        $result = $this->service->getDrivingDistance(-7.9, 112.6, -7.8, 112.7);
+
+        $this->assertFalse($result['success']);
+        $this->assertNull($result['distance_km']);
+        $this->assertStringNotContainsString($credential, json_encode($result));
+        Http::assertSentCount(1);
+    }
+
+    public function test_connection_error_does_not_log_or_return_exception_credentials(): void
+    {
+        $credential = 'synthetic-ors-credential-for-test';
+        config(['services.openrouteservice.api_key' => $credential]);
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::failedConnection('Connection failed: '.$credential),
+        ]);
+        Log::shouldReceive('warning')->once()->withArgs(fn (string $message, array $context): bool => ($context['exception'] ?? null) === ConnectionException::class
+            && ! str_contains(json_encode([$message, $context]), $credential));
+
+        $result = $this->service->getDrivingDistance(-7.9, 112.6, -7.8, 112.7);
+
+        $this->assertFalse($result['success']);
+        $this->assertNull($result['distance_km']);
+        $this->assertStringNotContainsString($credential, json_encode($result));
+        Http::assertSentCount(1);
+    }
 
     protected function setUp(): void
     {
