@@ -4,9 +4,11 @@ namespace App\Services\Booking;
 
 use App\Exceptions\ShippingPreviewException;
 use App\Models\CampingPackage;
+use App\Models\CustomerAddress;
 use App\Models\MasterItem;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Models\VendorShippingSetting;
 use App\Services\OpenRouteService;
 use App\Services\ShippingCalculator;
 
@@ -20,8 +22,8 @@ class CheckoutShippingService
     ) {}
 
     /**
-     * @param  array{checkout_type: string, pickup_method: string, customer_address_id?: int, package_id?: int, items?: array<int, array{id: int, qty: int}>, pickup_date?: string, return_date?: string}  $input
-     * @return array{success: bool, status: string, pickup_method: string, distance_km: float|null, total_weight_kg: float, distance_fee: int, weight_fee: int, delivery_fee: int}
+     * @param  array{checkout_type: string, pickup_method: string, customer_address_id?: int, package_id?: int, items?: array<int, array{id: int, qty: int}>, pickup_date?: string, return_date?: string, pickup_time?: string}  $input
+     * @return array{success: bool, status: string, pickup_method: string, distance_km: float|null, total_weight_kg: float, distance_fee: int, weight_fee: int, delivery_fee: int, items?: array<int, array{id: int, qty: int, price_per_day: float, weight_kg: float}>, subtotal?: float, grand_total?: float, customer_address_id?: int|null, delivery_address?: string|null, shipping_context?: string}
      */
     public function preview(array $input, ?User $customer): array
     {
@@ -36,13 +38,17 @@ class CheckoutShippingService
         if ($package && ! $customer->hasVerifiedEmail()) {
             throw new ShippingPreviewException('email_unverified', 'Silakan verifikasi email terlebih dahulu.', 403);
         }
-        [$vendor, $weight] = $package
-            ? $this->packageContext((int) $input['package_id'])
-            : $this->regularContext($input, $customer);
+        $context = null;
+        if ($package) {
+            [$vendor, $weight] = $this->packageContext((int) $input['package_id']);
+        } else {
+            [$vendor, $weight, $context] = $this->regularContext($input, $customer);
+            $context['customer_id'] = $customer?->id;
+        }
 
         $result = ['success' => true, 'status' => 'ready', 'pickup_method' => $input['pickup_method'], 'distance_km' => null, 'total_weight_kg' => $weight, 'distance_fee' => 0, 'weight_fee' => 0, 'delivery_fee' => 0];
         if (! $delivery) {
-            return $result;
+            return $context === null ? $result : $this->regularResult($result, $context);
         }
         $address = $customer->addresses()->whereKey($input['customer_address_id'] ?? 0)->first();
         if ($address === null) {
@@ -77,12 +83,12 @@ class CheckoutShippingService
         $result['weight_fee'] = $shipping['weight_fee'];
         $result['delivery_fee'] = $shipping['total_fee'];
 
-        return $result;
+        return $context === null ? $result : $this->regularResult($result, $context, $address, $setting);
     }
 
     /**
      * @param  array<string, mixed>  $input
-     * @return array{Vendor, float}
+     * @return array{Vendor, float, array<string, mixed>}
      */
     private function regularContext(array $input, ?User $customer): array
     {
@@ -119,7 +125,47 @@ class CheckoutShippingService
             $items[] = ['item' => $product, 'quantity' => $quantity];
         }
 
-        return [$vendor, $this->calculator->calculateTotalWeight($items)];
+        ksort($quantities);
+        $pickupDate = $input['pickup_date'] ?? $cart['pickup_date'];
+        $returnDate = $input['return_date'] ?? $cart['return_date'];
+        $pickupTime = $input['pickup_time'] ?? ($vendor->pickup_time ?: config('booking.default_pickup_time'));
+        $days = app(RentalService::class)->calculateRentalDays($pickupDate, $returnDate, $pickupTime, $pickupTime);
+        $pricedItems = [];
+        $subtotal = 0;
+        foreach ($quantities as $id => $quantity) {
+            $product = $products->get($id);
+            $pricedItems[] = ['id' => $id, 'qty' => $quantity, 'price_per_day' => (float) $product->daily_rate, 'weight_kg' => (float) $product->weight_kg];
+            $subtotal += (float) $product->daily_rate * $quantity * $days;
+        }
+
+        return [$vendor, $this->calculator->calculateTotalWeight($items), [
+            'vendor_id' => $vendor->id,
+            'vendor_coordinates' => [$vendor->latitude, $vendor->longitude],
+            'pickup_date' => $pickupDate, 'return_date' => $returnDate,
+            'pickup_time' => substr($pickupTime, 0, 5),
+            'items' => $pricedItems, 'subtotal' => $subtotal,
+        ]];
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     * @param  array<string, mixed>  $context
+     * @return array<string, mixed>
+     */
+    private function regularResult(array $result, array $context, ?CustomerAddress $address = null, ?VendorShippingSetting $setting = null): array
+    {
+        $result['items'] = $context['items'];
+        $result['subtotal'] = $context['subtotal'];
+        $result['grand_total'] = $context['subtotal'] + $result['delivery_fee'];
+        $result['customer_address_id'] = $address?->id;
+        $result['delivery_address'] = $address?->toDeliverySnapshot();
+        $result['shipping_context'] = hash_hmac('sha256', json_encode([
+            $context, $result,
+            $address ? [$address->id, $address->latitude, $address->longitude, $address->toDeliverySnapshot()] : null,
+            $setting ? [$setting->rate_per_km, $setting->weight_threshold_kg, $setting->extra_weight_fee_per_kg] : null,
+        ], JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION), (string) config('app.key'));
+
+        return $result;
     }
 
     /** @return array{Vendor, float} */

@@ -67,7 +67,7 @@ class ShippingPreviewTest extends TestCase
         $this->context();
         Http::fake();
         $this->postJson(self::ENDPOINT, ['checkout_type' => 'regular', 'pickup_method' => 'self_pickup'])
-            ->assertOk()->assertExactJson(['success' => true, 'status' => 'ready', 'pickup_method' => 'self_pickup', 'distance_km' => null, 'total_weight_kg' => 3.25, 'distance_fee' => 0, 'weight_fee' => 0, 'delivery_fee' => 0]);
+            ->assertOk()->assertJson(['success' => true, 'status' => 'ready', 'pickup_method' => 'self_pickup', 'distance_km' => null, 'total_weight_kg' => 3.25, 'distance_fee' => 0, 'weight_fee' => 0, 'delivery_fee' => 0]);
         Http::assertNothingSent();
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
@@ -78,7 +78,7 @@ class ShippingPreviewTest extends TestCase
         $c = $this->context();
         $this->fakeRoute();
         $this->actingAs($c['customer'])->postJson(self::ENDPOINT, $this->delivery($c) + ['items' => [['id' => $c['item']->id, 'qty' => 2, 'weight_kg' => 0]], 'vendor_id' => 999, 'delivery_fee' => 0, 'distance_km' => 0, 'rate_per_km' => 0, 'latitude' => 0, 'longitude' => 0])
-            ->assertOk()->assertExactJson(['success' => true, 'status' => 'ready', 'pickup_method' => 'delivery', 'distance_km' => 12.34, 'total_weight_kg' => 6.5, 'distance_fee' => 24680, 'weight_fee' => 2000, 'delivery_fee' => 26680]);
+            ->assertOk()->assertJson(['success' => true, 'status' => 'ready', 'pickup_method' => 'delivery', 'distance_km' => 12.34, 'total_weight_kg' => 6.5, 'distance_fee' => 24680, 'weight_fee' => 2000, 'delivery_fee' => 26680]);
         Http::assertSent(fn ($request) => $request['coordinates'] === [[112.6, -7.9], [112.6304, -7.9797]]);
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);

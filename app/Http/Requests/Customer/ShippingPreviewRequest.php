@@ -23,6 +23,7 @@ class ShippingPreviewRequest extends FormRequest
             'items.*.id' => ['required', 'integer', 'min:1', 'distinct'],
             'items.*.qty' => ['required', 'integer', 'min:1', 'max:10000'],
             'pickup_date' => ['exclude_unless:checkout_type,regular', 'required_with:return_date', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'pickup_time' => ['exclude_unless:checkout_type,regular', 'sometimes', 'date_format:H:i'],
             'return_date' => ['exclude_unless:checkout_type,regular', 'required_with:pickup_date', 'date_format:Y-m-d', 'after_or_equal:pickup_date'],
         ];
     }
