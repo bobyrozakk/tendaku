@@ -2,6 +2,7 @@ import { createIcons, icons } from "lucide";
 import "./components/location-picker.js";
 import "./pages/customer/booking-status.js";
 import "./pages/customer/booking-create.js";
+import "./pages/customer/package-checkout.js";
 import "../css/components/location-picker.css";
 import "../css/pages/customer/booking-status.css";
 import "../css/pages/customer/booking-receipt.css";

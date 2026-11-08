@@ -212,6 +212,22 @@
 
                         <form method="POST" action="{{ route('customer.cart.checkout') }}">
                             @csrf
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                <label class="text-xs font-semibold text-darkbrown-700">
+                                    Tanggal mulai sewa
+                                    <input type="date" name="pickup_date" required min="{{ now()->toDateString() }}"
+                                           value="{{ old('pickup_date', $cartSummary['pickup_date']) }}"
+                                           class="block w-full mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
+                                    <x-input-error :messages="$errors->get('pickup_date')" class="mt-1" />
+                                </label>
+                                <label class="text-xs font-semibold text-darkbrown-700">
+                                    Tanggal pengembalian
+                                    <input type="date" name="return_date" required min="{{ now()->toDateString() }}"
+                                           value="{{ old('return_date', $cartSummary['return_date']) }}"
+                                           class="block w-full mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
+                                    <x-input-error :messages="$errors->get('return_date')" class="mt-1" />
+                                </label>
+                            </div>
                             <button type="submit" class="btn-tendaku-primary !py-3.5 !px-8 text-sm font-extrabold shadow-md hover:shadow-lg flex items-center gap-2">
                                 <span>Lanjut ke Checkout</span>
                                 <i data-lucide="arrow-right" class="w-4 h-4"></i>

@@ -82,7 +82,13 @@
                 openLocationModal() {
                     this.showLocationModal = true;
                     this.$nextTick(() => {
-                        window.dispatchEvent(new CustomEvent('location-picker:refresh'));
+                        if (typeof window.refreshLocationPicker === 'function') {
+                            window.refreshLocationPicker('vendor-store-location-modal-picker');
+                        } else {
+                            window.dispatchEvent(new CustomEvent('location-picker:refresh', {
+                                detail: { pickerId: 'vendor-store-location-modal-picker' }
+                            }));
+                        }
                     });
                 },
                 closeLocationModal() {

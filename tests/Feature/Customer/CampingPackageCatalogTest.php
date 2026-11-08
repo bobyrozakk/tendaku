@@ -156,6 +156,50 @@ class CampingPackageCatalogTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_rent_buttons_link_to_each_selected_package_checkout(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $first = $this->createPackage($this->activeVendor, 'Paket Pertama', 'paket-pertama', ['price' => 50000]);
+        $second = $this->createPackage($this->activeVendor, 'Paket Kedua', 'paket-kedua', ['price' => 70000]);
+
+        $html = $this->actingAs($customer)->get(route('customer.packages.index'))->assertOk()->getContent();
+        preg_match_all('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Sewa Paket\s*<\/a>/u', $html, $buttons);
+
+        $this->assertCount(2, $buttons[1]);
+        $this->assertContains(route('customer.packages.checkout', ['id' => $first->id]), $buttons[1]);
+        $this->assertContains(route('customer.packages.checkout', ['id' => $second->id]), $buttons[1]);
+    }
+
+    public function test_selected_package_checkout_ignores_unrelated_regular_cart(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $package = $this->createPackage($this->activeVendor, 'Paket Dua Alat', 'paket-dua-alat', ['price' => 50000]);
+        $stove = $this->tenda->replicate();
+        $stove->fill(['name' => 'Kompor', 'slug' => 'kompor', 'daily_rate' => 15000])->save();
+        $package->packageItems()->createMany([
+            ['master_item_id' => $this->tenda->id, 'quantity' => 1],
+            ['master_item_id' => $stove->id, 'quantity' => 1],
+        ]);
+        $this->actingAs($customer)->withSession(['booking_cart' => [
+            'master_item_id' => $stove->id, 'quantity' => 1,
+            'pickup_date' => now()->addDay()->toDateString(), 'return_date' => now()->addDays(2)->toDateString(),
+        ]]);
+        $html = $this->get(route('customer.packages.index'))->assertOk()->getContent();
+        preg_match('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Sewa Paket\s*<\/a>/u', $html, $button);
+        $this->assertArrayHasKey(1, $button);
+
+        $this->get($button[1])->assertOk()->assertViewIs('customer.checkout.package')
+            ->assertViewHas('package', fn (CampingPackage $selected): bool => $selected->id === $package->id
+                && (float) $selected->price === 50000.0
+                && $selected->packageItems->count() === 2
+                && (int) $selected->packageItems->sum('quantity') === 2)
+            ->assertSee('Rp 50.000')->assertSee('Tenda Dome 4P')->assertSee('Kompor');
+        $this->assertSame($stove->id, session('booking_cart.master_item_id'));
+        $this->assertSame(1, session('booking_cart.quantity'));
+        $this->assertDatabaseCount('rentals', 0);
+        $this->assertDatabaseCount('payments', 0);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      */

@@ -19,7 +19,6 @@
     @php
         $price = (float) $package->price;
         $vendorName = $package->vendor?->name ?? 'Tendaku Vendor';
-        $deliveryFeeAmount = (int) \App\Http\Controllers\Customer\PackageCheckoutController::DELIVERY_FEE;
         $image = $package->image_url
             ?: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80';
         $user = auth()->user();
@@ -47,244 +46,29 @@
             'delivery_snapshot' => $a->toDeliverySnapshot(),
             'is_default' => (bool) $a->is_default,
         ])->values();
+        $packageCheckoutConfig = [
+            'packageId' => $package->id, 'method' => old('pickup_method', $pickupMethod),
+            'packagePrice' => $price, 'packageName' => $package->name,
+            'pickupDate' => old('pickup_date', $pickupDate->format('Y-m-d')),
+            'pickupTime' => old('pickup_time', $pickupTime),
+            'returnDate' => old('return_date', $returnDate->format('Y-m-d')),
+            'returnTime' => old('return_time', $returnTime),
+            'durationDays' => $rentalDays, 'totalHours' => $hours, 'subtotal' => $subtotal,
+            'csrf' => csrf_token(), 'shippingPreviewUrl' => route('checkout.shipping.preview'),
+            'storeAddressUrl' => route('customer.addresses.store'), 'addresses' => $addressListJson,
+            'selectedAddressId' => $selectedAddrId, 'name' => $user?->name ?? '', 'phone' => $user?->phone ?? '',
+            'nikInput' => old('nik', $user?->nik ?? ''),
+            'requiresApproval' => session()->has('shipping_conflict'),
+            'packageItems' => $package->packageItems->map(fn ($item) => ['id' => $item->master_item_id, 'name' => $item->masterItem?->name, 'qty' => $item->quantity])->values(),
+        ];
     @endphp
 
-    <div x-data="{
-              method: '{{ $pickupMethod }}',
-              deliveryFee: {{ $deliveryFeeAmount }},
-              packagePrice: {{ $price }},
-              pickupDate: '{{ old('pickup_date', $pickupDate->format('Y-m-d')) }}',
-              pickupTime: '{{ old('pickup_time', $pickupTime) }}',
-              returnDate: '{{ old('return_date', $returnDate->format('Y-m-d')) }}',
-              returnTime: '{{ old('return_time', $returnTime) }}',
-              durationDays: {{ old('duration_days', $rentalDays) }},
-              totalHours: {{ $hours }},
-              subtotal: {{ $price * $rentalDays }},
-              errorMessage: '',
-              isValid: true,
-
-              csrf: '{{ csrf_token() }}',
-              storeAddressUrl: '{{ route('customer.addresses.store') }}',
-              addressPickerId: 'checkout-add-address-location-picker',
-              addresses: @js($addressListJson),
-              selectedAddressId: {{ $selectedAddrId ?: 'null' }},
-              showAddAddressModal: false,
-              newAddressSubmitting: false,
-              newAddressErrors: {},
-              newAddressForm: {
-                  label: 'Rumah',
-                  recipient_name: '{{ addslashes($user?->name ?? '') }}',
-                  phone_number: '{{ addslashes($user?->phone ?? '') }}',
-                  full_address: '',
-                  province: 'Jawa Timur',
-                  city: 'Malang',
-                  district: '',
-                  village: '',
-                  postal_code: '',
-                  notes: '',
-                  latitude: null,
-                  longitude: null,
-                  is_default: false,
-              },
-              nikInput: '{{ old('nik', $user?->nik ?? '') }}',
-
-              init() {
-                  this.recalculate();
-                  if (this.selectedAddressId) {
-                      const exists = this.addresses.some(a => parseInt(a.id) === parseInt(this.selectedAddressId));
-                      if (!exists && this.addresses.length > 0) {
-                          this.selectedAddressId = this.addresses[0].id;
-                      }
-                  } else if (this.addresses.length > 0) {
-                      this.selectedAddressId = this.addresses[0].id;
-                  }
-              },
-
-              syncNewAddressCoordinates(detail) {
-                  if (!detail || (detail.pickerId && detail.pickerId !== this.addressPickerId)) {
-                      return;
-                  }
-                  this.newAddressForm.latitude = detail.latitude ?? null;
-                  this.newAddressForm.longitude = detail.longitude ?? null;
-              },
-
-              openAddAddressModal() {
-                  this.newAddressErrors = {};
-                  if (
-                      this.newAddressForm.latitude === null &&
-                      this.newAddressForm.longitude === null &&
-                      typeof window.resetLocationPicker === 'function'
-                  ) {
-                      window.resetLocationPicker(this.addressPickerId);
-                  }
-                  this.showAddAddressModal = true;
-                  this.$nextTick(() => {
-                      if (typeof window.refreshLocationPicker === 'function') {
-                          window.refreshLocationPicker(this.addressPickerId);
-                      }
-                      if (typeof window.renderLucideIcons === 'function') {
-                          window.renderLucideIcons();
-                      }
-                  });
-              },
-
-              closeAddAddressModal() {
-                  this.showAddAddressModal = false;
-                  this.newAddressErrors = {};
-              },
-
-              async saveNewAddress() {
-                  if (this.newAddressSubmitting) return;
-                  this.newAddressSubmitting = true;
-                  this.newAddressErrors = {};
-                  try {
-                      const resp = await fetch(this.storeAddressUrl, {
-                          method: 'POST',
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'Accept': 'application/json',
-                              'X-CSRF-TOKEN': this.csrf
-                          },
-                          body: JSON.stringify(this.newAddressForm)
-                      });
-
-                      const data = await resp.json();
-
-                      if (!resp.ok) {
-                          this.newAddressErrors = data.errors || { general: data.message || 'Gagal menyimpan alamat.' };
-                          this.newAddressSubmitting = false;
-                          return;
-                      }
-
-                      const created = data.data;
-                      if (created.is_default) {
-                          this.addresses.forEach(a => a.is_default = false);
-                      }
-                      this.addresses.unshift(created);
-                      this.selectedAddressId = created.id;
-                      this.closeAddAddressModal();
-
-                      this.newAddressForm = {
-                          label: 'Rumah',
-                          recipient_name: '{{ addslashes($user?->name ?? '') }}',
-                          phone_number: '{{ addslashes($user?->phone ?? '') }}',
-                          full_address: '',
-                          province: 'Jawa Timur',
-                          city: 'Malang',
-                          district: '',
-                          village: '',
-                          postal_code: '',
-                          notes: '',
-                          latitude: null,
-                          longitude: null,
-                          is_default: false,
-                      };
-
-                      if (typeof window.resetLocationPicker === 'function') {
-                          window.resetLocationPicker(this.addressPickerId);
-                      }
-
-                      this.$nextTick(() => {
-                          if (typeof window.renderLucideIcons === 'function') {
-                              window.renderLucideIcons();
-                          }
-                      });
-                  } catch (err) {
-                      this.newAddressErrors = { general: 'Terjadi gangguan jaringan saat menyimpan alamat.' };
-                  } finally {
-                      this.newAddressSubmitting = false;
-                  }
-              },
-
-              setDuration(days) {
-                  this.durationDays = Math.max(1, parseInt(days) || 1);
-                  if (!this.pickupDate) return;
-                  const [y, m, d] = this.pickupDate.split('-').map(Number);
-                  const [h, min] = (this.pickupTime || '09:00').split(':').map(Number);
-                  const pickup = new Date(y, m - 1, d, h, min, 0);
-
-                  if (isNaN(pickup.getTime())) return;
-
-                  const ret = new Date(pickup.getTime() + this.durationDays * 24 * 60 * 60 * 1000);
-                  const rY = ret.getFullYear();
-                  const rM = String(ret.getMonth() + 1).padStart(2, '0');
-                  const rD = String(ret.getDate()).padStart(2, '0');
-                  const rH = String(ret.getHours()).padStart(2, '0');
-                  const rMin = String(ret.getMinutes()).padStart(2, '0');
-
-                  this.returnDate = `${rY}-${rM}-${rD}`;
-                  this.returnTime = `${rH}:${rMin}`;
-                  this.recalculate();
-              },
-
-              onPickupChange() {
-                  this.setDuration(this.durationDays);
-              },
-
-              onReturnChange() {
-                  this.recalculate();
-              },
-
-              recalculate() {
-                  this.errorMessage = '';
-                  if (!this.pickupDate || !this.pickupTime || !this.returnDate || !this.returnTime) {
-                      this.isValid = false;
-                      return;
-                  }
-
-                  const [pY, pM, pD] = this.pickupDate.split('-').map(Number);
-                  const [pH, pMin] = this.pickupTime.split(':').map(Number);
-                  const pickup = new Date(pY, pM - 1, pD, pH, pMin, 0);
-
-                  const [rY, rM, rD] = this.returnDate.split('-').map(Number);
-                  const [rH, rMin] = this.returnTime.split(':').map(Number);
-                  const ret = new Date(rY, rM - 1, rD, rH, rMin, 0);
-
-                  if (isNaN(pickup.getTime()) || isNaN(ret.getTime())) {
-                      this.isValid = false;
-                      return;
-                  }
-
-                  const now = new Date();
-                  if (pickup.getTime() < now.getTime() - 60000) {
-                      this.errorMessage = 'Waktu pengambilan tidak boleh di masa lalu.';
-                      this.isValid = false;
-                      return;
-                  }
-
-                  const diffMs = ret.getTime() - pickup.getTime();
-                  const diffHours = diffMs / (1000 * 60 * 60);
-
-                  if (diffMs <= 0) {
-                      this.errorMessage = 'Waktu pengembalian wajib setelah waktu pengambilan (tidak boleh sama atau lebih awal).';
-                      this.isValid = false;
-                      this.durationDays = 0;
-                      this.totalHours = 0;
-                      this.subtotal = 0;
-                      return;
-                  }
-
-                  this.totalHours = Math.round(diffHours * 10) / 10;
-                  this.durationDays = Math.max(1, Math.ceil(diffHours / 24));
-                  this.subtotal = this.durationDays * this.packagePrice;
-                  this.isValid = true;
-              },
-
-              formatRupiah(val) {
-                  return 'Rp ' + (Math.round(val) || 0).toLocaleString('id-ID');
-              },
-
-              formatDateIndo(dateStr) {
-                  if (!dateStr) return '';
-                  const parts = dateStr.split('-');
-                  if (parts.length !== 3) return dateStr;
-                  return `${parts[2]}/${parts[1]}/${parts[0]}`;
-              }
-          }">
+    <div x-data="packageCheckout({{ \Illuminate\Support\Js::from($packageCheckoutConfig) }})">
         <form method="POST" action="{{ route('customer.packages.checkout.store', $package) }}"
-              class="grid grid-cols-1 lg:grid-cols-12 gap-8 py-2">
+              class="grid grid-cols-1 lg:grid-cols-12 gap-8 py-2" @submit.prevent="submitBooking($event.currentTarget)" :inert="isSubmitting">
             @csrf
             <input type="hidden" name="package_id" value="{{ $package->id }}" />
+            <input type="hidden" name="checkout_attempt_id" value="{{ old('checkout_attempt_id', (string) \Illuminate\Support\Str::uuid()) }}" />
 
         <!-- Kolom Kiri: Form Data Penyewa -->
         <div class="lg:col-span-7 space-y-6">
@@ -404,7 +188,7 @@
                                    class="mt-0.5 text-avocado-600 focus:ring-avocado-500" />
                             <span>
                                 <span class="block text-xs font-bold text-darkbrown-900">
-                                    Diantar (+Rp {{ number_format($deliveryFeeAmount, 0, ',', '.') }})
+                                    Diantar (ongkir otomatis)
                                 </span>
                                 <span class="block text-[11px] text-darkbrown-500">
                                     Pilih alamat pengantaran yang sudah tersimpan di akun Anda.
@@ -645,23 +429,23 @@
                                 {{ $vendorName }}
                             </p>
                             <h2 class="text-base font-extrabold text-darkbrown-900 font-heading mt-1">
-                                {{ $package->name }}
+                                <span x-text="packageName">{{ $package->name }}</span>
                             </h2>
                         </div>
 
                         <ul class="text-[11px] text-darkbrown-600 space-y-1 max-h-40 overflow-y-auto pr-1">
-                            @foreach ($package->packageItems as $packageItem)
+                            <template x-for="item in packageItems" :key="item.id">
                                 <li class="flex items-center justify-between gap-2 py-1 border-b border-wheat-100 last:border-0">
-                                    <span class="truncate">{{ $packageItem->masterItem?->name ?? 'Produk' }}</span>
-                                    <span class="font-bold text-darkbrown-900 shrink-0">{{ $packageItem->quantity }}x</span>
+                                    <span class="truncate" x-text="item.name"></span>
+                                    <span class="font-bold text-darkbrown-900 shrink-0" x-text="item.qty + 'x'"></span>
                                 </li>
-                            @endforeach
+                            </template>
                         </ul>
 
                         <div class="pt-3 border-t border-wheat-200 space-y-2 text-xs">
                             <div class="flex items-center justify-between">
                                 <span class="text-darkbrown-600">Harga paket / 24 jam</span>
-                                <span class="font-bold text-darkbrown-900">Rp {{ number_format($price, 0, ',', '.') }}</span>
+                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(packagePrice)">Rp {{ number_format($price, 0, ',', '.') }}</span>
                             </div>
                             <div class="flex items-center justify-between">
                                 <span class="text-darkbrown-600">
@@ -671,23 +455,38 @@
                                     Rp {{ number_format($price * $rentalDays, 0, ',', '.') }}
                                 </span>
                             </div>
-                            <div class="flex items-center justify-between" x-show="method === 'delivery'" x-cloak>
-                                <span class="text-darkbrown-600">Biaya pengantaran</span>
-                                <span class="font-bold text-darkbrown-900">Rp {{ number_format($deliveryFeeAmount, 0, ',', '.') }}</span>
+                            <div class="flex items-center justify-between">
+                                <span class="text-darkbrown-600">Ongkos kirim</span>
+                                <span class="font-bold text-darkbrown-900 text-right" x-text="method === 'self_pickup' ? 'Gratis — Ambil di Toko' : formatRupiah(deliveryFee)">—</span>
+                            </div>
+                            <div x-show="shippingReady" x-cloak class="flex items-center justify-between">
+                                <span>Berat total paket</span><span x-text="shipping ? measurement(shipping.total_weight_kg) + ' kg' : '—'"></span>
+                            </div>
+                            <div x-show="method === 'delivery' && shippingReady" x-cloak class="flex items-center justify-between">
+                                <span>Jarak pengiriman</span><span x-text="shipping?.distance_km == null ? '—' : measurement(shipping.distance_km) + ' km'"></span>
+                            </div>
+                            <div x-show="!shippingReady" x-cloak role="status" aria-live="polite" class="rounded-xl border border-wheat-200 bg-wheat-50 p-3 text-darkbrown-600">
+                                <span x-text="shippingMessage"></span>
+                                <button type="button" x-show="shippingState === 'error'" @click="scheduleShipping()" class="block mt-2 font-bold text-avocado-700">Coba lagi</button>
                             </div>
                             <div class="flex items-center justify-between pt-2 border-t border-wheat-200">
                                 <span class="font-bold text-darkbrown-900">Total Bayar</span>
                                 <span class="text-lg font-extrabold text-avocado-800 font-heading"
-                                      x-text="formatRupiah(subtotal + (method === 'delivery' ? deliveryFee : 0))">
-                                    Rp {{ number_format(($price * $rentalDays) + ($pickupMethod === 'delivery' ? $deliveryFeeAmount : 0), 0, ',', '.') }}
+                                      x-text="formatRupiah(grandTotal)">
+                                    —
                                 </span>
                             </div>
                         </div>
 
-                        <button type="submit"
-                                :disabled="!isValid"
+                        <div x-show="formError" x-cloak role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800" x-text="formError"></div>
+                        <div x-show="shippingNeedsApproval" x-cloak class="rounded-xl border border-wheat-300 bg-wheat-50 p-3 text-sm text-darkbrown-700 space-y-2">
+                            <p>Periksa rincian paket dan total terbaru sebelum melanjutkan.</p>
+                            <button type="button" @click="approveShippingChange()" class="font-bold text-avocado-700">Saya setuju dengan total terbaru</button>
+                        </div>
+                        <button type="submit" disabled
+                                :disabled="!canSubmit"
                                 class="btn-tendaku-primary w-full py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                            Buat Pesanan & Lanjut Bayar
+                            <span x-text="isSubmitting ? 'Membuat pesanan...' : 'Buat Pesanan & Lanjut Bayar'"></span>
                         </button>
 
                         <p class="text-[10px] text-darkbrown-500 text-center leading-relaxed">

@@ -13,6 +13,7 @@ use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PackageCheckoutController;
 use App\Http\Controllers\Customer\PaymentRetryController;
 use App\Http\Controllers\Customer\RentalStatusLookupController;
+use App\Http\Controllers\Customer\ShippingPreviewController;
 use App\Http\Controllers\Customer\StoreController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Vendor\SettlementInvoiceController as VendorSettlementI
 use App\Http\Controllers\Vendor\ShippingSettingController;
 use App\Http\Controllers\Vendor\UnitController;
 use App\Http\Controllers\Webhook\MidtransWebhookController;
+use App\Http\Middleware\RedirectIfUnverified;
 use App\Livewire\Kasir\ProfileKasir;
 use Illuminate\Support\Facades\Route;
 
@@ -40,8 +42,13 @@ Route::get('/cart', fn () => redirect()->route('customer.cart.index'));
 
 // 2. Booking / Checkout Flow
 Route::prefix('katalog/booking')->group(function () {
+    Route::post('shipping-preview', ShippingPreviewController::class)
+        ->withoutMiddleware(RedirectIfUnverified::class)
+        ->middleware('throttle:10,1')
+        ->block(120, 5)
+        ->name('checkout.shipping.preview');
     Route::get('/', [CheckoutController::class, 'index'])->name('checkout.index');
-    Route::post('/', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/', [CheckoutController::class, 'store'])->block(120, 5)->name('checkout.store');
     Route::get('status/{code}', [BookingController::class, 'status'])->name('booking.status');
     Route::post('status/{code}/sync', [BookingController::class, 'syncPayment'])->name('booking.sync');
     Route::post('status/{code}/pay', [BookingController::class, 'pay'])->name('booking.pay');
@@ -102,6 +109,7 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
         ->name('customer.packages.checkout');
     Route::post('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'store'])
         ->whereNumber('id')
+        ->block(120, 5)
         ->name('customer.packages.checkout.store');
     Route::get('/paket-camping/{id}', [CustomerCampingPackageController::class, 'show'])
         ->whereNumber('id')

@@ -495,6 +495,16 @@ class ProductBooking extends Component
     public function proceedToBooking(): mixed
     {
         if (Auth::check() && $this->inCart) {
+            $this->validate();
+            if (! $this->validateReturnDateTime()) {
+                return null;
+            }
+            app(CartService::class)->updateDates([
+                'pickup_date' => $this->pickup_date,
+                'return_date' => $this->return_date,
+                'pickup_time' => $this->pickup_time,
+                'return_time' => $this->return_time,
+            ], Auth::user());
             $this->redirectRoute('checkout.index');
 
             return null;

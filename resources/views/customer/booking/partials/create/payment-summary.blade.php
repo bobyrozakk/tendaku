@@ -17,7 +17,21 @@
                                     <span>Ongkos kirim</span>
                                     <span x-show="pickupMethod === 'delivery'" x-cloak class="block text-xs text-goldenrod-700 font-semibold">Kurir vendor ke lokasi</span>
                                 </div>
-                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(deliveryFee)">Rp 0</span>
+                                <span class="font-bold text-darkbrown-900 text-right" x-text="pickupMethod === 'self_pickup' ? 'Gratis — Ambil di Toko' : formatRupiah(deliveryFee)">—</span>
+                            </div>
+
+                            <div x-show="shippingReady" x-cloak class="flex items-center justify-between text-darkbrown-600">
+                                <span>Total berat pesanan</span>
+                                <span x-text="formatMeasurement(totalWeightKg) + ' kg'"></span>
+                            </div>
+                            <div x-show="pickupMethod === 'delivery' && shippingReady" x-cloak class="flex items-center justify-between text-darkbrown-600">
+                                <span>Jarak pengiriman</span>
+                                <span x-text="shipping?.distance_km == null ? '—' : formatMeasurement(shipping.distance_km) + ' km'"></span>
+                            </div>
+                            <div x-show="!shippingReady" x-cloak role="status" aria-live="polite" class="rounded-xl bg-wheat-50 border border-wheat-200 p-3 text-darkbrown-600">
+                                <span x-text="shippingMessage"></span>
+                                <button type="button" x-show="shippingState === 'error' && !shippingReloadRequired" @click="scheduleShipping()" class="block mt-2 font-bold text-avocado-700">Coba lagi</button>
+                                <button type="button" x-show="shippingReloadRequired" @click="window.location.reload()" class="block mt-2 font-bold text-avocado-700">Muat ulang checkout</button>
                             </div>
 
                             <div x-show="discount > 0" x-cloak class="flex items-center justify-between text-avocado-700">
@@ -38,7 +52,7 @@
                         </p>
 
                         <!-- Opsi Pembayaran-->
-                        <fieldset>
+                        <fieldset :disabled="isProcessing">
                             <legend class="text-sm font-bold text-darkbrown-900 mb-2.5">Opsi pembayaran</legend>
                             <div class="grid grid-cols-2 gap-3">
                                 <label :class="paymentOption === 'full' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
@@ -63,6 +77,11 @@
                             <span x-text="formError"></span>
                         </div>
 
+                        <div x-show="shippingNeedsApproval" x-cloak class="rounded-xl border border-wheat-300 bg-wheat-50 p-3 text-sm text-darkbrown-700 space-y-2">
+                            <p>Periksa ongkir dan total terbaru di atas sebelum melanjutkan.</p>
+                            <button type="button" @click="approveShippingChange()" class="font-bold text-avocado-700">Saya setuju dengan total terbaru</button>
+                        </div>
+
                         <!-- Ketentuan Pembatalan & Pelunasan Sewa -->
                         <div class="rounded-xl border border-amber-300 bg-amber-50/80 p-3.5 text-xs text-amber-950 space-y-2">
                             <div class="flex items-center gap-2 font-bold text-amber-900">
@@ -79,8 +98,8 @@
                         </div>
 
                         <div>
-                            <button type="button" x-on:click="submitBooking()" :disabled="isProcessing || expired"
-                                    :class="(isProcessing || expired) ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
+                            <button type="button" x-on:click="submitBooking()" :disabled="!canSubmitBooking"
+                                    :class="!canSubmitBooking ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
                                     class="w-full py-3.5 px-5 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
                                 <template x-if="!isProcessing">
                                 </template>

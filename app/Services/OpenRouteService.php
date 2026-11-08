@@ -284,7 +284,7 @@ class OpenRouteService
             Log::warning('OpenRouteService: gagal menghubungi Directions API.', [
                 'profile' => $profile,
                 'coordinates' => $apiCoordinates,
-                'exception' => $exception->getMessage(),
+                'exception' => $exception::class,
             ]);
 
             return $this->failureResult(
@@ -315,7 +315,6 @@ class OpenRouteService
             Log::warning('OpenRouteService: Directions API merespons HTTP error.', [
                 'status' => $response->status(),
                 'coordinates' => $apiCoordinates,
-                'body' => $response->body(),
             ]);
 
             return $this->failureResult(

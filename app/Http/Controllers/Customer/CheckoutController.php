@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\ShippingPreviewException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\StoreCheckoutRequest;
 use App\Models\MasterItem;
@@ -10,12 +11,14 @@ use App\Models\Rental;
 use App\Models\User;
 use App\Services\Booking\CartService;
 use App\Services\Booking\CheckoutService;
+use App\Services\Booking\CheckoutShippingService;
 use App\Services\Booking\CheckoutSummaryBuilder;
 use App\Services\Booking\RentalAccessGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class CheckoutController extends Controller
@@ -33,6 +36,15 @@ class CheckoutController extends Controller
      */
     public function index(Request $request): View|RedirectResponse
     {
+        $cartService = app(CartService::class);
+        if ($request->hasAny(['pickup_date', 'return_date'])) {
+            try {
+                $cartService->validateRentalDates($request->only(['pickup_date', 'return_date']));
+            } catch (ValidationException $exception) {
+                return redirect()->route('customer.cart.index')->withErrors($exception->errors())
+                    ->with('warning', 'Periksa dan perbarui jadwal sewa sebelum melanjutkan checkout.');
+            }
+        }
         // Mendukung parameter langsung produk/alat jika diarahkan langsung dari profil toko atau katalog
         if ($request->filled('item_id') || $request->filled('product_id')) {
             $itemId = (int) ($request->query('item_id') ?: $request->query('product_id'));
@@ -46,8 +58,7 @@ class CheckoutController extends Controller
                     'daily_rate' => (int) $masterItem->daily_rate,
                     'quantity' => max(1, (int) $request->query('qty', 1)),
                     'qty' => max(1, (int) $request->query('qty', 1)),
-                    'pickup_date' => $request->query('pickup_date') ?: now()->addDay()->toDateString(),
-                    'return_date' => $request->query('return_date') ?: now()->addDays(2)->toDateString(),
+                    ...$request->only(['pickup_date', 'return_date']),
                     'vendor_id' => $masterItem->vendor_id,
                     'vendor_name' => $masterItem->vendor?->name ?? 'Vendor',
                     'category_name' => $masterItem->category?->name,
@@ -64,6 +75,21 @@ class CheckoutController extends Controller
                     'warning',
                     'Silakan pilih alat camping yang ingin disewa terlebih dahulu.'
                 );
+        }
+
+        if ($request->has(['pickup_date', 'return_date'])) {
+            $cartService->updateDates($request->only(['pickup_date', 'return_date']), Auth::user());
+            $cart = $this->cart();
+        }
+
+        try {
+            $cartService->validateRentalDates([
+                'pickup_date' => $cart['pickup_date'] ?? null,
+                'return_date' => $cart['return_date'] ?? null,
+            ]);
+        } catch (ValidationException $exception) {
+            return redirect()->route('customer.cart.index')->withErrors($exception->errors())
+                ->with('warning', 'Jadwal sewa di keranjang tidak valid atau sudah lewat. Silakan perbarui tanggal sewa.');
         }
 
         $booking = $this->summary->build(
@@ -90,6 +116,7 @@ class CheckoutController extends Controller
     public function store(
         StoreCheckoutRequest $request,
         CheckoutService $checkout,
+        CheckoutShippingService $shipping,
     ): JsonResponse|RedirectResponse {
         $cart = $this->cart();
 
@@ -138,6 +165,29 @@ class CheckoutController extends Controller
         }
 
         try {
+            $shippingInput = ['checkout_type' => 'regular', 'pickup_method' => $pickupMethod];
+            foreach (['customer_address_id', 'items', 'pickup_date', 'return_date', 'pickup_time'] as $field) {
+                if ($request->validated($field) !== null) {
+                    $shippingInput[$field] = $request->validated($field);
+                }
+            }
+            $preview = $shipping->preview($shippingInput, $request->user());
+            $expectedContext = $request->validated('expected_shipping_context');
+            if (($pickupMethod === 'delivery' && (
+                $request->validated('expected_delivery_fee') === null
+                || (int) $request->validated('expected_delivery_fee') !== $preview['delivery_fee']
+                || $expectedContext === null
+            )) || ($expectedContext !== null && ! hash_equals($preview['shipping_context'], $expectedContext))) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false, 'status' => 'shipping_changed',
+                        'message' => 'Ongkir atau rincian pesanan berubah. Periksa total terbaru dan setujui sebelum melanjutkan.',
+                        'shipping' => $preview,
+                    ], 409);
+                }
+
+                return back()->with('warning', 'Rincian pesanan berubah. Muat ulang checkout dan periksa total terbaru.');
+            }
             $firstCartItem = $cart['items'][0] ?? $cart;
 
             $masterItemId = (int) (
@@ -150,7 +200,8 @@ class CheckoutController extends Controller
             $bookingData = $this->bookingData(
                 $request,
                 $cart,
-                $masterItem
+                $masterItem,
+                $preview,
             );
 
             // Rental + payment + token Snap lewat satu pintu.
@@ -196,6 +247,8 @@ class CheckoutController extends Controller
 
             return redirect()->route('booking.status', $rental->booking_code)
                 ->with('success', $successMessage);
+        } catch (ShippingPreviewException $e) {
+            return $this->failure($request, $e->getMessage(), $e->httpStatus);
         } catch (InsufficientStockException $e) {
             return $this->failure(
                 $request,
@@ -221,6 +274,7 @@ class CheckoutController extends Controller
         StoreCheckoutRequest $request,
         array $cart,
         MasterItem $masterItem,
+        array $shipping,
     ): array {
         $user = $request->user();
         $pickupMethod = $request->validated('pickup_method');
@@ -231,36 +285,10 @@ class CheckoutController extends Controller
         $pickupTime = $request->validated('pickup_time')
             ?: ($masterItem->vendor->pickup_time ?: config('booking.default_pickup_time'));
 
-        $rawItems = ! empty($cart['items']) && is_array($cart['items'])
-            ? array_values($cart['items'])
-            : [
-                [
-                    'master_item_id' => $masterItem->id,
-                    'qty' => $this->summary->quantityOf($cart),
-                ],
-            ];
-
-        $requestedQty = [];
-        foreach ((array) $request->input('items', []) as $requested) {
-            $requestedId = (int) ($requested['id'] ?? 0);
-
-            if ($requestedId > 0 && isset($requested['qty'])) {
-                $requestedQty[$requestedId] = max(1, (int) $requested['qty']);
-            }
-        }
-
-        $itemsList = array_map(function ($it) use ($requestedQty) {
-            $itemId = (int) ($it['master_item_id'] ?? 0);
-
-            $qty = $requestedQty[$itemId]
-                ?? max(1, (int) ($it['qty'] ?? $it['quantity'] ?? 1));
-
-            return [
-                'master_item_id' => $itemId,
-                'quantity' => $qty,
-                'qty' => $qty,
-            ];
-        }, $rawItems);
+        $itemsList = array_map(fn (array $item): array => [
+            'master_item_id' => $item['id'],
+            'quantity' => $item['qty'],
+        ], $shipping['items']);
 
         $data = [
             'vendor_id' => $masterItem->vendor_id,
@@ -270,11 +298,7 @@ class CheckoutController extends Controller
             'return_time' => $pickupTime,
             'expires_in_minutes' => (int) config('booking.payment_expiry_minutes'),
             'pickup_method' => $pickupMethod,
-            'delivery_fee' => $this->summary->deliveryFee(
-                $masterItem->vendor,
-                $pickupMethod,
-                $user !== null
-            ),
+            'delivery_fee' => $shipping['delivery_fee'],
             'notes' => $request->validated('notes'),
             'items' => $itemsList,
         ];
@@ -307,26 +331,8 @@ class CheckoutController extends Controller
         if (
             $pickupMethod === CheckoutSummaryBuilder::PICKUP_DELIVERY
         ) {
-            $selectedAddress = null;
-            $customerAddressId = $request->validated('customer_address_id');
-
-            if ($customerAddressId) {
-                // Pastikan alamat milik customer yang login (tidak dapat dimanipulasi)
-                $selectedAddress = $user->addresses()->where('id', $customerAddressId)->first();
-            }
-
-            if (! $selectedAddress) {
-                $selectedAddress = $user->defaultAddress();
-            }
-
-            if ($selectedAddress) {
-                $data['customer_address_id'] = $selectedAddress->id;
-                $data['delivery_address'] = $selectedAddress->toDeliverySnapshot();
-            } else {
-                $data['delivery_address'] =
-                    $request->validated('delivery_address')
-                    ?: ($user->address ?? '');
-            }
+            $data['customer_address_id'] = $shipping['customer_address_id'];
+            $data['delivery_address'] = $shipping['delivery_address'];
         }
 
         return $data;

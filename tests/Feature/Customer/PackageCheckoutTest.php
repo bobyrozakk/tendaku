@@ -3,6 +3,7 @@
 namespace Tests\Feature\Customer;
 
 use App\Models\CampingPackage;
+use App\Models\CustomerAddress;
 use App\Models\ItemCategory;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
@@ -11,6 +12,9 @@ use App\Models\User;
 use App\Models\Vendor;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PackageCheckoutTest extends TestCase
@@ -221,14 +225,38 @@ class PackageCheckoutTest extends TestCase
     public function test_customer_can_choose_delivery_when_address_is_present(): void
     {
         $pickupDate = Carbon::tomorrow();
+        $returnDate = $pickupDate->copy()->addDays(2);
+        $this->vendor->update(['latitude' => -7.94, 'longitude' => 112.61]);
+        $this->vendor->shippingSetting()->create([
+            'rate_per_km' => 2000, 'weight_threshold_kg' => 5, 'extra_weight_fee_per_kg' => 1000,
+        ]);
+        $this->tenda->update(['weight_kg' => 3.25]);
+        $this->kompor->update(['weight_kg' => 1.5]);
+        $address = CustomerAddress::factory()->for($this->customer)->withCoordinates()->create();
+        config(['services.openrouteservice.api_key' => 'test-ors-key', 'services.openrouteservice.base_url' => 'https://api.openrouteservice.org', 'services.openrouteservice.profile' => 'driving-car']);
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]),
+        ]);
 
-        $response = $this->actingAs($this->customer)
-            ->post(route('customer.packages.checkout.store', $this->package->id), [
-                'package_id' => $this->package->id,
-                'pickup_date' => $pickupDate->toDateString(),
-                'pickup_method' => 'delivery',
-                'payment_channel' => 'bca_va',
-            ]);
+        $payload = [
+            'package_id' => $this->package->id,
+            'pickup_date' => $pickupDate->toDateString(), 'pickup_time' => '09:00',
+            'return_date' => $returnDate->toDateString(), 'return_time' => '09:00',
+            'pickup_method' => 'delivery', 'customer_address_id' => $address->id,
+            'payment_channel' => 'bca_va',
+        ];
+        $preview = $this->actingAs($this->customer)->postJson(route('checkout.shipping.preview'), $payload + ['checkout_type' => 'package'])
+            ->assertOk()->assertJsonPath('distance_km', 12.34)->assertJsonPath('total_weight_kg', 8)
+            ->assertJsonPath('distance_fee', 24680)->assertJsonPath('weight_fee', 3000)
+            ->assertJsonPath('delivery_fee', 27680)->json();
+        $this->assertDatabaseCount('rentals', 0);
+        $this->assertDatabaseCount('payments', 0);
+        $response = $this->post(route('customer.packages.checkout.store', $this->package->id), $payload + [
+            'expected_delivery_fee' => $preview['delivery_fee'],
+            'expected_shipping_context' => $preview['shipping_context'],
+            'checkout_attempt_id' => (string) Str::uuid(),
+        ]);
 
         $rental = Rental::query()->firstOrFail();
 
@@ -237,9 +265,16 @@ class PackageCheckoutTest extends TestCase
 
         $this->assertSame('delivery', $rental->pickup_method);
         $this->assertSame('600000.00', $rental->subtotal);
-        $this->assertSame('25000.00', $rental->delivery_fee);
-        $this->assertSame('655000.00', $rental->grand_total);
-        $this->assertSame($this->customer->address, $rental->delivery_address);
+        $this->assertSame('27680.00', $rental->delivery_fee);
+        $this->assertSame('627680.00', $rental->grand_total);
+        $this->assertSame($address->id, (int) $rental->customer_address_id);
+        $this->assertSame($address->toDeliverySnapshot(), $rental->delivery_address);
+        $this->assertDatabaseCount('rentals', 1);
+        $this->assertDatabaseCount('payments', 1);
+        Http::assertSent(fn (ClientRequest $request): bool => $request['coordinates'] === [
+            [(float) $this->vendor->longitude, (float) $this->vendor->latitude],
+            [(float) $address->longitude, (float) $address->latitude],
+        ]);
     }
 
     public function test_checkout_redirects_back_with_error_when_units_are_unavailable(): void
