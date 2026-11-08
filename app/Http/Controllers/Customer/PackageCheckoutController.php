@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Exceptions\InsufficientStockException;
+use App\Exceptions\ShippingPreviewException;
 use App\Http\Controllers\Controller;
-use App\Models\CampingPackage;
 use App\Http\Requests\Customer\StorePackageCheckoutRequest;
+use App\Models\CampingPackage;
 use App\Services\Booking\CheckoutService;
+use App\Services\Booking\CheckoutShippingService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,11 +19,6 @@ use Illuminate\View\View;
 
 class PackageCheckoutController extends Controller
 {
-    /**
-     * Biaya pengantaran (delivery) dalam Rupiah.
-     */
-    public const DELIVERY_FEE = 25000;
-
     /**
      * Nama channel pembayaran untuk pesan sukses.
      */
@@ -93,145 +91,92 @@ class PackageCheckoutController extends Controller
     /**
      * Buat rental dari paket camping.
      */
-    public function store(StorePackageCheckoutRequest $request, CheckoutService $checkout): RedirectResponse
+    public function store(StorePackageCheckoutRequest $request, int $id, CheckoutService $checkout, CheckoutShippingService $shipping): RedirectResponse|JsonResponse
     {
-        $package = $this->findPackage((int) $request->input('package_id'));
+        $user = $request->user();
+        $expectedContext = $request->validated('expected_shipping_context');
+        $attemptId = $request->validated('checkout_attempt_id') ?? $expectedContext ?? '';
+        $receiptKey = 'package_checkout_receipts.'.$user->id.'.'.$id.'.'.$attemptId;
+        if ($expectedContext !== null && $request->session()->has($receiptKey)) {
+            $receipt = $request->session()->get($receiptKey);
 
-        $pickupMethod = $request->input('pickup_method', 'self_pickup');
+            return $request->expectsJson() ? response()->json($receipt) : redirect()->to($receipt['redirect_url']);
+        }
+        $package = $this->findPackage($id);
+        $pickupMethod = $request->validated('pickup_method') ?? 'self_pickup';
         $paymentChannel = $request->input('payment_channel');
         if (! array_key_exists((string) $paymentChannel, self::CHANNEL_LABELS)) {
             $paymentChannel = 'bca_va';
         }
-        $user = Auth::user();
-
-        $isGuest = ! Auth::check();
-
-        $validated = $request->validated();
-
-        $deliveryAddress = null;
-        $customerAddressId = null;
-
-        if ($pickupMethod === 'delivery') {
-            $user = Auth::user();
-            $addressId = $request->input('customer_address_id');
-            $selectedAddress = null;
-
-            if ($addressId) {
-                // Pastikan alamat milik customer yang login (tidak dapat dimanipulasi)
-                $selectedAddress = $user->addresses()->where('id', $addressId)->first();
-            }
-
-            if (! $selectedAddress) {
-                $selectedAddress = $user->defaultAddress();
-            }
-
-            if ($selectedAddress) {
-                $deliveryAddress = $selectedAddress->toDeliverySnapshot();
-                $customerAddressId = $selectedAddress->id;
-            } else {
-                $deliveryAddress = $request->input('delivery_address') ?: $user->address;
-            }
-
-            if (blank($deliveryAddress)) {
-                return redirect()->route('customer.packages.checkout', $package)
-                    ->with('warning', 'Alamat pengantaran belum tersedia. Silakan pilih atau tambahkan alamat terlebih dahulu.');
-            }
-        }
-
-        // Jika member melengkapi nomor telepon atau NIK, simpan ke akunnya
-        if (! $isGuest) {
-            $user = Auth::user();
-            $userUpdates = [];
-            if ($request->filled('phone') && blank($user->phone)) {
-                $userUpdates['phone'] = $request->input('phone');
-            }
-            if ($request->filled('nik') && blank($user->nik)) {
-                $userUpdates['nik'] = $request->input('nik');
-            }
-            if (! empty($userUpdates)) {
-                $user->update($userUpdates);
-            }
-        }
-
-        $pickupTimeStr = ! empty($validated['pickup_time']) ? trim($validated['pickup_time']) : '09:00';
-        $pickupDateTime = Carbon::parse($validated['pickup_date'].' '.$pickupTimeStr);
-
-        // Validasi waktu pengambilan tidak boleh di masa lalu
-        if ($pickupDateTime->lt(Carbon::now()->subMinute())) {
-            throw ValidationException::withMessages([
-                'pickup_time' => 'Waktu pengambilan tidak boleh di masa lalu.',
-            ]);
-        }
-
-        $returnDateStr = ! empty($validated['return_date'])
-            ? trim($validated['return_date'])
-            : $pickupDateTime->copy()->addDays(max(1, (int) $package->duration_days))->format('Y-m-d');
-        $returnTimeStr = ! empty($validated['return_time'])
-            ? trim($validated['return_time'])
-            : $pickupTimeStr;
-
-        $returnDateTime = Carbon::parse($returnDateStr.' '.$returnTimeStr);
-
-        // Validasi waktu pengembalian wajib setelah waktu pengambilan (tidak boleh sama atau lebih awal)
-        if ($returnDateTime->lte($pickupDateTime)) {
-            throw ValidationException::withMessages([
-                'return_time' => 'Waktu pengembalian harus setelah waktu pengambilan.',
-            ]);
-        }
-
-        $hours = $pickupDateTime->floatDiffInHours($returnDateTime, false);
-        if ($hours <= 0) {
-            throw ValidationException::withMessages([
-                'return_time' => 'Waktu pengembalian harus setelah waktu pengambilan.',
-            ]);
-        }
-
-        // Durasi sewa 1 hari = 24 jam penuh. Melebihi 24 jam dibulatkan ke atas per 24 jam.
-        $rentalDays = max(1, (int) ceil($hours / 24));
-        $subtotal = $rentalDays * (float) $package->price;
-
-        $items = $package->packageItems
-            ->map(fn ($item) => [
-                'master_item_id' => (int) $item->master_item_id,
-                'quantity' => (int) $item->quantity,
-            ])
-            ->values()
-            ->all();
+        $input = array_filter($request->safe()->only(['pickup_date', 'pickup_time', 'return_date', 'return_time', 'customer_address_id']), fn (mixed $value): bool => $value !== null && $value !== '');
+        $input += ['checkout_type' => 'package', 'package_id' => $id, 'pickup_method' => $pickupMethod];
 
         try {
+            $preview = $shipping->preview($input, $user);
+            $needsConfirmation = ($pickupMethod === 'delivery' || $request->expectsJson()) && (
+                $request->validated('expected_delivery_fee') === null || $expectedContext === null
+                || (int) $request->validated('expected_delivery_fee') !== $preview['delivery_fee']
+            );
+            if ($needsConfirmation || ($expectedContext !== null && ! hash_equals($preview['shipping_context'], $expectedContext))) {
+                $message = 'Ongkir atau rincian paket berubah. Periksa total terbaru dan setujui sebelum melanjutkan.';
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => false, 'status' => 'shipping_changed', 'message' => $message, 'shipping' => $preview], 409);
+                }
+
+                return redirect()->route('customer.packages.checkout', $id)->withInput()->with('shipping_conflict', $message);
+            }
+            $userUpdates = [];
+            foreach (['phone', 'nik'] as $field) {
+                if ($request->filled($field) && blank($user->$field)) {
+                    $userUpdates[$field] = $request->validated($field);
+                }
+            }
+            if ($userUpdates !== []) {
+                $user->update($userUpdates);
+            }
             $result = $checkout->checkout([
-                'vendor_id' => (int) $package->vendor_id,
-                'user_id' => $user->id,
-                'guest_name' => null,
-                'guest_phone' => null,
-                'guest_id_number' => null,
-                'pickup_date' => $pickupDateTime->format('Y-m-d'),
-                'pickup_time' => $pickupDateTime->format('H:i:s'),
-                'return_date' => $returnDateTime->format('Y-m-d'),
-                'return_time' => $returnDateTime->format('H:i:s'),
-                'rental_days' => $rentalDays,
-                'pickup_method' => $pickupMethod,
-                'delivery_address' => $deliveryAddress,
-                'customer_address_id' => $customerAddressId,
-                'delivery_fee' => $pickupMethod === 'delivery' ? self::DELIVERY_FEE : 0,
-                'discount_amount' => 0,
-                // Tarif paket camping per 24 jam x jumlah periode sewa
-                'subtotal_override' => $subtotal,
+                'vendor_id' => $preview['vendor_id'], 'user_id' => $user->id,
+                'guest_name' => null, 'guest_phone' => null, 'guest_id_number' => null,
+                'pickup_date' => $preview['pickup_date'], 'pickup_time' => $preview['pickup_time'],
+                'return_date' => $preview['return_date'], 'return_time' => $preview['return_time'],
+                'rental_days' => $preview['rental_days'], 'pickup_method' => $pickupMethod,
+                'delivery_address' => $preview['delivery_address'], 'customer_address_id' => $preview['customer_address_id'],
+                'delivery_fee' => $preview['delivery_fee'], 'discount_amount' => 0,
+                'subtotal_override' => $preview['subtotal'],
                 'expires_in_minutes' => (int) config('booking.payment_expiry_minutes'),
-                'notes' => 'Paket Camping: '.$package->name.' ('.$rentalDays.' hari sewa)',
-                'items' => $items,
+                'notes' => 'Paket Camping: '.$preview['package_name'].' ('.$preview['rental_days'].' hari sewa)',
+                'items' => array_map(fn (array $item): array => ['master_item_id' => $item['id'], 'quantity' => $item['qty']], $preview['items']),
             ], 'full', $paymentChannel, false);
+        } catch (ShippingPreviewException $exception) {
+            if ($exception->errorCode === 'invalid_schedule') {
+                throw ValidationException::withMessages([
+                    str_starts_with($exception->getMessage(), 'Waktu pengambilan') ? 'pickup_time' : 'return_time' => $exception->getMessage(),
+                ]);
+            }
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'status' => $exception->errorCode, 'message' => $exception->getMessage(), 'delivery_fee' => null], $exception->httpStatus);
+            }
 
-            $rental = $result['rental'];
+            return redirect()->route('customer.packages.checkout', $id)->withInput()->with('warning', $exception->getMessage());
         } catch (InsufficientStockException $exception) {
-            return redirect()->route('customer.packages.show', $package)
-                ->with('error', $exception->getMessage());
-        }
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'status' => 'insufficient_stock', 'message' => $exception->getMessage(), 'delivery_fee' => null], 422);
+            }
 
+            return redirect()->route('customer.packages.show', $package)->with('error', $exception->getMessage());
+        }
+        $rental = $result['rental'];
+        $receipt = ['success' => true, 'booking_code' => $rental->booking_code, 'redirect_url' => route('booking.status', $rental->booking_code), 'payment_amount' => (int) $result['payment']->amount];
+        if ($expectedContext !== null) {
+            $request->session()->put($receiptKey, $receipt);
+        }
+        if ($request->expectsJson()) {
+            return response()->json($receipt);
+        }
         $channelLabel = self::CHANNEL_LABELS[$paymentChannel] ?? 'Midtrans Sandbox';
 
-        return redirect()->route('booking.status', $rental->booking_code)
-            ->with('success', "Paket camping \"{$package->name}\" berhasil dipesan dengan kode #{$rental->booking_code} via {$channelLabel}.");
+        return redirect()->to($receipt['redirect_url'])
+            ->with('success', 'Paket camping "'.$package->name.'" berhasil dipesan dengan kode #'.$rental->booking_code.' via '.$channelLabel.'.');
     }
 
     /**

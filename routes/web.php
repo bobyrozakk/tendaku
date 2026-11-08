@@ -109,6 +109,7 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
         ->name('customer.packages.checkout');
     Route::post('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'store'])
         ->whereNumber('id')
+        ->block(120, 5)
         ->name('customer.packages.checkout.store');
     Route::get('/paket-camping/{id}', [CustomerCampingPackageController::class, 'show'])
         ->whereNumber('id')

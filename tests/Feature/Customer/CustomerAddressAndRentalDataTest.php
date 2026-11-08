@@ -16,7 +16,9 @@ use App\Services\OpenRouteService;
 use App\Services\ShippingCalculator;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class CustomerAddressAndRentalDataTest extends TestCase
@@ -226,15 +228,21 @@ class CustomerAddressAndRentalDataTest extends TestCase
      */
     public function test_scenario_5_customer_can_choose_different_address_when_booking(): void
     {
+        $this->prepareDeliveryShipping();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]),
+        ]);
+
         $customer = User::factory()->create(['role' => 'customer']);
-        $addr1 = CustomerAddress::factory()->create([
+        $addr1 = CustomerAddress::factory()->withCoordinates(-7.95, 112.62)->create([
             'user_id' => $customer->id,
             'label' => 'Rumah',
             'recipient_name' => 'Budi Rumah',
             'full_address' => 'Jl. Rumah No. 1',
             'is_default' => true,
         ]);
-        $addr2 = CustomerAddress::factory()->create([
+        $addr2 = CustomerAddress::factory()->withCoordinates(-7.96, 112.65)->create([
             'user_id' => $customer->id,
             'label' => 'Kantor',
             'recipient_name' => 'Budi Kantor',
@@ -242,7 +250,8 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'is_default' => false,
         ]);
 
-        $response = $this->actingAs($customer)->post(route('customer.packages.checkout.store', $this->package), [
+        $this->actingAs($customer);
+        $payload = [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-29',
             'pickup_time' => '09:00',
@@ -251,7 +260,9 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'pickup_method' => 'delivery',
             'customer_address_id' => $addr2->id,
             'payment_channel' => 'bca_va',
-        ]);
+        ];
+        $confirmed = $this->confirmDelivery($payload);
+        $response = $this->post(route('customer.packages.checkout.store', $this->package), $confirmed);
 
         $rental = Rental::withoutGlobalScopes()->latest('id')->first();
         $this->assertNotNull($rental);
@@ -260,6 +271,14 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->assertSame($addr2->id, (int) $rental->customer_address_id);
         $this->assertStringContainsString('Budi Kantor', $rental->delivery_address);
         $this->assertStringContainsString('Jl. Kantor No. 2', $rental->delivery_address);
+        $this->assertSame('24680.00', $rental->fresh()->delivery_fee);
+        $this->assertDatabaseCount('rentals', 1);
+        $this->assertDatabaseCount('payments', 1);
+        Http::assertSent(fn (ClientRequest $request): bool => $request['coordinates'] === [
+            [(float) $this->vendor->longitude, (float) $this->vendor->latitude],
+            [(float) $addr2->longitude, (float) $addr2->latitude],
+        ]);
+
     }
 
     /**
@@ -267,8 +286,14 @@ class CustomerAddressAndRentalDataTest extends TestCase
      */
     public function test_scenario_6_booking_snapshot_persists_even_after_address_is_modified_or_deleted(): void
     {
+        $this->prepareDeliveryShipping();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]),
+        ]);
+
         $customer = User::factory()->create(['role' => 'customer']);
-        $address = CustomerAddress::factory()->create([
+        $address = CustomerAddress::factory()->withCoordinates()->create([
             'user_id' => $customer->id,
             'label' => 'Rumah Asli',
             'recipient_name' => 'Budi Penerima',
@@ -277,7 +302,8 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'is_default' => true,
         ]);
 
-        $this->actingAs($customer)->post(route('customer.packages.checkout.store', $this->package), [
+        $this->actingAs($customer);
+        $payload = [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-29',
             'pickup_time' => '09:00',
@@ -285,9 +311,12 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'return_time' => '09:00',
             'pickup_method' => 'delivery',
             'customer_address_id' => $address->id,
-        ]);
+        ];
+        $confirmed = $this->confirmDelivery($payload);
+        $response = $this->post(route('customer.packages.checkout.store', $this->package), $confirmed);
 
-        $rental = Rental::withoutGlobalScopes()->latest('id')->first();
+        $response->assertRedirect();
+        $rental = Rental::withoutGlobalScopes()->latest('id')->firstOrFail();
         $originalSnapshot = $rental->delivery_address;
         $this->assertStringContainsString('Jl. Asli No. 99', $originalSnapshot);
 
@@ -300,6 +329,11 @@ class CustomerAddressAndRentalDataTest extends TestCase
         // Bahkan jika alamat dihapus dari profil customer
         $address->delete();
         $this->assertSame($originalSnapshot, $rental->fresh()->delivery_address);
+        $this->assertSame('24680.00', $rental->fresh()->delivery_fee);
+        $this->assertDatabaseCount('rentals', 1);
+        $this->assertDatabaseCount('payments', 1);
+        Http::assertSentCount(1);
+
     }
 
     /**
@@ -487,6 +521,12 @@ class CustomerAddressAndRentalDataTest extends TestCase
      */
     public function test_scenario_11_store_address_from_checkout_modal_saves_coordinates_and_validates_coordinate_pairs(): void
     {
+        $this->prepareDeliveryShipping();
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]),
+        ]);
+
         $customer = User::factory()->create([
             'role' => 'customer',
             'name' => 'Rina Checkout',
@@ -541,7 +581,8 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->assertEqualsWithDelta(112.6210987, (float) $address->longitude, 0.0000001);
 
         // 3. Alamat baru yang terpilih dapat langsung dipakai pada checkout paket camping
-        $checkoutRes = $this->actingAs($customer)->post(route('customer.packages.checkout.store', $this->package), [
+        $this->actingAs($customer);
+        $payload = [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-29',
             'pickup_time' => '09:00',
@@ -550,12 +591,19 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'pickup_method' => 'delivery',
             'customer_address_id' => $address->id,
             'payment_channel' => 'bca_va',
-        ]);
+        ];
+        $confirmed = $this->confirmDelivery($payload);
+        $checkoutRes = $this->post(route('customer.packages.checkout.store', $this->package), $confirmed);
 
         $rental = Rental::withoutGlobalScopes()->latest('id')->firstOrFail();
         $checkoutRes->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame($address->id, (int) $rental->customer_address_id);
         $this->assertStringContainsString('Jl. Soekarno Hatta No. 9', (string) $rental->delivery_address);
+        $this->assertSame('24680.00', $rental->fresh()->delivery_fee);
+        $this->assertDatabaseCount('rentals', 1);
+        $this->assertDatabaseCount('payments', 1);
+        Http::assertSentCount(1);
+
     }
 
     /**
@@ -702,5 +750,30 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->assertSame(50000, $shippingResult['distance_fee']);
         $this->assertSame(0, $shippingResult['weight_fee']);
         $this->assertSame(50000, $shippingResult['total_fee']);
+    }
+
+    private function prepareDeliveryShipping(): void
+    {
+        $this->vendor->update(['latitude' => -7.94, 'longitude' => 112.61]);
+        VendorShippingSetting::factory()->for($this->vendor)->create([
+            'rate_per_km' => 2000, 'weight_threshold_kg' => 5, 'extra_weight_fee_per_kg' => 1000,
+        ]);
+        $this->package->packageItems()->first()->masterItem->update(['weight_kg' => 3.0]);
+        config(['services.openrouteservice.api_key' => 'test-ors-key', 'services.openrouteservice.base_url' => 'https://api.openrouteservice.org', 'services.openrouteservice.profile' => 'driving-car']);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function confirmDelivery(array $payload): array
+    {
+        $preview = $this->postJson(route('checkout.shipping.preview'), $payload + ['checkout_type' => 'package'])
+            ->assertOk()->assertJsonPath('distance_km', 12.34)->assertJsonPath('total_weight_kg', 3)
+            ->assertJsonPath('delivery_fee', 24680)->json();
+        $this->assertDatabaseCount('rentals', 0);
+        $this->assertDatabaseCount('payments', 0);
+
+        return $payload + ['expected_delivery_fee' => $preview['delivery_fee'], 'expected_shipping_context' => $preview['shipping_context'], 'checkout_attempt_id' => (string) Str::uuid()];
     }
 }
