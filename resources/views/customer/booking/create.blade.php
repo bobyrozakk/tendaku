@@ -70,6 +70,7 @@
             'specs'            => $it['specs'] ?? '',
             'icon'             => $it['icon'] ?? 'default',
             'price_per_day'    => (int) $it['price_per_day'],
+            'weight_kg'        => (float) $it['weight_kg'],
             'deposit_per_unit' => (int) ($it['deposit_per_unit'] ?? 0),
             'qty'              => (int) $it['qty'],
             'max_qty'          => (int) ($it['max_qty'] ?? $it['stock'] ?? 99),
@@ -97,7 +98,7 @@
             'minDate'           => now()->toDateString(),
             'initialDays'       => (int) $booking['rental_days'],
             'discount'          => (int) ($booking['discount'] ?? 0),
-            'deliveryFeeAmount' => (int) ($booking['delivery_fee_amount'] ?? 0),
+            'shippingPreviewUrl' => route('checkout.shipping.preview'),
             'serverDpAmount'    => (int) ($booking['dp_amount'] ?? 0),
             'dpPercentage'      => (int) ($booking['dp_percentage'] ?? 50),
             'expiresAtIso'      => $booking['expires_at_iso'] ?? null,
@@ -118,7 +119,7 @@
             <div class="co-inner space-y-6">
                 @include('customer.booking.partials.create.trip-banner')
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-                    <div class="lg:col-span-7 xl:col-span-8 space-y-6">
+                    <div class="lg:col-span-7 xl:col-span-8 space-y-6" :inert="isProcessing">
                         @include('customer.booking.partials.create.renter-identity')
                         @include('customer.booking.partials.create.delivery-method')
                         @include('customer.booking.partials.create.rental-details')

@@ -15,6 +15,15 @@ document.addEventListener("alpine:init", () => {
         remaining: "",
         expired: false,
         countdownTimer: null,
+        shippingState: "incomplete",
+        shipping: null,
+        shippingMessage: "",
+        shippingTimer: null,
+        shippingController: null,
+        shippingSequence: 0,
+        shippingResultKey: "",
+        shippingNeedsApproval: false,
+        shippingReloadRequired: false,
 
         addresses: cfg.addresses || [],
         selectedAddressId: cfg.selectedAddressId || null,
@@ -289,6 +298,96 @@ document.addEventListener("alpine:init", () => {
                     window.renderLucideIcons();
                 }
             });
+            this.$watch("shippingInputKey", () => this.scheduleShipping());
+            this.scheduleShipping();
+        },
+
+        get shippingInputKey() {
+            return JSON.stringify([this.pickupMethod, this.selectedAddressId,
+                this.pickupDate, this.returnDate, this.pickupTime,
+                this.items.map((item) => [item.id, Number(item.qty)])]);
+        },
+        get shippingReady() {
+            return this.shippingState === "ready" &&
+                this.shippingResultKey === this.shippingInputKey;
+        },
+        get canSubmitBooking() {
+            return !this.isProcessing && !this.expired && this.shippingReady && !this.shippingNeedsApproval;
+        },
+        get totalWeightKg() {
+            return this.shippingReady ? this.shipping.total_weight_kg : null;
+        },
+        formatMeasurement(value) {
+            return Number(value).toLocaleString("id-ID", { maximumFractionDigits: 2 });
+        },
+        scheduleShipping() {
+            clearTimeout(this.shippingTimer);
+            this.shippingController?.abort();
+            ++this.shippingSequence;
+            this.shipping = null;
+            this.shippingResultKey = "";
+            this.shippingNeedsApproval = false;
+            this.shippingReloadRequired = false;
+            this.shippingState = "incomplete";
+            this.shippingMessage = this.pickupMethod === "delivery"
+                ? "Pilih alamat dan jadwal untuk menghitung ongkir."
+                : "Lengkapi jadwal untuk menghitung rincian pesanan.";
+            if (!this.pickupDate || !this.returnDate ||
+                (this.pickupMethod === "delivery" && !this.selectedAddressId)) return;
+            this.shippingState = "loading";
+            this.shippingMessage = "Menghitung rincian pengiriman…";
+            const sequence = this.shippingSequence;
+            const key = this.shippingInputKey;
+            this.shippingTimer = setTimeout(() => this.loadShipping(sequence, key), 450);
+        },
+        async loadShipping(sequence, key) {
+            const controller = new AbortController();
+            this.shippingController = controller;
+            try {
+                const response = await fetch(this.shippingPreviewUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": this.csrf },
+                    signal: controller.signal,
+                    body: JSON.stringify({ checkout_type: "regular", pickup_method: this.pickupMethod,
+                        customer_address_id: this.pickupMethod === "delivery" ? this.selectedAddressId : null,
+                        pickup_date: this.pickupDate, return_date: this.returnDate, pickup_time: this.pickupTime,
+                        items: this.items.map((item) => ({ id: item.id, qty: Number(item.qty) })) }),
+                });
+                const data = await response.json();
+                if (sequence !== this.shippingSequence || key !== this.shippingInputKey) return;
+                if (!response.ok || !data.success) throw new Error(data.message || "Ongkir belum dapat dihitung.");
+                this.applyShipping(data, key);
+            } catch (error) {
+                if (error.name === "AbortError" || sequence !== this.shippingSequence || key !== this.shippingInputKey) return;
+                this.shippingState = "error";
+                this.shippingMessage = error.message || "Koneksi bermasalah. Silakan coba lagi.";
+            }
+        },
+        applyShipping(data, key) {
+            const ids = (items) => items.map((item) => Number(item.id)).sort((a, b) => a - b).join(",");
+            if (ids(data.items || []) !== ids(this.items)) {
+                this.shippingState = "error";
+                this.shippingReloadRequired = true;
+                this.shippingMessage = "Isi keranjang berubah. Muat ulang checkout untuk memeriksa produk terbaru.";
+                return;
+            }
+            this.shipping = data;
+            this.shippingResultKey = key;
+            this.shippingState = "ready";
+            this.shippingMessage = "";
+            for (const priced of data.items || []) {
+                const item = this.items.find((entry) => Number(entry.id) === Number(priced.id));
+                if (item) item.price_per_day = priced.price_per_day;
+            }
+        },
+        approveShippingChange() {
+            this.shippingNeedsApproval = false;
+            this.formError = "";
+        },
+        destroy() {
+            clearTimeout(this.shippingTimer);
+            clearInterval(this.countdownTimer);
+            this.shippingController?.abort();
         },
 
         get isGuest() {
@@ -429,6 +528,7 @@ document.addEventListener("alpine:init", () => {
             return this.items.reduce((n, it) => n + (Number(it.qty) || 0), 0);
         },
         get subtotal() {
+            if (this.shippingReady) return this.shipping.subtotal;
             return (
                 this.items.reduce(
                     (n, it) => n + it.price_per_day * (Number(it.qty) || 0),
@@ -440,17 +540,18 @@ document.addEventListener("alpine:init", () => {
             return 0;
         },
         get deliveryFee() {
-            return this.isLoggedIn && this.pickupMethod === "delivery"
-                ? this.deliveryFeeAmount
-                : 0;
+            if (this.pickupMethod === "self_pickup") return 0;
+            return this.shippingReady ? this.shipping.delivery_fee : null;
         },
         get grandTotal() {
+            if (!this.shippingReady) return null;
             return Math.max(
                 0,
                 this.subtotal + this.deliveryFee - this.discount,
             );
         },
         get dpAmount() {
+            if (!this.shippingReady) return null;
             const base = Math.max(
                 0,
                 this.subtotal + this.deliveryFee - this.discount,
@@ -480,6 +581,7 @@ document.addEventListener("alpine:init", () => {
         },
 
         formatRupiah(num) {
+            if (num === null || num === undefined) return "—";
             return (
                 "Rp " +
                 Math.round(num || 0)
@@ -650,7 +752,7 @@ document.addEventListener("alpine:init", () => {
                 window.location.href = this.loginUrl;
                 return;
             }
-            if (this.isProcessing) return;
+            if (!this.canSubmitBooking) return;
 
             if (this.expired) {
                 this.formError =
@@ -673,6 +775,9 @@ document.addEventListener("alpine:init", () => {
                 // Jadwal & jumlah unit (harga dihitung ulang di server)
                 fd.append("pickup_date", this.pickupDate);
                 fd.append("return_date", this.returnDate);
+                fd.append("pickup_time", this.pickupTime);
+                fd.append("expected_delivery_fee", this.shipping.delivery_fee);
+                fd.append("expected_shipping_context", this.shipping.shipping_context);
                 this.items.forEach((it, i) => {
                     fd.append("items[" + i + "][id]", it.id);
                     fd.append("items[" + i + "][qty]", it.qty);
@@ -721,6 +826,16 @@ document.addEventListener("alpine:init", () => {
 
                 const data = await response.json();
 
+                if (response.status === 409 && data.shipping) {
+                    this.shippingController?.abort();
+                    ++this.shippingSequence;
+                    this.applyShipping(data.shipping, this.shippingInputKey);
+                    this.shippingNeedsApproval = this.shippingReady;
+                    this.formError = data.message;
+                    this.isProcessing = false;
+                    return;
+                }
+
                 if (!response.ok) {
                     const map = {
                         guest_name: "name",
@@ -730,6 +845,7 @@ document.addEventListener("alpine:init", () => {
                         guest_id_number: "nik",
                         nik: "nik",
                         delivery_address: "address",
+                        customer_address_id: "address",
                         delivery_notes: "notes",
                         pickup_date: "dates",
                         return_date: "dates",

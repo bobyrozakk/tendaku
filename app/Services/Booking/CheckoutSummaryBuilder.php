@@ -25,29 +25,6 @@ class CheckoutSummaryBuilder
         return max(1, (int) ($cart['quantity'] ?? $cart['qty'] ?? 1));
     }
 
-    public function deliveryFeeAmount(Vendor $vendor): int
-    {
-        return (int) (
-            $vendor->delivery_fee
-            ?: config('booking.delivery_fee', 20000)
-        );
-    }
-
-    /**
-     * Ongkir hanya untuk user login yang memilih delivery.
-     */
-    public function deliveryFee(
-        Vendor $vendor,
-        string $pickupMethod,
-        bool $isLoggedIn
-    ): int {
-        if (! $isLoggedIn || $pickupMethod !== self::PICKUP_DELIVERY) {
-            return 0;
-        }
-
-        return $this->deliveryFeeAmount($vendor);
-    }
-
     /**
      * Membuat ringkasan checkout untuk keranjang multi-item
      * maupun struktur keranjang lama (single-item).
@@ -177,18 +154,13 @@ class CheckoutSummaryBuilder
             );
         }
 
-        $deliveryFee = $this->deliveryFee(
-            $vendor,
-            $pickupMethod,
-            $isLoggedIn
-        );
-
-        $grandTotal = max(0, $totalSubtotal + $deliveryFee - $discount);
+        $deliveryFee = $pickupMethod === self::PICKUP_DELIVERY ? null : 0;
+        $grandTotal = $deliveryFee === null ? null : max(0, $totalSubtotal - $discount);
 
         $payments = app(PaymentService::class);
         $dpPercentage = $payments->resolveDpPercentage($vendor->dp_percentage);
 
-        $dpAmount = intdiv(
+        $dpAmount = $deliveryFee === null ? null : intdiv(
             max(0, $totalSubtotal + $deliveryFee - $discount) * $dpPercentage + 99,
             100
         );
@@ -225,6 +197,8 @@ class CheckoutSummaryBuilder
             'return_time' => $this->clock($returnTime),
 
             'rental_days' => $rentalDays,
+            'pickup_date_iso' => Carbon::parse($cart['pickup_date'])->toDateString(),
+            'return_date_iso' => Carbon::parse($cart['return_date'])->toDateString(),
             'pickup_method' => $pickupMethod,
             'delivery_address' => $user?->address ?? '',
             'delivery_notes' => '',
@@ -236,7 +210,6 @@ class CheckoutSummaryBuilder
             'admin_fee' => 0,
             'deposit' => 0,
             'delivery_fee' => $deliveryFee,
-            'delivery_fee_amount' => $this->deliveryFeeAmount($vendor),
             'discount' => $discount,
             'grand_total' => $grandTotal,
 
@@ -288,6 +261,7 @@ class CheckoutSummaryBuilder
             'variant' => '',
             'specs' => $item->description ?? '',
             'price_per_day' => $dailyRate,
+            'weight_kg' => (float) $item->weight_kg,
             'deposit_per_unit' => $depositPerUnit,
             'qty' => $qty,
             'stock' => $realStock,
