@@ -36,9 +36,11 @@ class StoreCheckoutRequest extends FormRequest
             'pickup_date' => ['nullable', 'date', 'after_or_equal:today'],
             'pickup_time' => ['nullable', 'date_format:H:i'],
             'return_date' => ['nullable', 'date', 'after:pickup_date'],
-            'items' => ['nullable', 'array'],
-            'items.*.id' => ['nullable'],
-            'items.*.qty' => ['nullable', 'integer', 'min:1'],
+            'items' => ['nullable', 'array', 'max:100'],
+            'items.*.id' => ['required', 'integer', 'min:1', 'distinct'],
+            'items.*.qty' => ['required', 'integer', 'min:1', 'max:10000'],
+            'expected_delivery_fee' => ['nullable', 'integer', 'min:0'],
+            'expected_shipping_context' => ['nullable', 'string', 'size:64'],
 
             // Data identitas guest (divalidasi di controller setelah pengecekan keranjang & delivery guard)
             'guest_name' => ['nullable', 'string', 'max:100'],

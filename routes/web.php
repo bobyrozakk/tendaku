@@ -47,7 +47,7 @@ Route::prefix('katalog/booking')->group(function () {
         ->middleware('throttle:10,1')
         ->name('checkout.shipping.preview');
     Route::get('/', [CheckoutController::class, 'index'])->name('checkout.index');
-    Route::post('/', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/', [CheckoutController::class, 'store'])->block(120, 5)->name('checkout.store');
     Route::get('status/{code}', [BookingController::class, 'status'])->name('booking.status');
     Route::post('status/{code}/sync', [BookingController::class, 'syncPayment'])->name('booking.sync');
     Route::post('status/{code}/pay', [BookingController::class, 'pay'])->name('booking.pay');
