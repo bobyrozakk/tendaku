@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\Booking\RentalService;
 use App\Traits\BelongsToVendor;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +31,7 @@ class Rental extends Model
         'actual_return_date',
         'picked_up_at',
         'returned_at',
+        'return_reminder_sent_at',
         'completed_at',
         'cancelled_at',
         'cancel_reason',
@@ -73,6 +75,7 @@ class Rental extends Model
 
             'picked_up_at' => 'datetime',
             'returned_at' => 'datetime',
+            'return_reminder_sent_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'ktp_received_at' => 'datetime',
@@ -207,5 +210,32 @@ class Rental extends Model
             - (float) $this->delivery_fee
             + (float) $this->discount_amount
         ));
+    }
+
+    /**
+     * Waktu jatuh tempo pengembalian barang gabungan return_date dan return_time.
+     */
+    public function returnDateTime(): Carbon
+    {
+        $dateStr = $this->return_date ? $this->return_date->format('Y-m-d') : now()->toDateString();
+        $timeStr = $this->return_time ?: '09:00:00';
+
+        return Carbon::parse("{$dateStr} {$timeStr}");
+    }
+
+    /**
+     * Alamat email penerima pengingat rental.
+     */
+    public function customerEmail(): ?string
+    {
+        return $this->customer?->email;
+    }
+
+    /**
+     * Nama penerima pengingat rental.
+     */
+    public function customerName(): string
+    {
+        return $this->customer?->name ?? $this->guest_name ?? 'Pelanggan Tendaku';
     }
 }

@@ -22,12 +22,12 @@ Schedule::job(new ExpirePendingRentals)->everyMinute();
 Schedule::command('payments:reconcile')->everyMinute()->withoutOverlapping();
 
 /*
- * Pengingat pengembalian barang (H-1 dan hari-H) dikirim harian pada jam
- * yang ditentukan di config/notifications.php (default 09:00 WIB).
+ * Pengingat pengembalian barang via Gmail (H-5 jam sebelum batas waktu pengembalian)
+ * dikirim ke email customer secara periodik.
  */
-Schedule::command('rentals:send-return-reminders')
-    ->dailyAt(sprintf('%02d:00', (int) config('notifications.reminder.hour', 9)))
-    ->timezone((string) config('notifications.reminder.timezone', 'Asia/Jakarta'));
+Schedule::command('rentals:send-email-reminders')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping();
 
 /*
  * Draft batch settlement mingguan untuk vendor (komisi, escrow, piutang tunai).
