@@ -117,8 +117,8 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
 
         $this->assertSame(1, $rental->rental_days);
         $this->assertEquals(60000.0, (float) $rental->subtotal);
-        // grand_total = subtotal + biaya layanan & admin 5%
-        $this->assertEquals(63000.0, (float) $rental->grand_total);
+        // grand_total = subtotal; biaya admin/komisi tidak ditambahkan ke tagihan customer
+        $this->assertEquals(60000.0, (float) $rental->grand_total);
         $this->assertSame('2026-10-26', $rental->pickup_date->format('Y-m-d'));
         $this->assertSame('05:00:00', $rental->pickup_time);
         $this->assertSame('2026-10-27', $rental->return_date->format('Y-m-d'));
@@ -149,7 +149,7 @@ class RentalDurationAndPaymentTimeoutTest extends TestCase
 
         $this->assertSame(2, $rental25Hours->rental_days);
         $this->assertEquals(120000.0, (float) $rental25Hours->subtotal);
-        $this->assertEquals(126000.0, (float) $rental25Hours->grand_total);
+        $this->assertEquals(120000.0, (float) $rental25Hours->grand_total);
 
         // 48 jam pas (26 Okt 05:00 s/d 28 Okt 05:00) => tepat 2 hari
         $rental48Hours = $this->service->createBooking([

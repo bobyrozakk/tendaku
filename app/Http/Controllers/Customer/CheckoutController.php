@@ -343,20 +343,9 @@ class CheckoutController extends Controller
      */
     protected function paymentChannel(?string $channel): string
     {
-        return in_array($channel, $this->vaChannelIds(), true)
+        return in_array($channel, config('payment.enabled_channels', []), true)
             ? $channel
             : 'bca_va';
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function vaChannelIds(): array
-    {
-        return array_map(
-            fn (string $bank) => $bank.'_va',
-            array_keys(config('payment.va_banks', []))
-        );
     }
 
     /**

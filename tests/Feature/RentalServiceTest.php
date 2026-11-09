@@ -12,8 +12,8 @@ use App\Models\RentalDetail;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Services\Booking\AvailabilityService;
-use App\Services\Payment\PaymentService;
 use App\Services\Booking\RentalService;
+use App\Services\Payment\PaymentService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use InvalidArgumentException;
@@ -121,10 +121,9 @@ class RentalServiceTest extends TestCase
         // item1: 50.000 x 3 hari x 2 unit = 300.000
         // item2: 15.000 x 3 hari x 1 unit = 45.000
         // Subtotal: 345.000
-        // Biaya admin 5% = 17.250
-        // Grand total: 345.000 + 17.250 = 362.250
+        // Grand total: 345.000 (komisi platform dihitung terpisah, bukan ditambahkan ke customer)
         $this->assertEquals(345000, (float) $rental->subtotal);
-        $this->assertEquals(362250, (float) $rental->grand_total);
+        $this->assertEquals(345000, (float) $rental->grand_total);
         $this->assertCount(3, $rental->details);
         $this->assertTrue($rental->relationLoaded('details'));
         $this->assertEquals(Carbon::now()->addMinutes(5), $rental->expires_at);
@@ -150,14 +149,14 @@ class RentalServiceTest extends TestCase
 
         $payment = app(PaymentService::class)->createOnlinePayment($rental, 'full');
 
-        // Pembayaran = grand_total = 100.000 + biaya admin 5% (5.000) = 105.000
+        // Pembayaran = grand_total = 100.000 (komisi platform dihitung terpisah)
 
         $this->assertDatabaseHas('payments', [
             'rental_id' => $rental->id,
             'vendor_id' => $this->vendor->id,
             'payment_type' => 'full',
             'channel' => 'midtrans',
-            'amount' => 105000,
+            'amount' => 100000,
             'status' => 'pending',
         ]);
         $this->assertSame($payment->id, $rental->payments()->first()->id);
@@ -183,10 +182,10 @@ class RentalServiceTest extends TestCase
 
         app(PaymentService::class)->createOnlinePayment($rental, 'full');
 
-        // subtotal 50.000 + ongkir 20.000 + biaya admin 5% (2.500) - diskon 5.000 = 67.500
+        // subtotal 50.000 + ongkir 20.000 - diskon 5.000 = 65.000
         $this->assertDatabaseHas('payments', [
             'rental_id' => $rental->id,
-            'amount' => 67500,
+            'amount' => 65000,
             'status' => 'pending',
         ]);
     }
@@ -208,7 +207,7 @@ class RentalServiceTest extends TestCase
         ]);
         $this->assertEquals(1, $rental1Day->rental_days);
         $this->assertEquals(50000, (float) $rental1Day->subtotal);
-        $this->assertEquals(52500, (float) $rental1Day->grand_total); // 50.000 + admin 5%
+        $this->assertEquals(50000, (float) $rental1Day->grand_total);
 
         // Multi hari sewa (5 x 24 jam: 10 s/d 15 = 5 hari)
         $rental5Days = $this->service->createBooking([
@@ -222,7 +221,7 @@ class RentalServiceTest extends TestCase
         ]);
         $this->assertEquals(5, $rental5Days->rental_days);
         $this->assertEquals(250000, (float) $rental5Days->subtotal);
-        $this->assertEquals(262500, (float) $rental5Days->grand_total); // 250.000 + admin 5%
+        $this->assertEquals(250000, (float) $rental5Days->grand_total);
     }
 
     public function test_create_booking_calculates_grand_total_with_delivery_and_discounts(): void
@@ -243,11 +242,11 @@ class RentalServiceTest extends TestCase
             ],
         ]);
 
-        // subtotal = 50.000, delivery = 20.000, admin 5% = 2.500, discount = 10.000 -> grand_total = 62.500
+        // subtotal = 50.000, delivery = 20.000, discount = 10.000 -> grand_total = 60.000
         $this->assertEquals(50000, (float) $rental->subtotal);
         $this->assertEquals(20000, (float) $rental->delivery_fee);
         $this->assertEquals(10000, (float) $rental->discount_amount);
-        $this->assertEquals(62500, (float) $rental->grand_total);
+        $this->assertEquals(60000, (float) $rental->grand_total);
         $this->assertEquals('Jl. Merbabu No. 12', $rental->delivery_address);
     }
 
@@ -804,7 +803,7 @@ class RentalServiceTest extends TestCase
 
         $this->assertEquals(150000, (float) $returnedRental->total_damage_fee);
 
-        // Grand total (sewa + biaya admin 5%) + 0 (late) + 150.000 (damage)
+        // Grand total sewa + 0 (late) + 150.000 (damage)
         $expectedFinal = (float) $returnedRental->grand_total + 150000;
         $this->assertEquals($expectedFinal, (float) $returnedRental->final_total);
 

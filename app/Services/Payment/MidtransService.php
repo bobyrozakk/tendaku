@@ -361,6 +361,10 @@ class MidtransService
      */
     private function resolvePaymentChannel(string $paymentType, array $data, ?string $fallback): ?string
     {
+        if (in_array($paymentType, ['qris', 'other_qris'], true)) {
+            return 'qris';
+        }
+
         if ($paymentType !== 'bank_transfer') {
             return $fallback;
         }

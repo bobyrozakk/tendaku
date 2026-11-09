@@ -82,7 +82,7 @@ class MidtransPaymentTest extends TestCase
             ->assertJsonPath('message', 'Rental ini tidak lagi menunggu pembayaran.');
     }
 
-    public function test_valid_settlement_notification_marks_payment_paid_and_confirms_rental(): void
+    public function test_valid_settlement_notification_marks_payment_paid_and_keeps_rental_pending(): void
     {
         [, $rental, $payment] = $this->createRentalWithPendingPayment();
         $notification = $this->signedNotification([
@@ -104,11 +104,11 @@ class MidtransPaymentTest extends TestCase
         ]);
         $this->assertDatabaseHas('rentals', [
             'id' => $rental->getKey(),
-            'status' => 'confirmed',
+            'status' => 'pending',
         ]);
     }
 
-    public function test_accepted_capture_notification_marks_payment_paid_and_confirms_rental(): void
+    public function test_accepted_capture_notification_marks_payment_paid_and_keeps_rental_pending(): void
     {
         [, $rental, $payment] = $this->createRentalWithPendingPayment();
         $notification = $this->signedNotification([
@@ -126,7 +126,7 @@ class MidtransPaymentTest extends TestCase
         ]);
         $this->assertDatabaseHas('rentals', [
             'id' => $rental->getKey(),
-            'status' => 'confirmed',
+            'status' => 'pending',
         ]);
     }
 
@@ -230,7 +230,7 @@ class MidtransPaymentTest extends TestCase
         $this->assertSame($paidAt->toDateTimeString(), $payment->refresh()->paid_at->toDateTimeString());
         $this->assertDatabaseHas('rentals', [
             'id' => $rental->getKey(),
-            'status' => 'confirmed',
+            'status' => 'pending',
         ]);
     }
 

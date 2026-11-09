@@ -5,11 +5,10 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Rental;
 use App\Services\Booking\BookingReceiptService;
-use App\Services\Payment\MidtransService;
 use App\Services\Booking\RentalAccessGuard;
 use App\Services\Booking\RentalService;
+use App\Services\Payment\MidtransService;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
@@ -17,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\Response;
@@ -71,7 +71,7 @@ class BookingController extends Controller
     /**
      * Halaman status booking & rental.
      */
-    public function status(Request $request, string $code, MidtransService $midtrans): View
+    public function status(Request $request, string $code): View
     {
         $rental = $this->findAuthorizedRental($request, $code);
 
@@ -88,24 +88,13 @@ class BookingController extends Controller
 
         $latestPayment = $rental->payments->firstWhere('channel', self::MIDTRANS_CHANNEL);
 
-        // Jika payment masih pending dan belum memiliki nomor VA dari Midtrans, generate langsung via Core API
-        if ($latestPayment && $latestPayment->status === 'pending' && empty($latestPayment->va_details)) {
-            try {
-                $midtrans->chargeBankTransfer($latestPayment, 'bca');
-                $latestPayment->refresh();
-                $rental->refresh();
-            } catch (\Throwable $e) {
-                // Abaikan jika ada kegagalan koneksi sesaat
-            }
-        }
-
         return view('customer.booking.status', compact('rental', 'latestPayment'));
     }
 
     /**
      * Polling: sinkronkan status pembayaran dengan Midtrans.
      */
-        public function syncPayment(Request $request, string $code, MidtransService $midtrans): JsonResponse
+    public function syncPayment(Request $request, string $code, MidtransService $midtrans): JsonResponse
     {
         $rental = $this->findAuthorizedRental($request, $code);
 
@@ -170,15 +159,13 @@ class BookingController extends Controller
             ->latest('id')
             ->firstOrFail();
 
-        $selectedBank = $request->input('bank', 'bca');
-
-        // Panggil Midtrans Core API untuk generate nomor VA langsung dari Sandbox
-        $vaInfo = $midtrans->chargeBankTransfer($payment, $selectedBank);
+        // Buka Snap agar customer dapat memilih QRIS atau Virtual Account.
+        $snapToken = $payment->snap_token ?: $midtrans->createTransaction($payment);
 
         return response()->json([
             'status' => 'success',
             'order_id' => $payment->order_id,
-            'va_info' => $vaInfo,
+            'snap_token' => $snapToken,
             'amount' => (int) $payment->amount,
         ]);
     }

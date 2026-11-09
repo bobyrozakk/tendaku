@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ItemCategory;
 use App\Models\MasterItem;
+use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\RentalDetail;
 use App\Models\User;
@@ -270,7 +271,7 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('Tendaku Vendor Store');
     }
 
-    public function test_pay_returns_virtual_account_info_for_pending_rental(): void
+    public function test_pay_returns_snap_token_for_pending_rental(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-SNAP01', 'pending');
         $rental->payments()->create([
@@ -283,15 +284,10 @@ class BookingStatusAndHistoryTest extends TestCase
         ]);
 
         $this->mock(MidtransService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('chargeBankTransfer')
+            $mock->shouldReceive('createTransaction')
                 ->once()
-                ->with(\Mockery::type(\App\Models\Payment::class), 'bca')
-                ->andReturn([
-                    'bank' => 'bca',
-                    'va_number' => '1234567890',
-                    'biller_code' => null,
-                    'qr_code_url' => null,
-                ]);
+                ->with(\Mockery::type(Payment::class))
+                ->andReturn('sandbox-snap-token');
         });
 
         $response = $this->actingAs($this->customer1)
@@ -302,11 +298,31 @@ class BookingStatusAndHistoryTest extends TestCase
                 'status' => 'success',
                 'order_id' => 'TDK-2026-SNAP01-FULL-1',
                 'amount' => 150000,
-                'va_info' => [
-                    'bank' => 'bca',
-                    'va_number' => '1234567890',
-                ],
+                'snap_token' => 'sandbox-snap-token',
             ]);
+    }
+
+    public function test_status_page_does_not_auto_generate_va_for_qris_payment(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-QRIS01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'payment_channel' => 'qris',
+            'order_id' => 'TDK-2026-QRIS01-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldNotReceive('chargeBankTransfer');
+        });
+
+        $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code))
+            ->assertOk()
+            ->assertSee('Bayar sekarang');
     }
 
     public function test_sync_payment_status_endpoint_returns_payment_status(): void

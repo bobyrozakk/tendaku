@@ -29,11 +29,12 @@ class PaymentWebhookTest extends TestCase
     // ── Skenario 1: Bayar penuh QRIS ──────────────────────────────────────────
 
     /**
-     * Skenario 1: Bayar penuh → payments paid, rental confirmed.
+     * Skenario 1: Bayar penuh → payments paid, rental tetap pending
+     * sampai kasir memvalidasi barcode dan menyetujui pesanan.
      *
      * @see TENDAKU_payment_spec.md §12 Skenario 1
      */
-    public function test_full_payment_marks_paid_and_confirms_rental(): void
+    public function test_full_payment_marks_paid_and_keeps_rental_pending(): void
     {
         [, $rental, $payment] = $this->createRentalWithPendingPayment();
 
@@ -50,8 +51,22 @@ class PaymentWebhookTest extends TestCase
         ]);
         $this->assertDatabaseHas('rentals', [
             'id' => $rental->getKey(),
-            'status' => 'confirmed',
+            'status' => 'pending',
         ]);
+    }
+
+    public function test_qris_payment_records_qris_payment_channel(): void
+    {
+        [, , $payment] = $this->createRentalWithPendingPayment();
+
+        $notification = $this->signedNotification([
+            'transaction_status' => 'settlement',
+            'payment_type' => 'qris',
+        ]);
+
+        $this->postJson(route('webhook.midtrans'), $notification)->assertOk();
+
+        $this->assertSame('qris', $payment->refresh()->payment_channel);
     }
 
     // ── Skenario 3: Webhook dikirim 2x → idempoten ───────────────────────────
@@ -77,7 +92,7 @@ class PaymentWebhookTest extends TestCase
             $paidAt->toDateTimeString(),
             $payment->refresh()->paid_at->toDateTimeString()
         );
-        $this->assertDatabaseHas('rentals', ['id' => $rental->getKey(), 'status' => 'confirmed']);
+        $this->assertDatabaseHas('rentals', ['id' => $rental->getKey(), 'status' => 'pending']);
     }
 
     // ── Skenario 4: Signature salah → 403, DB tidak berubah ──────────────────
