@@ -108,337 +108,183 @@
             </div>
         </div>
 
-        {{-- FORM BOOKING --}}
+        {{-- AKSI SEWA & KUANTITAS (FORM SEWA PINDAH KE HALAMAN BOOKING) --}}
         @php
             $isGuest = auth()->guest();
-            $submitAction = $isGuest ? 'checkoutNow' : 'addToCart';
+            $canSubmit = $this->availableStock >= $this->quantity && $this->availableStock > 0;
         @endphp
-        <form wire:submit="{{ $submitAction }}" id="booking-form" class="space-y-4">
+        <div id="booking-action-panel" class="space-y-4">
 
-            <div class="flex items-center justify-between">
-                <h3 class="text-xs font-extrabold uppercase tracking-wider text-darkbrown-700 flex items-center gap-2">
-                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-avocado-600"></i>
-                    <span>Formulir Sewa</span>
-                </h3>
-
-                {{-- Indikator Tanggal Penuh --}}
-                @if($this->isOutOfStock)
-                    <span class="text-[10px] text-red-600 font-semibold inline-flex items-center gap-1" title="Tidak ada unit yang bisa disewa dalam {{ count($this->fullyBookedDates) }} hari ke depan">
-                        <i data-lucide="alert-triangle" class="w-3 h-3 text-red-500"></i>
-                        Stok habis
-                    </span>
-                @elseif(count($this->fullyBookedDates) > 0)
-                    <span class="text-[10px] text-red-600 font-semibold inline-flex items-center gap-1" title="Ada tanggal di mana unit habis total">
-                        <i data-lucide="alert-triangle" class="w-3 h-3 text-red-500"></i>
-                        {{ count($this->fullyBookedDates) }} tanggal stok habis
-                    </span>
-                @endif
-            </div>
-
-            {{-- Tanggal & Jam Pengambilan (Pickup) --}}
-            <div class="space-y-1.5">
-                <label class="block text-xs font-semibold text-darkbrown-700">
-                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                    Tanggal & Jam Pengambilan (Pickup)
-                </label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <input
-                            type="date"
-                            id="pickup_date"
-                            wire:model.live="pickup_date"
-                            min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                            class="input-tendaku w-full text-xs py-2 px-3 rounded-xl transition-all
-                                @error('pickup_date') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
-                            required
-                        />
-                        @error('pickup_date')
-                            <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
-                    </div>
-                    <div>
-                        <input
-                            type="time"
-                            id="pickup_time"
-                            wire:model.live="pickup_time"
-                            class="input-tendaku w-full text-xs py-2 px-3 rounded-xl transition-all
-                                @error('pickup_time') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
-                            required
-                        />
-                        @error('pickup_time')
-                            <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
-                    </div>
-                </div>
-            </div>
-
-            {{-- Durasi Sewa (24 Jam Penuh per Hari) --}}
-            <div class="space-y-1.5">
+            {{-- Jumlah Unit (Quantity) --}}
+            <div class="space-y-2">
                 <div class="flex items-center justify-between">
-                    <label class="text-xs font-semibold text-darkbrown-700">
-                        <i data-lucide="hourglass" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                        Durasi Sewa
+                    <label for="quantity" class="text-xs font-bold text-darkbrown-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="package" class="w-4 h-4 text-avocado-600"></i>
+                        <span>Jumlah Unit</span>
                     </label>
-                    <span class="text-[10px] font-bold text-avocado-700 bg-avocado-50 border border-avocado-200 px-2 py-0.5 rounded-full">
-                        1 Hari = 24 Jam Penuh
+                    <span class="text-xs font-semibold">
+                        Stok:
+                        <strong class="{{ $this->availableStock > 0 ? 'text-avocado-700' : 'text-red-600' }}">
+                            {{ $this->availableStock > 0 ? $this->availableStock . ' Unit' : 'Stok Habis' }}
+                        </strong>
                     </span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button
-                        type="button"
-                        wire:click="$set('duration_days', {{ max(1, $duration_days - 1) }})"
-                        class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
-                    >
-                        -
-                    </button>
-                    <div class="flex-1 relative">
+
+                @if($this->availableStock > 0)
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            wire:click="$set('quantity', {{ max(1, $quantity - 1) }})"
+                            @disabled($quantity <= 1)
+                            class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            title="Kurangi unit"
+                        >
+                            -
+                        </button>
                         <input
                             type="number"
-                            id="duration_days"
-                            wire:model.live="duration_days"
+                            id="quantity"
+                            wire:model.live="quantity"
                             min="1"
-                            class="input-tendaku w-full text-center font-bold text-sm py-2 px-3 rounded-xl border-wheat-300"
+                            max="{{ max(1, $this->availableStock) }}"
+                            class="input-tendaku flex-1 text-center font-bold text-sm py-2 px-3 rounded-xl border-wheat-300"
                             required
                         />
-                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-500 pointer-events-none">
-                            Hari
-                        </span>
+                        <button
+                            type="button"
+                            wire:click="$set('quantity', {{ $quantity + 1 }})"
+                            @disabled($quantity >= $this->availableStock)
+                            class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            title="Tambah unit"
+                        >
+                            +
+                        </button>
                     </div>
-                    <button
-                        type="button"
-                        wire:click="$set('duration_days', {{ $duration_days + 1 }})"
-                        class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
-                    >
-                        +
-                    </button>
-                </div>
-                @error('duration_days')
+                @else
+                    <div class="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-500 shrink-0"></i>
+                        <span>Maaf, stok peralatan ini sedang tidak tersedia untuk saat ini.</span>
+                    </div>
+                @endif
+
+                @error('quantity')
                     <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
                         {{ $message }}
                     </p>
                 @enderror
             </div>
 
-            {{-- Tanggal & Waktu Selesai (Return Deadline) --}}
-            <div class="space-y-1.5">
-                <div class="flex items-center justify-between">
-                    <label class="text-xs font-semibold text-darkbrown-700">
-                        <i data-lucide="flag" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                        Batas Waktu Pengembalian (Return)
-                    </label>
-                    <span class="text-[10px] text-darkbrown-500 font-medium">
-                        Maks. {{ $duration_days * 24 }} Jam
-                    </span>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <input
-                            type="date"
-                            id="return_date"
-                            wire:model.live="return_date"
-                            min="{{ $pickup_date ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
-                            class="input-tendaku w-full text-xs py-2 px-3 rounded-xl transition-all
-                                @error('return_date') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
-                            required
-                        />
-                        @error('return_date')
-                            <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
-                    </div>
-                    <div>
-                        <input
-                            type="time"
-                            id="return_time"
-                            wire:model.live="return_time"
-                            class="input-tendaku w-full text-xs py-2 px-3 rounded-xl transition-all
-                                @error('return_time') border-red-400 ring-2 ring-red-200 focus:ring-red-400 @enderror"
-                            required
-                        />
-                        @error('return_time')
-                            <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
-                    </div>
-                </div>
-            </div>
-
-            {{-- Jumlah Unit (Quantity) --}}
-            <div>
-                <div class="flex items-center justify-between mb-1.5">
-                    <label for="quantity" class="text-xs font-semibold text-darkbrown-700">
-                        <i data-lucide="package" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                        Jumlah Unit
-                    </label>
-                    <span class="text-[11px] font-bold text-darkbrown-600">
-                        Tersedia:
-                        <strong class="{{ $this->availableStock > 0 ? 'text-avocado-700' : 'text-red-600' }}">
-                            {{ $this->availableStock }} Unit
-                        </strong>
-                    </span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button
-                        type="button"
-                        wire:click="$set('quantity', {{ max(1, $quantity - 1) }})"
-                        class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
-                    >
-                        -
-                    </button>
-                    <input
-                        type="number"
-                        id="quantity"
-                        wire:model.live="quantity"
-                        min="1"
-                        max="{{ max(1, $this->availableStock) }}"
-                        class="input-tendaku flex-1 text-center font-bold text-sm py-2 px-3 rounded-xl border-wheat-300"
-                        required
-                    />
-                    <button
-                        type="button"
-                        wire:click="$set('quantity', {{ $quantity + 1 }})"
-                        class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition"
-                    >
-                        +
-                    </button>
-                </div>
-                @error('quantity')
-                    <p class="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-red-600">
-                        {{ $message }}
+            {{-- Keterangan Alur Booking --}}
+            <div class="p-3.5 rounded-xl bg-wheat-50 border border-wheat-200 text-darkbrown-700 flex items-start gap-2.5">
+                <i data-lucide="calendar" class="w-4 h-4 text-avocado-600 shrink-0 mt-0.5"></i>
+                <div class="text-xs leading-relaxed">
+                    <span class="font-bold text-darkbrown-900">Jadwal & Pengambilan</span>
+                    <p class="text-[11px] text-darkbrown-600 mt-0.5">
+                        Tanggal mulai sewa, durasi hari, dan metode serah terima dipilih langsung di halaman <strong>Booking</strong>.
                     </p>
-                @enderror
+                </div>
             </div>
 
-            {{-- RINGKASAN BIAYA & STOK REAL-TIME --}}
-            @if($this->totalDays > 0)
-                <div
-                    class="rounded-xl overflow-hidden border {{ $this->availableStock >= $this->quantity ? 'border-avocado-200 bg-avocado-50/60' : 'border-red-200 bg-red-50/60' }} divide-y divide-wheat-200"
-                    wire:loading.class="opacity-60"
-                    wire:target="pickup_date,return_date,quantity"
-                >
-                    {{-- Status Ketersediaan --}}
-                    @if($this->availableStock >= $this->quantity)
-                        <div class="px-4 py-2 flex items-center gap-1.5 bg-avocado-600">
-                            <i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>
-                            <span class="text-[11px] font-bold text-white tracking-wide">
-                                Stok Tersedia ({{ $this->availableStock }} unit siap sewa)
-                            </span>
-                        </div>
-                    @else
-                        <div class="px-4 py-2 flex items-center gap-1.5 bg-red-600">
-                            <i data-lucide="x" class="w-3.5 h-3.5 text-white"></i>
-                            <span class="text-[11px] font-bold text-white tracking-wide">
-                                Stok Kurang! Hanya sisa {{ $this->availableStock }} unit
-                            </span>
-                        </div>
-                    @endif
+            {{-- TOMBOL UTAMA: Sewa Sekarang / Checkout / Masuk Keranjang --}}
+            @if($isGuest)
+                <div class="space-y-2 pt-1">
+                    <button
+                        type="button"
+                        wire:click="checkoutNow"
+                        id="btn-checkout"
+                        wire:loading.attr="disabled"
+                        wire:loading.class="opacity-75 cursor-wait"
+                        @class([
+                            'w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md transition-all duration-200',
+                            'flex items-center justify-center gap-2',
+                            'btn-tendaku-primary hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer' => $canSubmit,
+                            'bg-wheat-200 text-darkbrown-400 cursor-not-allowed opacity-60' => !$canSubmit,
+                        ])
+                        @disabled(!$canSubmit)
+                    >
+                        <span wire:loading.remove wire:target="checkoutNow" class="flex items-center gap-2">
+                            @if(!$canSubmit)
+                                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                                <span>Stok Tidak Mencukupi</span>
+                            @else
+                                <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
+                                <span>Checkout Sekarang</span>
+                            @endif
+                        </span>
 
-                    <div class="px-4 py-3 space-y-2">
-                        {{-- Periode --}}
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-darkbrown-600 font-medium">Periode Sewa</span>
-                            <span class="font-bold text-darkbrown-900 text-right">
-                                {{ \Carbon\Carbon::parse($pickup_date)->translatedFormat('d M Y') }} {{ $pickup_time }}
-                                →
-                                {{ \Carbon\Carbon::parse($return_date)->translatedFormat('d M Y') }} {{ $return_time }}
-                            </span>
-                        </div>
+                        <span wire:loading wire:target="checkoutNow" class="flex items-center gap-2">
+                            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            <span>Menyiapkan checkout...</span>
+                        </span>
+                    </button>
 
-                        {{-- Durasi & Unit --}}
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-darkbrown-600 font-medium">Rincian Sewa</span>
-                            <span class="font-extrabold text-darkbrown-900">
-                                {{ $this->quantity }} Unit × {{ $this->totalDays }} Hari ({{ $this->totalDays * 24 }} Jam)
+                    <p class="text-[11px] leading-relaxed text-darkbrown-500 text-center">
+                        Langsung checkout tanpa akun. Isi jadwal sewa dan data diri di halaman Booking.
+                    </p>
+                </div>
+            @else
+                <div class="space-y-2 pt-1">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                            type="button"
+                            wire:click="addToCart"
+                            id="btn-masuk-keranjang"
+                            wire:loading.attr="disabled"
+                            wire:loading.class="opacity-75 cursor-wait"
+                            @class([
+                                'w-full py-3 px-3 rounded-xl font-bold text-xs shadow-sm transition-all duration-150',
+                                'flex items-center justify-center gap-1.5',
+                                'btn-tendaku-secondary hover:border-avocado-500 hover:text-avocado-700 cursor-pointer' => $canSubmit,
+                                'bg-wheat-200 text-darkbrown-400 cursor-not-allowed opacity-60' => !$canSubmit,
+                            ])
+                            @disabled(!$canSubmit)
+                        >
+                            <span wire:loading.remove wire:target="addToCart" class="flex items-center gap-1.5">
+                                <i data-lucide="shopping-cart" class="w-4 h-4 text-avocado-700"></i>
+                                <span>Masukkan ke Keranjang</span>
                             </span>
-                        </div>
+                            <span wire:loading wire:target="addToCart" class="flex items-center gap-1.5">
+                                <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                <span>Menyimpan...</span>
+                            </span>
+                        </button>
 
-                        {{-- Tarif Harian --}}
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-darkbrown-600 font-medium">Tarif / Hari (24 Jam)</span>
-                            <span class="font-semibold text-darkbrown-900">
-                                Rp {{ number_format($this->product->daily_rate, 0, ',', '.') }}
+                        <button
+                            type="button"
+                            wire:click="checkoutNow"
+                            id="btn-sewa-sekarang"
+                            wire:loading.attr="disabled"
+                            wire:loading.class="opacity-75 cursor-wait"
+                            @class([
+                                'w-full py-3 px-3 rounded-xl font-extrabold text-xs shadow-md transition-all duration-150',
+                                'flex items-center justify-center gap-1.5',
+                                'btn-tendaku-primary hover:shadow-lg cursor-pointer' => $canSubmit,
+                                'bg-wheat-200 text-darkbrown-400 cursor-not-allowed opacity-60' => !$canSubmit,
+                            ])
+                            @disabled(!$canSubmit)
+                        >
+                            <span wire:loading.remove wire:target="checkoutNow" class="flex items-center gap-1.5">
+                                <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
+                                <span>Sewa Sekarang</span>
                             </span>
-                        </div>
-                    </div>
-
-                    {{-- Total Harga Instan --}}
-                    <div class="px-4 py-3 flex justify-between items-baseline bg-white/70">
-                        <span class="text-xs font-bold text-darkbrown-900">Total Estimasi</span>
-                        <div class="text-right">
-                            <span class="text-2xl font-extrabold text-avocado-800 font-heading">
-                                Rp {{ number_format($this->totalPrice, 0, ',', '.') }}
+                            <span wire:loading wire:target="checkoutNow" class="flex items-center gap-1.5">
+                                <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                <span>Menyiapkan...</span>
                             </span>
-                            <p class="text-[10px] text-darkbrown-500 font-medium">
-                                ({{ $this->quantity }} unit × {{ $this->totalDays }} hari × Rp {{ number_format($this->product->daily_rate, 0, ',', '.') }})
-                            </p>
-                        </div>
+                        </button>
                     </div>
                 </div>
             @endif
-
-            {{-- Loading Feedback --}}
-            <div wire:loading wire:target="pickup_date,pickup_time,duration_days,return_date,return_time,quantity" class="flex items-center gap-2 text-xs text-darkbrown-500 font-medium justify-center py-1">
-                <svg class="animate-spin h-3.5 w-3.5 text-avocado-600" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
-                Memeriksa ketersediaan stok & menghitung total...
-            </div>
-
-            {{-- TOMBOL UTAMA: Sewa Sekarang --}}
-            @php
-                $canSubmit = $this->totalDays > 0 && $this->availableStock >= $this->quantity;
-            @endphp
-            <button
-                type="submit"
-                id="{{ $isGuest ? 'btn-checkout' : 'btn-masuk-keranjang' }}"
-                wire:loading.attr="disabled"
-                wire:loading.class="opacity-75 cursor-wait"
-                @class([
-                    'w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md transition-all duration-200',
-                    'flex items-center justify-center gap-2',
-                    'btn-tendaku-primary hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0' => $canSubmit,
-                    'bg-wheat-200 text-darkbrown-400 cursor-not-allowed opacity-60' => !$canSubmit,
-                ])
-                @disabled(!$canSubmit)
-            >
-                <span wire:loading.remove wire:target="{{ $submitAction }}" class="flex items-center gap-2">
-                    @if($this->totalDays <= 0)
-                        <i data-lucide="calendar" class="w-4 h-4"></i>
-                        <span>Pilih Tanggal Dahulu</span>
-                    @elseif($this->availableStock < $this->quantity)
-                        <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                        <span>Stok Tidak Mencukupi</span>
-                    @elseif($isGuest)
-                        <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                        <span>Checkout Sekarang</span>
-                    @else
-                        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                        <span>Masukkan ke Keranjang</span>
-                    @endif
-                </span>
-
-                <span wire:loading wire:target="{{ $submitAction }}" class="flex items-center gap-2">
-                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                    {{ $isGuest ? 'Menyiapkan checkout...' : 'Menambahkan...' }}
-                </span>
-            </button>
-
-            @if($isGuest)
-                <p class="text-[11px] leading-relaxed text-darkbrown-500 text-center">
-                    Langsung checkout tanpa akun. Isi nama, nomor WhatsApp, dan nomor KTP di halaman berikutnya.
-                </p>
-            @endif
-        </form>
+        </div>
 
         {{-- Tombol Lanjut ke Checkout (khusus anggota, muncul jika produk ini sudah ada di keranjang) --}}
         @if($inCart && ! $isGuest)

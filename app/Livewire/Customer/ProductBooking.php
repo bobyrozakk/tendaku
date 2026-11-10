@@ -380,7 +380,7 @@ class ProductBooking extends Component
         $this->dispatch('notify', [
             'type' => 'success',
             'title' => 'Ditambahkan ke Keranjang! 🛒',
-            'message' => "{$this->product->name} ({$this->quantity} unit, {$this->totalDays} hari) berhasil masuk keranjang.",
+            'message' => "{$this->product->name} ({$this->quantity} unit) berhasil masuk keranjang.",
         ]);
 
         $this->dispatch('cart-updated', count: $result['total_count']);

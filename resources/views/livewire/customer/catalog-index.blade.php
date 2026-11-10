@@ -358,7 +358,7 @@
                             <div class="flex items-center gap-2">
                                 <a href="{{ route('customer.product.show', $item->id) }}" 
                                    class="btn-tendaku-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
-                                    Lihat Detail &amp; Sewa
+                                    Lihat Detail
                                 </a>
                                 @auth
                                     <button type="button"
