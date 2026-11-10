@@ -60,6 +60,17 @@ class RentalStatusLookupTest extends TestCase
         $response->assertSee('Tidak perlu membuat akun atau login');
     }
 
+    public function test_authenticated_user_does_not_see_status_sewa_in_navbar(): void
+    {
+        $user = User::factory()->create(['role' => 'customer']);
+
+        $response = $this->actingAs($user)->get(route('home'));
+
+        $response->assertOk();
+        $response->assertDontSee('Status Sewa');
+        $response->assertSee('Riwayat Sewa');
+    }
+
     public function test_guest_can_lookup_guest_rental_using_booking_code(): void
     {
         $rental = $this->createRental([
