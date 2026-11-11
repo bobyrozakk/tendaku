@@ -27,13 +27,18 @@ document.addEventListener("alpine:init", () => {
         shippingNeedsApproval: false,
         shippingReloadRequired: false,
 
-        ...checkoutAddressState(cfg, { province: "Jawa Barat", city: "Bandung", is_default: true }),
+        ...checkoutAddressState(cfg, {
+            province: "Jawa Barat",
+            city: "Bandung",
+            is_default: true,
+        }),
         showAddressPicker: false,
 
         // Serah terima setelah booking dibuat: form -> handoff
         phase: "form",
         createdCode: "",
-        // State & Logika Kalender
+        bookedDates: Array.isArray(cfg.bookedDates) ? [...cfg.bookedDates] : [],
+        availabilityUrl: cfg.availabilityUrl || "",
         calOpen: null, // 'pickup' | 'return' | null
         calYear: new Date().getFullYear(),
         calMonth: new Date().getMonth(),
@@ -185,6 +190,62 @@ document.addEventListener("alpine:init", () => {
                 : this.minDate;
         },
 
+        get bookedDatesSet() {
+            return new Set(
+                Array.isArray(this.bookedDates) ? this.bookedDates : [],
+            );
+        },
+        isDateBooked(iso) {
+            return this.bookedDatesSet.has(iso);
+        },
+        hasBookedDateInRange(startIso, endIso) {
+            if (!startIso || !endIso || startIso > endIso) return false;
+            let cur = startIso;
+            while (cur <= endIso) {
+                if (this.isDateBooked(cur)) return true;
+                cur = this.addDaysIso(cur, 1);
+            }
+            return false;
+        },
+        findFirstValidReturnDate(pickup) {
+            if (!pickup) return "";
+            const candidate = this.addDaysIso(pickup, 1);
+            if (!this.hasBookedDateInRange(pickup, candidate)) {
+                return candidate;
+            }
+            return "";
+        },
+        async fetchAvailability(year, month) {
+            if (!this.availabilityUrl) return;
+            const mm = String(month + 1).padStart(2, "0");
+            const from = `${year}-${mm}-01`;
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            const to = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
+
+            try {
+                const query = new URLSearchParams({ from, to });
+                (this.items || []).forEach((it, idx) => {
+                    query.append(`items[${idx}][id]`, it.id);
+                    query.append(`items[${idx}][qty]`, it.qty);
+                });
+                const res = await fetch(
+                    `${this.availabilityUrl}?${query.toString()}`,
+                    {
+                        headers: { Accept: "application/json" },
+                    },
+                );
+                if (!res.ok) return;
+                const data = await res.json();
+                if (Array.isArray(data.dates)) {
+                    const merged = new Set([
+                        ...this.bookedDates,
+                        ...data.dates,
+                    ]);
+                    this.bookedDates = Array.from(merged);
+                }
+            } catch (_) {}
+        },
+
         openCalendar(type) {
             this.calOpen = this.calOpen === type ? null : type;
             const cur = type === "pickup" ? this.pickupDate : this.returnDate;
@@ -195,6 +256,9 @@ document.addEventListener("alpine:init", () => {
                     this.calMonth = d.getMonth();
                 }
             }
+            if (this.calOpen) {
+                this.fetchAvailability(this.calYear, this.calMonth);
+            }
         },
         prevMonth() {
             if (this.calMonth === 0) {
@@ -203,6 +267,7 @@ document.addEventListener("alpine:init", () => {
             } else {
                 this.calMonth--;
             }
+            this.fetchAvailability(this.calYear, this.calMonth);
         },
         nextMonth() {
             if (this.calMonth === 11) {
@@ -211,6 +276,7 @@ document.addEventListener("alpine:init", () => {
             } else {
                 this.calMonth++;
             }
+            this.fetchAvailability(this.calYear, this.calMonth);
         },
         get calendarDays() {
             const days = [];
@@ -228,10 +294,20 @@ document.addEventListener("alpine:init", () => {
                 const dd = String(d).padStart(2, "0");
                 const iso = `${this.calYear}-${mm}-${dd}`;
                 const isPast = iso < this.minDate;
-                const isBeforePickup =
-                    this.calOpen === "return" &&
-                    this.pickupDate &&
-                    iso < this.minReturnDate;
+                const isBooked = this.isDateBooked(iso);
+
+                let isBlocked = false;
+                if (this.calOpen === "pickup") {
+                    isBlocked = isBooked;
+                } else if (this.calOpen === "return") {
+                    const isBeforePickup =
+                        this.pickupDate && iso < this.minReturnDate;
+                    const rangeBlocked =
+                        this.pickupDate &&
+                        this.hasBookedDateInRange(this.pickupDate, iso);
+                    isBlocked = isBeforePickup || isBooked || rangeBlocked;
+                }
+
                 const isSelected =
                     (this.calOpen === "pickup" && this.pickupDate === iso) ||
                     (this.calOpen === "return" && this.returnDate === iso);
@@ -244,7 +320,7 @@ document.addEventListener("alpine:init", () => {
                 days.push({
                     day: d,
                     iso: iso,
-                    disabled: isPast || isBeforePickup,
+                    disabled: isPast || isBlocked,
                     selected: isSelected,
                     inRange: inRange,
                 });
@@ -263,12 +339,18 @@ document.addEventListener("alpine:init", () => {
         },
 
         init() {
-            // Data awal: pastikan tanggal kembali minimal 1 hari setelah tanggal ambil
             if (
                 this.pickupDate &&
-                (!this.returnDate || this.returnDate <= this.pickupDate)
+                (!this.returnDate ||
+                    this.returnDate <= this.pickupDate ||
+                    this.hasBookedDateInRange(this.pickupDate, this.returnDate))
             ) {
-                this.returnDate = this.minReturnDate;
+                const candidate = this.findFirstValidReturnDate(
+                    this.pickupDate,
+                );
+                if (candidate) {
+                    this.returnDate = candidate;
+                }
             }
             this.startCountdown();
             if (this.selectedAddressId) {
@@ -284,22 +366,43 @@ document.addEventListener("alpine:init", () => {
         },
 
         get shippingInputKey() {
-            return JSON.stringify([this.pickupMethod, this.selectedAddressId,
-                this.pickupDate, this.returnDate, this.pickupTime,
-                this.items.map((item) => [item.id, Number(item.qty)])]);
+            return JSON.stringify([
+                this.pickupMethod,
+                this.selectedAddressId,
+                this.pickupDate,
+                this.returnDate,
+                this.pickupTime,
+                this.items.map((item) => [item.id, Number(item.qty)]),
+            ]);
         },
         get shippingReady() {
-            return !(this.pickupMethod === "delivery" && this.needsAddressLocation()) && this.shippingState === "ready" &&
-                this.shippingResultKey === this.shippingInputKey;
+            return (
+                !(
+                    this.pickupMethod === "delivery" &&
+                    this.needsAddressLocation()
+                ) &&
+                this.shippingState === "ready" &&
+                this.shippingResultKey === this.shippingInputKey
+            );
         },
         get canSubmitBooking() {
-            return !this.isProcessing && !this.newAddressSubmitting && !this.showAddAddressModal && !this.expired && this.shippingReady && !this.shippingNeedsApproval;
+            return (
+                !this.isProcessing &&
+                !this.newAddressSubmitting &&
+                !this.showAddAddressModal &&
+                !this.expired &&
+                this.shippingReady &&
+                !this.shippingNeedsApproval &&
+                !this.hasBookedDateInRange(this.pickupDate, this.returnDate)
+            );
         },
         get totalWeightKg() {
             return this.shippingReady ? this.shipping.total_weight_kg : null;
         },
         formatMeasurement(value) {
-            return Number(value).toLocaleString("id-ID", { maximumFractionDigits: 2 });
+            return Number(value).toLocaleString("id-ID", {
+                maximumFractionDigits: 2,
+            });
         },
         scheduleShipping() {
             clearTimeout(this.shippingTimer);
@@ -310,20 +413,32 @@ document.addEventListener("alpine:init", () => {
             this.shippingNeedsApproval = false;
             this.shippingReloadRequired = false;
             this.shippingState = "incomplete";
-            this.shippingMessage = this.pickupMethod === "delivery"
-                ? "Pilih alamat dan jadwal untuk menghitung ongkir."
-                : "Lengkapi jadwal untuk menghitung rincian pesanan.";
-            if (!this.pickupDate || !this.returnDate ||
-                (this.pickupMethod === "delivery" && !this.selectedAddressId)) return;
-            if (this.pickupMethod === "delivery" && this.needsAddressLocation()) {
-                this.shippingMessage = "Lengkapi titik lokasi alamat pengantaran terlebih dahulu.";
+            this.shippingMessage =
+                this.pickupMethod === "delivery"
+                    ? "Pilih alamat dan jadwal untuk menghitung ongkir."
+                    : "Lengkapi jadwal untuk menghitung rincian pesanan.";
+            if (
+                !this.pickupDate ||
+                !this.returnDate ||
+                (this.pickupMethod === "delivery" && !this.selectedAddressId)
+            )
+                return;
+            if (
+                this.pickupMethod === "delivery" &&
+                this.needsAddressLocation()
+            ) {
+                this.shippingMessage =
+                    "Lengkapi titik lokasi alamat pengantaran terlebih dahulu.";
                 return;
             }
             this.shippingState = "loading";
             this.shippingMessage = "Menghitung rincian pengiriman…";
             const sequence = this.shippingSequence;
             const key = this.shippingInputKey;
-            this.shippingTimer = setTimeout(() => this.loadShipping(sequence, key), 450);
+            this.shippingTimer = setTimeout(
+                () => this.loadShipping(sequence, key),
+                450,
+            );
         },
         async loadShipping(sequence, key) {
             const controller = new AbortController();
@@ -331,29 +446,62 @@ document.addEventListener("alpine:init", () => {
             try {
                 const response = await fetch(this.shippingPreviewUrl, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json", Accept: "application/json", "X-CSRF-TOKEN": this.csrf },
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                        "X-CSRF-TOKEN": this.csrf,
+                    },
                     signal: controller.signal,
-                    body: JSON.stringify({ checkout_type: "regular", pickup_method: this.pickupMethod,
-                        customer_address_id: this.pickupMethod === "delivery" ? this.selectedAddressId : null,
-                        pickup_date: this.pickupDate, return_date: this.returnDate, pickup_time: this.pickupTime,
-                        items: this.items.map((item) => ({ id: item.id, qty: Number(item.qty) })) }),
+                    body: JSON.stringify({
+                        checkout_type: "regular",
+                        pickup_method: this.pickupMethod,
+                        customer_address_id:
+                            this.pickupMethod === "delivery"
+                                ? this.selectedAddressId
+                                : null,
+                        pickup_date: this.pickupDate,
+                        return_date: this.returnDate,
+                        pickup_time: this.pickupTime,
+                        items: this.items.map((item) => ({
+                            id: item.id,
+                            qty: Number(item.qty),
+                        })),
+                    }),
                 });
                 const data = await response.json();
-                if (sequence !== this.shippingSequence || key !== this.shippingInputKey) return;
-                if (!response.ok || !data.success) throw new Error(data.message || "Ongkir belum dapat dihitung.");
+                if (
+                    sequence !== this.shippingSequence ||
+                    key !== this.shippingInputKey
+                )
+                    return;
+                if (!response.ok || !data.success)
+                    throw new Error(
+                        data.message || "Ongkir belum dapat dihitung.",
+                    );
                 this.applyShipping(data, key);
             } catch (error) {
-                if (error.name === "AbortError" || sequence !== this.shippingSequence || key !== this.shippingInputKey) return;
+                if (
+                    error.name === "AbortError" ||
+                    sequence !== this.shippingSequence ||
+                    key !== this.shippingInputKey
+                )
+                    return;
                 this.shippingState = "error";
-                this.shippingMessage = error.message || "Koneksi bermasalah. Silakan coba lagi.";
+                this.shippingMessage =
+                    error.message || "Koneksi bermasalah. Silakan coba lagi.";
             }
         },
         applyShipping(data, key) {
-            const ids = (items) => items.map((item) => Number(item.id)).sort((a, b) => a - b).join(",");
+            const ids = (items) =>
+                items
+                    .map((item) => Number(item.id))
+                    .sort((a, b) => a - b)
+                    .join(",");
             if (ids(data.items || []) !== ids(this.items)) {
                 this.shippingState = "error";
                 this.shippingReloadRequired = true;
-                this.shippingMessage = "Isi keranjang berubah. Muat ulang checkout untuk memeriksa produk terbaru.";
+                this.shippingMessage =
+                    "Isi keranjang berubah. Muat ulang checkout untuk memeriksa produk terbaru.";
                 return;
             }
             this.shipping = data;
@@ -361,7 +509,9 @@ document.addEventListener("alpine:init", () => {
             this.shippingState = "ready";
             this.shippingMessage = "";
             for (const priced of data.items || []) {
-                const item = this.items.find((entry) => Number(entry.id) === Number(priced.id));
+                const item = this.items.find(
+                    (entry) => Number(entry.id) === Number(priced.id),
+                );
                 if (item) item.price_per_day = priced.price_per_day;
             }
         },
@@ -502,12 +652,19 @@ document.addEventListener("alpine:init", () => {
             if (q > it.max_qty) q = it.max_qty;
             it.qty = q;
             this.touched = true;
+            this.fetchAvailability(this.calYear, this.calMonth);
         },
         onPickupChange() {
             if (!this.pickupDate) return;
 
-            if (!this.returnDate || this.returnDate <= this.pickupDate) {
-                this.returnDate = this.minReturnDate;
+            if (
+                !this.returnDate ||
+                this.returnDate <= this.pickupDate ||
+                this.hasBookedDateInRange(this.pickupDate, this.returnDate)
+            ) {
+                this.returnDate = this.findFirstValidReturnDate(
+                    this.pickupDate,
+                );
             }
 
             this.touched = true;
@@ -519,9 +676,12 @@ document.addEventListener("alpine:init", () => {
             if (
                 this.pickupDate &&
                 this.returnDate &&
-                this.returnDate <= this.pickupDate
+                (this.returnDate <= this.pickupDate ||
+                    this.hasBookedDateInRange(this.pickupDate, this.returnDate))
             ) {
-                this.returnDate = this.minReturnDate;
+                this.returnDate = this.findFirstValidReturnDate(
+                    this.pickupDate,
+                );
             }
         },
 
@@ -597,6 +757,11 @@ document.addEventListener("alpine:init", () => {
                     "Tanggal kembali harus setelah tanggal ambil (minimal 1 hari).";
             } else if (this.pickupDate < this.minDate) {
                 e.dates = "Tanggal ambil tidak boleh sebelum hari ini.";
+            } else if (
+                this.hasBookedDateInRange(this.pickupDate, this.returnDate)
+            ) {
+                e.dates =
+                    "Sebagian tanggal pada periode ini sudah penuh dipesan.";
             }
             if (
                 this.items.some((it) => !(it.qty >= 1 && it.qty <= it.max_qty))
@@ -655,7 +820,10 @@ document.addEventListener("alpine:init", () => {
                 fd.append("return_date", this.returnDate);
                 fd.append("pickup_time", this.pickupTime);
                 fd.append("expected_delivery_fee", this.shipping.delivery_fee);
-                fd.append("expected_shipping_context", this.shipping.shipping_context);
+                fd.append(
+                    "expected_shipping_context",
+                    this.shipping.shipping_context,
+                );
                 this.items.forEach((it, i) => {
                     fd.append("items[" + i + "][id]", it.id);
                     fd.append("items[" + i + "][qty]", it.qty);

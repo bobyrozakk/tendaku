@@ -165,8 +165,29 @@ class CheckoutSummaryBuilder
             100
         );
 
+        $bookedDates = [];
+        $availabilityService = app(AvailabilityService::class);
+        $calFrom = Carbon::today();
+        $calTo = Carbon::today()->addDays(120);
+
+        foreach ($itemsData as $itemEntry) {
+            try {
+                $dates = $availabilityService->getBookedDates(
+                    (int) $itemEntry['id'],
+                    $calFrom,
+                    $calTo,
+                    (int) ($itemEntry['qty'] ?? 1)
+                );
+                foreach ($dates as $d) {
+                    $bookedDates[$d] = true;
+                }
+            } catch (\Throwable) {
+            }
+        }
+
         return [
             'booking_code' => 'TDK-PENDING',
+            'booked_dates' => array_keys($bookedDates),
             'status' => 'pending',
             'status_label' => 'Menunggu Pembayaran',
             'created_at' => now()->format('d F Y, H:i T'),
