@@ -71,7 +71,7 @@ class BookingController extends Controller
     /**
      * Halaman status booking & rental.
      */
-    public function status(Request $request, string $code): View
+    public function status(Request $request, string $code, MidtransService $midtrans): View
     {
         $rental = $this->findAuthorizedRental($request, $code);
 
@@ -87,6 +87,29 @@ class BookingController extends Controller
         ]);
 
         $latestPayment = $rental->payments->firstWhere('channel', self::MIDTRANS_CHANNEL);
+
+        // Jika payment masih pending, siapkan detail pembayaran (QRIS atau Virtual Account BCA default)
+        if ($latestPayment && $latestPayment->status === 'pending') {
+            try {
+                if ($latestPayment->isQris()) {
+                    if (empty($latestPayment->qris_details)) {
+                        $midtrans->chargeQris($latestPayment);
+                        $latestPayment->refresh();
+                        $rental->refresh();
+                    }
+                } else {
+                    if (empty($latestPayment->va_details)) {
+                        $bank = str_replace('_va', '', strtolower($latestPayment->payment_channel ?? 'bca'));
+                        $bank = array_key_exists($bank, config('payment.va_banks', [])) ? $bank : 'bca';
+                        $midtrans->chargeBankTransfer($latestPayment, $bank);
+                        $latestPayment->refresh();
+                        $rental->refresh();
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Abaikan jika ada kegagalan koneksi sesaat
+            }
+        }
 
         return view('customer.booking.status', compact('rental', 'latestPayment'));
     }
@@ -141,7 +164,7 @@ class BookingController extends Controller
     }
 
     /**
-     * Ambil (atau buat) Snap token untuk rental yang masih menunggu pembayaran.
+     * Ambil rincian pembayaran (QRIS atau nomor Virtual Account) untuk rental yang masih menunggu pembayaran.
      */
     public function pay(Request $request, string $code, MidtransService $midtrans): JsonResponse
     {
@@ -159,13 +182,40 @@ class BookingController extends Controller
             ->latest('id')
             ->firstOrFail();
 
-        // Buka Snap agar customer dapat memilih QRIS atau Virtual Account.
-        $snapToken = $payment->snap_token ?: $midtrans->createTransaction($payment);
+        if ($payment->isQris()) {
+            $qrisInfo = $payment->qris_details;
+            if (empty($qrisInfo)) {
+                $qrisInfo = $midtrans->chargeQris($payment);
+                $payment->refresh();
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'order_id' => $payment->order_id,
+                'is_qris' => true,
+                'qr_code_url' => $qrisInfo['qr_code_url'] ?? null,
+                'qr_string' => $qrisInfo['qr_string'] ?? null,
+                'amount' => (int) $payment->amount,
+            ]);
+        }
+
+        $selectedBank = $request->input('bank');
+        if (! $selectedBank) {
+            $selectedBank = str_replace('_va', '', strtolower($payment->payment_channel ?? 'bca'));
+        }
+        $selectedBank = array_key_exists($selectedBank, config('payment.va_banks', [])) ? $selectedBank : 'bca';
+
+        $vaInfo = $payment->va_details;
+        if (empty($vaInfo)) {
+            $vaInfo = $midtrans->chargeBankTransfer($payment, $selectedBank);
+            $payment->refresh();
+        }
 
         return response()->json([
             'status' => 'success',
             'order_id' => $payment->order_id,
-            'snap_token' => $snapToken,
+            'is_qris' => false,
+            'va_info' => $vaInfo,
             'amount' => (int) $payment->amount,
         ]);
     }

@@ -98,6 +98,54 @@ class Payment extends Model
     ];
 
     /**
+     * Cek apakah pembayaran menggunakan metode QRIS.
+     */
+    public function isQris(): bool
+    {
+        return strtolower((string) $this->payment_channel) === 'qris'
+            || strtolower((string) $this->method) === 'qris'
+            || ! empty($this->qris_details);
+    }
+
+    /**
+     * Ekstrak informasi QRIS dari notifikasi / respons Midtrans.
+     *
+     * @return array{
+     *     qr_code_url: ?string,
+     *     qr_string: ?string
+     * }|null
+     */
+    public function getQrisDetailsAttribute(): ?array
+    {
+        $raw = $this->raw_notification;
+
+        if (empty($raw) || ! is_array($raw)) {
+            return null;
+        }
+
+        $qrCodeUrl = null;
+        if (! empty($raw['actions']) && is_array($raw['actions'])) {
+            foreach ($raw['actions'] as $action) {
+                if (($action['name'] ?? '') === 'generate-qr-code') {
+                    $qrCodeUrl = $action['url'] ?? null;
+                    break;
+                }
+            }
+        }
+
+        $qrString = $raw['qr_string'] ?? null;
+
+        if (! $qrCodeUrl && ! $qrString) {
+            return null;
+        }
+
+        return [
+            'qr_code_url' => $qrCodeUrl,
+            'qr_string' => $qrString,
+        ];
+    }
+
+    /**
      * Ekstrak informasi Virtual Account dari notifikasi Midtrans.
      *
      * @return array{
@@ -109,6 +157,10 @@ class Payment extends Model
      */
     public function getVaDetailsAttribute(): ?array
     {
+        if ($this->isQris()) {
+            return null;
+        }
+
         $raw = $this->raw_notification;
 
         if (empty($raw) || ! is_array($raw)) {

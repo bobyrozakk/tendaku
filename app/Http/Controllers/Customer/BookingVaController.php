@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Rental;
+use App\Services\Booking\RentalAccessGuard;
 use App\Services\Payment\MidtransService;
 use App\Services\Payment\PaymentService;
-use App\Services\Booking\RentalAccessGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,8 +27,8 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  */
 class BookingVaController extends Controller
 {
-    /** Harus sama dengan $vaBanks di status.blade.php */
-    public const BANKS = ['bca', 'bni', 'bri', 'permata', 'cimb'];
+    /** Harus sama dengan $vaBanks di status.blade.php plus qris */
+    public const BANKS = ['bca', 'bni', 'bri', 'permata', 'cimb', 'qris'];
 
     public function __construct(private readonly RentalAccessGuard $accessGuard) {}
 
@@ -45,7 +45,7 @@ class BookingVaController extends Controller
         $this->accessGuard->authorize($request, $rental);
 
         try {
-            [$payment, $old, $va] = DB::transaction(function () use ($rental, $bank, $paymentService, $midtrans) {
+            [$payment, $old, $details] = DB::transaction(function () use ($rental, $bank, $paymentService, $midtrans) {
                 // Kunci rental supaya dua klik cepat tidak membuat dua tagihan
                 $locked = Rental::query()->whereKey($rental->id)->lockForUpdate()->firstOrFail();
 
@@ -64,10 +64,17 @@ class BookingVaController extends Controller
 
                 abort_if($old === null, 404, 'Tagihan aktif tidak ditemukan.');
 
-                // Bank yang sama dengan nomor yang sudah ada: kembalikan saja, tanpa charge baru
-                $existing = $old->va_details;
-                if ($existing && ! empty($existing['va_number']) && strtolower($existing['bank'] ?? '') === $bank) {
-                    return [$old, null, $existing];
+                if ($bank === 'qris') {
+                    $existing = $old->qris_details;
+                    if ($existing && ! empty($existing['qr_code_url'])) {
+                        return [$old, null, $existing];
+                    }
+                } else {
+                    // Bank yang sama dengan nomor yang sudah ada: kembalikan saja, tanpa charge baru
+                    $existing = $old->va_details;
+                    if ($existing && ! empty($existing['va_number']) && strtolower($existing['bank'] ?? '') === $bank) {
+                        return [$old, null, $existing];
+                    }
                 }
 
                 // order_id baru yang pasti unik
@@ -78,24 +85,29 @@ class BookingVaController extends Controller
                     $attempt++;
                 }
 
-                $new = $paymentService->createOnlinePayment($locked, $old->payment_type, $attempt);
+                $channel = $bank === 'qris' ? 'qris' : $bank.'_va';
+                $new = $paymentService->createOnlinePayment($locked, $old->payment_type, $attempt, $channel);
 
-                // Charge ke Midtrans. Kalau gagal, exception membatalkan transaksi DB,
-                // payment baru ikut hilang dan tagihan lama tetap utuh.
-                $va = $midtrans->chargeBankTransfer($new, $bank);
-
-                if (empty($va['va_number'])) {
-                    throw new \RuntimeException('Midtrans tidak mengembalikan nomor VA.');
+                if ($bank === 'qris') {
+                    $result = $midtrans->chargeQris($new);
+                    if (empty($result['qr_code_url']) && empty($result['qr_string'])) {
+                        throw new \RuntimeException('Midtrans tidak mengembalikan data QRIS.');
+                    }
+                } else {
+                    $result = $midtrans->chargeBankTransfer($new, $bank);
+                    if (empty($result['va_number'])) {
+                        throw new \RuntimeException('Midtrans tidak mengembalikan nomor VA.');
+                    }
                 }
 
-                return [$new, $old, $va];
+                return [$new, $old, $result];
             });
         } catch (HttpException $e) {
             throw $e; // abort() di atas: teruskan apa adanya (422/404)
         } catch (\Throwable $e) {
-            Log::error('Gagal ganti bank VA: '.$e->getMessage(), ['code' => $code, 'bank' => $bank]);
+            Log::error('Gagal ganti metode/bank pembayaran: '.$e->getMessage(), ['code' => $code, 'bank' => $bank]);
 
-            return response()->json(['message' => 'Gagal membuat nomor VA di Midtrans. Coba lagi sebentar.'], 502);
+            return response()->json(['message' => 'Gagal membuat tagihan di Midtrans. Coba lagi sebentar.'], 502);
         }
 
         // Tagihan lama dibatalkan SETELAH yang baru berhasil dibuat
@@ -103,10 +115,21 @@ class BookingVaController extends Controller
             $this->cancelOld($old, $paymentService);
         }
 
+        if ($bank === 'qris') {
+            return response()->json([
+                'bank' => 'qris',
+                'is_qris' => true,
+                'qr_code_url' => $details['qr_code_url'] ?? null,
+                'qr_string' => $details['qr_string'] ?? null,
+                'order_id' => $payment->order_id,
+            ]);
+        }
+
         return response()->json([
-            'bank' => strtolower($va['bank'] ?? $bank),
-            'va_number' => $va['va_number'],
-            'biller_code' => $va['biller_code'] ?? null,
+            'bank' => strtolower($details['bank'] ?? $bank),
+            'is_qris' => false,
+            'va_number' => $details['va_number'],
+            'biller_code' => $details['biller_code'] ?? null,
             'order_id' => $payment->order_id,
         ]);
     }

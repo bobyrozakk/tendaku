@@ -139,8 +139,7 @@ class BookingReceiptService
             'balance' => $balance,
 
             'items' => $items,
-            'currency' => fn ($value) =>
-                'Rp ' . number_format((float) $value, 0, ',', '.'),
+            'currency' => fn ($value) => 'Rp '.number_format((float) $value, 0, ',', '.'),
         ];
     }
 }

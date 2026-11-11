@@ -1,4 +1,5 @@
 <?php
+
 // kata2 taro disini
 return [
 
@@ -6,11 +7,11 @@ return [
     'logo' => 'images/Logo.svg',
 
     'brand' => [
-        'name'        => 'Tendaku.id',
-        'slogan'      => 'Teman perjalanan untuk setiap petualanganmu.',
+        'name' => 'Tendaku.id',
+        'slogan' => 'Teman perjalanan untuk setiap petualanganmu.',
         'description' => 'Sewa perlengkapan camping dengan mudah, praktis, dan terjangkau. '
-                       . 'Kami siap menemani perjalanan outdoor-mu dengan perlengkapan berkualitas '
-                       . 'agar pengalaman berkemah semakin nyaman dan menyenangkan.',
+                       .'Kami siap menemani perjalanan outdoor-mu dengan perlengkapan berkualitas '
+                       .'agar pengalaman berkemah semakin nyaman dan menyenangkan.',
     ],
 
     'social' => [

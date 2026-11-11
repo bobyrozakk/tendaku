@@ -271,7 +271,7 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('Tendaku Vendor Store');
     }
 
-    public function test_pay_returns_snap_token_for_pending_rental(): void
+    public function test_pay_returns_virtual_account_info_for_pending_rental(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-SNAP01', 'pending');
         $rental->payments()->create([
@@ -284,10 +284,15 @@ class BookingStatusAndHistoryTest extends TestCase
         ]);
 
         $this->mock(MidtransService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('createTransaction')
+            $mock->shouldReceive('chargeBankTransfer')
                 ->once()
-                ->with(\Mockery::type(Payment::class))
-                ->andReturn('sandbox-snap-token');
+                ->with(\Mockery::type(Payment::class), 'bca')
+                ->andReturn([
+                    'bank' => 'bca',
+                    'va_number' => '1234567890',
+                    'biller_code' => null,
+                    'qr_code_url' => null,
+                ]);
         });
 
         $response = $this->actingAs($this->customer1)
@@ -298,11 +303,52 @@ class BookingStatusAndHistoryTest extends TestCase
                 'status' => 'success',
                 'order_id' => 'TDK-2026-SNAP01-FULL-1',
                 'amount' => 150000,
-                'snap_token' => 'sandbox-snap-token',
+                'is_qris' => false,
+                'va_info' => [
+                    'bank' => 'bca',
+                    'va_number' => '1234567890',
+                ],
             ]);
     }
 
-    public function test_status_page_does_not_auto_generate_va_for_qris_payment(): void
+    public function test_pay_returns_qris_info_for_pending_qris_rental(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-QRIS02', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'payment_channel' => 'qris',
+            'order_id' => 'TDK-2026-QRIS02-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('chargeQris')
+                ->once()
+                ->with(\Mockery::type(Payment::class))
+                ->andReturn([
+                    'qr_code_url' => 'https://api.sandbox.midtrans.com/v2/qris/sample/qr-code',
+                    'qr_string' => '00020101021226...',
+                ]);
+        });
+
+        $response = $this->actingAs($this->customer1)
+            ->postJson(route('booking.pay', $rental->booking_code));
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'order_id' => 'TDK-2026-QRIS02-FULL-1',
+                'amount' => 150000,
+                'is_qris' => true,
+                'qr_code_url' => 'https://api.sandbox.midtrans.com/v2/qris/sample/qr-code',
+                'qr_string' => '00020101021226...',
+            ]);
+    }
+
+    public function test_status_page_auto_charges_qris_for_qris_payment(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-QRIS01', 'pending');
         $rental->payments()->create([
@@ -317,12 +363,50 @@ class BookingStatusAndHistoryTest extends TestCase
 
         $this->mock(MidtransService::class, function (MockInterface $mock): void {
             $mock->shouldNotReceive('chargeBankTransfer');
+            $mock->shouldReceive('chargeQris')
+                ->once()
+                ->with(\Mockery::type(Payment::class))
+                ->andReturn([
+                    'qr_code_url' => 'https://api.sandbox.midtrans.com/v2/qris/sample/qr-code',
+                    'qr_string' => '00020101021226...',
+                ]);
         });
 
         $this->actingAs($this->customer1)
             ->get(route('booking.status', $rental->booking_code))
             ->assertOk()
-            ->assertSee('Bayar sekarang');
+            ->assertSee('Pembayaran QRIS')
+            ->assertSee('Tampilkan Kode QR (QRIS)');
+    }
+
+    public function test_status_page_auto_generates_va_for_pending_rental(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-VA01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-VA01-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('chargeBankTransfer')
+                ->once()
+                ->with(\Mockery::type(Payment::class), 'bca')
+                ->andReturn([
+                    'bank' => 'bca',
+                    'va_number' => '1234567890',
+                    'biller_code' => null,
+                    'qr_code_url' => null,
+                ]);
+        });
+
+        $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code))
+            ->assertOk()
+            ->assertSee('Nomor virtual account');
     }
 
     public function test_sync_payment_status_endpoint_returns_payment_status(): void
@@ -421,6 +505,73 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame('confirmed', $rental->fresh()->status);
+    }
+
+    public function test_customer_can_switch_virtual_account_bank(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-SWVA01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK2026101010001-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('chargeBankTransfer')
+                ->once()
+                ->with(\Mockery::type(Payment::class), 'bni')
+                ->andReturn([
+                    'bank' => 'bni',
+                    'va_number' => '9876543210',
+                    'biller_code' => null,
+                ]);
+        });
+
+        $response = $this->actingAs($this->customer1)
+            ->postJson(route('booking.va', $rental->booking_code), ['bank' => 'bni']);
+
+        $response->assertOk()
+            ->assertJson([
+                'bank' => 'bni',
+                'is_qris' => false,
+                'va_number' => '9876543210',
+            ]);
+    }
+
+    public function test_customer_can_switch_payment_to_qris(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-SWQR01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK2026101010002-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('chargeQris')
+                ->once()
+                ->with(\Mockery::type(Payment::class))
+                ->andReturn([
+                    'qr_code_url' => 'https://api.sandbox.midtrans.com/v2/qris/sample-qris/qr-code',
+                    'qr_string' => '00020101021226...',
+                ]);
+        });
+
+        $response = $this->actingAs($this->customer1)
+            ->postJson(route('booking.va', $rental->booking_code), ['bank' => 'qris']);
+
+        $response->assertOk()
+            ->assertJson([
+                'bank' => 'qris',
+                'is_qris' => true,
+                'qr_code_url' => 'https://api.sandbox.midtrans.com/v2/qris/sample-qris/qr-code',
+            ]);
     }
 
     private function createRental(int $userId, string $bookingCode, string $status): Rental

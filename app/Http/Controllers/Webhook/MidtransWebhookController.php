@@ -60,8 +60,7 @@ class MidtransWebhookController extends Controller
                 'Midtrans notification amount mismatch.',
                 [
                     'order_id' => $notification['order_id'] ?? null,
-                    'notification_amount' =>
-                        $notification['gross_amount'] ?? null,
+                    'notification_amount' => $notification['gross_amount'] ?? null,
                     'message' => $exception->getMessage(),
                 ]
             );

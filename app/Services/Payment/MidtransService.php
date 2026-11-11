@@ -175,6 +175,64 @@ class MidtransService
         return $payment->fresh()->va_details;
     }
 
+    /**
+     * Charge transaksi menggunakan QRIS via Midtrans Core API.
+     *
+     * @return array{qr_code_url: ?string, qr_string: ?string}|null
+     */
+    public function chargeQris(Payment $payment): ?array
+    {
+        if ($payment->raw_notification && ! empty($payment->qris_details)) {
+            return $payment->qris_details;
+        }
+
+        $rental = $this->rentalFor($payment);
+
+        $params = [
+            'payment_type' => 'qris',
+            'transaction_details' => [
+                'order_id' => $payment->order_id,
+                'gross_amount' => (int) $payment->amount,
+            ],
+            'qris' => [
+                'acquirer' => 'gopay',
+            ],
+            'customer_details' => $this->buildCustomerDetails($rental),
+            'item_details' => $this->buildItemDetails($payment, $rental),
+        ];
+
+        if ($payment->expires_at && $payment->expires_at->isFuture()) {
+            $params['custom_expiry'] = [
+                'expiry_duration' => max(
+                    1,
+                    (int) floor(now()->diffInMinutes($payment->expires_at))
+                ),
+                'unit' => 'minute',
+            ];
+        }
+
+        try {
+            $raw = json_decode(json_encode(CoreApi::charge($params)), true);
+        } catch (\Throwable $e) {
+            Log::error('Midtrans CoreApi Charge QRIS error: '.$e->getMessage(), [
+                'order_id' => $payment->order_id,
+            ]);
+
+            throw $e;
+        }
+
+        $payment->update([
+            'midtrans_transaction_id' => $raw['transaction_id']
+                ?? $payment->midtrans_transaction_id,
+            'midtrans_status' => $raw['transaction_status'] ?? 'pending',
+            'method' => 'qris',
+            'payment_channel' => 'qris',
+            'raw_notification' => $raw,
+        ]);
+
+        return $payment->fresh()->qris_details;
+    }
+
     // ── Status: polling & webhook ─────────────────────────────────────────
 
     public function syncStatus(Payment $payment): Payment

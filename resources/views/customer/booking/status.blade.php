@@ -110,6 +110,8 @@
             ?? $latestPayment
             ?? $rental->payments->where('channel', 'midtrans')->sortByDesc('id')->first();
         $paidPayment   = $rental->payments->where('status', 'paid')->sortByDesc('paid_at')->first();
+        $isQris        = (bool) ($onlinePayment?->isQris());
+        $qrisInfo      = $onlinePayment?->qris_details;
         $vaInfo        = $onlinePayment?->va_details;
 
         $vaBanks = [
@@ -222,6 +224,9 @@
             'vaUrl'         => route('booking.va', $rental->booking_code),
             'vaBanks'       => $vaBanks,
             'orderId'       => $onlinePayment?->order_id,
+            'isQris'        => (bool) $isQris,
+            'qrCodeUrl'     => $qrisInfo['qr_code_url'] ?? '',
+            'qrString'      => $qrisInfo['qr_string'] ?? '',
             'va'            => $vaInfo ? [
                 'bank'   => $vaBankKey,
                 'number' => $vaInfo['va_number'] ?? '',

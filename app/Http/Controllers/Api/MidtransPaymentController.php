@@ -66,8 +66,7 @@ class MidtransPaymentController extends Controller
         Rental $rental,
         PaymentService $paymentService,
         MidtransService $midtrans,
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $this->authorizeCustomerOwnership($request, $rental);
 
         // Rental harus sudah dalam status returned atau completed agar ada denda
