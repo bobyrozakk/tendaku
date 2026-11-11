@@ -1,3 +1,5 @@
+import { checkoutAddressState } from "../../components/checkout-address.js";
+
 document.addEventListener("alpine:init", () => {
     Alpine.data("checkoutPage", (cfg) => ({
         ...cfg,
@@ -25,29 +27,8 @@ document.addEventListener("alpine:init", () => {
         shippingNeedsApproval: false,
         shippingReloadRequired: false,
 
-        addresses: cfg.addresses || [],
-        selectedAddressId: cfg.selectedAddressId || null,
-        storeAddressUrl: cfg.storeAddressUrl || "",
-        addressPickerId: "checkout-add-address-location-picker",
+        ...checkoutAddressState(cfg, { province: "Jawa Barat", city: "Bandung", is_default: true }),
         showAddressPicker: false,
-        showAddAddressModal: false,
-        newAddressSubmitting: false,
-        newAddressErrors: {},
-        newAddressForm: {
-            label: "Rumah",
-            recipient_name: cfg.name || "",
-            phone_number: "",
-            full_address: "",
-            province: "Jawa Barat",
-            city: "Bandung",
-            district: "",
-            village: "",
-            postal_code: "",
-            notes: "",
-            latitude: null,
-            longitude: null,
-            is_default: true,
-        },
 
         // Serah terima setelah booking dibuat: form -> handoff
         phase: "form",
@@ -308,11 +289,11 @@ document.addEventListener("alpine:init", () => {
                 this.items.map((item) => [item.id, Number(item.qty)])]);
         },
         get shippingReady() {
-            return this.shippingState === "ready" &&
+            return !(this.pickupMethod === "delivery" && this.needsAddressLocation()) && this.shippingState === "ready" &&
                 this.shippingResultKey === this.shippingInputKey;
         },
         get canSubmitBooking() {
-            return !this.isProcessing && !this.expired && this.shippingReady && !this.shippingNeedsApproval;
+            return !this.isProcessing && !this.newAddressSubmitting && !this.showAddAddressModal && !this.expired && this.shippingReady && !this.shippingNeedsApproval;
         },
         get totalWeightKg() {
             return this.shippingReady ? this.shipping.total_weight_kg : null;
@@ -334,6 +315,10 @@ document.addEventListener("alpine:init", () => {
                 : "Lengkapi jadwal untuk menghitung rincian pesanan.";
             if (!this.pickupDate || !this.returnDate ||
                 (this.pickupMethod === "delivery" && !this.selectedAddressId)) return;
+            if (this.pickupMethod === "delivery" && this.needsAddressLocation()) {
+                this.shippingMessage = "Lengkapi titik lokasi alamat pengantaran terlebih dahulu.";
+                return;
+            }
             this.shippingState = "loading";
             this.shippingMessage = "Menghitung rincian pengiriman…";
             const sequence = this.shippingSequence;
@@ -398,10 +383,7 @@ document.addEventListener("alpine:init", () => {
         },
 
         get selectedAddress() {
-            return (
-                this.addresses.find((a) => a.id === this.selectedAddressId) ||
-                null
-            );
+            return this.getSelectedAddress();
         },
 
         selectAddress(id) {
@@ -412,110 +394,6 @@ document.addEventListener("alpine:init", () => {
             }
             this.showAddressPicker = false;
             if (this.errors.address) delete this.errors.address;
-        },
-
-        syncNewAddressCoordinates(detail) {
-            if (
-                !detail ||
-                (detail.pickerId && detail.pickerId !== this.addressPickerId)
-            ) {
-                return;
-            }
-            this.newAddressForm.latitude = detail.latitude ?? null;
-            this.newAddressForm.longitude = detail.longitude ?? null;
-        },
-
-        openAddAddressModal() {
-            this.newAddressErrors = {};
-            if (!this.newAddressForm.recipient_name && this.name) {
-                this.newAddressForm.recipient_name = this.name;
-            }
-            if (!this.newAddressForm.phone_number && this.phone) {
-                this.newAddressForm.phone_number = this.phone;
-            }
-            if (
-                this.newAddressForm.latitude === null &&
-                this.newAddressForm.longitude === null &&
-                typeof window.resetLocationPicker === "function"
-            ) {
-                window.resetLocationPicker(this.addressPickerId);
-            }
-            this.showAddAddressModal = true;
-            this.$nextTick(() => {
-                if (typeof window.refreshLocationPicker === "function") {
-                    window.refreshLocationPicker(this.addressPickerId);
-                }
-                if (typeof window.renderLucideIcons === "function") {
-                    window.renderLucideIcons();
-                }
-            });
-        },
-
-        closeAddAddressModal() {
-            this.showAddAddressModal = false;
-            this.newAddressErrors = {};
-        },
-
-        async saveNewAddress() {
-            if (this.newAddressSubmitting) return;
-            this.newAddressSubmitting = true;
-            this.newAddressErrors = {};
-            try {
-                const resp = await fetch(this.storeAddressUrl, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Accept: "application/json",
-                        "X-CSRF-TOKEN": this.csrf,
-                    },
-                    body: JSON.stringify(this.newAddressForm),
-                });
-
-                const data = await resp.json();
-
-                if (!resp.ok) {
-                    this.newAddressErrors = data.errors || {
-                        general: data.message || "Gagal menyimpan alamat.",
-                    };
-                    this.newAddressSubmitting = false;
-                    return;
-                }
-
-                const created = data.data;
-                if (created.is_default) {
-                    this.addresses.forEach((a) => (a.is_default = false));
-                }
-                this.addresses.unshift(created);
-                this.selectAddress(created.id);
-                this.closeAddAddressModal();
-
-                // Reset form dan titik lokasi pada peta
-                this.newAddressForm = {
-                    label: "Rumah",
-                    recipient_name: this.name || "",
-                    phone_number: "",
-                    full_address: "",
-                    province: "Jawa Barat",
-                    city: "Bandung",
-                    district: "",
-                    village: "",
-                    postal_code: "",
-                    notes: "",
-                    latitude: null,
-                    longitude: null,
-                    is_default: false,
-                };
-
-                if (typeof window.resetLocationPicker === "function") {
-                    window.resetLocationPicker(this.addressPickerId);
-                }
-            } catch (err) {
-                this.newAddressErrors = {
-                    general: "Terjadi gangguan jaringan saat menyimpan alamat.",
-                };
-            } finally {
-                this.newAddressSubmitting = false;
-            }
         },
 
         get rentalDays() {

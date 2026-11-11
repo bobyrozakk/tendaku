@@ -2,7 +2,7 @@
             $inputBase ??= 'w-full rounded-xl border border-wheat-300 bg-white px-3.5 py-2.5 text-sm text-darkbrown-900 placeholder:text-darkbrown-400 focus:border-avocado-600 focus:ring-2 focus:ring-avocado-500/30 transition';
         @endphp
 
-        <!-- Modal Tambah Alamat Baru (Tanpa Meninggalkan Checkout) -->
+        <!-- Modal Tambah / Edit Alamat (Tanpa Meninggalkan Booking) -->
         <div x-show="showAddAddressModal" x-cloak
              @keydown.escape.window="if (showAddAddressModal) closeAddAddressModal()"
              class="fixed inset-0 z-50 overflow-y-auto"
@@ -35,7 +35,8 @@
                                 <i data-lucide="map-pin" class="w-5 h-5"></i>
                             </div>
                             <div>
-                                <h3 id="modal-title" class="text-base font-bold text-darkbrown-900 font-heading">Tambah Alamat Pengantaran</h3>
+                                <h3 id="modal-title" class="text-base font-bold text-darkbrown-900 font-heading"
+                                    x-text="editingAddressId !== null ? 'Lengkapi Titik Lokasi' : 'Tambah Alamat Pengantaran'">Tambah Alamat Pengantaran</h3>
                                 <p class="text-xs text-darkbrown-500">Alamat otomatis tersimpan ke akun Anda untuk sewa berikutnya.</p>
                             </div>
                         </div>
@@ -46,7 +47,7 @@
 
                     <div x-show="newAddressErrors.general" x-cloak class="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700" x-text="newAddressErrors.general"></div>
 
-                    <div class="mt-4 space-y-4" @keydown.enter="if ($event.target.tagName === 'INPUT' && $event.target.type !== 'checkbox') { $event.preventDefault(); saveNewAddress(); }">
+                    <div class="mt-4 space-y-4" :inert="newAddressSubmitting" @keydown.enter="if ($event.target.tagName === 'INPUT' && $event.target.type !== 'checkbox') { $event.preventDefault(); saveAddress(); }">
                         <!-- Label Alamat -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1.5">Label Alamat *</label>
@@ -156,7 +157,7 @@
                                     class="px-4 py-2 text-xs font-bold text-darkbrown-700 bg-white border border-wheat-300 hover:bg-wheat-100 rounded-xl transition">
                                 Batal
                             </button>
-                            <button type="button" @click="saveNewAddress()" :disabled="newAddressSubmitting"
+                            <button type="button" @click="saveAddress()" :disabled="newAddressSubmitting"
                                     class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 rounded-xl shadow-sm disabled:opacity-50 transition">
                                 <span x-show="!newAddressSubmitting">Simpan & Gunakan</span>
                                 <span x-show="newAddressSubmitting">Menyimpan...</span>

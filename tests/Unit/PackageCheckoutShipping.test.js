@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../../resources/js/pages/customer/package-checkout.js', import.meta.url), 'utf8');
+const source = ['components/location-picker.js', 'components/checkout-address.js', 'pages/customer/package-checkout.js']
+    .map(path => fs.readFileSync(new URL('../../resources/js/' + path, import.meta.url), 'utf8')
+        .replace(/^import .+;\r?\n/gm, '').replace(/^export /gm, '')).join('\n');
 function page(fetch) {
     let factory;
     let timerId = 0;
@@ -20,8 +22,9 @@ function page(fetch) {
     });
     const component = factory({ packageId: 1, packagePrice: 300000, method: 'delivery',
         pickupDate: '2090-01-01', pickupTime: '09:00', returnDate: '2090-01-03', returnTime: '09:00',
-        durationDays: 2, subtotal: 600000, totalHours: 48, addresses: [{ id: 1 }], selectedAddressId: 1,
-        shippingPreviewUrl: '/preview', storeAddressUrl: '/addresses', csrf: 'token', packageItems: [] });
+        durationDays: 2, subtotal: 600000, totalHours: 48,
+        addresses: [{ id: 1, latitude: -7.9, longitude: 112.6 }, { id: 2, latitude: -7.8, longitude: 112.7 }], selectedAddressId: 1,
+        shippingPreviewUrl: '/preview', storeAddressUrl: '/addresses', updateAddressUrl: '/addresses/__ADDRESS__', csrf: 'token', packageItems: [] });
     component.$nextTick = () => {};
     component.$watch = (_, callback) => { component.inputChanged = callback; };
     return { component, redirects, run: async () => { const callbacks = [...timers.values()]; timers.clear(); for (const callback of callbacks) await callback(); } };
@@ -81,14 +84,14 @@ test('older address responses are ignored even when abort is not honored by the 
 test('new address saving selects it and the next preview uses its id', async () => {
     let payload;
     const { component, run } = page(async (url, options) => {
-        if (url === '/addresses') return response({ data: { id: 7, is_default: true } });
+        if (url === '/addresses') return response({ data: { ...JSON.parse(options.body), id: 7, is_default: true } });
         payload = JSON.parse(options.body);
         return response(quote());
     });
     component.init();
     component.showAddAddressModal = true;
     component.syncNewAddressCoordinates({ pickerId: component.addressPickerId, latitude: -7.8, longitude: 112.7 });
-    await component.saveNewAddress();
+    await component.saveAddress();
     assert.equal(component.selectedAddressId, 7);
     assert.equal(component.showAddAddressModal, false);
     assert.equal(component.newAddressForm.latitude, null);

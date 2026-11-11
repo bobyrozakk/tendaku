@@ -1,10 +1,10 @@
+import { checkoutAddressState } from "../../components/checkout-address.js";
+
 document.addEventListener("alpine:init", () => {
     Alpine.data("packageCheckout", (cfg) => ({
         ...cfg,
         errorMessage: "", isValid: true,
-        addressPickerId: "checkout-add-address-location-picker",
-        showAddAddressModal: false, newAddressSubmitting: false, newAddressErrors: {},
-        newAddressForm: { label: "Rumah", recipient_name: cfg.name || "", phone_number: cfg.phone || "", full_address: "", province: "Jawa Timur", city: "Malang", district: "", village: "", postal_code: "", notes: "", latitude: null, longitude: null, is_default: false },
+        ...checkoutAddressState(cfg),
         shippingState: "incomplete", shipping: null, shippingMessage: "",
         shippingSequence: 0, shippingTimer: null, shippingController: null,
         shippingResultKey: "", shippingNeedsApproval: cfg.requiresApproval || false,
@@ -21,102 +21,6 @@ document.addEventListener("alpine:init", () => {
             }
             this.$watch("shippingKey", () => this.scheduleShipping());
             this.scheduleShipping();
-        },
-
-        syncNewAddressCoordinates(detail) {
-            if (!detail || (detail.pickerId && detail.pickerId !== this.addressPickerId)) {
-                return;
-            }
-            this.newAddressForm.latitude = detail.latitude ?? null;
-            this.newAddressForm.longitude = detail.longitude ?? null;
-        },
-
-        openAddAddressModal() {
-            this.newAddressErrors = {};
-            if (
-                this.newAddressForm.latitude === null &&
-                this.newAddressForm.longitude === null &&
-                typeof window.resetLocationPicker === 'function'
-            ) {
-                window.resetLocationPicker(this.addressPickerId);
-            }
-            this.showAddAddressModal = true;
-            this.$nextTick(() => {
-                if (typeof window.refreshLocationPicker === 'function') {
-                    window.refreshLocationPicker(this.addressPickerId);
-                }
-                if (typeof window.renderLucideIcons === 'function') {
-                    window.renderLucideIcons();
-                }
-            });
-        },
-
-        closeAddAddressModal() {
-            this.showAddAddressModal = false;
-            this.newAddressErrors = {};
-        },
-
-        async saveNewAddress() {
-            if (this.newAddressSubmitting) return;
-            this.newAddressSubmitting = true;
-            this.newAddressErrors = {};
-            try {
-                const resp = await fetch(this.storeAddressUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': this.csrf
-                    },
-                    body: JSON.stringify(this.newAddressForm)
-                });
-
-                const data = await resp.json();
-
-                if (!resp.ok) {
-                    this.newAddressErrors = data.errors || { general: data.message || 'Gagal menyimpan alamat.' };
-                    this.newAddressSubmitting = false;
-                    return;
-                }
-
-                const created = data.data;
-                if (created.is_default) {
-                    this.addresses.forEach(a => a.is_default = false);
-                }
-                this.addresses.unshift(created);
-                this.selectedAddressId = created.id;
-                this.closeAddAddressModal();
-
-                this.newAddressForm = {
-                    label: 'Rumah',
-                    recipient_name: cfg.name || "",
-                    phone_number: cfg.phone || "",
-                    full_address: '',
-                    province: 'Jawa Timur',
-                    city: 'Malang',
-                    district: '',
-                    village: '',
-                    postal_code: '',
-                    notes: '',
-                    latitude: null,
-                    longitude: null,
-                    is_default: false,
-                };
-
-                if (typeof window.resetLocationPicker === 'function') {
-                    window.resetLocationPicker(this.addressPickerId);
-                }
-
-                this.$nextTick(() => {
-                    if (typeof window.renderLucideIcons === 'function') {
-                        window.renderLucideIcons();
-                    }
-                });
-            } catch (err) {
-                this.newAddressErrors = { general: 'Terjadi gangguan jaringan saat menyimpan alamat.' };
-            } finally {
-                this.newAddressSubmitting = false;
-            }
         },
 
         setDuration(days) {
@@ -208,7 +112,7 @@ document.addEventListener("alpine:init", () => {
             return JSON.stringify([this.packageId, this.method, this.selectedAddressId, this.pickupDate, this.pickupTime, this.returnDate, this.returnTime]);
         },
         get shippingReady() {
-            return this.shippingState === "ready" && this.shippingResultKey === this.shippingKey;
+            return !(this.method === "delivery" && this.needsAddressLocation()) && this.shippingState === "ready" && this.shippingResultKey === this.shippingKey;
         },
         get deliveryFee() {
             return this.method === "self_pickup" ? 0 : (this.shippingReady ? this.shipping.delivery_fee : null);
@@ -217,7 +121,7 @@ document.addEventListener("alpine:init", () => {
             return this.shippingReady ? this.shipping.grand_total : null;
         },
         get canSubmit() {
-            return this.isValid && this.shippingReady && !this.isSubmitting && !this.shippingNeedsApproval;
+            return this.isValid && this.shippingReady && !this.isSubmitting && !this.newAddressSubmitting && !this.showAddAddressModal && !this.shippingNeedsApproval;
         },
         measurement(value) {
             return Number(value).toLocaleString("id-ID", { maximumFractionDigits: 2 });
@@ -232,6 +136,10 @@ document.addEventListener("alpine:init", () => {
             this.recalculate();
             this.shippingMessage = this.isValid ? "Pilih alamat pengantaran terlebih dahulu." : (this.errorMessage || "Lengkapi jadwal sewa terlebih dahulu.");
             if (!this.isValid || (this.method === "delivery" && !this.selectedAddressId)) return;
+            if (this.method === "delivery" && this.needsAddressLocation()) {
+                this.shippingMessage = "Lengkapi titik lokasi alamat pengantaran terlebih dahulu.";
+                return;
+            }
             this.shippingState = "loading";
             this.shippingMessage = "Menghitung rincian pengiriman...";
             const key = this.shippingKey;

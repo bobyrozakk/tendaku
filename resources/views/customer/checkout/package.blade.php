@@ -56,6 +56,7 @@
             'durationDays' => $rentalDays, 'totalHours' => $hours, 'subtotal' => $subtotal,
             'csrf' => csrf_token(), 'shippingPreviewUrl' => route('checkout.shipping.preview'),
             'storeAddressUrl' => route('customer.addresses.store'), 'addresses' => $addressListJson,
+            'updateAddressUrl' => route('customer.addresses.update', ['address' => '__ADDRESS__']),
             'selectedAddressId' => $selectedAddrId, 'name' => $user?->name ?? '', 'phone' => $user?->phone ?? '',
             'nikInput' => old('nik', $user?->nik ?? ''),
             'requiresApproval' => session()->has('shipping_conflict'),
@@ -240,6 +241,8 @@
                                     <span>Tambah Alamat Baru</span>
                                 </button>
                             </div>
+                            @include('customer.booking.partials.create.address-location-notice')
+
                             <x-input-error :messages="$errors->get('customer_address_id')" class="mt-1" />
                             <x-input-error :messages="$errors->get('delivery_address')" class="mt-1" />
                         </div>

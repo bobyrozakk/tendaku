@@ -90,6 +90,7 @@
             'addresses'         => $addressList,
             'selectedAddressId' => $initialAddressId,
             'storeAddressUrl'   => route('customer.addresses.store'),
+            'updateAddressUrl'  => route('customer.addresses.update', ['address' => '__ADDRESS__']),
             'deliveryAddress'   => $savedAddress,
             'deliveryNotes'     => $booking['delivery_notes'] ?? '',
             'items'             => $items,

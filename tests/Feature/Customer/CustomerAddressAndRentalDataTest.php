@@ -19,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CustomerAddressAndRentalDataTest extends TestCase
@@ -496,8 +497,11 @@ class CustomerAddressAndRentalDataTest extends TestCase
                 ->assertSee('newAddressErrors.latitude?.[0]', false)
                 ->assertSee('newAddressErrors.longitude?.[0]', false)
                 ->assertSee('id="modal_is_default"', false)
-                ->assertSee('type="button" @click="saveNewAddress()"', false)
-                ->assertDontSee('<form @submit.prevent="saveNewAddress()"', false);
+                ->assertSee('type="button" @click="saveAddress()"', false)
+                ->assertDontSee('<form @submit.prevent="saveAddress()"', false)
+                ->assertSee('Lengkapi Titik Lokasi')
+                ->assertSee('openEditAddressModal()', false)
+                ->assertSee('__ADDRESS__', false);
 
             $dom = new \DOMDocument;
             @$dom->loadHTML($response->getContent());
@@ -750,6 +754,90 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->assertSame(50000, $shippingResult['distance_fee']);
         $this->assertSame(0, $shippingResult['weight_fee']);
         $this->assertSame(50000, $shippingResult['total_fee']);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function bookingTypes(): array
+    {
+        return ['regular' => ['regular'], 'package' => ['package']];
+    }
+
+    #[DataProvider('bookingTypes')]
+    public function test_legacy_default_address_can_be_completed_without_creating_a_new_address_and_used_for_delivery(string $type): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $address = CustomerAddress::factory()->for($customer)->create([
+            'label' => 'Rumah Lama', 'is_default' => true, 'latitude' => null, 'longitude' => null,
+        ]);
+        $this->prepareDeliveryShipping();
+        $item = $this->package->packageItems()->first()->masterItem;
+        $this->actingAs($customer)->withSession(['booking_cart' => [
+            'master_item_id' => $item->id, 'quantity' => 1,
+            'pickup_date' => '2026-10-29', 'return_date' => '2026-10-30',
+        ]]);
+        $input = [
+            'checkout_type' => $type, 'pickup_method' => 'delivery', 'customer_address_id' => $address->id,
+            'pickup_date' => '2026-10-29', 'pickup_time' => '09:00',
+            'return_date' => '2026-10-30', 'return_time' => '09:00',
+        ];
+        if ($type === 'package') {
+            $input['package_id'] = $this->package->id;
+        }
+        Http::preventStrayRequests();
+
+        $this->get($type === 'package' ? route('customer.packages.checkout', $this->package) : route('checkout.index'))
+            ->assertOk()->assertSee('Rumah Lama')->assertSee('Lengkapi Titik Lokasi')
+            ->assertSee('openEditAddressModal()', false);
+        $this->postJson(route('checkout.shipping.preview'), $input)
+            ->assertUnprocessable()->assertJsonPath('status', 'customer_coordinates_missing')
+            ->assertJsonPath('delivery_fee', null);
+        $this->postJson(route('checkout.shipping.preview'), array_replace($input, ['pickup_method' => 'self_pickup']))
+            ->assertOk()->assertJsonPath('delivery_fee', 0);
+        Http::assertNothingSent();
+
+        $this->putJson(route('customer.addresses.update', $address), $address->only([
+            'label', 'recipient_name', 'phone_number', 'province', 'city', 'district', 'village', 'postal_code', 'notes',
+        ]) + [
+            'full_address' => 'Jl. Lokasi Dilengkapi No. 8', 'latitude' => -7.95, 'longitude' => 112.65, 'is_default' => true,
+        ])->assertOk()->assertJsonPath('data.id', $address->id)
+            ->assertJsonPath('data.latitude', -7.95)->assertJsonPath('data.longitude', 112.65);
+
+        $this->assertDatabaseCount('customer_addresses', 1);
+        $this->assertDatabaseHas('customer_addresses', [
+            'id' => $address->id, 'user_id' => $customer->id, 'is_default' => true,
+            'full_address' => 'Jl. Lokasi Dilengkapi No. 8', 'latitude' => -7.95, 'longitude' => 112.65,
+        ]);
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response([
+                'routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]],
+            ]),
+        ]);
+
+        $this->postJson(route('checkout.shipping.preview'), $input)->assertOk()
+            ->assertJsonPath('customer_address_id', $address->id)
+            ->assertJsonPath('delivery_fee', 24680)
+            ->assertJsonPath('delivery_address', $address->fresh()->toDeliverySnapshot());
+        Http::assertSent(fn (ClientRequest $request): bool => $request['coordinates'] === [
+            [(float) $this->vendor->fresh()->longitude, (float) $this->vendor->fresh()->latitude], [112.65, -7.95],
+        ]);
+        $this->assertDatabaseCount('rentals', 0);
+        $this->assertDatabaseCount('payments', 0);
+    }
+
+    public function test_customer_cannot_add_coordinates_to_another_customers_legacy_address(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $address = CustomerAddress::factory()->create(['latitude' => null, 'longitude' => null]);
+
+        $this->actingAs($customer)->putJson(route('customer.addresses.update', $address), $address->only([
+            'label', 'recipient_name', 'phone_number', 'full_address', 'province', 'city', 'district',
+        ]) + ['latitude' => -7.95, 'longitude' => 112.65])->assertForbidden();
+
+        $this->assertNull($address->fresh()->latitude);
+        $this->assertNull($address->fresh()->longitude);
+        $this->assertDatabaseCount('customer_addresses', 1);
     }
 
     private function prepareDeliveryShipping(): void
