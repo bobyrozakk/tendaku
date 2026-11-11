@@ -69,9 +69,10 @@ class AvailabilityService
     public function bookedDates(
         int $masterItemId,
         string|DateTimeInterface|null $from = null,
-        string|DateTimeInterface|null $to = null
+        string|DateTimeInterface|null $to = null,
+        int $requestedQty = 1
     ): array {
-        return $this->getBookedDates($masterItemId, $from, $to);
+        return $this->getBookedDates($masterItemId, $from, $to, $requestedQty);
     }
 
     /**
@@ -166,7 +167,8 @@ class AvailabilityService
     public function getBookedDates(
         int $masterItemId,
         string|DateTimeInterface|null $from = null,
-        string|DateTimeInterface|null $to = null
+        string|DateTimeInterface|null $to = null,
+        int $requestedQty = 1
     ): array {
         $today = Carbon::today();
         $startDate = $from !== null ? Carbon::parse($from)->startOfDay() : $today;
@@ -242,8 +244,9 @@ class AvailabilityService
         }
 
         $exhaustedDates = [];
+        $needed = max(1, $requestedQty);
         foreach ($dailyBookedCounts as $dateStr => $count) {
-            if ($count >= $totalCandidateUnits) {
+            if (($totalCandidateUnits - $count) < $needed) {
                 $exhaustedDates[] = $dateStr;
             }
         }

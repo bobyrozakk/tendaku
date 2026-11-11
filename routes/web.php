@@ -9,6 +9,7 @@ use App\Http\Controllers\Customer\BookingVaController;
 use App\Http\Controllers\Customer\CampingPackageController as CustomerCampingPackageController;
 use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Customer\CatalogController;
+use App\Http\Controllers\Customer\CheckoutAvailabilityController;
 use App\Http\Controllers\Customer\CheckoutController;
 use App\Http\Controllers\Customer\PackageCheckoutController;
 use App\Http\Controllers\Customer\PaymentRetryController;
@@ -47,6 +48,10 @@ Route::prefix('katalog/booking')->group(function () {
         ->middleware('throttle:10,1')
         ->block(120, 5)
         ->name('checkout.shipping.preview');
+    Route::get('availability', CheckoutAvailabilityController::class)
+        ->withoutMiddleware(RedirectIfUnverified::class)
+        ->middleware('throttle:30,1')
+        ->name('checkout.availability');
     Route::get('/', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/', [CheckoutController::class, 'store'])->block(120, 5)->name('checkout.store');
     Route::get('status/{code}', [BookingController::class, 'status'])->name('booking.status');
