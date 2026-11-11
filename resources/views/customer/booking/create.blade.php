@@ -97,6 +97,8 @@
             'pickupDate'        => $toIso($booking['pickup_date'], $booking['pickup_date_iso'] ?? null),
             'returnDate'        => $toIso($booking['return_date'], $booking['return_date_iso'] ?? null),
             'minDate'           => now()->toDateString(),
+            'bookedDates'       => $booking['booked_dates'] ?? [],
+            'availabilityUrl'   => route('checkout.availability'),
             'initialDays'       => (int) $booking['rental_days'],
             'discount'          => (int) ($booking['discount'] ?? 0),
             'shippingPreviewUrl' => route('checkout.shipping.preview'),
