@@ -9,6 +9,16 @@ services:
         working_dir: /var/www
         volumes:
             - ./:/var/www
+        env_file:
+            - .env
+        environment:
+            OPENROUTESERVICE_API_KEY: ${OPENROUTESERVICE_API_KEY}
+            OPENROUTESERVICE_BASE_URL: ${OPENROUTESERVICE_BASE_URL}
+            OPENROUTESERVICE_PROFILE: ${OPENROUTESERVICE_PROFILE}
+            OPENROUTESERVICE_TIMEOUT: ${OPENROUTESERVICE_TIMEOUT}
+            OPENROUTESERVICE_RETRY_TIMES: ${OPENROUTESERVICE_RETRY_TIMES}
+            OPENROUTESERVICE_RETRY_SLEEP_MS: ${OPENROUTESERVICE_RETRY_SLEEP_MS}
+            OPENROUTESERVICE_CACHE_TTL: ${OPENROUTESERVICE_CACHE_TTL}
         networks:
             - tendaku-network
 
@@ -27,7 +37,7 @@ services:
             - app
 
     mailpit:
-        image: "axllent/mailpit:latest"
+        image: axllent/mailpit:latest
         container_name: tendaku_mailpit
         restart: unless-stopped
         ports:
@@ -35,6 +45,8 @@ services:
             - "8025:8025"
         networks:
             - tendaku-network
+        depends_on:
+            - app
 
 networks:
     tendaku-network:
