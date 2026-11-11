@@ -252,6 +252,15 @@ export function createLocationPickerState(config = {}) {
                 if (event?.detail?.pickerId && event.detail.pickerId !== this.pickerId) {
                     return;
                 }
+                if (event?.detail && Object.hasOwn(event.detail, "latitude") && Object.hasOwn(event.detail, "longitude")) {
+                    const latitude = parseCoordinateValue(event.detail.latitude);
+                    const longitude = parseCoordinateValue(event.detail.longitude);
+                    if (isValidCoordinatePair(latitude, longitude)) {
+                        this.selectCoordinates(latitude, longitude, { emitEvents: false, zoom: this.selectedZoom });
+                    } else {
+                        this.resetLocation({ emitEvents: false });
+                    }
+                }
                 if (!this.mapInstance) {
                     this.initializeMap();
                 }
@@ -661,7 +670,7 @@ export function createLocationPickerState(config = {}) {
     };
 }
 
-export function refreshLocationPicker(pickerId) {
+export function refreshLocationPicker(pickerId, coordinates = {}) {
     if (!pickerId || typeof document === "undefined") {
         return;
     }
@@ -670,7 +679,7 @@ export function refreshLocationPicker(pickerId) {
     if (pickerElement) {
         pickerElement.dispatchEvent(
             new CustomEvent("location-picker:refresh", {
-                detail: { pickerId },
+                detail: { ...coordinates, pickerId },
                 bubbles: false,
             }),
         );
