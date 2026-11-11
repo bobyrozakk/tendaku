@@ -156,7 +156,7 @@ class PackageCheckoutTest extends TestCase
         $response->assertSee('Paket Camping 2 Hari');
         $response->assertSee('Rp 300.000');
         $response->assertSee('Tenda Dome 4P');
-        $response->assertSee('QRIS');
+        $response->assertSee('BCA Virtual Account');
         $response->assertSee($this->customer->name);
     }
 
@@ -169,7 +169,7 @@ class PackageCheckoutTest extends TestCase
                 'package_id' => $this->package->id,
                 'pickup_date' => $pickupDate->toDateString(),
                 'pickup_method' => 'self_pickup',
-                'payment_channel' => 'qris',
+                'payment_channel' => 'bca_va',
             ]);
 
         $rental = Rental::query()->firstOrFail();
@@ -177,8 +177,8 @@ class PackageCheckoutTest extends TestCase
 
         $response->assertRedirect(route('booking.status', $rental->booking_code));
         $response->assertSessionHas('success');
-        $this->assertSame('qris', $payment->method);
-        $this->assertSame('qris', $payment->payment_channel);
+        $this->assertSame('bca_va', $payment->method);
+        $this->assertSame('bca_va', $payment->payment_channel);
 
         $this->assertSame('600000.00', $rental->subtotal);
         $this->assertSame('600000.00', $rental->grand_total);
@@ -333,7 +333,7 @@ class PackageCheckoutTest extends TestCase
             'return_date' => '2026-10-29',
             'return_time' => '05:00',
             'pickup_method' => 'self_pickup',
-            'payment_channel' => 'qris',
+            'payment_channel' => 'bca_va',
         ]);
 
         $rental = Rental::query()->latest('id')->firstOrFail();
@@ -359,7 +359,7 @@ class PackageCheckoutTest extends TestCase
             'return_date' => '2026-10-30',
             'return_time' => '05:00',
             'pickup_method' => 'self_pickup',
-            'payment_channel' => 'qris',
+            'payment_channel' => 'bca_va',
         ]);
 
         $rental = Rental::query()->latest('id')->firstOrFail();
@@ -381,7 +381,7 @@ class PackageCheckoutTest extends TestCase
             'return_date' => '2026-10-31',
             'return_time' => '05:00',
             'pickup_method' => 'self_pickup',
-            'payment_channel' => 'qris',
+            'payment_channel' => 'bca_va',
         ]);
 
         $rental = Rental::query()->latest('id')->firstOrFail();
@@ -403,7 +403,7 @@ class PackageCheckoutTest extends TestCase
             'return_date' => '2026-11-02',
             'return_time' => '05:00',
             'pickup_method' => 'self_pickup',
-            'payment_channel' => 'qris',
+            'payment_channel' => 'bca_va',
         ]);
 
         $rental = Rental::query()->latest('id')->firstOrFail();
@@ -427,7 +427,7 @@ class PackageCheckoutTest extends TestCase
             'return_date' => '2027-01-02',
             'return_time' => '05:00',
             'pickup_method' => 'self_pickup',
-            'payment_channel' => 'qris',
+            'payment_channel' => 'bca_va',
         ]);
 
         $rental = Rental::query()->latest('id')->firstOrFail();
@@ -565,7 +565,7 @@ class PackageCheckoutTest extends TestCase
             'return_date' => $returnDate,
             'return_time' => $returnTime,
             'pickup_method' => 'self_pickup',
-            'payment_channel' => 'qris',
+            'payment_channel' => 'bca_va',
         ]);
 
         $rental = Rental::query()->latest('id')->firstOrFail();

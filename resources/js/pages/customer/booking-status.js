@@ -16,10 +16,6 @@ function statusPage(cfg) {
         vaBiller: cfg.va?.biller ?? "",
         vaLoading: false,
         vaOpen: false,
-        isQris: Boolean(cfg.isQris),
-        qrCodeUrl: cfg.qrCodeUrl || "",
-        qrString: cfg.qrString || "",
-        showQrisModal: false,
         flash: "",
         flashTone: "info",
         iconPath: {
@@ -204,51 +200,15 @@ function statusPage(cfg) {
             this.changeBank(key);
         },
 
-        // Buka modal kode QR untuk pembayaran QRIS
-        async openQrisModal() {
-            if (this.qrCodeUrl) {
-                this.showQrisModal = true;
-                return;
-            }
-            this.paying = true;
-            this.flash = "";
-            try {
-                const res = await fetch(this.payUrl, {
-                    method: "POST",
-                    headers: this.headers(),
-                });
-                const data = await res.json().catch(() => ({}));
-                if (data && data.qr_code_url) {
-                    this.qrCodeUrl = data.qr_code_url;
-                    this.qrString = data.qr_string || "";
-                    this.isQris = true;
-                    this.showQrisModal = true;
-                } else {
-                    this.setFlash(data.message || "Gagal memuat kode QRIS.", "error");
-                }
-            } catch (e) {
-                this.setFlash("Koneksi bermasalah saat memuat QRIS. Coba lagi.", "error");
-            } finally {
-                this.paying = false;
-            }
-        },
-
-        // Ganti bank VA atau beralih ke QRIS: minta server membuat tagihan baru ke Midtrans.
+        // Ganti bank VA: minta server membuat tagihan baru ke Midtrans. Nomor tidak pernah dibuat di browser.
         async changeBank(next) {
             const prev = this.vaBank;
-            const prevIsQris = this.isQris;
-            if (this.vaLoading || (next === prev && this.isQris === (next === "qris"))) return;
+            if (this.vaLoading || next === prev) return;
             const prevNumber = this.vaNumber,
-                prevBiller = this.vaBiller,
-                prevQrUrl = this.qrCodeUrl,
-                prevQrString = this.qrString;
-
+                prevBiller = this.vaBiller;
             this.flash = "";
             this.vaLoading = true;
-            if (next !== "qris") {
-                this.vaNumber = "";
-            }
-
+            this.vaNumber = "";
             try {
                 const res = await fetch(this.vaUrl, {
                     method: "POST",
@@ -256,37 +216,19 @@ function statusPage(cfg) {
                     body: JSON.stringify({ bank: next }),
                 });
                 const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
+                if (!res.ok || !data.va_number)
                     throw new Error(
-                        data.message || "Gagal mengubah metode pembayaran. Coba lagi.",
+                        data.message || "Gagal membuat nomor VA. Coba lagi.",
                     );
-                }
-
-                if (data.is_qris) {
-                    this.isQris = true;
-                    this.qrCodeUrl = data.qr_code_url || "";
-                    this.qrString = data.qr_string || "";
-                    this.showQrisModal = true;
-                } else {
-                    if (!data.va_number) {
-                        throw new Error(data.message || "Gagal membuat nomor VA.");
-                    }
-                    this.isQris = false;
-                    this.vaBank = next;
-                    this.vaNumber = data.va_number;
-                    this.vaBiller = data.biller_code || "";
-                    this.showQrisModal = false;
-                }
-
+                this.vaBank = next;
+                this.vaNumber = data.va_number;
+                this.vaBiller = data.biller_code || "";
                 if (data.order_id) this.orderId = data.order_id;
             } catch (e) {
-                // Gagal: kembali ke metode & nomor sebelumnya
-                this.isQris = prevIsQris;
+                // Gagal: kembali ke bank & nomor sebelumnya (nomor lama masih aktif di Midtrans)
                 this.vaBank = prev;
                 this.vaNumber = prevNumber;
                 this.vaBiller = prevBiller;
-                this.qrCodeUrl = prevQrUrl;
-                this.qrString = prevQrString;
                 this.setFlash(
                     e.message || "Koneksi bermasalah. Coba lagi.",
                     "error",
@@ -304,20 +246,30 @@ function statusPage(cfg) {
                 const res = await fetch(this.payUrl, {
                     method: "POST",
                     headers: this.headers(),
-                    body: JSON.stringify({ bank: this.vaBank }),
                 });
-                const data = await res.json().catch(() => ({}));
+                const data = await res.json();
 
-                if (data && data.is_qris) {
-                    this.isQris = true;
-                    this.qrCodeUrl = data.qr_code_url || "";
-                    this.qrString = data.qr_string || "";
-                    this.showQrisModal = true;
-                } else if (data && data.va_info) {
-                    this.isQris = false;
-                    this.vaNumber = data.va_info.va_number || "";
-                    this.vaBiller = data.va_info.biller_code || "";
-                    this.setFlash("Nomor Virtual Account siap digunakan.");
+                if (data && data.snap_token) {
+                    if (typeof window.snap !== "undefined") {
+                        window.snap.pay(data.snap_token, {
+                            onSuccess: () => this.sync(true),
+                            // Belum dibayar tapi tagihan/VA sudah terbit: muat ulang agar nomor VA tampil
+                            onPending: () => window.location.reload(),
+                            onError: (r) =>
+                                this.setFlash(
+                                    "Pembayaran gagal: " +
+                                        ((r && r.status_message) ||
+                                            "terjadi kesalahan"),
+                                    "error",
+                                ),
+                            onClose: () => this.sync(true),
+                        });
+                    } else {
+                        this.setFlash(
+                            "Jendela pembayaran belum siap. Muat ulang halaman lalu coba lagi.",
+                            "error",
+                        );
+                    }
                 } else {
                     this.setFlash(
                         (data && data.message) ||

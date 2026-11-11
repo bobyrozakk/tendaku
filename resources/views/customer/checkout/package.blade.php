@@ -400,7 +400,6 @@
                     </label>
                     <select id="payment_channel" name="payment_channel"
                             class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                        <option value="qris" @selected(old('payment_channel') === 'qris')>QRIS</option>
                         <option value="bca_va" @selected(old('payment_channel', 'bca_va') === 'bca_va')>BCA Virtual Account</option>
                         <option value="bni_va" @selected(old('payment_channel') === 'bni_va')>BNI Virtual Account</option>
                         <option value="bri_va" @selected(old('payment_channel') === 'bri_va')>BRI Virtual Account</option>

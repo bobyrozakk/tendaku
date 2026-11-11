@@ -18,7 +18,6 @@ return [
 
     // pembayaran
     'enabled_channels' => [
-        'qris',
         'bca_va',
         'bni_va',
         'bri_va',

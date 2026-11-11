@@ -72,6 +72,20 @@
                             </div>
                         </fieldset>
 
+                        <!-- Metode Pembayaran Online -->
+                        <div class="space-y-1.5" :disabled="isProcessing">
+                            <label for="payment_channel" class="block text-sm font-bold text-darkbrown-900">Metode pembayaran</label>
+                            <select id="payment_channel" name="payment_channel" x-model="selectedChannel"
+                                    class="w-full rounded-xl border border-wheat-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-darkbrown-800 shadow-sm focus:border-avocado-500 focus:outline-none focus:ring-2 focus:ring-avocado-500/20">
+                                <option value="bca_va">BCA Virtual Account</option>
+                                <option value="bni_va">BNI Virtual Account</option>
+                                <option value="bri_va">BRI Virtual Account</option>
+                                <option value="permata_va">Permata Virtual Account</option>
+                                <option value="cimb_va">CIMB Niaga Virtual Account</option>
+                            </select>
+                            <p class="text-xs text-darkbrown-500">Pilih bank transfer Virtual Account.</p>
+                        </div>
+
                         <div x-show="formError" x-cloak role="alert" class="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-3 text-sm text-red-800">
                             <i data-lucide="alert-circle" class="w-5 h-5 shrink-0 mt-0.5"></i>
                             <span x-text="formError"></span>
