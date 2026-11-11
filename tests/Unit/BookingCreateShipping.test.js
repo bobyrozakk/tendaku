@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../../resources/js/pages/customer/booking-create.js', import.meta.url), 'utf8');
+const source = ['components/location-picker.js', 'components/checkout-address.js', 'pages/customer/booking-create.js']
+    .map(path => fs.readFileSync(new URL('../../resources/js/' + path, import.meta.url), 'utf8')
+        .replace(/^import .+;\r?\n/gm, '').replace(/^export /gm, '')).join('\n');
 function page(fetch) {
     let factory;
     const timers = new Map();
@@ -18,10 +20,11 @@ function page(fetch) {
     });
     const component = factory({
         items: [{ id: 1, qty: 2, max_qty: 4, price_per_day: 50000 }],
-        pickupMethod: 'delivery', selectedAddressId: 1, addresses: [{ id: 1 }], isLoggedIn: true,
+        pickupMethod: 'delivery', selectedAddressId: 1,
+        addresses: [{ id: 1, latitude: -7.9, longitude: 112.6 }, { id: 2, latitude: -7.8, longitude: 112.7 }], isLoggedIn: true,
         pickupDate: '2090-01-01', returnDate: '2090-01-02', pickupTime: '09:00',
         minDate: '2026-01-01', initialDays: 1, discount: 0, dpPercentage: 50,
-        shippingPreviewUrl: '/preview', storeUrl: '/store', csrf: 'token',
+        shippingPreviewUrl: '/preview', storeUrl: '/store', storeAddressUrl: '/addresses', updateAddressUrl: '/addresses/__ADDRESS__', csrf: 'token',
         needsName: false, needsPhone: false, needsNik: false,
     });
     component.$nextTick = () => {};

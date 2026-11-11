@@ -166,6 +166,8 @@
                                 </div>
                             </template>
 
+                            @include('customer.booking.partials.create.address-location-notice')
+
                             <!-- Catatan untuk Kurir -->
                             <div class="pt-2">
                                 <label for="f_notes" class="block text-xs font-semibold text-darkbrown-800 mb-1">Catatan Tambahan untuk Kurir <span class="font-normal text-darkbrown-500">(opsional)</span></label>
