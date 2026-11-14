@@ -47,7 +47,14 @@
 
                     <div x-show="newAddressErrors.general" x-cloak class="mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700" x-text="newAddressErrors.general"></div>
 
-                    <div class="mt-4 space-y-4" :inert="newAddressSubmitting" @keydown.enter="if ($event.target.tagName === 'INPUT' && $event.target.type !== 'checkbox') { $event.preventDefault(); saveAddress(); }">
+                    <x-address-autofill
+                        picker-id="checkout-add-address-location-picker"
+                        active-expression="showAddAddressModal && !newAddressSubmitting"
+                        context-expression="newAddressForm"
+                        class="mt-4 space-y-4"
+                        ::inert="newAddressSubmitting"
+                        @keydown.enter="if ($event.target.tagName === 'INPUT' && $event.target.type !== 'checkbox') { $event.preventDefault(); saveAddress(); }"
+                    >
                         <!-- Label Alamat -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1.5">Label Alamat *</label>
@@ -82,7 +89,7 @@
                         <!-- Alamat Lengkap -->
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Alamat Lengkap (Jalan, No, RT/RW) *</label>
-                            <textarea rows="2" x-model="newAddressForm.full_address" required placeholder="Nama jalan, nomor rumah/gedung, RT/RW"
+                            <textarea rows="2" x-model="newAddressForm.full_address" data-address-field="full_address" required placeholder="Nama jalan, nomor rumah/gedung, RT/RW"
                                       class="{{ $inputBase }} resize-none text-xs"></textarea>
                             <p x-show="newAddressErrors.full_address" x-text="newAddressErrors.full_address?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                         </div>
@@ -91,13 +98,13 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Provinsi *</label>
-                                <input type="text" x-model="newAddressForm.province" required placeholder="Cth: Jawa Barat"
+                                <input type="text" x-model="newAddressForm.province" data-address-field="province" required placeholder="Cth: Jawa Barat"
                                        class="{{ $inputBase }} text-xs">
                                 <p x-show="newAddressErrors.province" x-text="newAddressErrors.province?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kota / Kabupaten *</label>
-                                <input type="text" x-model="newAddressForm.city" required placeholder="Cth: Bandung"
+                                <input type="text" x-model="newAddressForm.city" data-address-field="city" required placeholder="Cth: Bandung"
                                        class="{{ $inputBase }} text-xs">
                                 <p x-show="newAddressErrors.city" x-text="newAddressErrors.city?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
@@ -107,13 +114,13 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kecamatan *</label>
-                                <input type="text" x-model="newAddressForm.district" required placeholder="Cth: Coblong"
+                                <input type="text" x-model="newAddressForm.district" data-address-field="district" required placeholder="Cth: Coblong"
                                        class="{{ $inputBase }} text-xs">
                                 <p x-show="newAddressErrors.district" x-text="newAddressErrors.district?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kelurahan / Desa</label>
-                                <input type="text" x-model="newAddressForm.village" placeholder="Cth: Dago"
+                                <input type="text" x-model="newAddressForm.village" data-address-field="village" placeholder="Cth: Dago"
                                        class="{{ $inputBase }} text-xs">
                             </div>
                         </div>
@@ -122,7 +129,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kode Pos</label>
-                                <input type="text" x-model="newAddressForm.postal_code" placeholder="40135" maxlength="10"
+                                <input type="text" x-model="newAddressForm.postal_code" data-address-field="postal_code" placeholder="40135" maxlength="10"
                                        class="{{ $inputBase }} text-xs">
                             </div>
                             <div class="sm:col-span-2">
@@ -163,7 +170,7 @@
                                 <span x-show="newAddressSubmitting">Menyimpan...</span>
                             </button>
                         </div>
-                    </div>
+                    </x-address-autofill>
                 </div>
             </div>
         </div>

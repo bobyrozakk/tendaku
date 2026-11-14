@@ -275,7 +275,13 @@ new class extends Component
          1. FORM TAMBAH / EDIT ALAMAT
          ============================================================ --}}
     @if ($isCreating || $editingId)
-        <form wire:submit="save" class="mt-6 space-y-4 p-5 rounded-xl bg-wheat-50/70 border border-wheat-200">
+        <x-address-autofill
+            :picker-id="'customer-address-picker-'.($editingId ?? 'create')"
+            :as-form="true"
+            wire:submit="save"
+            wire:key="customer-address-autofill-{{ $editingId ?? 'create' }}"
+            class="mt-6 space-y-4 p-5 rounded-xl bg-wheat-50/70 border border-wheat-200"
+        >
             <div class="flex items-center justify-between border-b border-wheat-200 pb-3">
                 <h3 class="text-sm font-extrabold text-darkbrown-900 font-heading">
                     {{ $editingId ? __('Ubah Alamat') : __('Tambah Alamat Baru') }}
@@ -339,6 +345,7 @@ new class extends Component
                     </label>
                     <input
                         wire:model="city"
+                        data-address-field="city"
                         id="addr_city"
                         type="text"
                         placeholder="Contoh: Kota Malang"
@@ -355,6 +362,7 @@ new class extends Component
                     </label>
                     <input
                         wire:model="province"
+                        data-address-field="province"
                         id="addr_province"
                         type="text"
                         placeholder="Contoh: Jawa Timur"
@@ -371,6 +379,7 @@ new class extends Component
                     </label>
                     <input
                         wire:model="district"
+                        data-address-field="district"
                         id="addr_district"
                         type="text"
                         placeholder="Contoh: Lowokwaru"
@@ -387,6 +396,7 @@ new class extends Component
                     </label>
                     <input
                         wire:model="village"
+                        data-address-field="village"
                         id="addr_village"
                         type="text"
                         placeholder="Contoh: Ketawanggede"
@@ -402,6 +412,7 @@ new class extends Component
                     </label>
                     <input
                         wire:model="postal_code"
+                        data-address-field="postal_code"
                         id="addr_postal"
                         type="text"
                         placeholder="65145"
@@ -417,6 +428,7 @@ new class extends Component
                     </label>
                     <textarea
                         wire:model="full_address"
+                        data-address-field="full_address"
                         id="addr_full"
                         rows="2"
                         placeholder="Tuliskan nama jalan lengkap, nomor rumah, nomor blok, RT/RW..."
@@ -457,7 +469,7 @@ new class extends Component
                         wire-latitude-model="latitude"
                         wire-longitude-model="longitude"
                         label="Titik Koordinat Lokasi Pengantaran (Peta)"
-                        help-text="Klik pada peta, geser pin, atau gunakan tombol Gunakan Lokasi Saya untuk menandai titik pengantaran. Menggeser pin tidak mengubah teks alamat di atas."
+                        help-text="Pilih titik pada peta untuk mengisi alamat otomatis. Semua kolom alamat tetap dapat Anda edit."
                     />
                 </div>
 
@@ -494,7 +506,7 @@ new class extends Component
                     <span>{{ __('Batal') }}</span>
                 </button>
             </div>
-        </form>
+        </x-address-autofill>
     @endif
 
     {{-- ============================================================

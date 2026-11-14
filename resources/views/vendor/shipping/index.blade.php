@@ -218,7 +218,7 @@
                             </button>
                         </div>
 
-                        <form action="{{ route('vendor.shipping.location.update') }}" method="POST" class="space-y-4 px-6 py-5">
+                        <x-address-autofill picker-id="vendor-store-location-modal-picker" active-expression="showLocationModal" :as-form="true" action="{{ route('vendor.shipping.location.update') }}" method="POST" class="space-y-4 px-6 py-5">
                             @csrf
                             @method('PUT')
 
@@ -228,6 +228,7 @@
                                     <x-text-input
                                         id="modal_vendor_address"
                                         name="address"
+                                        data-address-field="full_address"
                                         type="text"
                                         class="mt-1.5 w-full text-sm bg-white"
                                         :value="$storeAddressValue"
@@ -241,6 +242,7 @@
                                     <x-text-input
                                         id="modal_vendor_city"
                                         name="city"
+                                        data-address-field="city"
                                         type="text"
                                         class="mt-1.5 w-full text-sm bg-white"
                                         :value="$storeCityValue"
@@ -258,7 +260,7 @@
                                     latitude-name="latitude"
                                     longitude-name="longitude"
                                     label="Titik Koordinat Lokasi Toko"
-                                    help-text="Klik pada peta atau geser pin ke posisi toko Anda. Menggeser pin tidak akan mengubah teks alamat di atas."
+                                    help-text="Pilih titik pada peta untuk mengisi alamat otomatis. Alamat dan kota toko tetap dapat Anda edit."
                                     :required="true"
                                 />
                             </div>
@@ -279,7 +281,7 @@
                                     <span>Simpan Lokasi Toko</span>
                                 </button>
                             </div>
-                        </form>
+                        </x-address-autofill>
                     </div>
                 </div>
             @else
@@ -295,7 +297,7 @@
                         </span>
                     </x-slot>
 
-                    <form action="{{ route('vendor.shipping.location.update') }}" method="POST" class="space-y-5">
+                    <x-address-autofill picker-id="vendor-store-location-picker" :as-form="true" action="{{ route('vendor.shipping.location.update') }}" method="POST" class="space-y-5">
                         @csrf
                         @method('PUT')
 
@@ -306,6 +308,7 @@
                                     <x-text-input
                                         id="vendor_address"
                                         name="address"
+                                        data-address-field="full_address"
                                         type="text"
                                         class="mt-1.5 w-full text-sm bg-white"
                                         :value="$storeAddressValue"
@@ -322,6 +325,7 @@
                                     <x-text-input
                                         id="vendor_city"
                                         name="city"
+                                        data-address-field="city"
                                         type="text"
                                         class="mt-1.5 w-full text-sm bg-white"
                                         :value="$storeCityValue"
@@ -359,7 +363,7 @@
                                 <span>Simpan Lokasi Toko</span>
                             </button>
                         </div>
-                    </form>
+                    </x-address-autofill>
                 </x-card>
             @endif
         </section>
