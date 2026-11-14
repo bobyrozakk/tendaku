@@ -5,6 +5,7 @@ PRD.md
 .env
 .env.backup
 .env.production
+/.env.testing
 .phpactor.json
 .phpunit.result.cache
 /.codex
