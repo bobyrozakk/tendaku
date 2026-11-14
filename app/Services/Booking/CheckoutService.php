@@ -14,9 +14,8 @@ use Throwable;
 /**
  * Satu pintu checkout untuk barang dan paket.
  *
- * Urutan: buat rental (pending, stok tertahan) -> buat payment ->
- * (opsional) minta token Snap. Kalau langkah setelah rental gagal,
- * rental dan payment langsung dibatalkan supaya stok tidak tertahan.
+ * Urutan: buat rental (pending, stok tertahan) -> buat payment bila metode
+ * sudah dipilih -> (opsional) minta token Snap.
  */
 class CheckoutService
 {
@@ -28,8 +27,9 @@ class CheckoutService
 
     /**
      * @param  array<string, mixed>  $bookingData  Data untuk RentalService::createBooking()
-     * @param  bool  $withSnapToken  false = hanya buat payment pending; customer bayar dari halaman status
-     * @return array{rental: Rental, payment: Payment, snap_token: ?string}
+     * @param  bool  $withSnapToken  Whether to request a Snap token for the payment
+     * @param  bool  $deferPayment  Keep payment out of the database until a method is selected
+     * @return array{rental: Rental, payment: ?Payment, snap_token: ?string}
      */
     public function checkout(
         array $bookingData,
@@ -37,11 +37,30 @@ class CheckoutService
         ?string $channel = null,
         bool $withSnapToken = true,
         ?string $previewBookingCode = null,
+        bool $deferPayment = false,
     ): array {
         $rental = $this->rentals->createBooking($bookingData);
 
         try {
             $rental = $this->applyPreviewBookingCode($rental, $previewBookingCode);
+
+            if ($deferPayment) {
+                if ($paymentOption === 'dp') {
+                    $rental->update([
+                        'dp_amount' => $this->payments->calculateDpAmount(
+                            (float) $rental->subtotal,
+                            (float) $rental->delivery_fee,
+                            (float) $rental->discount_amount,
+                        ),
+                    ]);
+                }
+
+                return [
+                    'rental' => $rental,
+                    'payment' => null,
+                    'snap_token' => null,
+                ];
+            }
 
             $payment = $this->payments->createOnlinePayment(
                 $rental,

@@ -110,7 +110,7 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Membuat rental dan pembayaran Midtrans Snap (via CheckoutService).
+     * Membuat rental; payment dibuat setelah pelanggan memilih bank/QRIS.
      * Nilai transaksi harus dihitung dan divalidasi di server.
      */
     public function store(
@@ -204,19 +204,17 @@ class CheckoutController extends Controller
                 $preview,
             );
 
-            // Rental + payment + token Snap lewat satu pintu.
-            // Jika Midtrans gagal, rental dibatalkan dan stok langsung bebas.
+            $paymentOption = $request->validated('payment_option') ?: 'full';
             $result = $checkout->checkout(
                 $bookingData,
-                $request->validated('payment_option') ?: 'full',
-                'bca_va',
-                true,
+                $paymentOption,
+                null,
+                false,
                 $request->input('booking_code'),
+                true,
             );
 
             $rental = $result['rental'];
-            $payment = $result['payment'];
-            $snapToken = $result['snap_token'];
 
             // Pertahankan akses status booking untuk guest.
             if ($request->user() === null) {
@@ -228,11 +226,13 @@ class CheckoutController extends Controller
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'snap_token' => $snapToken,
+                    'snap_token' => null,
                     'booking_code' => $rental->booking_code,
                     'redirect_url' => $this->statusUrl($request, $rental),
-                    'payment_type' => $payment->payment_type,
-                    'payment_amount' => (int) $payment->amount,
+                    'payment_type' => $paymentOption,
+                    'payment_amount' => $paymentOption === 'dp'
+                        ? (int) $rental->dp_amount
+                        : (int) $rental->grand_total,
                 ]);
             }
 

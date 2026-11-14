@@ -169,9 +169,9 @@ class PaymentScenarioTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('snap_token', 'new-snap-token-attempt-2');
 
-        // order_id baru harus berakhiran -2 (attempt berikutnya)
+        // Retry keeps the booking code and advances the payment sequence.
         $newOrderId = $response->json('order_id');
-        $this->assertStringEndsWith('-2', $newOrderId);
+        $this->assertSame('TDKTEST00102', $newOrderId);
 
         // Payment baru ada di DB dengan status pending
         $this->assertDatabaseHas('payments', [

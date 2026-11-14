@@ -96,7 +96,7 @@ class BookingController extends Controller
 
         $latestPayment = $rental->payments->firstWhere('channel', self::MIDTRANS_CHANNEL);
 
-        // Jika payment masih pending, siapkan detail pembayaran Virtual Account (default BCA)
+        // Jika payment masih pending, siapkan detail metode yang dipilih pelanggan.
         if ($latestPayment && $latestPayment->status === 'pending') {
             try {
                 if ($latestPayment->payment_channel === 'qris') {

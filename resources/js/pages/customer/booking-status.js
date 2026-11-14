@@ -243,7 +243,7 @@ function statusPage(cfg) {
         // Ganti bank VA: minta server membuat tagihan baru ke Midtrans. Nomor tidak pernah dibuat di browser.
         async changeBank(next) {
             const prev = this.vaBank;
-            if (this.vaLoading || next === prev) return;
+            if (this.vaLoading || (next === prev && this.orderId)) return;
             const prevNumber = this.vaNumber,
                 prevBiller = this.vaBiller;
             this.flash = "";
@@ -321,6 +321,14 @@ function statusPage(cfg) {
                     }
                     if (data.order_id) this.orderId = data.order_id;
                     this.openQris();
+                    return;
+                }
+
+                if (data?.va_info?.va_number) {
+                    if (data.order_id) this.orderId = data.order_id;
+                    this.vaBank = data.va_info.bank || this.vaBank;
+                    this.vaNumber = data.va_info.va_number;
+                    this.vaBiller = data.va_info.biller_code || "";
                     return;
                 }
 

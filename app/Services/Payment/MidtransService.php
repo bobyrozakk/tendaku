@@ -33,6 +33,7 @@ class MidtransService
         private readonly CommissionCalculator $calculator,
         private readonly CommissionService $commissions,
         private readonly EscrowService $escrow,
+        private readonly PaymentService $payments,
     ) {
         $serverKey = config('services.midtrans.server_key');
 
@@ -126,8 +127,19 @@ class MidtransService
                 return $payment->va_details;
             }
 
-            $baseOrderId = explode('-', $payment->order_id)[0];
-            $payment->order_id = $baseOrderId.'-'.substr(str_shuffle('123456789'), 0, 3);
+            $rental = $this->rentalFor($payment);
+            $sequence = $this->payments->orderSequence($rental->booking_code, $payment->order_id);
+            $orderId = $this->payments->generateOrderId($rental->booking_code, $bank, $sequence);
+
+            while (Payment::query()
+                ->where('order_id', $orderId)
+                ->where('id', '!=', $payment->getKey())
+                ->exists()) {
+                $sequence++;
+                $orderId = $this->payments->generateOrderId($rental->booking_code, $bank, $sequence);
+            }
+
+            $payment->order_id = $orderId;
             $payment->save();
         }
 

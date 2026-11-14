@@ -628,8 +628,9 @@ class BookingStatusAndHistoryTest extends TestCase
         $rental->payments()->create([
             'vendor_id' => $this->vendor->id,
             'payment_type' => 'full',
+            'payment_channel' => 'bca_va',
             'channel' => 'midtrans',
-            'order_id' => 'TDK2026101010001-1',
+            'order_id' => 'TDK2026SWVA0111',
             'amount' => 150000,
             'status' => 'pending',
         ]);
@@ -652,6 +653,7 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertJson([
                 'bank' => 'bni',
                 'va_number' => '9876543210',
+                'order_id' => 'TDK2026SWVA0121',
             ]);
     }
 

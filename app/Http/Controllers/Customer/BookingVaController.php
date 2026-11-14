@@ -61,9 +61,21 @@ class BookingVaController extends Controller
                     ->latest('id')
                     ->first();
 
-                abort_if($old === null, 404, 'Tagihan aktif tidak ditemukan.');
+                if ($old === null) {
+                    abort_if(
+                        $locked->payments()->exists(),
+                        404,
+                        'Tagihan aktif tidak ditemukan.',
+                    );
 
-                if ($isQris && $old->payment_channel === 'qris') {
+                    $paymentType = (float) $locked->dp_amount > 0 ? 'dp' : 'full';
+                    $attempt = 1;
+                } else {
+                    $paymentType = $old->payment_type;
+                    $attempt = $paymentService->orderSequence($locked->booking_code, $old->order_id);
+                }
+
+                if ($old !== null && $isQris && $old->payment_channel === 'qris') {
                     $existing = $old->qris_details;
                     if ($existing) {
                         return [$old, null, $existing];
@@ -72,7 +84,7 @@ class BookingVaController extends Controller
                     return [$old, null, $midtrans->chargeQris($old)];
                 }
 
-                if (! $isQris && $old->payment_channel === $bank.'_va') {
+                if ($old !== null && ! $isQris && $old->payment_channel === $bank.'_va') {
                     $existing = $old->va_details;
                     if ($existing && ! empty($existing['va_number']) && strtolower($existing['bank'] ?? '') === $bank) {
                         return [$old, null, $existing];
@@ -80,18 +92,18 @@ class BookingVaController extends Controller
                 }
 
                 // order_id baru yang pasti unik
-                $attempt = $this->nextAttempt($old->order_id);
+                $method = $isQris ? 'qris' : $bank.'_va';
                 while (Payment::query()->where('order_id', $paymentService->generateOrderId(
-                    $locked->booking_code, $old->payment_type, $attempt
+                    $locked->booking_code, $method, $attempt
                 ))->exists()) {
                     $attempt++;
                 }
 
                 $new = $paymentService->createOnlinePayment(
                     $locked,
-                    $old->payment_type,
+                    $paymentType,
                     $attempt,
-                    $isQris ? 'qris' : $bank.'_va'
+                    $method
                 );
 
                 if ($isQris) {
@@ -159,10 +171,5 @@ class BookingVaController extends Controller
         }
 
         $paymentService->advanceStatus($old->fresh(), 'cancelled');
-    }
-
-    private function nextAttempt(string $orderId): int
-    {
-        return preg_match('/-(\d+)$/', $orderId, $m) ? ((int) $m[1]) + 1 : 2;
     }
 }

@@ -13,12 +13,10 @@
             <div class="text-sm text-darkbrown-500">{{ $payTypeLabel }}</div>
             <div class="text-2xl font-extrabold text-darkbrown-900 font-heading tracking-tight">{{ $rupiah($payAmount) }}</div>
         </div>
-        @if($onlinePayment?->order_id)
-            <div class="text-right">
-                <div class="text-xs text-darkbrown-500">ID pesanan</div>
-                <div class="font-mono text-sm font-semibold text-darkbrown-800" x-text="orderId">{{ $onlinePayment->order_id }}</div>
-            </div>
-        @endif
+        <div x-show="orderId" x-cloak class="text-right">
+            <div class="text-xs text-darkbrown-500">ID pesanan</div>
+            <div class="font-mono text-sm font-semibold text-darkbrown-800" x-text="orderId">{{ $onlinePayment?->order_id }}</div>
+        </div>
     </div>
 
     <div class="flex items-center gap-2 rounded-xl bg-sunglow-100/70 border border-sunglow-300/70 px-3.5 py-2.5 text-sm text-darkbrown-800">
@@ -30,7 +28,7 @@
         <span x-show="expired" x-cloak class="font-semibold text-red-700">Batas waktu pembayaran sudah terlewat.</span>
     </div>
 
-    @if($onlinePayment?->status === 'pending')
+    @if($canSelectPayment)
         <div class="rounded-xl border-2 border-goldenrod-400 bg-white p-3 space-y-2">
             <span>Metode pembayaran</span>
 
@@ -74,11 +72,11 @@
                 </div>
             </div>
 
-            <p class="text-xs text-darkbrown-500">Pilih Virtual Account bank atau QRIS untuk membayar dengan scan kode.</p>
+            <p class="text-xs text-darkbrown-500">Pilih bank atau QRIS untuk membuat tagihan pembayaran.</p>
         </div>
     @endif
 
-    @if($onlinePayment?->status === 'pending')
+    @if($canSelectPayment)
         <div x-show="qrisOpen" x-cloak x-transition.opacity
              @keydown.escape.window="qrisOpen = false"
              class="fixed inset-0 z-50 flex items-center justify-center bg-darkbrown-950/70 p-4"
@@ -95,8 +93,9 @@
                 <h2 id="qris-title" class="pr-6 text-lg font-extrabold text-darkbrown-900">Bayar dengan QRIS</h2>
                 <p class="mt-1 text-sm text-darkbrown-600">Scan kode ini dengan aplikasi pembayaran Anda.</p>
 
-                <div class="relative mx-auto mt-4 aspect-square w-64 max-w-full rounded-xl border border-wheat-200 bg-white p-2 flex items-center justify-center">
-                    <div x-show="qrisImageLoading && !qrisImageFailed" class="flex flex-col items-center justify-center gap-2 text-darkbrown-500 text-xs">
+                <div class="mt-4 text-sm font-extrabold tracking-widest text-darkbrown-900">QRIS TENDAKU PLATFORM</div>
+                <div class="relative mx-auto mt-2 aspect-square w-64 max-w-full rounded-xl border border-wheat-200 bg-white p-2 flex items-center justify-center">
+                    <div x-show="qrisImageLoading && !qrisImageFailed" class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 text-center text-darkbrown-500 text-xs">
                         <svg class="w-6 h-6 animate-spin text-goldenrod-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
                         <span>Memuat gambar QRIS...</span>
                     </div>
@@ -141,9 +140,9 @@
 
     <div class="flex flex-wrap items-center gap-2.5" x-show="!expired">
 
-        @if($vaInfo && !config('services.midtrans.is_production'))
+        @if(!config('services.midtrans.is_production'))
             {{-- Sandbox: VA otomatis tersalin, lalu simulator Midtrans terbuka di tab baru --}}
-            <a x-show="vaBank !== 'qris'" x-cloak href="https://simulator.sandbox.midtrans.com/" target="_blank" rel="noopener"
+            <a x-show="orderId && vaBank !== 'qris' && vaNumber" x-cloak href="https://simulator.sandbox.midtrans.com/" target="_blank" rel="noopener"
                @click="copy(vaNumber)"
                class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2">
                 <span>Bayar sekarang</span>
@@ -153,15 +152,14 @@
                 Tampilkan QRIS
             </button>
         @else
-            {{-- Production / tanpa VA: pakai alur payNow() yang lama --}}
-            <button type="button" @click="payNow()" :disabled="paying"
+            <button type="button" x-show="orderId" @click="payNow()" :disabled="paying"
                     class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
                 <svg x-show="paying" x-cloak class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
                 <span x-text="paying ? 'Memproses...' : 'Bayar sekarang'">Bayar sekarang</span>
             </button>
         @endif
 
-        <button type="button" @click="sync()" :disabled="syncing"
+        <button type="button" x-show="orderId" @click="sync()" :disabled="syncing"
                 class="py-2.5 px-4 rounded-xl text-sm font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
             <svg class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5.6 9A8 8 0 0119 11m-.6 4A8 8 0 015 13" /></svg>
             <span x-text="syncing ? 'Mengecek...' : 'Cek status'">Cek status</span>
