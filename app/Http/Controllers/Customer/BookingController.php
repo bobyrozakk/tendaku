@@ -42,6 +42,14 @@ class BookingController extends Controller
      */
     public function index(Request $request): View
     {
+        Rental::query()
+            ->where('user_id', Auth::id())
+            ->where('status', self::RENTAL_PENDING)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->get()
+            ->each->expireIfPastDue();
+
         $allowedStatuses = array_keys(config('booking.statuses', []));
 
         $validated = $request->validate([

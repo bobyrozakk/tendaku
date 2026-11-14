@@ -111,6 +111,36 @@ class BookingStatusAndHistoryTest extends TestCase
         $responseFilter->assertDontSee('TDK-2026-BUDI03');
     }
 
+    public function test_booking_history_marks_past_due_unpaid_orders_as_expired(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-EXPIRED01', 'pending');
+        $rental->update(['expires_at' => Carbon::now()->subMinute()]);
+        $payment = $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_method' => 'midtrans_snap',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-EXPIRED01-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('customer.booking.index'));
+
+        $response->assertSee('TDK-2026-EXPIRED01')
+            ->assertSee('Kedaluwarsa');
+
+        $this->assertDatabaseHas('rentals', [
+            'id' => $rental->id,
+            'status' => 'expired',
+        ]);
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id,
+            'status' => 'expired',
+        ]);
+    }
+
     public function test_unauthenticated_user_cannot_access_booking_history(): void
     {
         $response = $this->get(route('customer.booking.index'));

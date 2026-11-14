@@ -137,7 +137,7 @@ class RentalStatusLookupTest extends TestCase
         $response->assertOk();
         $response->assertSee('Budi Penyewa');
         $response->assertSee('Tenda Consina 4P');
-        $response->assertSee('Menunggu Penyelesaian');
+        $response->assertSee('Dikembalikan');
         $response->assertDontSee('budi@example.com');
         $response->assertDontSee('085712345678');
     }
