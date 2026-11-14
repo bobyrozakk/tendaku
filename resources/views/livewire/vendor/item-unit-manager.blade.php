@@ -1,5 +1,28 @@
 <div class="space-y-6">
 
+    {{-- ═══════════════════════════════════════════════════ --}}
+    {{-- Alert: Barang Hilang — Butuh Tindakan              --}}
+    {{-- ═══════════════════════════════════════════════════ --}}
+    @if($lostNotifCount > 0)
+        <div class="rounded-2xl border border-rose-300 bg-rose-50 p-4 flex items-start gap-4 shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-rose-100 border border-rose-200 flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-extrabold text-sm text-rose-900">🚨 Ada {{ $lostNotifCount }} laporan barang hilang dari kasir</p>
+                <p class="text-xs text-rose-700 mt-0.5">
+                    Kasir telah melaporkan unit fisik yang hilang saat pengembalian. Silakan tinjau dan hapus unit tersebut dari inventaris.
+                </p>
+            </div>
+            <button wire:click="setTab('lost')"
+                    class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition shadow-sm">
+                Lihat Unit Hilang
+            </button>
+        </div>
+    @endif
+
     <!-- Top Filter Controls -->
     <div class="bg-white p-4 sm:p-5 rounded-2xl border border-wheat-200 shadow-tendaku-sm space-y-4">
         <!-- Segmented Tab Pills: Status Filter -->
@@ -49,6 +72,16 @@
                 <span>Dipensiunkan</span>
                 <span class="px-2 py-0.5 rounded-full text-[10px] {{ $filterStatus === 'retired' ? 'bg-white/20 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
                     {{ $totalRetired }}
+                </span>
+            </button>
+
+            <button wire:click="setTab('lost')"
+                class="flex items-center gap-2 py-2 px-4 rounded-xl text-xs transition duration-200 shrink-0 font-bold
+                {{ $filterStatus === 'lost' ? 'bg-rose-600 text-white shadow-sm' : 'text-rose-700 hover:bg-rose-50' }}">
+                <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                <span>Barang Hilang</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] {{ $filterStatus === 'lost' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800' }}">
+                    {{ $totalLost }}
                 </span>
             </button>
         </div>
@@ -174,6 +207,10 @@
                                     <span class="text-xs font-semibold text-yellow-700">Perawatan</span>
                                 @elseif ($unit->status === 'retired')
                                     <span class="text-xs font-semibold text-darkbrown-400">Dipensiunkan</span>
+                                @elseif ($unit->status === 'lost')
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                                        Hilang
+                                    </span>
                                 @endif
                             </td>
 
@@ -314,6 +351,7 @@
                                 <option value="available">Tersedia (Siap Sewa)</option>
                                 <option value="maintenance">Perawatan (Maintenance)</option>
                                 <option value="retired">Dipensiunkan (Retired)</option>
+                                <option value="lost">Hilang (Lost)</option>
                             </select>
                             @error('status') <span class="text-red-500 text-xs mt-1 block font-medium">{{ $message }}</span> @enderror
                         </div>
@@ -420,6 +458,7 @@
                                 <option value="rented">Sedang Disewa (Rented)</option>
                                 <option value="maintenance">Perawatan (Maintenance)</option>
                                 <option value="retired">Dipensiunkan (Retired)</option>
+                                <option value="lost">Hilang (Lost)</option>
                             </select>
                             @error('status') <span class="text-red-500 text-xs mt-1 block font-medium">{{ $message }}</span> @enderror
                         </div>

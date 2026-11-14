@@ -249,7 +249,12 @@
 
                     {{-- Status Badge (Kolom tetap 120px) --}}
                     <div class="w-28 shrink-0 flex items-center justify-start">
-                        @if($unit->status === 'available')
+                        @if($unit->status === 'lost' || $unit->condition === 'lost')
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                                Hilang
+                            </span>
+                        @elseif($unit->status === 'available')
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-200 shadow-2xs">
                                 <span class="w-1.5 h-1.5 rounded-full bg-avocado-500 animate-pulse"></span>
                                 Tersedia
