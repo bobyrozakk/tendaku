@@ -4,6 +4,7 @@ namespace App\Livewire\Vendor;
 
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
+use App\Models\NotificationLog;
 use App\Models\RentalDetail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -351,6 +352,21 @@ class ItemUnitManager extends Component
 
         $unit->delete();
 
+        // Jika unit bertatus lost, tandai notifikasi terkait sebagai sudah diproses
+        if ($unit->status === 'lost' || $unit->condition === 'lost') {
+            NotificationLog::withoutGlobalScope('vendor')
+                ->where('vendor_id', $vendorId)
+                ->where('type', 'lost_unit')
+                ->where('status', 'sent')
+                ->get()
+                ->each(function ($notif) use ($unit) {
+                    // Tandai sebagai "failed" (diproses/ditutup) jika terkait unit ini
+                    if (str_contains($notif->message, $unit->unit_code)) {
+                        $notif->update(['status' => 'failed']);
+                    }
+                });
+        }
+
         $this->feedbackMessage = 'Unit fisik berhasil dihapus.';
         $this->feedbackType = 'success';
         $this->dispatch('toast', [
@@ -445,6 +461,14 @@ class ItemUnitManager extends Component
         $totalRented = (clone $baseCounts)->where('status', 'rented')->count();
         $totalMaintenance = (clone $baseCounts)->where('status', 'maintenance')->count();
         $totalRetired = (clone $baseCounts)->where('status', 'retired')->count();
+        $totalLost = (clone $baseCounts)->where('status', 'lost')->count();
+
+        // Hitung notif lost_unit yang belum diproses
+        $lostNotifCount = NotificationLog::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('type', 'lost_unit')
+            ->where('status', 'sent')
+            ->count();
 
         return view('livewire.vendor.item-unit-manager', [
             'units' => $units,
@@ -454,6 +478,8 @@ class ItemUnitManager extends Component
             'totalRented' => $totalRented,
             'totalMaintenance' => $totalMaintenance,
             'totalRetired' => $totalRetired,
+            'totalLost' => $totalLost,
+            'lostNotifCount' => $lostNotifCount,
         ]);
     }
 }

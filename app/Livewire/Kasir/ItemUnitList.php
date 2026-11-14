@@ -136,9 +136,10 @@ class ItemUnitList extends Component
         $available = (int) ($rows['available'] ?? 0);
         $rented = (int) ($rows['rented'] ?? 0);
         $maintenance = (int) ($rows['maintenance'] ?? 0);
+        $lost = (int) ($rows['lost'] ?? 0);
 
         return [
-            'all' => $available + $rented + $maintenance,
+            'all' => $available + $rented + $maintenance + $lost,
             'available' => $available,
             'rented' => $rented,
             'maintenance' => $maintenance,
@@ -177,7 +178,10 @@ class ItemUnitList extends Component
             $query->whereHas('masterItem', fn ($itemQ) => $itemQ->where('category_id', $this->filterCategory));
         }
 
-        $units = $query->orderBy('unit_code')->paginate(12);
+        $units = $query
+            ->orderByRaw("CASE WHEN status = 'lost' OR condition = 'lost' THEN 1 ELSE 0 END ASC")
+            ->orderBy('unit_code')
+            ->paginate(12);
 
         $counts = $this->statusCounts;
 

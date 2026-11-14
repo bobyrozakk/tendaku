@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('barcode', 100)->nullable();
             $table->enum('condition', ['excellent', 'good', 'fair', 'damaged', 'lost'])
                 ->default('excellent');
-            $table->enum('status', ['available', 'rented', 'maintenance', 'retired'])
+            $table->enum('status', ['available', 'rented', 'maintenance', 'retired', 'lost'])
                 ->default('available');
             $table->date('purchase_date')->nullable();
             $table->decimal('purchase_price', 10, 2)->nullable();

@@ -224,6 +224,25 @@ class Rental extends Model
     }
 
     /**
+     * Waktu jadwal pengambilan barang gabungan pickup_date dan pickup_time.
+     */
+    public function pickupDateTime(): Carbon
+    {
+        $dateStr = $this->pickup_date ? $this->pickup_date->format('Y-m-d') : now()->toDateString();
+        $timeStr = $this->pickup_time ?: '09:00:00';
+
+        return Carbon::parse("{$dateStr} {$timeStr}");
+    }
+
+    /**
+     * Apakah jadwal pengambilan rental sudah terlambat / lewat batas waktu.
+     */
+    public function isPickupOverdue(): bool
+    {
+        return $this->status === 'confirmed' && $this->pickupDateTime()->isPast();
+    }
+
+    /**
      * Alamat email penerima pengingat rental.
      */
     public function customerEmail(): ?string

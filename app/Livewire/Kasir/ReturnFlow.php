@@ -3,12 +3,17 @@
 namespace App\Livewire\Kasir;
 
 use App\Models\ItemUnit;
+use App\Models\NotificationLog;
 use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\RentalDetail;
+use App\Models\User;
+use App\Services\WhatsAppService;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class ReturnFlow extends Component
@@ -217,6 +222,11 @@ class ReturnFlow extends Component
             return;
         }
 
+        // Kumpulkan detail barang hilang sebelum transaksi (untuk notif setelahnya)
+        $lostDetails = $order->details->filter(
+            fn ($d) => ($this->inspectionNotes[$d->id] ?? 'good') === 'lost'
+        );
+
         // Eksekusi penyelesaian return di Database
         DB::transaction(function () use ($order, $totalLateFee, $totalDamageFee, $totalFines) {
             $user = Auth::user();
@@ -282,6 +292,11 @@ class ReturnFlow extends Component
             ]);
         });
 
+        // 4. Kirim notifikasi ke owner jika ada barang hilang
+        if ($lostDetails->isNotEmpty()) {
+            $this->notifyOwnerAboutLostItems($order, $lostDetails);
+        }
+
         // Siapkan struk untuk dicetak
         $this->prepareReceipt($order);
 
@@ -302,6 +317,67 @@ class ReturnFlow extends Component
     {
         $this->finePaidSuccess = true;
         $this->completeReturn();
+    }
+
+    /**
+     * Kirim notifikasi statis in-app (dan opsional WhatsApp) ke owner/vendor
+     * bahwa ada unit fisik yang dilaporkan hilang saat pengembalian.
+     *
+     * @param  Rental  $order
+     * @param  Collection  $lostDetails
+     */
+    private function notifyOwnerAboutLostItems($order, $lostDetails): void
+    {
+        $owner = User::withoutGlobalScopes()
+            ->where('vendor_id', $order->vendor_id)
+            ->where('role', 'vendor_owner')
+            ->first();
+
+        $itemNames = $lostDetails->map(function ($d) {
+            $name = $d->masterItem?->name ?? 'Unit tidak diketahui';
+            $unitCode = $d->itemUnit?->unit_code ?? '-';
+
+            return "{$name} ({$unitCode})";
+        })->join(', ');
+
+        $message = "🚨 Laporan Barang Hilang — {$order->booking_code}: Unit {$itemNames} dilaporkan hilang oleh kasir saat pengembalian. Silakan periksa inventaris dan hapus unit tersebut jika diperlukan.";
+
+        // Simpan notif statis in-app ke tabel notification_logs
+        try {
+            NotificationLog::create([
+                'vendor_id' => $order->vendor_id,
+                'user_id' => $owner?->id,
+                'rental_id' => $order->id,
+                'channel' => 'in_app',
+                'type' => 'lost_unit',
+                'message' => $message,
+                'status' => 'sent',
+                'sent_at' => Carbon::now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ReturnFlow: gagal menyimpan notif in-app barang hilang.', [
+                'rental_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Kirim WhatsApp jika owner punya nomor telepon
+        if ($owner && $owner->phone) {
+            $waMessage = "🚨 *Laporan Barang Hilang — {$order->booking_code}*\n"
+                ."Kasir melaporkan barang hilang saat pengembalian:\n"
+                ."{$itemNames}\n\n"
+                .'Silakan periksa inventaris atau hapus unit tersebut dari toko melalui menu Kelola Unit.';
+
+            try {
+                app(WhatsAppService::class)->send($owner->phone, $waMessage);
+            } catch (\Throwable $e) {
+                Log::error('ReturnFlow: gagal kirim WhatsApp notif barang hilang ke owner.', [
+                    'rental_id' => $order->id,
+                    'owner_id' => $owner->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     public function prepareReceipt($order)

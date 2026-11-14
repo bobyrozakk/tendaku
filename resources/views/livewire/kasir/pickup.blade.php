@@ -17,36 +17,74 @@
         </div>
     @endif
 
+    <!-- Header KPI Cards / Status Overview (2 Tab Bersih) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Card 1: Siap Pickup (Hari Ini / Mendatang) -->
+        <div wire:click="$set('activeTab', 'ready')" class="bg-white p-5 rounded-2xl border transition-all duration-200 cursor-pointer shadow-tendaku-sm hover:shadow-md {{ $activeTab === 'ready' ? 'border-avocado-500 ring-2 ring-avocado-500/20' : 'border-wheat-200/90 hover:border-avocado-300' }} flex items-center justify-between relative overflow-hidden">
+            <div class="space-y-1">
+                <span class="text-xs font-bold text-darkbrown-500 uppercase tracking-wider block">Siap Diambil</span>
+                <p class="text-3xl font-extrabold text-avocado-700 tracking-tight">{{ $counts['ready'] }}</p>
+                <p class="text-[11px] text-darkbrown-500">Jadwal hari ini & mendatang</p>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-avocado-100 text-avocado-700 border border-avocado-200 shrink-0">
+                <i data-lucide="package-check" class="w-7 h-7 text-avocado-700"></i>
+            </div>
+        </div>
+
+        <!-- Card 2: Belum Diambil / Lewat Jadwal -->
+        <div wire:click="$set('activeTab', 'overdue')" class="bg-white p-5 rounded-2xl border transition-all duration-200 cursor-pointer shadow-tendaku-sm hover:shadow-md {{ $activeTab === 'overdue' ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-wheat-200/90 hover:border-amber-300' }} flex items-center justify-between relative overflow-hidden">
+            <div class="space-y-1">
+                <span class="text-xs font-bold text-darkbrown-500 uppercase tracking-wider block">Belum Diambil</span>
+                <p class="text-3xl font-extrabold text-amber-600 tracking-tight">{{ $counts['overdue'] }}</p>
+                <p class="text-[11px] text-darkbrown-500">Lewat dari tanggal jadwal sewa</p>
+            </div>
+            <div class="p-3.5 rounded-2xl bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                <i data-lucide="clock-alert" class="w-7 h-7 text-amber-700"></i>
+            </div>
+        </div>
+    </div>
+
     <!-- Full-Width Card Antrean Pickup -->
     <x-card padding="p-0">
-        <!-- Header Card & Search Filter -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 pt-5 pb-4 border-b border-wheat-200">
+        <!-- Header Card & Search Filter & Tabs -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 px-5 pt-5 pb-4 border-b border-wheat-200">
             <div class="flex items-center gap-3">
                 <span class="p-2.5 rounded-xl bg-sunglow-100 text-darkbrown-800 border border-sunglow-200">
                     <i data-lucide="package-check" class="w-5 h-5 text-darkbrown-800"></i>
                 </span>
                 <div>
-                    <div class="flex items-center gap-2">
-                        <h2 class="font-extrabold text-base text-darkbrown-900">Antrean Pickup Hari Ini</h2>
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sunglow-100 text-darkbrown-900 border border-sunglow-300">
-                            <span class="w-1.5 h-1.5 rounded-full bg-sunglow-600 animate-pulse"></span>
-                            {{ $totalCount ?? $filteredOrders->total() }} Siap Pickup
-                        </span>
-                    </div>
-                    <p class="text-[11px] text-darkbrown-500">Klik transaksi untuk membuka verifikasi dan serah terima unit</p>
+                    <h2 class="font-extrabold text-base text-darkbrown-900">
+                        {{ $activeTab === 'overdue' ? 'Pesanan Belum Diambil' : 'Antrean Siap Pickup' }}
+                    </h2>
                 </div>
             </div>
 
-            <!-- Search Bar -->
-            <div class="w-full sm:w-80 relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-darkbrown-400">
-                    <i data-lucide="search" class="w-4 h-4"></i>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <!-- Segmented Filter Tabs: Hanya 2 Tab (Siap Diambil & Belum Diambil) -->
+                <div class="inline-flex p-1 bg-wheat-100/80 rounded-2xl border border-wheat-200/80 shrink-0">
+                    <button wire:click="$set('activeTab', 'ready')"
+                        class="px-4 py-2 text-center text-xs font-bold rounded-xl transition-all duration-200 flex items-center gap-1.5 cursor-pointer {{ $activeTab === 'ready' ? 'bg-white text-darkbrown-900 shadow-sm border border-wheat-200' : 'text-darkbrown-600 hover:text-darkbrown-900' }}">
+                        <span>Siap Diambil</span>
+                        <span class="px-2 py-0.5 text-[10px] rounded-full bg-avocado-100 text-avocado-800 border border-avocado-200 font-extrabold">{{ $counts['ready'] }}</span>
+                    </button>
+                    <button wire:click="$set('activeTab', 'overdue')"
+                        class="px-4 py-2 text-center text-xs font-bold rounded-xl transition-all duration-200 flex items-center gap-1.5 cursor-pointer {{ $activeTab === 'overdue' ? 'bg-white text-amber-900 shadow-sm border border-amber-300 font-extrabold' : 'text-darkbrown-600 hover:text-darkbrown-900' }}">
+                        <span>Belum Diambil</span>
+                        <span class="px-2 py-0.5 text-[10px] rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-extrabold">{{ $counts['overdue'] }}</span>
+                    </button>
                 </div>
-                <x-text-input 
-                    wire:model.live.debounce.250ms="searchPickup" 
-                    placeholder="Cari ID Booking atau Nama..." 
-                    class="w-full text-xs pl-9 py-2 bg-wheat-50/50 border-wheat-300 rounded-xl focus:bg-white"
-                />
+
+                <!-- Search Bar -->
+                <div class="w-full sm:w-64 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-darkbrown-400">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                    </div>
+                    <x-text-input 
+                        wire:model.live.debounce.250ms="searchPickup" 
+                        placeholder="Cari ID Booking atau Nama..." 
+                        class="w-full text-xs pl-9 py-2 bg-wheat-50/50 border-wheat-300 rounded-xl focus:bg-white"
+                    />
+                </div>
             </div>
         </div>
 
@@ -56,24 +94,34 @@
                 <div 
                     wire:click="selectPickup('{{ $order['id'] }}')" 
                     x-on:click="showPickupModal = true"
-                    class="group flex items-center justify-between p-4 mb-3 border rounded-2xl cursor-pointer transition-all duration-200 hover:border-avocado-400 hover:shadow-tendaku-sm bg-white border-wheat-200/90 hover:bg-wheat-50/50 last:mb-0"
+                    class="group flex items-center justify-between p-4 mb-3 border rounded-2xl cursor-pointer transition-all duration-200 hover:shadow-tendaku-sm bg-white {{ $order['is_overdue'] ? 'border-amber-300 hover:border-amber-400 bg-amber-50/20 hover:bg-amber-50/40' : 'border-wheat-200/90 hover:border-avocado-400 hover:bg-wheat-50/50' }} last:mb-0"
                 >
                     <!-- Left: Customer info & Booking ID -->
                     <div class="flex items-center gap-4">
-                        <div class="p-2.5 rounded-xl bg-wheat-100 border border-wheat-200 text-darkbrown-700 group-hover:bg-avocado-50 group-hover:border-avocado-200 group-hover:text-avocado-700 transition-colors shrink-0">
-                            <i data-lucide="user" class="w-5 h-5"></i>
+                        <div class="p-2.5 rounded-xl border {{ $order['is_overdue'] ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-wheat-100 border-wheat-200 text-darkbrown-700 group-hover:bg-avocado-50 group-hover:border-avocado-200 group-hover:text-avocado-700' }} transition-colors shrink-0">
+                            @if($order['is_overdue'])
+                                <i data-lucide="clock-alert" class="w-5 h-5 text-amber-700"></i>
+                            @else
+                                <i data-lucide="user" class="w-5 h-5"></i>
+                            @endif
                         </div>
                         <div>
-                            <div class="flex items-center gap-2 mb-0.5">
+                            <div class="flex items-center gap-2 mb-0.5 flex-wrap">
                                 <h4 class="font-extrabold text-darkbrown-900 text-sm">{{ $order['customer_name'] }}</h4>
                                 <span class="px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold bg-wheat-100 text-darkbrown-800 border border-wheat-200">
                                     {{ $order['id'] }}
                                 </span>
+                                @if($order['is_overdue'])
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                                        <i data-lucide="alert-circle" class="w-3 h-3 text-amber-600"></i>
+                                        Lewat {{ $order['overdue_days'] }} Hari
+                                    </span>
+                                @endif
                             </div>
-                            <div class="flex items-center gap-3 text-[11px] text-darkbrown-500">
-                                <span class="flex items-center gap-1">
-                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-darkbrown-400 shrink-0"></i>
-                                    {{ $order['rental_period'] }}
+                            <div class="flex items-center gap-3 text-[11px] text-darkbrown-500 flex-wrap">
+                                <span class="flex items-center gap-1 font-semibold {{ $order['is_overdue'] ? 'text-amber-800 font-bold' : '' }}">
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5 {{ $order['is_overdue'] ? 'text-amber-600' : 'text-darkbrown-400' }} shrink-0"></i>
+                                    Jadwal: {{ $order['rental_period'] }}
                                 </span>
                                 <span class="hidden sm:inline text-darkbrown-300">•</span>
                                 <span class="hidden sm:inline font-semibold text-darkbrown-600">{{ $order['phone'] }}</span>
@@ -87,10 +135,17 @@
                             <p class="text-xs font-bold text-darkbrown-800">{{ count($order['allocated_units']) }} Unit Fisik</p>
                             <p class="text-[10px] font-semibold {{ ($order['is_fully_paid'] ?? true) ? 'text-avocado-700' : 'text-amber-700 font-bold' }}">{{ $order['payment_status'] }}</p>
                         </div>
-                        <x-badge variant="sunglow" size="sm" :dot="true">
-                            {{ $order['status'] }}
-                        </x-badge>
-                        <div class="text-wheat-400 group-hover:text-avocado-500 transition-colors">
+                        @if($order['is_overdue'])
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-sm">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping"></span>
+                                Belum Diambil
+                            </span>
+                        @else
+                            <x-badge variant="sunglow" size="sm" :dot="true">
+                                {{ $order['status'] }}
+                            </x-badge>
+                        @endif
+                        <div class="text-wheat-400 {{ $order['is_overdue'] ? 'group-hover:text-amber-600' : 'group-hover:text-avocado-500' }} transition-colors">
                             <i data-lucide="chevron-right" class="w-4 h-4"></i>
                         </div>
                     </div>
@@ -98,8 +153,20 @@
             @empty
                 <div class="p-16 text-center text-xs text-darkbrown-500 space-y-2">
                     <i data-lucide="file-question" class="w-12 h-12 mx-auto text-wheat-400"></i>
-                    <p class="font-bold text-darkbrown-700">Tidak ada transaksi ditemukan</p>
-                    <p class="text-[11px]">Gunakan kata kunci pencarian lain atau pastikan ada transaksi berstatus 'Siap Pickup'.</p>
+                    <p class="font-bold text-darkbrown-700">
+                        @if($activeTab === 'overdue')
+                            Tidak ada pesanan yang terlambat diambil
+                        @else
+                            Tidak ada transaksi ditemukan
+                        @endif
+                    </p>
+                    <p class="text-[11px]">
+                        @if($activeTab === 'overdue')
+                            Semua pesanan yang siap pickup diambil tepat waktu atau belum melewati jadwal sewa.
+                        @else
+                            Gunakan kata kunci pencarian lain atau pilih tab filter lain.
+                        @endif
+                    </p>
                 </div>
             @endforelse
         </div>
