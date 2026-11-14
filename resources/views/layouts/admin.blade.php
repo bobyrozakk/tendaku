@@ -87,8 +87,12 @@
         <header class="admin-print-hide sticky top-0 z-30 border-b border-wheat-200/80 bg-wheat-50/90 backdrop-blur-xl">
             <div class="mx-auto flex min-h-[4rem] w-full max-w-screen-2xl items-center justify-between gap-3 px-4 py-2 sm:px-6 lg:px-8">
                 <a href="{{ route('dashboard') }}"
-                   class="shrink-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 focus-visible:ring-offset-wheat-50">
+                   class="inline-flex items-center gap-2.5 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 focus-visible:ring-offset-wheat-50 transition-opacity hover:opacity-90"
+                   aria-label="Dashboard Super Admin">
                     <x-application-logo size="md" />
+                    <span class="rounded-full bg-darkbrown-800 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-sunglow-300 shadow-sm">
+                        Admin
+                    </span>
                 </a>
 
                 <!-- Navigasi utama admin -->

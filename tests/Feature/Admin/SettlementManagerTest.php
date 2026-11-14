@@ -85,7 +85,7 @@ class SettlementManagerTest extends TestCase
         $this->actingAs($this->superAdmin)
             ->get(route('admin.settlements'))
             ->assertOk()
-            ->assertSee('Settlement &amp; Pencairan Vendor', false)
+            ->assertSee('Settlement Vendor')
             ->assertSee($settlement->vendor->name)
             ->assertSee('Draft Menunggu Review');
     }
