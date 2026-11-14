@@ -111,6 +111,8 @@
             ?? $rental->payments->where('channel', 'midtrans')->sortByDesc('id')->first();
         $paidPayment   = $rental->payments->where('status', 'paid')->sortByDesc('paid_at')->first();
         $vaInfo        = $onlinePayment?->va_details;
+        $isQrisPayment = $onlinePayment?->status === 'pending' && $onlinePayment?->payment_channel === 'qris';
+        $qrisInfo      = $isQrisPayment ? $onlinePayment?->qris_details : null;
 
         $vaBanks = [
             'bca'     => 'BCA',
@@ -118,6 +120,7 @@
             'bri'     => 'BRI',
             'permata' => 'Permata',
             'cimb'    => 'CIMB Niaga',
+            'qris'    => 'QRIS',
         ];
         $vaBankKey = strtolower((string) ($vaInfo['bank'] ?? ''));
         $vaBankKey = array_key_exists($vaBankKey, $vaBanks) ? $vaBankKey : 'bca';
@@ -220,7 +223,14 @@
             'syncUrl'       => route('booking.sync', $rental->booking_code),
             'csrf'          => csrf_token(),
             'vaUrl'         => route('booking.va', $rental->booking_code),
+            'qrisImageUrl'  => route('booking.qris-image', $rental->isGuest()
+                ? ['code' => $rental->booking_code, 'phone' => $rental->guest_phone]
+                : $rental->booking_code),
             'vaBanks'       => $vaBanks,
+            'paymentMethod' => $isQrisPayment ? 'qris' : $vaBankKey,
+            'isQrisPayment' => $isQrisPayment,
+            'qrisAvailable' => (bool) $qrisInfo,
+            'qrisRawUrl'    => $qrisInfo['qr_code_url'] ?? null,
             'orderId'       => $onlinePayment?->order_id,
             'va'            => $vaInfo ? [
                 'bank'   => $vaBankKey,

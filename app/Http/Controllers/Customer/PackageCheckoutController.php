@@ -20,18 +20,6 @@ use Illuminate\View\View;
 class PackageCheckoutController extends Controller
 {
     /**
-     * Nama channel pembayaran untuk pesan sukses.
-     */
-    private const CHANNEL_LABELS = [
-        'qris' => 'QRIS',
-        'bca_va' => 'BCA Virtual Account',
-        'bni_va' => 'BNI Virtual Account',
-        'bri_va' => 'BRI Virtual Account',
-        'permata_va' => 'Permata Virtual Account',
-        'cimb_va' => 'CIMB Niaga Virtual Account',
-    ];
-
-    /**
      * Halaman konfirmasi sewa paket camping.
      */
     public function index(Request $request, int $id): View
@@ -105,10 +93,7 @@ class PackageCheckoutController extends Controller
         }
         $package = $this->findPackage($id);
         $pickupMethod = $request->validated('pickup_method') ?? 'self_pickup';
-        $paymentChannel = $request->input('payment_channel');
-        if (! array_key_exists((string) $paymentChannel, self::CHANNEL_LABELS)) {
-            $paymentChannel = 'bca_va';
-        }
+        $paymentChannel = 'bca_va';
         $input = array_filter($request->safe()->only(['pickup_date', 'pickup_time', 'return_date', 'return_time', 'customer_address_id']), fn (mixed $value): bool => $value !== null && $value !== '');
         $input += ['checkout_type' => 'package', 'package_id' => $id, 'pickup_method' => $pickupMethod];
 
@@ -174,10 +159,9 @@ class PackageCheckoutController extends Controller
         if ($request->expectsJson()) {
             return response()->json($receipt);
         }
-        $channelLabel = self::CHANNEL_LABELS[$paymentChannel] ?? 'Midtrans Sandbox';
 
         return redirect()->to($receipt['redirect_url'])
-            ->with('success', 'Paket camping "'.$package->name.'" berhasil dipesan dengan kode #'.$rental->booking_code.' via '.$channelLabel.'.');
+            ->with('success', 'Paket camping "'.$package->name.'" berhasil dipesan dengan kode #'.$rental->booking_code.' via BCA Virtual Account.');
     }
 
     /**

@@ -209,7 +209,7 @@ class CheckoutController extends Controller
             $result = $checkout->checkout(
                 $bookingData,
                 $request->validated('payment_option') ?: 'full',
-                $this->paymentChannel($request->validated('payment_channel')),
+                'bca_va',
                 true,
                 $request->input('booking_code'),
             );
@@ -336,34 +336,6 @@ class CheckoutController extends Controller
         }
 
         return $data;
-    }
-
-    /**
-     * Kanal pembayaran yang didukung halaman checkout.
-     */
-    protected function paymentChannel(?string $channel): string
-    {
-        return in_array($channel, config('payment.enabled_channels', []), true)
-            ? $channel
-            : 'bca_va';
-    }
-
-    /**
-     * Metode pembayaran untuk ditampilkan di halaman checkout.
-     *
-     * @return array<int, array<string, string>>
-     */
-    protected function paymentMethods(): array
-    {
-        return collect(config('payment.va_banks', []))
-            ->map(fn (string $label, string $bank) => [
-                'id' => $bank.'_va',
-                'name' => $label.' Virtual Account',
-                'desc' => 'Konfirmasi pembayaran otomatis 24 jam',
-                'badge' => 'Otomatis',
-            ])
-            ->values()
-            ->all();
     }
 
     /**

@@ -11,11 +11,18 @@ function statusPage(cfg) {
         justDone: null,
         copied: false,
         remaining: "",
-        vaBank: cfg.va?.bank ?? "bca",
+        vaBank: cfg.paymentMethod ?? cfg.va?.bank ?? "bca",
         vaNumber: cfg.va?.number ?? "",
         vaBiller: cfg.va?.biller ?? "",
         vaLoading: false,
         vaOpen: false,
+        qrisOpen: false,
+        qrisAvailable: Boolean(cfg.qrisAvailable),
+        qrisImageUrl: cfg.qrisImageUrl,
+        qrisRawUrl: cfg.qrisRawUrl ?? "",
+        currentQrisImageUrl: "",
+        qrisImageLoading: false,
+        qrisImageFailed: false,
         flash: "",
         flashTone: "info",
         iconPath: {
@@ -29,6 +36,10 @@ function statusPage(cfg) {
 
         init() {
             this.startCountdown();
+            if (this.qrisAvailable) {
+                this.refreshQrisImage();
+                this.qrisOpen = true;
+            }
             // Daftar bank ditutup saat layar digulir/diubah ukurannya (posisinya fixed)
             const closeBank = () => {
                 if (this.vaOpen) this.vaOpen = false;
@@ -200,6 +211,35 @@ function statusPage(cfg) {
             this.changeBank(key);
         },
 
+        getQrisUrl() {
+            if (!this.qrisImageUrl) return "";
+            try {
+                const u = new URL(this.qrisImageUrl, window.location.origin);
+                if (this.orderId) {
+                    u.searchParams.set("order", this.orderId);
+                }
+                u.searchParams.set("_t", Date.now().toString());
+                return u.toString();
+            } catch {
+                return this.qrisImageUrl;
+            }
+        },
+
+        refreshQrisImage() {
+            this.qrisImageFailed = false;
+            this.qrisImageLoading = true;
+            this.currentQrisImageUrl = this.getQrisUrl();
+        },
+
+        retryQrisImage() {
+            this.refreshQrisImage();
+        },
+
+        openQris() {
+            this.refreshQrisImage();
+            this.qrisOpen = true;
+        },
+
         // Ganti bank VA: minta server membuat tagihan baru ke Midtrans. Nomor tidak pernah dibuat di browser.
         async changeBank(next) {
             const prev = this.vaBank;
@@ -216,13 +256,34 @@ function statusPage(cfg) {
                     body: JSON.stringify({ bank: next }),
                 });
                 const data = await res.json().catch(() => ({}));
-                if (!res.ok || !data.va_number)
+                if (!res.ok)
+                    throw new Error(
+                        data.message || "Gagal membuat nomor VA. Coba lagi.",
+                    );
+                if (next === "qris") {
+                    if (!data.is_qris || !data.qris_info?.qr_code_url) {
+                        throw new Error("QRIS belum tersedia. Coba lagi.");
+                    }
+                    this.vaBank = "qris";
+                    this.vaNumber = "";
+                    this.vaBiller = "";
+                    this.qrisAvailable = true;
+                    if (data.qris_info?.qr_code_url) {
+                        this.qrisRawUrl = data.qris_info.qr_code_url;
+                    }
+                    if (data.order_id) this.orderId = data.order_id;
+                    this.openQris();
+                    return;
+                }
+                if (data.is_qris || !data.va_number)
                     throw new Error(
                         data.message || "Gagal membuat nomor VA. Coba lagi.",
                     );
                 this.vaBank = next;
                 this.vaNumber = data.va_number;
                 this.vaBiller = data.biller_code || "";
+                this.qrisAvailable = false;
+                this.qrisOpen = false;
                 if (data.order_id) this.orderId = data.order_id;
             } catch (e) {
                 // Gagal: kembali ke bank & nomor sebelumnya (nomor lama masih aktif di Midtrans)
@@ -240,6 +301,10 @@ function statusPage(cfg) {
 
         async payNow() {
             if (this.paying) return;
+            if (this.qrisAvailable) {
+                this.openQris();
+                return;
+            }
             this.paying = true;
             this.flash = "";
             try {
@@ -248,6 +313,16 @@ function statusPage(cfg) {
                     headers: this.headers(),
                 });
                 const data = await res.json();
+
+                if (data?.is_qris && data.qris_info?.qr_code_url) {
+                    this.qrisAvailable = true;
+                    if (data.qris_info?.qr_code_url) {
+                        this.qrisRawUrl = data.qris_info.qr_code_url;
+                    }
+                    if (data.order_id) this.orderId = data.order_id;
+                    this.openQris();
+                    return;
+                }
 
                 if (data && data.snap_token) {
                     if (typeof window.snap !== "undefined") {
@@ -317,6 +392,7 @@ function statusPage(cfg) {
         // Pembayaran terdeteksi: centang -> tab bayar menutup -> tab serah terima membuka
         async handlePaid(data) {
             const slow = !reduced();
+            this.qrisOpen = false;
             this.celebrate = true;
             await wait(slow ? 1200 : 200);
             const now = new Date().toLocaleString("id-ID", {

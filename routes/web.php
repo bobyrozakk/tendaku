@@ -56,6 +56,9 @@ Route::prefix('katalog/booking')->group(function () {
     Route::post('/', [CheckoutController::class, 'store'])->block(120, 5)->name('checkout.store');
     Route::get('status/{code}', [BookingController::class, 'status'])->name('booking.status');
     Route::post('status/{code}/sync', [BookingController::class, 'syncPayment'])->name('booking.sync');
+    Route::get('status/{code}/qris-image', [BookingController::class, 'qrisImage'])
+        ->middleware('throttle:30,1')
+        ->name('booking.qris-image');
     Route::post('status/{code}/pay', [BookingController::class, 'pay'])->name('booking.pay');
     Route::post('status/{code}/cancel', [BookingController::class, 'cancel'])->name('booking.cancel');
     Route::post('status/{code}/va', [BookingVaController::class, 'switch'])

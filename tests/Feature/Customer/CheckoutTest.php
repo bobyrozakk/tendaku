@@ -124,7 +124,7 @@ class CheckoutTest extends TestCase
         $this->assertNull(session('booking_cart'), 'Keranjang harus dikosongkan setelah checkout berhasil.');
     }
 
-    public function test_logged_in_checkout_creates_a_pending_payment_for_the_grand_total(): void
+    public function test_logged_in_checkout_uses_default_va_even_if_a_stale_channel_is_submitted(): void
     {
         $customer = User::factory()->create(['role' => 'customer']);
 
@@ -134,7 +134,6 @@ class CheckoutTest extends TestCase
                 'pickup_method' => 'self_pickup',
                 'payment_option' => 'full',
                 'payment_channel' => 'qris',
-                'payment_option' => 'full',
             ])
             ->assertRedirect();
 
@@ -145,7 +144,8 @@ class CheckoutTest extends TestCase
         $this->assertSame($rental->vendor_id, $payment->vendor_id);
         $this->assertSame('full', $payment->payment_type);
         $this->assertSame('midtrans', $payment->channel);
-        $this->assertSame('qris', $payment->method);
+        $this->assertSame('bca_va', $payment->payment_channel);
+        $this->assertSame('bca_va', $payment->method);
         $this->assertSame('pending', $payment->status);
         $this->assertSame((float) $rental->grand_total, (float) $payment->amount);
     }
@@ -155,6 +155,8 @@ class CheckoutTest extends TestCase
         $this->withSession($this->cartSession())
             ->get(route('checkout.index'))
             ->assertOk()
+            ->assertDontSee('QRIS')
+            ->assertDontSee('name="payment_channel"', false)
             ->assertSee('No. WhatsApp aktif')
             ->assertSee('id="f_phone"', false)
             ->assertSee('id="f_name"', false)

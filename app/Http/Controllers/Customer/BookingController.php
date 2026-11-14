@@ -91,7 +91,13 @@ class BookingController extends Controller
         // Jika payment masih pending, siapkan detail pembayaran Virtual Account (default BCA)
         if ($latestPayment && $latestPayment->status === 'pending') {
             try {
-                if (empty($latestPayment->va_details)) {
+                if ($latestPayment->payment_channel === 'qris') {
+                    if (empty($latestPayment->qris_details)) {
+                        $midtrans->chargeQris($latestPayment);
+                        $latestPayment->refresh();
+                        $rental->refresh();
+                    }
+                } elseif (empty($latestPayment->va_details)) {
                     $bank = str_replace('_va', '', strtolower($latestPayment->payment_channel ?? 'bca'));
                     $bank = array_key_exists($bank, config('payment.va_banks', [])) ? $bank : 'bca';
                     $midtrans->chargeBankTransfer($latestPayment, $bank);
@@ -99,7 +105,7 @@ class BookingController extends Controller
                     $rental->refresh();
                 }
             } catch (\Throwable $e) {
-                // Abaikan jika ada kegagalan koneksi sesaat
+                report($e);
             }
         }
 
@@ -174,6 +180,18 @@ class BookingController extends Controller
             ->latest('id')
             ->firstOrFail();
 
+        if ($payment->payment_channel === 'qris') {
+            $qrisInfo = $payment->qris_details ?? $midtrans->chargeQris($payment);
+
+            return response()->json([
+                'status' => 'success',
+                'order_id' => $payment->order_id,
+                'is_qris' => true,
+                'qris_info' => $qrisInfo,
+                'amount' => (int) $payment->amount,
+            ]);
+        }
+
         $selectedBank = $request->input('bank');
         if (! $selectedBank) {
             $selectedBank = str_replace('_va', '', strtolower($payment->payment_channel ?? 'bca'));
@@ -192,6 +210,28 @@ class BookingController extends Controller
             'is_qris' => false,
             'va_info' => $vaInfo,
             'amount' => (int) $payment->amount,
+        ]);
+    }
+
+    /**
+     * Sajikan gambar QRIS Midtrans untuk pemilik booking yang berhak.
+     */
+    public function qrisImage(Request $request, string $code, MidtransService $midtrans): Response
+    {
+        $rental = $this->findAuthorizedRental($request, $code);
+        $payment = $this->midtransPayments($rental)
+            ->where('status', self::PAYMENT_PENDING)
+            ->whereIn('payment_type', self::PAYABLE_TYPES)
+            ->where('payment_channel', 'qris')
+            ->latest('id')
+            ->firstOrFail();
+
+        abort_if(empty($payment->qris_details), 404, 'Gambar QRIS belum tersedia.');
+
+        return response($midtrans->getQrisImage($payment), 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 

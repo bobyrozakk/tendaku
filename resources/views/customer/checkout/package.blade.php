@@ -387,30 +387,6 @@
                 </div>
             </section>
 
-            <!-- Metode Pembayaran -->
-            <div class="card-tendaku rounded-2xl bg-white p-6 border border-wheat-200 shadow-tendaku space-y-4">
-                <h2 class="text-base font-extrabold text-darkbrown-900 border-b border-wheat-200 pb-3 font-heading flex items-center gap-2">
-                    <i data-lucide="credit-card" class="w-4 h-4 text-avocado-600"></i>
-                    Metode Pembayaran
-                </h2>
-
-                <div>
-                    <label for="payment_channel" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                        Pilih Kanal Pembayaran
-                    </label>
-                    <select id="payment_channel" name="payment_channel"
-                            class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300">
-                        <option value="bca_va" @selected(old('payment_channel', 'bca_va') === 'bca_va')>BCA Virtual Account</option>
-                        <option value="bni_va" @selected(old('payment_channel') === 'bni_va')>BNI Virtual Account</option>
-                        <option value="bri_va" @selected(old('payment_channel') === 'bri_va')>BRI Virtual Account</option>
-                        <option value="permata_va" @selected(old('payment_channel') === 'permata_va')>Permata Virtual Account</option>
-                        <option value="cimb_va" @selected(old('payment_channel') === 'cimb_va')>CIMB Niaga Virtual Account</option>
-                    </select>
-                    <p class="text-[11px] text-darkbrown-400 mt-1">
-                        Instruksi pembayaran tampil pada halaman status setelah pesanan dibuat.
-                    </p>
-                </div>
-            </div>
         </div>
 
         <!-- Kolom Kanan: Ringkasan Pesanan -->

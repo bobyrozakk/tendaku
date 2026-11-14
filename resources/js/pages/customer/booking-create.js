@@ -3,7 +3,6 @@ import { checkoutAddressState } from "../../components/checkout-address.js";
 document.addEventListener("alpine:init", () => {
     Alpine.data("checkoutPage", (cfg) => ({
         ...cfg,
-        selectedChannel: "bca_va",
         paymentOption: "full",
         isProcessing: false,
         formError: "",
@@ -813,7 +812,6 @@ document.addEventListener("alpine:init", () => {
                 fd.append("_token", this.csrf);
                 fd.append("pickup_method", this.pickupMethod);
                 fd.append("payment_option", this.paymentOption);
-                fd.append("payment_channel", this.selectedChannel);
 
                 // Jadwal & jumlah unit (harga dihitung ulang di server)
                 fd.append("pickup_date", this.pickupDate);

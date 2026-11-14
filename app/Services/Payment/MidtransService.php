@@ -13,6 +13,7 @@ use App\Services\Finance\EscrowService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use LogicException;
@@ -173,6 +174,117 @@ class MidtransService
         ]);
 
         return $payment->fresh()->va_details;
+    }
+
+    /**
+     * Buat tagihan QRIS Midtrans dan simpan responsnya pada payment.
+     *
+     * @return array{qr_code_url: string}
+     */
+    public function chargeQris(Payment $payment): array
+    {
+        if (! $payment->exists || ! $payment->getKey() || blank($payment->order_id)) {
+            throw new InvalidArgumentException('Payment tersimpan dengan order_id wajib untuk membuat QRIS.');
+        }
+
+        if ($payment->status !== PaymentStatus::Pending->value) {
+            throw new InvalidArgumentException('QRIS hanya dapat dibuat untuk pembayaran yang masih pending.');
+        }
+
+        if ($payment->payment_channel !== 'qris') {
+            throw new InvalidArgumentException('Metode pembayaran ini tidak memilih QRIS.');
+        }
+
+        if ($qrisDetails = $payment->qris_details) {
+            return $qrisDetails;
+        }
+
+        $rental = $this->rentalFor($payment);
+        $params = [
+            'transaction_details' => [
+                'order_id' => $payment->order_id,
+                'gross_amount' => (int) $payment->amount,
+            ],
+            'customer_details' => $this->buildCustomerDetails($rental),
+            'item_details' => $this->buildItemDetails($payment, $rental),
+            'payment_type' => 'qris',
+            'qris' => ['acquirer' => 'gopay'],
+        ];
+
+        if ($payment->expires_at && $payment->expires_at->isFuture()) {
+            $params['custom_expiry'] = [
+                'expiry_duration' => max(
+                    1,
+                    (int) floor(now()->diffInMinutes($payment->expires_at))
+                ),
+                'unit' => 'minute',
+            ];
+        }
+
+        try {
+            $raw = json_decode(json_encode(CoreApi::charge($params)), true);
+        } catch (\Throwable $e) {
+            Log::error('Midtrans QRIS charge error: '.$e->getMessage(), [
+                'order_id' => $payment->order_id,
+            ]);
+
+            throw $e;
+        }
+
+        if (! is_array($raw)) {
+            throw new LogicException('Midtrans tidak mengembalikan respons QRIS yang valid.');
+        }
+
+        $qrisDetails = (new Payment(['raw_notification' => $raw]))->qris_details;
+
+        if (! $qrisDetails) {
+            throw new LogicException('Midtrans tidak mengembalikan URL gambar QRIS.');
+        }
+
+        $payment->update([
+            'midtrans_transaction_id' => $raw['transaction_id']
+                ?? $payment->midtrans_transaction_id,
+            'midtrans_status' => $raw['transaction_status'] ?? 'pending',
+            'payment_channel' => 'qris',
+            'method' => 'qris',
+            'raw_notification' => $raw,
+        ]);
+
+        return $qrisDetails;
+    }
+
+    /**
+     * Ambil gambar QRIS dari Midtrans menggunakan autentikasi server-side.
+     */
+    public function getQrisImage(Payment $payment): string
+    {
+        $qrCodeUrl = $payment->qris_details['qr_code_url'] ?? null;
+        $isProduction = (bool) config('services.midtrans.is_production');
+        $allowedHosts = $isProduction
+            ? ['api.midtrans.com', 'merchants-app.midtrans.com']
+            : ['api.sandbox.midtrans.com', 'merchants-app.sbx.midtrans.com'];
+        $url = is_string($qrCodeUrl) ? parse_url($qrCodeUrl) : false;
+
+        if (
+            ! is_array($url)
+            || ($url['scheme'] ?? null) !== 'https'
+            || ! in_array($url['host'] ?? null, $allowedHosts, true)
+        ) {
+            throw new LogicException('URL gambar QRIS Midtrans tidak valid.');
+        }
+
+        $response = Http::connectTimeout(3)
+            ->timeout(10)
+            ->withBasicAuth((string) config('services.midtrans.server_key'), '')
+            ->accept('image/png')
+            ->get($qrCodeUrl)
+            ->throw();
+
+        if (! str_starts_with((string) $response->header('Content-Type'), 'image/png')) {
+            throw new LogicException('Midtrans tidak mengembalikan gambar QRIS PNG.');
+        }
+
+        return $response->body();
     }
 
     // ── Status: polling & webhook ─────────────────────────────────────────
