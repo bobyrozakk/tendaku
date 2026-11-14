@@ -2,11 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Models\CustomerAddress;
 use App\Models\ItemCategory;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
+use App\Models\MasterItemImage;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Models\VendorShippingSetting;
 use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -56,6 +59,42 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        CustomerAddress::updateOrCreate(
+            ['user_id' => $customer1->id, 'label' => 'Rumah'],
+            [
+                'recipient_name' => $customer1->name,
+                'phone_number' => '081234567800',
+                'full_address' => 'Jl. Candi Panggung Barat No. 18',
+                'province' => 'Jawa Timur',
+                'city' => 'Malang',
+                'district' => 'Lowokwaru',
+                'village' => 'Mojolangu',
+                'postal_code' => '65142',
+                'latitude' => -7.9406,
+                'longitude' => 112.6121,
+                'notes' => 'Rumah pagar hitam dekat pertigaan.',
+                'is_default' => true,
+            ]
+        );
+
+        CustomerAddress::updateOrCreate(
+            ['user_id' => $customer2->id, 'label' => 'Rumah'],
+            [
+                'recipient_name' => $customer2->name,
+                'phone_number' => '089876543210',
+                'full_address' => 'Jl. Agus Salim No. 23',
+                'province' => 'Jawa Timur',
+                'city' => 'Batu',
+                'district' => 'Batu',
+                'village' => 'Sisir',
+                'postal_code' => '65314',
+                'latitude' => -7.8712,
+                'longitude' => 112.5249,
+                'notes' => 'Rumah berada di sisi utara jalan.',
+                'is_default' => true,
+            ]
+        );
+
         // -------------------------------------------------------------
         // 2. VENDOR 1 (Tendaku Central Camp - Malang)
         // -------------------------------------------------------------
@@ -68,8 +107,11 @@ class DatabaseSeeder extends Seeder
                 'email' => 'store@tendaku.com',
                 'address' => 'Jl. Outdoor Adventure No. 45, Lowokwaru',
                 'city' => 'Malang',
+                'latitude' => -7.9562,
+                'longitude' => 112.6143,
                 'logo_url' => 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=400&q=80',
                 'status' => 'active',
+                'commission_rate' => 0.0500,
                 'approved_at' => now(),
                 'approved_by' => $superAdmin->id,
             ]
@@ -125,8 +167,11 @@ class DatabaseSeeder extends Seeder
                 'email' => 'contact@mountaineer.id',
                 'address' => 'Jl. Panglima Sudirman No. 88',
                 'city' => 'Batu',
+                'latitude' => -7.8726,
+                'longitude' => 112.5234,
                 'logo_url' => 'https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=400&q=80',
                 'status' => 'active',
+                'commission_rate' => 0.0500,
                 'approved_at' => now(),
                 'approved_by' => $superAdmin->id,
             ]
@@ -157,11 +202,25 @@ class DatabaseSeeder extends Seeder
                 'email' => 'bromo@campadventure.id',
                 'address' => 'Jl. Raya Bromo No. 12, Sukapura',
                 'city' => 'Probolinggo',
+                'latitude' => -7.9220,
+                'longitude' => 112.9580,
                 'status' => 'pending',
+                'commission_rate' => 0.0500,
                 'approved_at' => null,
                 'approved_by' => null,
             ]
         );
+
+        foreach ([
+            $vendor1->id => ['rate_per_km' => 2000, 'weight_threshold_kg' => 10, 'extra_weight_fee_per_kg' => 1000],
+            $vendor2->id => ['rate_per_km' => 2500, 'weight_threshold_kg' => 10, 'extra_weight_fee_per_kg' => 1250],
+            $vendor3->id => ['rate_per_km' => 3000, 'weight_threshold_kg' => 8, 'extra_weight_fee_per_kg' => 1500],
+        ] as $vendorId => $shippingSetting) {
+            VendorShippingSetting::updateOrCreate(
+                ['vendor_id' => $vendorId],
+                $shippingSetting
+            );
+        }
 
         User::updateOrCreate(
             ['email' => 'owner3@tendaku.com'],
@@ -221,6 +280,7 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Tenda kemping kapasitas 4 orang dengan spesifikasi tinggi. Double layer Polyester PU 3000mm tahan cuaca ekstrem.',
                 'daily_rate' => 45000,
                 'late_fee_per_day' => 25000,
+                'weight_kg' => 5.2,
                 'image_url' => 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=1000&q=80',
                 'is_active' => true,
             ],
@@ -231,6 +291,7 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Tenda ultralight kapasitas 2 orang berbahan Silicone Coated 20D Nylon. Bobot sangat ringan hanya 1.8 kg.',
                 'daily_rate' => 60000,
                 'late_fee_per_day' => 30000,
+                'weight_kg' => 2.4,
                 'image_url' => 'https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=1000&q=80',
                 'is_active' => true,
             ],
@@ -241,6 +302,7 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Kantong tidur hangat dilapisi dacron sintetis 300g/m² dengan toleransi suhu nyaman hingga 5°C.',
                 'daily_rate' => 15000,
                 'late_fee_per_day' => 10000,
+                'weight_kg' => 1.4,
                 'image_url' => 'https://images.unsplash.com/photo-1526772662000-3f88f10405ff?auto=format&fit=crop&w=1000&q=80',
                 'is_active' => true,
             ],
@@ -251,6 +313,7 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Kompor mawar lipat anti angin dilengkapi pelindung bodi stainless, hemat gas dan cepat mendidihkan air.',
                 'daily_rate' => 12000,
                 'late_fee_per_day' => 8000,
+                'weight_kg' => 0.45,
                 'image_url' => 'https://images.unsplash.com/photo-1517824806704-9040b037703b?auto=format&fit=crop&w=1000&q=80',
                 'is_active' => true,
             ],
@@ -261,6 +324,7 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Set alat masak lengkap aluminium anodized: 2 panci, 1 wajan lipat, 1 teko air hangat, plus spons cuci.',
                 'daily_rate' => 20000,
                 'late_fee_per_day' => 10000,
+                'weight_kg' => 0.75,
                 'image_url' => 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1000&q=80',
                 'is_active' => true,
             ],
@@ -271,6 +335,7 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Tas carrier legendaris dengan sistem suspensi Anti-Gravity 3D mesh. Nyaman memuat perlengkapan hingga 25kg.',
                 'daily_rate' => 50000,
                 'late_fee_per_day' => 25000,
+                'weight_kg' => 2.1,
                 'image_url' => 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=1000&q=80',
                 'is_active' => true,
             ],
@@ -281,6 +346,7 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Lampu gantung fleksibel 300 Lumens dengan port pengisi daya USB dan panel surya darurat. Tahan hingga 12 jam.',
                 'daily_rate' => 10000,
                 'late_fee_per_day' => 5000,
+                'weight_kg' => 0.35,
                 'image_url' => 'https://images.unsplash.com/photo-1508873696983-2df515122519?auto=format&fit=crop&w=1000&q=80',
                 'is_active' => true,
             ],
@@ -302,11 +368,13 @@ class DatabaseSeeder extends Seeder
                     'daily_rate' => $itemData['daily_rate'],
                     'deposit_amount' => 0,
                     'late_fee_per_day' => $itemData['late_fee_per_day'],
+                    'weight_kg' => $itemData['weight_kg'],
                     'image_url' => $itemData['image_url'],
                     'is_active' => true,
                 ]
             );
 
+            $this->seedPrimaryImage($item);
             $v1CreatedItems[] = $item;
         }
 
@@ -321,10 +389,12 @@ class DatabaseSeeder extends Seeder
                 'daily_rate' => 55000,
                 'deposit_amount' => 0,
                 'late_fee_per_day' => 25000,
+                'weight_kg' => 4.8,
                 'image_url' => 'https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=1000&q=80',
                 'is_active' => true,
             ]
         );
+        $this->seedPrimaryImage($v2Item);
 
         // -------------------------------------------------------------
         // 6. UNIT FISIK SERIALIZED DENGAN VARIASI STATUS & KONDISI
@@ -390,5 +460,21 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+    }
+
+    private function seedPrimaryImage(MasterItem $item): void
+    {
+        $imagePath = Str::contains($item->image_url, '/storage/')
+            ? Str::after($item->image_url, '/storage/')
+            : $item->image_url;
+
+        MasterItemImage::updateOrCreate(
+            ['master_item_id' => $item->id, 'image_path' => $imagePath],
+            [
+                'image_url' => $item->image_url,
+                'is_primary' => true,
+                'sort_order' => 1,
+            ]
+        );
     }
 }
