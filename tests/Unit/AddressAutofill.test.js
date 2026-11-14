@@ -294,6 +294,56 @@ test('programmatic field changes during a request are preserved without an input
     assert.equal(form.inputs.get('city').value, 'Data baru dari form');
 });
 
+function checkoutAutofillContext(state) {
+    const template = fs.readFileSync(new URL('../../' + templates.checkout, import.meta.url), 'utf8');
+    const expression = template.match(/context-expression="([^"]+)"/)[1];
+    return state[expression];
+}
+
+test('a fresh checkout draft does not inherit manual protection from a previous new address', async () => {
+    const form = fixture('checkout', async () => success(), { city: 'Malang' });
+    const firstDraft = { editingAddressId: null, newAddressForm: { city: 'Malang' } };
+    form.component.syncAutofillContext(true, checkoutAutofillContext(firstDraft));
+    form.edit('city', 'Malang');
+    form.component.syncAutofillContext(false, checkoutAutofillContext(firstDraft));
+
+    const freshDraft = { editingAddressId: null, newAddressForm: { city: 'Malang' } };
+    form.component.syncAutofillContext(true, checkoutAutofillContext(freshDraft));
+    assert.equal(form.calls.length, 0);
+    form.pin();
+    await form.run();
+    assert.equal(form.model.city, 'Kota Malang');
+});
+
+test('replacing a checkout draft ignores its pending response even if its address id stays the same', async () => {
+    let finish;
+    const form = fixture('checkout', () => new Promise(resolve => { finish = resolve; }));
+    const firstDraft = { editingAddressId: 7, newAddressForm: {} };
+    form.component.syncAutofillContext(true, checkoutAutofillContext(firstDraft));
+    form.pin();
+    const pending = form.run();
+
+    const replacement = { editingAddressId: 7, newAddressForm: {} };
+    form.component.syncAutofillContext(true, checkoutAutofillContext(replacement));
+    finish(success());
+    await pending;
+    assert.equal(form.calls[0].options.signal.aborted, true);
+    assert.equal(form.model.full_address, '');
+});
+
+test('reopening the same checkout draft keeps its manual corrections protected', async () => {
+    const form = fixture('checkout');
+    const draft = { editingAddressId: null, newAddressForm: {} };
+    form.component.syncAutofillContext(true, checkoutAutofillContext(draft));
+    form.edit('city', 'Koreksi pada draft');
+    form.component.syncAutofillContext(false, checkoutAutofillContext(draft));
+    form.component.syncAutofillContext(true, checkoutAutofillContext(draft));
+    assert.equal(form.calls.length, 0);
+    form.pin();
+    await form.run();
+    assert.equal(form.model.city, 'Koreksi pada draft');
+});
+
 for (const kind of ['profile', 'checkout']) {
     test(`${kind}: an automatic district follows a move to a different district`, async () => {
         let district = 'Klojen';

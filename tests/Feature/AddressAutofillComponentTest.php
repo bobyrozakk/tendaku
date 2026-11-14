@@ -29,7 +29,7 @@ class AddressAutofillComponentTest extends TestCase
 
         $this->assertStringContainsString('x-data="addressAutofill(', $html);
         $this->assertStringContainsString('reverse-geocode', $html);
-        $this->assertStringContainsString('syncAutofillContext(showAddAddressModal &amp;&amp; !newAddressSubmitting, editingAddressId)', $html);
+        $this->assertStringContainsString('syncAutofillContext(showAddAddressModal &amp;&amp; !newAddressSubmitting, newAddressForm)', $html);
         $this->assertStringContainsString(':inert="newAddressSubmitting"', $html);
         $this->assertStringContainsString('@location-picker:change="syncNewAddressCoordinates($event.detail)"', $html);
         $this->assertStringContainsString('@location-picker:change="scheduleAddressAutofill($event.detail)"', $html);

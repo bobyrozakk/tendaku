@@ -50,7 +50,7 @@
                     <x-address-autofill
                         picker-id="checkout-add-address-location-picker"
                         active-expression="showAddAddressModal && !newAddressSubmitting"
-                        context-expression="editingAddressId"
+                        context-expression="newAddressForm"
                         class="mt-4 space-y-4"
                         ::inert="newAddressSubmitting"
                         @keydown.enter="if ($event.target.tagName === 'INPUT' && $event.target.type !== 'checkbox') { $event.preventDefault(); saveAddress(); }"
