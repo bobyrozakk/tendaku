@@ -7,7 +7,6 @@ use App\Enums\PaymentType;
 use App\Exceptions\InvalidMidtransSignatureException;
 use App\Models\Payment;
 use App\Models\Rental;
-use App\Services\Finance\CommissionCalculator;
 use App\Services\Finance\CommissionService;
 use App\Services\Finance\EscrowService;
 use Carbon\Carbon;
@@ -30,7 +29,6 @@ class MidtransService
     public const ORDER_ID_PREFIX = 'TDK';
 
     public function __construct(
-        private readonly CommissionCalculator $calculator,
         private readonly CommissionService $commissions,
         private readonly EscrowService $escrow,
         private readonly PaymentService $payments,
@@ -441,10 +439,6 @@ class MidtransService
             return $payment;
         }
 
-        if ($newStatus === PaymentStatus::Paid) {
-            $this->confirmRentalIfFirstPayment($payment);
-        }
-
         $this->applyMonetization($payment);
 
         return $payment;
@@ -521,33 +515,6 @@ class MidtransService
             'refund', 'partial_refund' => PaymentStatus::Refunded,
             default => null,
         };
-    }
-
-    /**
-     * Konfirmasi rental saat pembayaran paid pertama.
-     *
-     * Catatan alur bisnis: Setelah pembayaran lunas, status rental TETAP 'pending'
-     * agar kasir toko dapat memvalidasi dan mencocokkan barcode unit fisik alat secara manual di POS.
-     * Status rental baru berubah menjadi 'confirmed' (Tervalidasi / Siap Pickup) setelah kasir
-     * menyelesaikan validasi barcode dan mengklik "Setujui Pesanan".
-     */
-    private function confirmRentalIfFirstPayment(Payment $payment): void
-    {
-        // Status rental tetap 'pending' sampai kasir menyetujui pesanan via POS
-    }
-
-    /**
-     * Membuat order ID dengan prefix project.
-     */
-    public static function generateOrderId(int $paymentId): string
-    {
-        if ($paymentId <= 0) {
-            throw new InvalidArgumentException(
-                'Payment ID harus berupa angka positif.'
-            );
-        }
-
-        return self::ORDER_ID_PREFIX.'-'.$paymentId;
     }
 
     /**

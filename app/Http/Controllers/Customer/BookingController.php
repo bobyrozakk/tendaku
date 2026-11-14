@@ -106,8 +106,7 @@ class BookingController extends Controller
                         $rental->refresh();
                     }
                 } elseif (empty($latestPayment->va_details)) {
-                    $bank = str_replace('_va', '', strtolower($latestPayment->payment_channel ?? 'bca'));
-                    $bank = array_key_exists($bank, config('payment.va_banks', [])) ? $bank : 'bca';
+                    $bank = $this->resolveBank($latestPayment->payment_channel);
                     $midtrans->chargeBankTransfer($latestPayment, $bank);
                     $latestPayment->refresh();
                     $rental->refresh();
@@ -257,7 +256,6 @@ class BookingController extends Controller
         $rental->loadMissing([
             'vendor',
             'customer',
-            'pickedUpBy:id,name',
             'pickedUpBy',
             'details.masterItem.category',
             'payments',
@@ -350,6 +348,13 @@ class BookingController extends Controller
         abort_unless(filter_var($photoPath, FILTER_VALIDATE_URL), 404, 'Foto jaminan KTP tidak ditemukan.');
 
         return redirect()->away($photoPath);
+    }
+
+    private function resolveBank(?string $channel): string
+    {
+        $bank = str_replace('_va', '', strtolower($channel ?? 'bca'));
+
+        return array_key_exists($bank, config('payment.va_banks', [])) ? $bank : 'bca';
     }
 
     /**

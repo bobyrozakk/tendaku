@@ -65,7 +65,7 @@ Route::prefix('katalog/booking')->group(function () {
         ->middleware('throttle:10,1')
         ->name('booking.va');
     Route::get('receipt/{code}', [BookingController::class, 'receipt'])->name('booking.receipt');
-    Route::get('receipt/{code}/photo', [BookingController::class, 'collate                  ralPhoto'])->name('booking.receipt.photo');
+    Route::get('receipt/{code}/photo', [BookingController::class, 'collateralPhoto'])->name('booking.receipt.photo');
 });
 
 // Riwayat Sewa Customer (Wajib Login & Email Terverifikasi)

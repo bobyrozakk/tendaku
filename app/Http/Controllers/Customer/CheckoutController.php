@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\StoreCheckoutRequest;
 use App\Models\MasterItem;
 use App\Models\Rental;
-use App\Models\User;
 use App\Services\Booking\CartService;
 use App\Services\Booking\CheckoutService;
 use App\Services\Booking\CheckoutShippingService;
@@ -23,8 +22,6 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    private const CART_SESSION_KEY = 'booking_cart';
-
     public function __construct(
         private readonly CheckoutSummaryBuilder $summary,
         private readonly RentalAccessGuard $accessGuard,

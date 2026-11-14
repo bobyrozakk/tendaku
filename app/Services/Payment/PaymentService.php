@@ -35,7 +35,6 @@ class PaymentService
         int|float $subtotal,
         int|float $deliveryFee = 0,
         int|float $discount = 0,
-        ?int $percentage = null,
     ): int {
         $base = max(0, (int) round($subtotal) + (int) round($deliveryFee) - (int) round($discount));
 
@@ -105,7 +104,6 @@ class PaymentService
                 (float) $rental->subtotal,
                 (float) $rental->delivery_fee,
                 (float) $rental->discount_amount,
-                (int) ($rental->vendor?->dp_percentage ?? 0)
             )),
             PaymentType::Remaining->value => $this->remainingAmountOrFail($rental),
             default => $grandTotal,
