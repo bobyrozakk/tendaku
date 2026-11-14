@@ -1,5 +1,6 @@
 import { createIcons, icons } from "lucide";
 import "./components/location-picker.js";
+import "./components/address-autofill.js";
 import "./pages/customer/booking-status.js";
 import "./pages/customer/booking-create.js";
 import "./pages/customer/package-checkout.js";

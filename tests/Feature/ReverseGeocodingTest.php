@@ -140,6 +140,34 @@ class ReverseGeocodingTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    #[DataProvider('districtMappings')]
+    public function test_district_mapping_does_not_guess_from_other_administrative_levels(array $address, ?string $district): void
+    {
+        $user = User::factory()->make(['id' => 1]);
+        Http::fake([
+            self::API_URL => Http::response(['display_name' => 'Alamat dari API', 'address' => $address]),
+        ]);
+
+        $this->actingAs($user)->getJson(route('locations.reverse-geocode', ['latitude' => -7.9, 'longitude' => 112.6]))
+            ->assertOk()->assertJsonPath('data.district', $district);
+        Http::assertSentCount(1);
+    }
+
+    /**
+     * @return array<string, array{array<string, string>, ?string}>
+     */
+    public static function districtMappings(): array
+    {
+        return [
+            'city district takes precedence' => [['city_district' => 'Klojen', 'district' => 'Blimbing', 'suburb' => 'Oro-oro Dowo'], 'Klojen'],
+            'explicit district fallback' => [['city_district' => ' ', 'district' => 'Blimbing'], 'Blimbing'],
+            'suburb is ambiguous' => [['suburb' => 'Klojen'], null],
+            'county is not a kecamatan' => [['county' => 'Kabupaten Malang'], null],
+            'state district is not a kecamatan' => [['state_district' => 'Wilayah Malang'], null],
+            'town municipality and neighbourhood are not inferred' => [['town' => 'Batu', 'municipality' => 'Kota Batu', 'neighbourhood' => 'Lingkungan A'], null],
+        ];
+    }
+
     #[DataProvider('invalidCoordinates')]
     public function test_returns_422_for_invalid_coordinates_without_calling_provider(array $coordinates, array $errors): void
     {
