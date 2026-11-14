@@ -16,6 +16,7 @@ use App\Http\Controllers\Customer\PaymentRetryController;
 use App\Http\Controllers\Customer\RentalStatusLookupController;
 use App\Http\Controllers\Customer\ShippingPreviewController;
 use App\Http\Controllers\Customer\StoreController;
+use App\Http\Controllers\ReverseGeocodingController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
 use App\Http\Controllers\Vendor\CategoryController;
@@ -86,6 +87,10 @@ Route::prefix('status-sewa')
             ->middleware('throttle:30,1')
             ->name('show');
     });
+
+Route::get('locations/reverse-geocode', ReverseGeocodingController::class)
+    ->middleware(['auth', 'verified', 'role:customer,vendor_owner', 'throttle:30,1,reverse-geocoding'])
+    ->name('locations.reverse-geocode');
 
 // Pengelolaan Alamat Lengkap Customer (Wajib Login & Email Terverifikasi)
 Route::middleware(['auth', 'verified'])

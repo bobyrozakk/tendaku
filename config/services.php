@@ -64,6 +64,10 @@ return [
         'retry_sleep_ms' => (int) env('FONNTE_RETRY_SLEEP_MS', 300),
     ],
 
+    'locationiq' => [
+        'api_key' => env('LOCATIONIQ_API_KEY'),
+    ],
+
     'openrouteservice' => [
         // API Key OpenRouteService untuk perhitungan jarak pengiriman (Directions API).
         'api_key' => env('OPENROUTESERVICE_API_KEY', env('ORS_API_KEY')),
