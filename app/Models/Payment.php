@@ -148,6 +148,38 @@ class Payment extends Model
     }
 
     /**
+     * Ekstrak URL gambar QRIS dari respons charge Midtrans.
+     *
+     * @return array{qr_code_url: string}|null
+     */
+    public function getQrisDetailsAttribute(): ?array
+    {
+        $actions = $this->raw_notification['actions'] ?? [];
+
+        if (! is_array($actions)) {
+            return null;
+        }
+
+        foreach (['generate-qr-code', 'generate-qr-code-v2'] as $actionName) {
+            foreach ($actions as $action) {
+                if (
+                    is_array($action)
+                    && ($action['name'] ?? null) === $actionName
+                    && is_string($action['url'] ?? null)
+                    && $action['url'] !== ''
+                ) {
+                    return [
+                        'qr_code_url' => $action['url'],
+                        'qr_string' => $this->raw_notification['qr_string'] ?? null,
+                    ];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Pindah ke status baru jika transisinya valid.
      * Tidak menyimpan ke database; caller harus memanggil save().
      */

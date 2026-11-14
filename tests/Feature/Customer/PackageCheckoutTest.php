@@ -156,7 +156,8 @@ class PackageCheckoutTest extends TestCase
         $response->assertSee('Paket Camping 2 Hari');
         $response->assertSee('Rp 300.000');
         $response->assertSee('Tenda Dome 4P');
-        $response->assertSee('BCA Virtual Account');
+        $response->assertDontSee('BCA Virtual Account');
+        $response->assertDontSee('QRIS');
         $response->assertSee($this->customer->name);
     }
 
@@ -169,7 +170,7 @@ class PackageCheckoutTest extends TestCase
                 'package_id' => $this->package->id,
                 'pickup_date' => $pickupDate->toDateString(),
                 'pickup_method' => 'self_pickup',
-                'payment_channel' => 'bca_va',
+                'payment_channel' => 'qris',
             ]);
 
         $rental = Rental::query()->firstOrFail();

@@ -56,7 +56,8 @@ class PaymentRetryController extends Controller
         $newPayment = $paymentService->createOnlinePayment(
             $rental,
             $oldPayment->payment_type,
-            $this->nextAttemptNumber($oldPayment->order_id),
+            $paymentService->orderSequence($rental->booking_code, $oldPayment->order_id) + 1,
+            $oldPayment->payment_channel,
         );
 
         $snapToken = $midtransService->createTransaction($newPayment);
@@ -71,16 +72,5 @@ class PaymentRetryController extends Controller
             'booking_code' => $rental->booking_code,
             'redirect_url' => route('booking.status', $rental->booking_code),
         ]);
-    }
-
-    /**
-     * Ambil angka percobaan di akhir order_id lalu tambah 1.
-     * TDK-2026-ABCDE-FULL-1 → 2 ; TDK-2026-ABCDE-DP-3 → 4
-     */
-    private function nextAttemptNumber(string $orderId): int
-    {
-        return preg_match('/-(\d+)$/', $orderId, $matches)
-            ? ((int) $matches[1]) + 1
-            : 2;
     }
 }

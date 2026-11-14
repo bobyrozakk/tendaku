@@ -35,31 +35,49 @@ class PaymentService
         int|float $subtotal,
         int|float $deliveryFee = 0,
         int|float $discount = 0,
-        ?int $percentage = null,
     ): int {
         $base = max(0, (int) round($subtotal) + (int) round($deliveryFee) - (int) round($discount));
 
         return intdiv($base * $this->defaultDpPercentage() + 99, 100);
     }
 
-    //  order_id Midtrans unik berprefix TDK.
-    //  Digit tipe: full=1, dp=2, remaining=3, fine=4, lainnya=9.
-    public function generateOrderId(string $bookingCode, string $paymentType, int $attempt = 1): string
+    public function generateOrderId(string $bookingCode, ?string $paymentMethod, int $sequence = 1): string
     {
-        $cleanCode = str_replace(['TDK-', 'TDK'], '', strtoupper($bookingCode));
-
-        $datePart = substr($cleanCode, 0, 8);
-        $seqPart = substr($cleanCode, 8);
-
-        $typeNumber = match ($paymentType) {
-            PaymentType::Full->value => '1',
-            PaymentType::Dp->value => '2',
-            PaymentType::Remaining->value => '3',
-            PaymentType::Fine->value => '4',
-            default => '9',
+        $bookingCodePrefix = $this->bookingCodePrefix($bookingCode);
+        $methodCode = match (str_replace('_va', '', strtolower($paymentMethod ?? ''))) {
+            'bca' => '1',
+            'bni' => '2',
+            'bri' => '3',
+            'permata' => '4',
+            'cimb' => '5',
+            'qris' => '6',
+            default => '0',
         };
 
-        return "TDK{$datePart}{$typeNumber}{$seqPart}-{$attempt}";
+        return "{$bookingCodePrefix}{$methodCode}{$sequence}";
+    }
+
+    public function orderSequence(string $bookingCode, string $orderId): int
+    {
+        if (preg_match('/-(\d+)$/', $orderId, $matches)) {
+            return (int) $matches[1];
+        }
+
+        $cleanBookingCode = strtoupper(str_replace('-', '', $bookingCode));
+        $cleanOrderId = strtoupper(str_replace('-', '', $orderId));
+        $bookingCodePrefix = $this->bookingCodePrefix($bookingCode);
+        $suffixes = [
+            substr($cleanOrderId, strlen($cleanBookingCode)),
+            substr($cleanOrderId, strlen($bookingCodePrefix)),
+        ];
+
+        foreach ($suffixes as $suffix) {
+            if (preg_match('/^[0-6](\d+)$/', $suffix, $matches)) {
+                return (int) $matches[1];
+            }
+        }
+
+        return 1;
     }
 
     // ── Pembayaran online (Midtrans) ──────────────────────────────────────────
@@ -86,7 +104,6 @@ class PaymentService
                 (float) $rental->subtotal,
                 (float) $rental->delivery_fee,
                 (float) $rental->discount_amount,
-                (int) ($rental->vendor?->dp_percentage ?? 0)
             )),
             PaymentType::Remaining->value => $this->remainingAmountOrFail($rental),
             default => $grandTotal,
@@ -104,7 +121,7 @@ class PaymentService
             'payment_channel' => $method,
             'method' => $method,
             'expires_at' => $rental->expires_at,
-        ]);
+        ], $method);
     }
 
     //  Payment pending untuk pelunasan sisa via Midtrans.
@@ -185,14 +202,21 @@ class PaymentService
         string $paymentType,
         int $amount,
         int $attempt,
-        array $extra = []
+        array $extra = [],
+        ?string $paymentMethod = null,
     ): Payment {
+        $orderId = $this->generateOrderId($rental->booking_code, $paymentMethod, $attempt);
+        while (Payment::query()->where('order_id', $orderId)->exists()) {
+            $attempt++;
+            $orderId = $this->generateOrderId($rental->booking_code, $paymentMethod, $attempt);
+        }
+
         return $rental->payments()->create([
             'vendor_id' => $rental->vendor_id,
             'payment_type' => $paymentType,
             'channel' => 'midtrans',
             'amount' => $amount,
-            'order_id' => $this->generateOrderId($rental->booking_code, $paymentType, $attempt),
+            'order_id' => $orderId,
             // Kolom legacy dipertahankan untuk audit, tetapi tidak lagi dipakai
             // sebagai potongan. Komisi resmi dihitung CommissionService.
             'platform_fee' => 0,
@@ -235,5 +259,14 @@ class PaymentService
         if ($fineAmount <= 0) {
             throw new InvalidArgumentException('Nominal denda harus lebih dari 0.');
         }
+    }
+
+    private function bookingCodePrefix(string $bookingCode): string
+    {
+        $cleanBookingCode = strtoupper(str_replace('-', '', $bookingCode));
+
+        return preg_match('/^TDK\d{15,}$/', $cleanBookingCode)
+            ? substr($cleanBookingCode, 0, 15)
+            : $cleanBookingCode;
     }
 }

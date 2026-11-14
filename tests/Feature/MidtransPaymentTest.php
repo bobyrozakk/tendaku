@@ -6,6 +6,8 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Services\Payment\MidtransService;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Mockery;
 use Mockery\MockInterface;
 use Tests\Concerns\CreatesMidtransFixtures;
@@ -47,6 +49,38 @@ class MidtransPaymentTest extends TestCase
                 'snap_token' => 'sandbox-snap-token',
             ],
         ]);
+    }
+
+    public function test_qris_image_is_fetched_from_midtrans_with_server_authentication(): void
+    {
+        [, , $payment] = $this->createRentalWithPendingPayment();
+        $qrisUrl = 'https://api.sandbox.midtrans.com/v2/qris/test-transaction/qr-code';
+        $payment->update([
+            'payment_channel' => 'qris',
+            'raw_notification' => [
+                'actions' => [
+                    [
+                        'name' => 'generate-qr-code-v2',
+                        'method' => 'GET',
+                        'url' => 'https://merchants-app.sbx.midtrans.com/v4/qris/gopay/example/qr-code',
+                    ],
+                    ['name' => 'generate-qr-code', 'method' => 'GET', 'url' => $qrisUrl],
+                ],
+            ],
+        ]);
+        Http::preventStrayRequests();
+        Http::fake([
+            'api.sandbox.midtrans.com/v2/qris/*' => Http::response('png-image-data', 200, [
+                'Content-Type' => 'image/png',
+            ]),
+        ]);
+
+        $image = app(MidtransService::class)->getQrisImage($payment->fresh());
+
+        $this->assertSame('png-image-data', $image);
+        Http::assertSent(fn (Request $request): bool => $request->url() === $qrisUrl
+            && $request->hasHeader('Authorization', 'Basic '.base64_encode(self::SERVER_KEY.':'))
+            && $request->hasHeader('Accept', 'image/png'));
     }
 
     public function test_unauthenticated_customer_cannot_request_a_snap_token(): void

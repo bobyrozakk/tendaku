@@ -120,11 +120,12 @@ class CheckoutTest extends TestCase
         $this->assertSame('2026-10-13', $rental->return_date->toDateString());
         $this->assertSame(2, (int) $rental->rental_days);
         $this->assertSame(1, $rental->details()->count());
+        $this->assertDatabaseCount('payments', 0);
 
         $this->assertNull(session('booking_cart'), 'Keranjang harus dikosongkan setelah checkout berhasil.');
     }
 
-    public function test_logged_in_checkout_creates_a_pending_payment_for_the_grand_total(): void
+    public function test_logged_in_checkout_defers_payment_until_bank_is_selected(): void
     {
         $customer = User::factory()->create(['role' => 'customer']);
 
@@ -134,20 +135,58 @@ class CheckoutTest extends TestCase
                 'pickup_method' => 'self_pickup',
                 'payment_option' => 'full',
                 'payment_channel' => 'qris',
-                'payment_option' => 'full',
             ])
             ->assertRedirect();
 
         $rental = Rental::withoutGlobalScopes()->sole();
-        $payment = Payment::withoutGlobalScope('vendor')->sole();
 
-        $this->assertSame($rental->id, $payment->rental_id);
-        $this->assertSame($rental->vendor_id, $payment->vendor_id);
-        $this->assertSame('full', $payment->payment_type);
-        $this->assertSame('midtrans', $payment->channel);
-        $this->assertSame('qris', $payment->method);
-        $this->assertSame('pending', $payment->status);
-        $this->assertSame((float) $rental->grand_total, (float) $payment->amount);
+        $this->assertSame(0, Payment::withoutGlobalScopes()->count());
+        $this->assertSame(0.0, (float) $rental->dp_amount);
+    }
+
+    public function test_selecting_a_bank_creates_the_first_pending_payment(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('chargeBankTransfer')
+                ->once()
+                ->with(\Mockery::type(Payment::class), 'bni')
+                ->andReturn([
+                    'bank' => 'bni',
+                    'va_number' => '9876543210',
+                    'biller_code' => null,
+                ]);
+        });
+
+        $this->actingAs($customer)
+            ->withSession($this->cartSession())
+            ->post(route('checkout.store'), [
+                'pickup_method' => 'self_pickup',
+                'payment_option' => 'dp',
+            ])
+            ->assertRedirect();
+
+        $rental = Rental::withoutGlobalScopes()->sole();
+        $this->assertDatabaseCount('payments', 0);
+        $this->get(route('booking.status', $rental->booking_code))
+            ->assertOk()
+            ->assertSee('Pilih bank atau QRIS untuk membuat tagihan pembayaran.');
+
+        $response = $this->actingAs($customer)
+            ->postJson(route('booking.va', $rental->booking_code), ['bank' => 'bni']);
+        $expectedOrderId = substr($rental->booking_code, 0, -3).'21';
+
+        $response->assertOk()
+            ->assertJsonPath('order_id', $expectedOrderId);
+        $this->assertDatabaseHas('payments', [
+            'rental_id' => $rental->id,
+            'payment_type' => 'dp',
+            'payment_channel' => 'bni_va',
+            'order_id' => $expectedOrderId,
+            'amount' => (int) $rental->dp_amount,
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseCount('payments', 1);
     }
 
     public function test_guest_checkout_page_shows_whatsapp_input(): void
@@ -155,6 +194,8 @@ class CheckoutTest extends TestCase
         $this->withSession($this->cartSession())
             ->get(route('checkout.index'))
             ->assertOk()
+            ->assertDontSee('QRIS')
+            ->assertDontSee('name="payment_channel"', false)
             ->assertSee('No. WhatsApp aktif')
             ->assertSee('id="f_phone"', false)
             ->assertSee('id="f_name"', false)

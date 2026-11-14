@@ -109,8 +109,14 @@
         $onlinePayment = $rental->payments->where('channel', 'midtrans')->whereIn('payment_type', ['full', 'dp'])->where('status', 'pending')->sortByDesc('id')->first()
             ?? $latestPayment
             ?? $rental->payments->where('channel', 'midtrans')->sortByDesc('id')->first();
+        $canSelectPayment = $status === 'pending'
+            && ! $isPaid
+            && ! $isExpiredNow
+            && ($onlinePayment === null || $onlinePayment->status === 'pending');
         $paidPayment   = $rental->payments->where('status', 'paid')->sortByDesc('paid_at')->first();
         $vaInfo        = $onlinePayment?->va_details;
+        $isQrisPayment = $onlinePayment?->status === 'pending' && $onlinePayment?->payment_channel === 'qris';
+        $qrisInfo      = $isQrisPayment ? $onlinePayment?->qris_details : null;
 
         $vaBanks = [
             'bca'     => 'BCA',
@@ -118,6 +124,7 @@
             'bri'     => 'BRI',
             'permata' => 'Permata',
             'cimb'    => 'CIMB Niaga',
+            'qris'    => 'QRIS',
         ];
         $vaBankKey = strtolower((string) ($vaInfo['bank'] ?? ''));
         $vaBankKey = array_key_exists($vaBankKey, $vaBanks) ? $vaBankKey : 'bca';
@@ -127,8 +134,9 @@
         $totalFinal = $rental->final_total ?: ($rental->grand_total + $rental->total_late_fee + $rental->total_damage_fee);
         $canPayFine = $hasDenda && Auth::check() && Auth::id() === $rental->user_id;
 
-        $payAmount     = $onlinePayment?->amount ?? $totalFinal;
-        $payTypeLabel  = $onlinePayment?->payment_type === 'dp' ? 'Uang muka (DP)' : 'Pelunasan penuh';
+        $paymentType   = $onlinePayment?->payment_type ?? ((float) $rental->dp_amount > 0 ? 'dp' : 'full');
+        $payAmount     = $onlinePayment?->amount ?? ($paymentType === 'dp' ? $rental->dp_amount : $totalFinal);
+        $payTypeLabel  = $paymentType === 'dp' ? 'Uang muka (DP)' : 'Pelunasan penuh';
         $rupiah        = fn ($n) => 'Rp ' . number_format((int) $n, 0, ',', '.');
         $fmtDateTime   = fn ($d) => $d ? \Carbon\Carbon::parse($d)->translatedFormat('d M Y, H:i') : '';
         $fmtDate       = fn ($d) => $d ? \Carbon\Carbon::parse($d)->translatedFormat('d M Y') : '';
@@ -220,8 +228,15 @@
             'syncUrl'       => route('booking.sync', $rental->booking_code),
             'csrf'          => csrf_token(),
             'vaUrl'         => route('booking.va', $rental->booking_code),
+            'qrisImageUrl'  => route('booking.qris-image', $rental->isGuest()
+                ? ['code' => $rental->booking_code, 'phone' => $rental->guest_phone]
+                : $rental->booking_code),
             'vaBanks'       => $vaBanks,
-            'orderId'       => $onlinePayment?->order_id,
+            'paymentMethod' => $isQrisPayment ? 'qris' : $vaBankKey,
+            'isQrisPayment' => $isQrisPayment,
+            'qrisAvailable' => (bool) $qrisInfo,
+            'qrisRawUrl'    => $qrisInfo['qr_code_url'] ?? null,
+            'orderId'       => $onlinePayment?->status === 'pending' ? $onlinePayment->order_id : null,
             'va'            => $vaInfo ? [
                 'bank'   => $vaBankKey,
                 'number' => $vaInfo['va_number'] ?? '',

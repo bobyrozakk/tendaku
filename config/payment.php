@@ -23,6 +23,7 @@ return [
         'bri_va',
         'permata_va',
         'cimb_va',
+        'qris',
     ],
 
     // Bank VA yang didukung: kode Midtrans => label tampilan.

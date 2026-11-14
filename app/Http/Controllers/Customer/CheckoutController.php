@@ -8,7 +8,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Customer\StoreCheckoutRequest;
 use App\Models\MasterItem;
 use App\Models\Rental;
-use App\Models\User;
 use App\Services\Booking\CartService;
 use App\Services\Booking\CheckoutService;
 use App\Services\Booking\CheckoutShippingService;
@@ -23,8 +22,6 @@ use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    private const CART_SESSION_KEY = 'booking_cart';
-
     public function __construct(
         private readonly CheckoutSummaryBuilder $summary,
         private readonly RentalAccessGuard $accessGuard,
@@ -110,7 +107,7 @@ class CheckoutController extends Controller
     }
 
     /**
-     * Membuat rental dan pembayaran Midtrans Snap (via CheckoutService).
+     * Membuat rental; payment dibuat setelah pelanggan memilih bank/QRIS.
      * Nilai transaksi harus dihitung dan divalidasi di server.
      */
     public function store(
@@ -204,19 +201,17 @@ class CheckoutController extends Controller
                 $preview,
             );
 
-            // Rental + payment + token Snap lewat satu pintu.
-            // Jika Midtrans gagal, rental dibatalkan dan stok langsung bebas.
+            $paymentOption = $request->validated('payment_option') ?: 'full';
             $result = $checkout->checkout(
                 $bookingData,
-                $request->validated('payment_option') ?: 'full',
-                $this->paymentChannel($request->validated('payment_channel')),
-                true,
+                $paymentOption,
+                null,
+                false,
                 $request->input('booking_code'),
+                true,
             );
 
             $rental = $result['rental'];
-            $payment = $result['payment'];
-            $snapToken = $result['snap_token'];
 
             // Pertahankan akses status booking untuk guest.
             if ($request->user() === null) {
@@ -228,11 +223,13 @@ class CheckoutController extends Controller
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'snap_token' => $snapToken,
+                    'snap_token' => null,
                     'booking_code' => $rental->booking_code,
                     'redirect_url' => $this->statusUrl($request, $rental),
-                    'payment_type' => $payment->payment_type,
-                    'payment_amount' => (int) $payment->amount,
+                    'payment_type' => $paymentOption,
+                    'payment_amount' => $paymentOption === 'dp'
+                        ? (int) $rental->dp_amount
+                        : (int) $rental->grand_total,
                 ]);
             }
 
@@ -336,34 +333,6 @@ class CheckoutController extends Controller
         }
 
         return $data;
-    }
-
-    /**
-     * Kanal pembayaran yang didukung halaman checkout.
-     */
-    protected function paymentChannel(?string $channel): string
-    {
-        return in_array($channel, config('payment.enabled_channels', []), true)
-            ? $channel
-            : 'bca_va';
-    }
-
-    /**
-     * Metode pembayaran untuk ditampilkan di halaman checkout.
-     *
-     * @return array<int, array<string, string>>
-     */
-    protected function paymentMethods(): array
-    {
-        return collect(config('payment.va_banks', []))
-            ->map(fn (string $label, string $bank) => [
-                'id' => $bank.'_va',
-                'name' => $label.' Virtual Account',
-                'desc' => 'Konfirmasi pembayaran otomatis 24 jam',
-                'badge' => 'Otomatis',
-            ])
-            ->values()
-            ->all();
     }
 
     /**

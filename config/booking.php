@@ -29,7 +29,7 @@ return [
             'filter' => 'Sedang Disewa',
         ],
         'returned' => [
-            'label' => 'Menunggu Penyelesaian',
+            'label' => 'Dikembalikan',
             'filter' => 'Dikembalikan',
         ],
         'completed' => [

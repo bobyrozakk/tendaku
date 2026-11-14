@@ -111,6 +111,36 @@ class BookingStatusAndHistoryTest extends TestCase
         $responseFilter->assertDontSee('TDK-2026-BUDI03');
     }
 
+    public function test_booking_history_marks_past_due_unpaid_orders_as_expired(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-EXPIRED01', 'pending');
+        $rental->update(['expires_at' => Carbon::now()->subMinute()]);
+        $payment = $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_method' => 'midtrans_snap',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-EXPIRED01-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('customer.booking.index'));
+
+        $response->assertSee('TDK-2026-EXPIRED01')
+            ->assertSee('Kedaluwarsa');
+
+        $this->assertDatabaseHas('rentals', [
+            'id' => $rental->id,
+            'status' => 'expired',
+        ]);
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->id,
+            'status' => 'expired',
+        ]);
+    }
+
     public function test_unauthenticated_user_cannot_access_booking_history(): void
     {
         $response = $this->get(route('customer.booking.index'));
@@ -321,6 +351,139 @@ class BookingStatusAndHistoryTest extends TestCase
             ]);
     }
 
+    public function test_pay_returns_qris_details_and_persists_the_midtrans_response(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-QRIS01', 'pending');
+        $payment = $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_channel' => 'qris',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-QRIS01-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+        $qrisUrl = 'https://api.sandbox.midtrans.com/v2/qris/test-transaction/qr-code';
+
+        $this->mock(MidtransService::class, function (MockInterface $mock) use ($payment, $qrisUrl): void {
+            $mock->shouldReceive('chargeQris')
+                ->once()
+                ->with(\Mockery::on(fn (Payment $requestedPayment): bool => $requestedPayment->is($payment)))
+                ->andReturnUsing(function (Payment $requestedPayment) use ($qrisUrl): array {
+                    $requestedPayment->update([
+                        'method' => 'qris',
+                        'raw_notification' => [
+                            'actions' => [
+                                ['name' => 'generate-qr-code', 'method' => 'GET', 'url' => $qrisUrl],
+                            ],
+                        ],
+                    ]);
+
+                    return ['qr_code_url' => $qrisUrl];
+                });
+        });
+
+        $response = $this->actingAs($this->customer1)
+            ->postJson(route('booking.pay', $rental->booking_code));
+
+        $response->assertOk()->assertJson([
+            'status' => 'success',
+            'order_id' => 'TDK-2026-QRIS01-FULL-1',
+            'is_qris' => true,
+            'qris_info' => ['qr_code_url' => $qrisUrl],
+            'amount' => 150000,
+        ]);
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->getKey(),
+            'payment_channel' => 'qris',
+            'method' => 'qris',
+        ]);
+        $this->assertSame($qrisUrl, $payment->fresh()->qris_details['qr_code_url']);
+    }
+
+    public function test_status_page_generates_and_opens_qris_popup_for_pending_qris_payment(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-QRIS02', 'pending');
+        $payment = $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_channel' => 'qris',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-QRIS02-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+        $qrisUrl = 'https://api.sandbox.midtrans.com/v2/qris/test-transaction/qr-code';
+
+        $this->mock(MidtransService::class, function (MockInterface $mock) use ($qrisUrl): void {
+            $mock->shouldReceive('chargeQris')
+                ->once()
+                ->andReturnUsing(function (Payment $requestedPayment) use ($qrisUrl): array {
+                    $requestedPayment->update([
+                        'method' => 'qris',
+                        'raw_notification' => [
+                            'actions' => [
+                                ['name' => 'generate-qr-code-v2', 'method' => 'GET', 'url' => $qrisUrl],
+                            ],
+                        ],
+                    ]);
+
+                    return ['qr_code_url' => $qrisUrl];
+                });
+        });
+
+        $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code))
+            ->assertOk()
+            ->assertSee('Bayar dengan QRIS')
+            ->assertSee('x-bind:src', false);
+
+        $this->assertDatabaseHas('payments', [
+            'id' => $payment->getKey(),
+            'payment_channel' => 'qris',
+            'method' => 'qris',
+        ]);
+        $this->assertSame($qrisUrl, $payment->fresh()->qris_details['qr_code_url']);
+    }
+
+    public function test_only_the_booking_owner_can_load_its_qris_image(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-QRIS03', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_channel' => 'qris',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-QRIS03-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+            'raw_notification' => [
+                'actions' => [
+                    [
+                        'name' => 'generate-qr-code',
+                        'method' => 'GET',
+                        'url' => 'https://api.sandbox.midtrans.com/v2/qris/test-transaction/qr-code',
+                    ],
+                ],
+            ],
+        ]);
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getQrisImage')
+                ->once()
+                ->andReturn('png-image-data');
+        });
+
+        $this->actingAs($this->customer1)
+            ->get(route('booking.qris-image', $rental->booking_code))
+            ->assertOk()
+            ->assertHeader('content-type', 'image/png')
+            ->assertContent('png-image-data');
+
+        $this->actingAs($this->customer2)
+            ->get(route('booking.qris-image', $rental->booking_code))
+            ->assertForbidden();
+    }
+
     public function test_status_page_auto_generates_va_for_pending_rental(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-VA01', 'pending');
@@ -358,7 +521,7 @@ class BookingStatusAndHistoryTest extends TestCase
         $this->actingAs($this->customer1)
             ->get(route('booking.status', $rental->booking_code))
             ->assertOk()
-            ->assertSee('Nomor virtual account');
+            ->assertSee('1234567890');
     }
 
     public function test_sync_payment_status_endpoint_returns_payment_status(): void
@@ -465,8 +628,9 @@ class BookingStatusAndHistoryTest extends TestCase
         $rental->payments()->create([
             'vendor_id' => $this->vendor->id,
             'payment_type' => 'full',
+            'payment_channel' => 'bca_va',
             'channel' => 'midtrans',
-            'order_id' => 'TDK2026101010001-1',
+            'order_id' => 'TDK2026SWVA0111',
             'amount' => 150000,
             'status' => 'pending',
         ]);
@@ -489,7 +653,118 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertJson([
                 'bank' => 'bni',
                 'va_number' => '9876543210',
+                'order_id' => 'TDK2026SWVA0121',
             ]);
+    }
+
+    public function test_customer_can_switch_to_qris_and_open_its_popup(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-SWQR01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_channel' => 'bca_va',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-SWQR01-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+        $qrisUrl = 'https://api.sandbox.midtrans.com/v2/qris/test-transaction/qr-code';
+
+        $this->mock(MidtransService::class, function (MockInterface $mock) use ($qrisUrl): void {
+            $mock->shouldReceive('chargeQris')
+                ->once()
+                ->andReturnUsing(function (Payment $payment) use ($qrisUrl): array {
+                    $payment->update([
+                        'method' => 'qris',
+                        'raw_notification' => [
+                            'actions' => [
+                                ['name' => 'generate-qr-code-v2', 'method' => 'GET', 'url' => $qrisUrl],
+                            ],
+                        ],
+                    ]);
+
+                    return ['qr_code_url' => $qrisUrl];
+                });
+        });
+
+        $this->actingAs($this->customer1)
+            ->postJson(route('booking.va', $rental->booking_code), ['bank' => 'qris'])
+            ->assertOk()
+            ->assertJsonPath('is_qris', true)
+            ->assertJsonPath('qris_info.qr_code_url', $qrisUrl);
+
+        $this->assertDatabaseHas('payments', [
+            'rental_id' => $rental->getKey(),
+            'payment_channel' => 'qris',
+            'method' => 'qris',
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code))
+            ->assertOk()
+            ->assertSee('Bayar dengan QRIS')
+            ->assertSee('QRIS')
+            ->assertSee('x-bind:src', false);
+    }
+
+    public function test_guest_can_load_qris_image_with_booking_phone(): void
+    {
+        $rental = Rental::create([
+            'vendor_id' => $this->vendor->id,
+            'user_id' => null,
+            'guest_name' => 'Anto Tamu',
+            'guest_phone' => '081298765432',
+            'guest_id_number' => '3507111122223333',
+            'booking_code' => 'TDK-2026-GQRIS1',
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-12',
+            'rental_days' => 3,
+            'subtotal' => 150000,
+            'grand_total' => 150000,
+            'status' => 'pending',
+            'expires_at' => Carbon::now()->addHours(2),
+        ]);
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_channel' => 'qris',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-GQRIS1-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+            'raw_notification' => [
+                'actions' => [
+                    [
+                        'name' => 'generate-qr-code',
+                        'method' => 'GET',
+                        'url' => 'https://api.sandbox.midtrans.com/v2/qris/test-transaction/qr-code',
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getQrisImage')
+                ->once()
+                ->andReturn('png-image-data');
+        });
+
+        $this->get(route('booking.status', [
+            'code' => $rental->booking_code,
+            'phone' => $rental->guest_phone,
+        ]))
+            ->assertOk()
+            ->assertSee('phone=081298765432');
+
+        $this->get(route('booking.qris-image', [
+            'code' => $rental->booking_code,
+            'phone' => $rental->guest_phone,
+        ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'image/png')
+            ->assertContent('png-image-data');
     }
 
     private function createRental(int $userId, string $bookingCode, string $status): Rental
