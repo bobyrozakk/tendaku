@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -56,7 +56,7 @@
 @layer components {
     /* Tendaku Custom Buttons */
     .btn-tendaku-primary {
-        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-avocado-500 hover:bg-avocado-600 active:bg-avocado-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-avocado-600 hover:bg-avocado-700 active:bg-avocado-800 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
     }
 
     .btn-tendaku-accent {
@@ -64,7 +64,7 @@
     }
 
     .btn-tendaku-gold {
-        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-goldenrod-500 hover:bg-goldenrod-600 active:bg-goldenrod-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2;
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-darkbrown-900 bg-goldenrod-500 hover:bg-goldenrod-600 active:bg-goldenrod-700 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2;
     }
 
     .btn-tendaku-secondary {
@@ -77,6 +77,11 @@
 
     .btn-tendaku-outline {
         @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-avocado-600 border border-avocado-500/40 hover:bg-avocado-50 active:bg-avocado-100 transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;
+    }
+
+    /* Tombol sekunder di atas hero gelap super admin */
+    .btn-admin-hero-secondary {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl border border-wheat-300/30 bg-white/5 px-4 py-2.5 text-sm font-semibold text-wheat-100 shadow-sm transition duration-200 ease-in-out hover:border-wheat-200/50 hover:bg-white/10 active:bg-white/15 focus:outline-none focus:ring-2 focus:ring-wheat-300 focus:ring-offset-2 focus:ring-offset-darkbrown-900;
     }
 
     /* Tendaku Cards */
@@ -116,6 +121,13 @@
     /* Input Fields */
     .input-tendaku {
         @apply w-full rounded-xl border-wheat-300 bg-white/90 text-darkbrown-800 shadow-sm focus:border-avocado-500 focus:ring-2 focus:ring-avocado-400/40 text-sm placeholder:text-darkbrown-400 transition duration-150;
+    }
+
+    /* Angka metrik admin memakai Outfit agar lebih tegas dan mudah dipindai */
+    .font-admin-number {
+        font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.03em;
     }
 }
 

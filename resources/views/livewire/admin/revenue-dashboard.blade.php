@@ -21,18 +21,9 @@
     </style>
 
     <!-- Filter -->
-    <div class="no-print card-tendaku p-5">
-        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-                <div class="mb-1 flex flex-wrap items-center gap-2">
-                    <x-badge variant="goldenrod" :dot="true">Filter Laporan</x-badge>
-                    <span class="text-xs text-darkbrown-400">Semua angka mengikuti filter di bawah</span>
-                </div>
-                <h2 class="text-lg font-extrabold tracking-tight text-darkbrown-900">Pendapatan Platform</h2>
-                <p class="mt-0.5 text-xs text-darkbrown-500">
-                    Pilih vendor, periode, metode, status escrow, dan tipe pembayaran.
-                </p>
-            </div>
+    <div class="no-print card-tendaku p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-sm font-extrabold tracking-tight text-darkbrown-900">Filter</h2>
 
             <div class="flex flex-wrap items-center gap-2">
                 <button type="button" wire:click="resetFilters"
@@ -56,7 +47,7 @@
             </div>
         </div>
 
-        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <div>
                 <label for="period" class="mb-1 block text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Periode</label>
                 <select id="period" wire:model.live="period"
@@ -147,7 +138,6 @@
             :value="'Rp ' . number_format($current['platform_net'], 0, ',', '.')"
             :trend="($delta['platform_net'] >= 0 ? '+' : '') . $delta['platform_net'] . '% vs periode sebelumnya'"
             :trendUp="$delta['platform_net'] >= 0"
-            description="Setelah MDR gateway & beban transfer vendor"
             color="avocado"
         >
             <x-slot name="icon">
@@ -162,7 +152,7 @@
             :value="'Rp ' . number_format($current['commission'], 0, ',', '.')"
             :trend="($delta['commission'] >= 0 ? '+' : '') . $delta['commission'] . '% vs periode lalu'"
             :trendUp="$delta['commission'] >= 0"
-            :description="'Bulan ini Rp ' . number_format($kpis['commission_this_month'], 0, ',', '.') . ' · Hari ini Rp ' . number_format($kpis['commission_today'], 0, ',', '.')"
+            :description="'Hari ini Rp ' . number_format($kpis['commission_today'], 0, ',', '.')"
             color="goldenrod"
         >
             <x-slot name="icon">
@@ -201,15 +191,10 @@
 
     <!-- Ringkasan Alur Finansial Periode Terpilih -->
     <div class="card-tendaku p-5">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-wheat-200 pb-4">
-            <div>
-                <h3 class="text-sm font-extrabold uppercase tracking-wider text-darkbrown-800">
-                    Kalkulasi Aliran Dana Periode Terpilih
-                </h3>
-                <p class="text-xs text-darkbrown-500">
-                    Transparansi pembagian dari pendapatan kotor ke komisi hingga laba bersih platform.
-                </p>
-            </div>
+        <div class="flex flex-col gap-3 border-b border-wheat-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <h3 class="text-sm font-extrabold tracking-tight text-darkbrown-800">
+                Aliran Dana
+            </h3>
             <div class="flex items-center gap-2">
                 <x-badge variant="wheat" size="sm">
                     {{ $summary['range']['start']?->isoFormat('D MMM Y') ?? 'Awal' }}
@@ -220,11 +205,10 @@
         </div>
 
         <!-- Ledger Flow -->
-        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 items-stretch">
+        <div class="mt-4 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 p-3.5">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Pendapatan Kotor (GMV)</p>
-                <p class="mt-1 text-lg font-extrabold text-darkbrown-900">Rp {{ number_format($current['gross_revenue'], 0, ',', '.') }}</p>
-                <p class="text-[10px] text-darkbrown-400">Total nilai booking sewa</p>
+                <p class="font-admin-number mt-1 text-lg font-extrabold text-darkbrown-900">Rp {{ number_format($current['gross_revenue'], 0, ',', '.') }}</p>
             </div>
 
             <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 p-3.5">
@@ -232,38 +216,30 @@
                     <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Komisi Platform</p>
                     <span class="rounded bg-avocado-100 px-1.5 py-0.5 text-[9px] font-extrabold text-avocado-800">{{ $current['transaction_count'] }} trx</span>
                 </div>
-                <p class="mt-1 text-lg font-extrabold text-avocado-700">Rp {{ number_format($current['commission'], 0, ',', '.') }}</p>
-                <p class="text-[10px] text-darkbrown-400">Total fee platform yang diakui</p>
-            </div>
-
-            <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 p-3.5">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">MDR Standar Gateway</p>
-                <p class="mt-1 text-lg font-extrabold text-goldenrod-700">Rp {{ number_format($current['gateway_fee_total'], 0, ',', '.') }}</p>
-                <p class="text-[10px] text-darkbrown-400">Beban transaksi payment gateway</p>
+                <p class="font-admin-number mt-1 text-lg font-extrabold text-avocado-700">Rp {{ number_format($current['commission'], 0, ',', '.') }}</p>
             </div>
 
             <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 p-3.5">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Escrow Ditahan</p>
-                <p class="mt-1 text-lg font-extrabold text-darkbrown-800">Rp {{ number_format($current['escrow_held'], 0, ',', '.') }}</p>
-                <p class="text-[10px] text-darkbrown-400">Dana QRIS dalam pengamanan</p>
+                <p class="font-admin-number mt-1 text-lg font-extrabold text-darkbrown-800">Rp {{ number_format($current['escrow_held'], 0, ',', '.') }}</p>
             </div>
 
             <div class="rounded-xl border border-avocado-200 bg-avocado-50/60 p-3.5">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-avocado-800">Laba Bersih Platform</p>
-                <p class="mt-1 text-lg font-extrabold {{ $current['platform_net'] < 0 ? 'text-red-600' : 'text-avocado-900' }}">
+                <p class="font-admin-number mt-1 text-lg font-extrabold {{ $current['platform_net'] < 0 ? 'text-red-600' : 'text-avocado-900' }}">
                     Rp {{ number_format($current['platform_net'], 0, ',', '.') }}
                 </p>
                 <p class="text-[10px] text-avocado-700">Transfer Rp {{ number_format($current['transfer_fee_total'], 0, ',', '.') }} ({{ $current['vendor_count'] }} vendor)</p>
             </div>
         </div>
 
-        <p class="mt-3 text-[11px] text-darkbrown-400">
-            Rumus: Laba platform = komisi platform – MDR standar – estimasi biaya transfer bank (Rp {{ number_format($current['transfer_fee'], 0, ',', '.') }} × {{ $current['vendor_count'] }} vendor).
+        <p class="mt-3 text-[11px] text-darkbrown-500">
+            Biaya transfer: Rp {{ number_format($current['transfer_fee'], 0, ',', '.') }} × {{ $current['vendor_count'] }} vendor.
         </p>
     </div>
 
     <!-- Chart -->
-    <x-card title="Tren Komisi Platform" subtitle="Komisi diakui berdasarkan waktu pembayaran. Chart mengikuti filter vendor/metode/tipe, bukan periode tabel.">
+    <x-card title="Tren Komisi Platform" subtitle="Komisi diakui saat pembayaran.">
         <x-slot name="action">
             <div class="no-print flex flex-wrap gap-1 rounded-xl bg-wheat-100 p-1">
                 @foreach ($chartTabs as $tabKey => $tabLabel)
@@ -277,10 +253,10 @@
 
         <div class="mb-4 flex flex-wrap items-end justify-between gap-2">
             <div>
-                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Total Komisi Chart</p>
-                <p class="text-2xl font-extrabold text-darkbrown-900">Rp {{ number_format($chart['total'], 0, ',', '.') }}</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Total komisi</p>
+                <p class="font-admin-number text-2xl font-extrabold text-darkbrown-900">Rp {{ number_format($chart['total'], 0, ',', '.') }}</p>
             </div>
-            <p class="text-[11px] text-darkbrown-400">
+            <p class="text-[11px] text-darkbrown-500">
                 {{ $chart['start']->isoFormat('D MMM Y') }} – {{ $chart['end']->isoFormat('D MMM Y') }}
             </p>
         </div>
@@ -295,19 +271,18 @@
 
                     <div class="group flex min-w-0 flex-col items-center gap-2">
                         <div class="whitespace-nowrap text-[9px] font-bold text-darkbrown-700 opacity-0 transition group-hover:opacity-100 sm:text-[10px]"
-                             title="Rp {{ number_format($point['value'], 0, ',', '.') }} · {{ $point['count'] }} transaksi">
+                             aria-hidden="true">
                             Rp {{ number_format($point['value'] / 1000, 0) }}k
                         </div>
                         <div class="flex h-28 w-full max-w-[52px] items-end rounded-t-xl bg-wheat-100 p-1 sm:h-36">
-                            <div class="w-full rounded-t-lg bg-gradient-to-t from-darkbrown-800 via-avocado-600 to-avocado-400 transition-all duration-300 group-hover:from-darkbrown-900 group-hover:to-avocado-300"
+                            <div class="w-full rounded-t-lg bg-gradient-to-t transition-all duration-300 {{ $loop->last ? 'from-avocado-700 via-avocado-600 to-avocado-400 group-hover:to-avocado-300' : 'from-goldenrod-500 via-goldenrod-400 to-sunglow-300 group-hover:from-goldenrod-600 group-hover:to-sunglow-400' }}"
                                  style="height: {{ $barHeightPercent }}%;"
+                                 role="img"
+                                 aria-label="Rp {{ number_format($point['value'], 0, ',', '.') }} pada {{ $point['label'] }}"
                                  title="Rp {{ number_format($point['value'], 0, ',', '.') }} · {{ $point['count'] }} transaksi"></div>
                         </div>
-                        <div class="w-full text-center text-[9px] font-semibold leading-tight text-darkbrown-600 sm:text-[10px]">
-                            <div class="truncate">
-                                {{ ($chartTab === 'daily' && $loop->index % 3 !== 0 && ! $loop->last) ? '' : $point['label'] }}
-                            </div>
-                            <div class="text-[9px] font-normal text-darkbrown-400">{{ $point['count'] }}</div>
+                        <div class="w-full whitespace-nowrap text-center text-[9px] font-semibold leading-tight text-darkbrown-600 sm:text-[10px]">
+                            {{ ($chartTab === 'daily' && $loop->index % 5 !== 0 && ! $loop->last) ? '' : $point['label'] }}
                         </div>
                     </div>
                 @endforeach
@@ -316,7 +291,7 @@
     </x-card>
 
     <!-- Ringkasan per vendor -->
-    <x-card title="Ringkasan per Vendor" subtitle="GMV dari rental valid; komisi, escrow, dan payout mengikuti filter transaksi." padding="p-0" class="overflow-hidden">
+    <x-card title="Ringkasan per Vendor" subtitle="GMV dan pembagian dana per vendor." padding="p-0" class="overflow-hidden">
         <x-slot name="action">
             <x-badge variant="wheat" size="sm">Payout masih estimasi</x-badge>
         </x-slot>
@@ -344,7 +319,7 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="truncate font-bold text-darkbrown-950">{{ $row['vendor_name'] }}</p>
-                                        <p class="text-[10px] text-darkbrown-400">{{ $row['vendor_city'] ?: '—' }}</p>
+                                        <p class="text-[10px] text-darkbrown-500">{{ $row['vendor_city'] ?: '—' }}</p>
                                     </div>
                                 </div>
                             </td>
@@ -352,7 +327,7 @@
                             <td class="min-w-[150px] px-4 py-3.5">
                                 <div class="flex items-center gap-2">
                                     <div class="h-2 flex-1 overflow-hidden rounded-full bg-wheat-200">
-                                        <div class="h-full rounded-full bg-avocado-500" style="width: {{ $row['commission_percentage'] }}%;"></div>
+                                        <div class="h-full rounded-full bg-gradient-to-r from-goldenrod-500 to-sunglow-400" style="width: {{ $row['commission_percentage'] }}%;"></div>
                                     </div>
                                     <span class="w-20 text-right text-[11px] font-bold text-darkbrown-700">Rp {{ number_format($row['commission_total'], 0, ',', '.') }}</span>
                                 </div>
@@ -365,14 +340,14 @@
                                 @if ($row['cash_receivable'] > 0)
                                     <x-badge variant="danger" size="sm">Rp {{ number_format($row['cash_receivable'], 0, ',', '.') }}</x-badge>
                                 @else
-                                    <span class="text-darkbrown-400">—</span>
+                                    <span class="text-darkbrown-500">—</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3.5 text-center font-semibold">{{ $row['transaction_count'] }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-10 text-center text-darkbrown-400">
+                            <td colspan="7" class="px-4 py-10 text-center text-darkbrown-500">
                                 Belum ada transaksi paid pada filter ini.
                             </td>
                         </tr>
@@ -383,7 +358,7 @@
     </x-card>
 
     <!-- Transaksi -->
-    <x-card title="Transaksi Pendapatan" subtitle="50 transaksi terbaru sesuai filter. Export CSV memuat seluruh baris, bukan hanya yang tampil." padding="p-0" class="overflow-hidden">
+    <x-card title="Transaksi Pendapatan" subtitle="50 transaksi terbaru sesuai filter." padding="p-0" class="overflow-hidden">
         <x-slot name="action">
             <x-badge variant="wheat" size="sm">{{ $current['transaction_count'] }} total</x-badge>
         </x-slot>
@@ -398,7 +373,6 @@
                         <th class="px-4 py-3">Metode</th>
                         <th class="px-4 py-3 text-right">Nominal</th>
                         <th class="px-4 py-3 text-right">Komisi</th>
-                        <th class="px-4 py-3 text-right">MDR</th>
                         <th class="px-4 py-3 text-center">Escrow</th>
                         <th class="px-4 py-3 text-center">Batch</th>
                         <th class="px-4 py-3">Dibayar</th>
@@ -422,7 +396,6 @@
                             </td>
                             <td class="px-4 py-3.5 text-right font-semibold">Rp {{ number_format($transaction['amount'], 0, ',', '.') }}</td>
                             <td class="px-4 py-3.5 text-right font-bold text-avocado-700">Rp {{ number_format($transaction['commission_amount'], 0, ',', '.') }}</td>
-                            <td class="px-4 py-3.5 text-right text-darkbrown-600">Rp {{ number_format($transaction['gateway_fee_amount'], 0, ',', '.') }}</td>
                             <td class="px-4 py-3.5 text-center">
                                 @if ($transaction['escrow_status'] === 'held')
                                     <x-badge variant="sunglow" size="sm" :dot="true">Ditahan</x-badge>
@@ -431,7 +404,7 @@
                                 @elseif (in_array($transaction['escrow_status'], ['refunded', 'void'], true))
                                     <x-badge variant="danger" size="sm" :dot="true">{{ $escrowStatusLabels[$transaction['escrow_status']] }}</x-badge>
                                 @else
-                                    <span class="text-[11px] text-darkbrown-400">Tidak berlaku</span>
+                                    <span class="text-[11px] text-darkbrown-500">Tidak berlaku</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3.5 text-center text-[11px]">
@@ -451,7 +424,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="px-4 py-10 text-center text-darkbrown-400">
+                            <td colspan="10" class="px-4 py-10 text-center text-darkbrown-500">
                                 Belum ada transaksi paid pada filter ini.
                             </td>
                         </tr>
@@ -462,7 +435,7 @@
     </x-card>
 
     <!-- Batch settlement -->
-    <x-card title="Batch Settlement" subtitle="Draft mingguan, approval, bukti transfer, dan invoice dikelola dari halaman settlement.">
+    <x-card title="Batch Settlement" subtitle="Kelola batch di halaman settlement.">
         <div class="flex flex-col gap-3 rounded-2xl border border-avocado-200 bg-avocado-50/60 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <p class="text-sm font-bold text-darkbrown-800">
@@ -470,7 +443,7 @@
                     Rp {{ number_format($kpis['payout_this_month'], 0, ',', '.') }}
                 </p>
                 <p class="mt-1 text-xs text-darkbrown-500">
-                    Setujui batch untuk menerbitkan invoice, lalu catat bukti transfer agar escrow dilepas dan invoice ditandai lunas.
+                    Setujui batch untuk menerbitkan invoice.
                 </p>
             </div>
             <a href="{{ route('admin.settlements') }}" class="btn-tendaku-primary shrink-0 !px-3.5 !py-2 text-xs">

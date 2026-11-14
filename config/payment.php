@@ -10,11 +10,11 @@ return [
     |
     | platform_fee_min  : Minimum fee dalam rupiah. Default Rp1.000.
     |
-    | dp_percentage     : Persentase DP dari grand_total, default 50% (D4).
+    | dp_percentage     : DP selalu 50% dari grand_total, sama untuk semua vendor.
     */
     'platform_fee_rate' => env('PAYMENT_PLATFORM_FEE_RATE', 0.02),
     'platform_fee_min' => env('PAYMENT_PLATFORM_FEE_MIN', 1000),
-    'dp_percentage' => env('PAYMENT_DP_PERCENTAGE', 50),
+    'dp_percentage' => 50,
 
     // pembayaran
     'enabled_channels' => [

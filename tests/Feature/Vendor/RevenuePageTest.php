@@ -153,6 +153,61 @@ class RevenuePageTest extends TestCase
             ->assertSessionHas('error');
     }
 
+    public function test_vendor_revenue_page_shows_negative_balance_and_disables_payout(): void
+    {
+        [, $cashPayment] = $this->createPaidRevenuePayment($this->vendor, 500000, [
+            'booking_code' => 'TND-VENDOR-CASH-NEGATIVE',
+            'payment_method' => 'cash',
+            'payment_channel' => null,
+            'escrow_status' => 'not_applicable',
+            'gateway_fee_amount' => 0,
+            'paid_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+        $this->createRevenueCommission($cashPayment, 25000, [
+            'base_amount' => 500000,
+            'recognized_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+
+        $this->actingAs($this->owner)
+            ->get(route('vendor.pendapatan'))
+            ->assertOk()
+            ->assertViewHas('withdrawableSummary', fn (array $summary): bool => $summary['estimated_net'] === -25000.0)
+            ->assertSee('Saldo Negatif')
+            ->assertDontSee('Saldo Siap Ditarik')
+            ->assertSee('Tidak ada transfer untuk saldo negatif');
+    }
+
+    public function test_vendor_cannot_request_payout_when_balance_is_negative(): void
+    {
+        $this->vendor->paymentSetting()->create([
+            'bank_name' => 'BCA',
+            'bank_account_number' => '1234567890',
+            'bank_account_name' => 'Owner Vendor',
+        ]);
+
+        [, $cashPayment] = $this->createPaidRevenuePayment($this->vendor, 500000, [
+            'booking_code' => 'TND-VENDOR-CASH-REQUEST',
+            'payment_method' => 'cash',
+            'payment_channel' => null,
+            'escrow_status' => 'not_applicable',
+            'gateway_fee_amount' => 0,
+            'paid_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+        $this->createRevenueCommission($cashPayment, 25000, [
+            'base_amount' => 500000,
+            'recognized_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+
+        $this->actingAs($this->owner)
+            ->post(route('vendor.pendapatan.request'))
+            ->assertRedirect(route('vendor.pendapatan'))
+            ->assertSessionHas('error', fn (string $message): bool => str_contains($message, 'negatif'));
+
+        $this->assertDatabaseMissing('settlements', [
+            'vendor_id' => $this->vendor->id,
+        ]);
+    }
+
     private function createIssuedInvoice(): VendorInvoice
     {
         [, $payment] = $this->createPaidRevenuePayment($this->vendor, 1000000, [

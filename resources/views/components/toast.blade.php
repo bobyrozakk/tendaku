@@ -6,7 +6,7 @@
     x-data="tendakuToast()"
     @toast.window="add($event.detail)"
     @notify.window="add($event.detail)"
-    class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 max-w-sm w-full pointer-events-none"
+    {{ $attributes->merge(['class' => 'fixed top-5 left-4 right-4 z-[9999] flex w-auto flex-col gap-3 pointer-events-none sm:left-auto sm:right-5 sm:w-full sm:max-w-sm']) }}
     aria-live="polite"
 >
     <template x-for="toast in toasts" :key="toast.id">

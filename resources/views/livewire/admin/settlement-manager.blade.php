@@ -6,7 +6,7 @@
         'cancelled' => 'danger',
     ];
 
-    $formatRupiah = fn (float $value): string => 'Rp '.number_format($value, 0, ',', '.');
+    $formatRupiah = fn (float $value): string => ($value < 0 ? '− ' : '').'Rp '.number_format(abs($value), 0, ',', '.');
 @endphp
 
 <div class="space-y-6">
@@ -42,7 +42,7 @@
             <button
                 type="button"
                 @click="show = false"
-                class="shrink-0 rounded-lg p-1 text-darkbrown-400 transition hover:bg-wheat-100 hover:text-darkbrown-700"
+                class="shrink-0 rounded-lg p-1 text-darkbrown-500 transition hover:bg-wheat-100 hover:text-darkbrown-700"
                 title="Tutup"
             >
                 <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -102,7 +102,7 @@
                 <div>
                     <h2 class="text-base font-extrabold tracking-tight text-darkbrown-900 sm:text-lg">Daftar Batch Settlement</h2>
                     <p class="mt-0.5 text-xs text-darkbrown-500">
-                        Batch dikelompokkan per vendor dan periode Senin–Minggu atau permohonan penarikan dana manual vendor.
+                        Batch mingguan dan penarikan manual.
                     </p>
                 </div>
 
@@ -181,7 +181,7 @@
                                     {{ $settlement->period_start->isoFormat('D MMM Y') }} – {{ $settlement->period_end->isoFormat('D MMM Y') }}
                                 </p>
                                 <div class="mt-0.5 flex items-center gap-1.5">
-                                    <span class="font-mono text-[10px] text-darkbrown-400">#{{ $settlement->id }}</span>
+                                    <span class="font-mono text-[10px] text-darkbrown-500">#{{ $settlement->id }}</span>
                                     @if ($settlement->notes && str_contains(strtolower($settlement->notes), 'tarik dana'))
                                         <span class="rounded bg-sunglow-100 px-1 py-0.2 text-[9px] font-bold text-sunglow-900">Tarik Dana Manual</span>
                                     @endif
@@ -189,7 +189,7 @@
                             </td>
                             <td class="px-5 py-3.5">
                                 <p class="font-semibold text-darkbrown-800">{{ $settlement->vendor?->name ?? '-' }}</p>
-                                <p class="text-[11px] text-darkbrown-400">{{ $settlement->vendor?->city ?? '-' }}</p>
+                                <p class="text-[11px] text-darkbrown-500">{{ $settlement->vendor?->city ?? '-' }}</p>
                             </td>
                             <td class="px-5 py-3.5 text-right font-semibold text-darkbrown-800">
                                 {{ $formatRupiah((float) $settlement->gross_qris + (float) $settlement->gross_fine_qris) }}
@@ -216,8 +216,8 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-5 py-12 text-center">
-                                <p class="text-sm font-bold text-darkbrown-700">Belum ada batch settlement.</p>
-                                <p class="mt-1 text-xs text-darkbrown-400">Jalankan command atau klik “Buat Draft Minggu Lalu” untuk membuat batch pertama.</p>
+                                <p class="text-sm font-bold text-darkbrown-700">Belum ada batch.</p>
+                                <p class="mt-1 text-xs text-darkbrown-500">Buat draft untuk memulai.</p>
                             </td>
                         </tr>
                     @endforelse
@@ -288,7 +288,7 @@
 
             <div class="grid grid-cols-2 gap-3 border-b border-wheat-200 px-6 py-5 lg:grid-cols-4">
                 <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 px-3 py-2.5">
-                    <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Bruto QRIS/Transfer</p>
+                    <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Dana Online</p>
                     <p class="mt-1 text-sm font-extrabold text-darkbrown-900">{{ $formatRupiah((float) $detail->gross_qris) }}</p>
                 </div>
                 <div class="rounded-xl border border-wheat-200 bg-wheat-50/70 px-3 py-2.5">
@@ -310,8 +310,6 @@
             <div class="grid grid-cols-1 gap-5 px-6 py-5 lg:grid-cols-3">
                 <div class="space-y-2 text-xs text-darkbrown-600 lg:col-span-2">
                     <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        <p><span class="font-semibold text-darkbrown-800">MDR standar (platform):</span> {{ $formatRupiah((float) $detail->gateway_fee_total) }}</p>
-                        <p><span class="font-semibold text-darkbrown-800">MDR denda (potong vendor):</span> {{ $formatRupiah((float) $detail->fine_fee_total) }}</p>
                         <p><span class="font-semibold text-darkbrown-800">Komisi tunai (piutang):</span> {{ $formatRupiah((float) $detail->cash_commission_offset) }}</p>
                         <p><span class="font-semibold text-darkbrown-800">Biaya transfer (beban platform):</span> {{ $formatRupiah((float) $detail->transfer_fee) }}</p>
                         <p><span class="font-semibold text-darkbrown-800">Penyesuaian carry-forward:</span> {{ $formatRupiah((float) $detail->adjustment_amount) }}</p>
@@ -380,7 +378,6 @@
                                 <th class="px-3 py-2.5">Kode Booking</th>
                                 <th class="px-3 py-2.5 text-right">Bruto</th>
                                 <th class="px-3 py-2.5 text-right">Komisi</th>
-                                <th class="px-3 py-2.5 text-right">Fee</th>
                                 <th class="px-3 py-2.5 text-right">Net</th>
                             </tr>
                         </thead>
@@ -391,7 +388,6 @@
                                     <td class="px-3 py-2.5 font-mono text-darkbrown-600">{{ $item->payment?->rental?->booking_code ?? '-' }}</td>
                                     <td class="px-3 py-2.5 text-right">{{ $formatRupiah((float) $item->gross_amount) }}</td>
                                     <td class="px-3 py-2.5 text-right text-goldenrod-700">{{ $formatRupiah((float) $item->commission_amount) }}</td>
-                                    <td class="px-3 py-2.5 text-right">{{ $formatRupiah((float) $item->fee_amount) }}</td>
                                     <td class="px-3 py-2.5 text-right font-bold {{ (float) $item->net_amount < 0 ? 'text-red-600' : 'text-avocado-700' }}">
                                         {{ $formatRupiah((float) $item->net_amount) }}
                                     </td>
@@ -431,7 +427,7 @@
                         <span class="mb-1 block text-xs font-bold text-darkbrown-700">Bukti Transfer <span class="text-red-500">*</span></span>
                         <input type="file" wire:model="proof" accept=".jpg,.jpeg,.png,.pdf"
                                class="w-full rounded-xl border border-wheat-300 bg-wheat-50 px-3 py-2.5 text-sm text-darkbrown-700 file:mr-3 file:rounded-lg file:border-0 file:bg-avocado-600 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white">
-                        <span class="mt-1 block text-[11px] text-darkbrown-400">JPG, PNG, atau PDF maksimal 5 MB.</span>
+                        <span class="mt-1 block text-[11px] text-darkbrown-500">JPG, PNG, atau PDF maksimal 5 MB.</span>
                         <div wire:loading wire:target="proof" class="mt-1 text-[11px] font-semibold text-avocado-700">Mengunggah file...</div>
                         @error('proof') <span class="mt-1 block text-xs font-semibold text-red-600">{{ $message }}</span> @enderror
                     </label>

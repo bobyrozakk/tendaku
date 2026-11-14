@@ -19,22 +19,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | MDR QRIS
-    |--------------------------------------------------------------------------
-    |
-    | Tarif QRIS mengikuti kebijakan BI untuk merchant UKE/UME/UBE. Nominal
-    | pada atau di bawah ambang tidak dikenai MDR.
-    |
-    */
-
-    'qris' => [
-        'mdr_threshold' => (int) env('MONETIZATION_QRIS_MDR_THRESHOLD', 100000),
-        'mdr_rate_below_threshold' => (float) env('MONETIZATION_QRIS_MDR_RATE_BELOW', 0.0),
-        'mdr_rate_above_threshold' => (float) env('MONETIZATION_QRIS_MDR_RATE_ABOVE', 0.007),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Batch settlement
     |--------------------------------------------------------------------------
     */

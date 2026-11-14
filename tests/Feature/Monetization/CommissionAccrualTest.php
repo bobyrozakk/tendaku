@@ -160,7 +160,7 @@ class CommissionAccrualTest extends TestCase
 
         $this->assertSame(0, PlatformCommission::withoutGlobalScope('vendor')->count());
         $this->assertSame('held', $payment->refresh()->escrow_status);
-        $this->assertSame('1400.00', $payment->gateway_fee_amount);
+        $this->assertSame('0.00', $payment->gateway_fee_amount);
     }
 
     public function test_refund_voids_the_commission_and_refunds_the_escrow(): void

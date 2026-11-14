@@ -108,15 +108,15 @@ class RevenueDashboardTest extends TestCase
 
         $this->assertSame(1200000.0, $summary['current']['gross_revenue']);
         $this->assertSame(60000.0, $summary['current']['commission']);
-        $this->assertSame(8400.0, $summary['current']['gateway_fee_total']);
         $this->assertSame(3500.0, $summary['current']['transfer_fee_total']);
-        $this->assertSame(48100.0, $summary['current']['platform_net']);
+        $this->assertSame(56500.0, $summary['current']['platform_net']);
         $this->assertSame(60000.0, $kpis['commission_this_month']);
 
         Livewire::actingAs($this->superAdmin)
             ->test(RevenueDashboard::class)
             ->assertSee('Rp 60.000')
-            ->assertSee('Rp 48.100')
+            ->assertSee('Rp 56.500')
+            ->assertDontSee('MDR')
             ->assertSee('TND-REV-001')
             ->assertSee('TND-REV-002')
             ->assertSee($this->vendor->name);

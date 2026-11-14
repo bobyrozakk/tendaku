@@ -19,7 +19,7 @@
 
 <div {{ $attributes->merge(['class' => "rounded-2xl border transition-all duration-200 {$cardClass}"]) }}>
     @if ($title || isset($header) || isset($action))
-        <div class="px-6 pt-5 pb-4 flex items-start justify-between gap-4 {{ $headerBorder ? 'border-b border-wheat-200/60' : '' }}">
+        <div class="flex flex-col gap-3 px-6 pt-5 pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 {{ $headerBorder ? 'border-b border-wheat-200/60' : '' }}">
             <div class="space-y-0.5">
                 @if ($title)
                     <h3 class="text-base sm:text-lg font-bold tracking-tight {{ $variant === 'dark' ? 'text-wheat-100' : 'text-darkbrown-800' }}">
@@ -37,7 +37,7 @@
             </div>
 
             @if (isset($action))
-                <div class="shrink-0 flex items-center gap-2">
+                <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
                     {{ $action }}
                 </div>
             @endif

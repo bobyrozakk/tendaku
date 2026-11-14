@@ -53,9 +53,9 @@
     @if ($withText)
         <span class="flex flex-col leading-none">
             <span class="text-lg font-black tracking-tight text-darkbrown-800">
-                TENDA<span class="text-avocado-500">KU</span>
+                TENDA<span class="text-avocado-600">KU</span>
             </span>
-            <span class="text-[9px] font-semibold uppercase tracking-widest text-goldenrod-700">
+            <span class="text-[9px] font-semibold uppercase tracking-widest text-goldenrod-800">
                 Outdoor Rental
             </span>
         </span>

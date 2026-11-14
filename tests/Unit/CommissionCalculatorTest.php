@@ -118,34 +118,11 @@ class CommissionCalculatorTest extends TestCase
         $this->assertSame(0, $this->calculator()->incrementalCommissionFor(40000, 2500));
     }
 
-    public function test_mdr_is_zero_at_the_100_000_threshold(): void
-    {
-        $this->assertSame(0, $this->calculator()->mdrFor(100000));
-    }
-
-    public function test_mdr_is_700_for_100_001(): void
-    {
-        $this->assertSame(700, $this->calculator()->mdrFor(100001));
-    }
-
-    public function test_mdr_is_7_000_for_1_000_000(): void
-    {
-        $this->assertSame(7000, $this->calculator()->mdrFor(1000000));
-    }
-
-    public function test_platform_net_subtracts_mdr_and_transfer_fee(): void
-    {
-        $this->assertSame(48100, $this->calculator()->platformNet(60000, 8400, 3500));
-    }
-
     private function calculator(): CommissionCalculator
     {
         return new CommissionCalculator(
             defaultRate: 0.05,
             minimumCommission: 2500,
-            qrisMdrThreshold: 100000,
-            qrisMdrRateBelowThreshold: 0.0,
-            qrisMdrRateAboveThreshold: 0.007,
         );
     }
 }

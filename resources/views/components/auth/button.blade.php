@@ -2,7 +2,7 @@
     wire:loading.attr="disabled"
     {{ $attributes->merge([
         'type' => 'submit',
-        'class' => 'inline-flex items-center justify-center gap-2 rounded-full bg-tendaku-avocado px-6 py-3.5 text-lg font-semibold text-white shadow-[0_4px_0_0_#566F06] transition hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-brown focus-visible:ring-offset-2 focus-visible:ring-offset-tendaku-wheat active:translate-y-[3px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-75 disabled:shadow-none',
+        'class' => 'inline-flex items-center justify-center gap-2 rounded-full bg-avocado-600 px-6 py-3.5 text-lg font-semibold text-white shadow-[0_4px_0_0_#3F5306] transition hover:bg-avocado-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-brown focus-visible:ring-offset-2 focus-visible:ring-offset-tendaku-wheat active:translate-y-[3px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-75 disabled:shadow-none',
     ]) }}
 >
     <svg wire:loading class="h-5 w-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

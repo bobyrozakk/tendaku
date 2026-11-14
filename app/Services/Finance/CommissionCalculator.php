@@ -18,15 +18,9 @@ class CommissionCalculator
     public function __construct(
         private readonly float $defaultRate,
         private readonly int $minimumCommission,
-        private readonly int $qrisMdrThreshold,
-        private readonly float $qrisMdrRateBelowThreshold,
-        private readonly float $qrisMdrRateAboveThreshold,
     ) {
         $this->assertRate($defaultRate, 'default commission rate');
         $this->assertNonNegative($minimumCommission, 'minimum commission');
-        $this->assertNonNegative($qrisMdrThreshold, 'QRIS MDR threshold');
-        $this->assertRate($qrisMdrRateBelowThreshold, 'QRIS MDR rate below threshold');
-        $this->assertRate($qrisMdrRateAboveThreshold, 'QRIS MDR rate above threshold');
     }
 
     public static function fromConfig(): self
@@ -34,9 +28,6 @@ class CommissionCalculator
         return new self(
             defaultRate: (float) config('monetization.commission.rate', 0.05),
             minimumCommission: (int) config('monetization.commission.minimum', 2500),
-            qrisMdrThreshold: (int) config('monetization.qris.mdr_threshold'),
-            qrisMdrRateBelowThreshold: (float) config('monetization.qris.mdr_rate_below_threshold'),
-            qrisMdrRateAboveThreshold: (float) config('monetization.qris.mdr_rate_above_threshold'),
         );
     }
 
@@ -97,32 +88,6 @@ class CommissionCalculator
         $commission = (int) round($amount * $rate);
 
         return max($this->minimumCommission, $commission);
-    }
-
-    /**
-     * Hitung MDR QRIS. Nominal pada atau di bawah ambang tidak dikenai MDR.
-     */
-    public function mdrFor(float $amount): int
-    {
-        $this->assertAmount($amount, 'QRIS amount');
-
-        if ($amount <= 0) {
-            return 0;
-        }
-
-        $rate = $amount <= $this->qrisMdrThreshold
-            ? $this->qrisMdrRateBelowThreshold
-            : $this->qrisMdrRateAboveThreshold;
-
-        return (int) round($amount * $rate);
-    }
-
-    /**
-     * Laba platform dari komisi setelah MDR dan biaya transfer.
-     */
-    public function platformNet(int $commission, int $mdr, int $transferFee = 0): int
-    {
-        return $commission - $mdr - $transferFee;
     }
 
     /**

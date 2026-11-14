@@ -1,3 +1,16 @@
+@php
+    $netBalance = (float) $withdrawableSummary['estimated_net'];
+    $isNegativeBalance = $netBalance < 0;
+    $hasWithdrawableBalance = $netBalance > 0;
+    $balanceTitle = match (true) {
+        $isNegativeBalance => 'Saldo Negatif',
+        $hasWithdrawableBalance => 'Saldo Siap Ditarik',
+        default => 'Belum Ada Saldo',
+    };
+    $formatRupiah = fn (float $value): string => 'Rp '.number_format($value, 0, ',', '.');
+    $formatSignedRupiah = fn (float $value): string => ($value < 0 ? '− ' : '').'Rp '.number_format(abs($value), 0, ',', '.');
+@endphp
+
 <x-layouts.vendor>
     <x-slot name="header">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -29,25 +42,34 @@
         @endif
 
         {{-- Card Penarikan Saldo (Vendor Request Payout) --}}
-        <div class="rounded-2xl border-2 border-avocado-600/30 bg-gradient-to-br from-avocado-50 via-white to-wheat-100/50 p-5 sm:p-6 shadow-sm">
+        <div class="rounded-2xl border-2 p-5 sm:p-6 shadow-sm {{ $isNegativeBalance ? 'border-red-200 bg-gradient-to-br from-red-50 via-white to-wheat-100/50' : 'border-avocado-600/30 bg-gradient-to-br from-avocado-50 via-white to-wheat-100/50' }}">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div class="space-y-1">
                     <div class="flex items-center gap-2">
-                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-avocado-600 text-white shadow-xs">
-                            <i data-lucide="wallet" class="w-4 h-4"></i>
+                        <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-white shadow-xs {{ $isNegativeBalance ? 'bg-red-600' : 'bg-avocado-600' }}">
+                            <i data-lucide="{{ $isNegativeBalance ? 'alert-triangle' : 'wallet' }}" class="w-4 h-4"></i>
                         </span>
-                        <h2 class="text-base font-extrabold text-darkbrown-900">Saldo Siap Ditarik</h2>
+                        <h2 class="text-base font-extrabold text-darkbrown-900">{{ $balanceTitle }}</h2>
                     </div>
-                    <div class="flex items-baseline gap-2 pt-1">
-                        <span class="text-3xl font-extrabold text-avocado-800 font-heading">
-                            Rp {{ number_format($withdrawableSummary['estimated_net'], 0, ',', '.') }}
+                    <div class="flex flex-wrap items-baseline gap-2 pt-1">
+                        <span class="text-3xl font-extrabold font-heading {{ $isNegativeBalance ? 'text-red-600' : 'text-avocado-800' }}">
+                            {{ $formatSignedRupiah($netBalance) }}
                         </span>
                         <span class="text-xs text-darkbrown-500 font-medium">
                             ({{ $withdrawableSummary['eligible_count'] }} transaksi sewa selesai)
                         </span>
                     </div>
+                    <p id="payout-status-note" class="text-xs text-darkbrown-600 leading-relaxed pt-0.5">
+                        @if ($isNegativeBalance)
+                            Pengajuan pencairan dinonaktifkan sampai saldo kembali positif.
+                        @elseif ($hasWithdrawableBalance)
+                            Estimasi bersih dari dana online yang ditahan platform setelah komisi 5%. Uang tunai yang sudah Anda terima tidak dihitung sebagai saldo.
+                        @else
+                            Belum ada dana online bersih yang dapat dicairkan. Saldo muncul setelah ada pembayaran online yang dananya ditahan platform.
+                        @endif
+                    </p>
                     <p class="text-xs text-darkbrown-600 leading-relaxed pt-0.5">
-                        Estimasi bersih setelah potongan komisi platform 5%. Rekening tujuan:
+                        Rekening tujuan:
                         <strong>{{ $vendor->paymentSetting?->bank_name ?: '-' }} · {{ $vendor->paymentSetting?->bank_account_number ?: '-' }}</strong> (a.n. {{ $vendor->paymentSetting?->bank_account_name ?: '-' }}).
                     </p>
                 </div>
@@ -64,10 +86,11 @@
                             </p>
                         </div>
                     @else
-                        <form method="POST" action="{{ route('vendor.pendapatan.request') }}" onsubmit="return confirm('Apakah Anda yakin ingin mengajukan penarikan saldo sebesar Rp {{ number_format($withdrawableSummary['estimated_net'], 0, ',', '.') }} ke rekening bank Anda?');">
+                        <form method="POST" action="{{ route('vendor.pendapatan.request') }}" onsubmit="return confirm('Apakah Anda yakin ingin mengajukan penarikan saldo sebesar {{ $formatRupiah($netBalance) }} ke rekening bank Anda?');">
                             @csrf
                             <button type="submit"
-                                    @disabled($withdrawableSummary['estimated_net'] <= 0)
+                                    @disabled(! $hasWithdrawableBalance)
+                                    aria-describedby="payout-status-note"
                                     class="btn-tendaku-primary !px-5 !py-3 text-sm font-extrabold shadow-tendaku transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer">
                                 <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
                                 <span>Tarik Dana ke Rekening</span>
@@ -76,6 +99,37 @@
                     @endif
                 </div>
             </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+                <div class="rounded-xl border border-wheat-200 bg-white/80 px-3 py-2">
+                    <p class="text-[9px] font-bold uppercase tracking-wider text-darkbrown-400">Dana Online</p>
+                    <p class="mt-0.5 font-extrabold text-darkbrown-800">{{ $formatRupiah($withdrawableSummary['gross_total']) }}</p>
+                </div>
+                <div class="rounded-xl border border-wheat-200 bg-white/80 px-3 py-2">
+                    <p class="text-[9px] font-bold uppercase tracking-wider text-darkbrown-400">Komisi Platform</p>
+                    <p class="mt-0.5 font-extrabold text-red-600">− {{ $formatRupiah($withdrawableSummary['estimated_commission']) }}</p>
+                </div>
+                @if ((float) $withdrawableSummary['adjustment_total'] !== 0.0)
+                    <div class="rounded-xl border border-wheat-200 bg-white/80 px-3 py-2">
+                        <p class="text-[9px] font-bold uppercase tracking-wider text-darkbrown-400">Saldo Sebelumnya</p>
+                        <p class="mt-0.5 font-extrabold {{ (float) $withdrawableSummary['adjustment_total'] < 0 ? 'text-red-600' : 'text-avocado-700' }}">
+                            {{ $formatSignedRupiah((float) $withdrawableSummary['adjustment_total']) }}
+                        </p>
+                    </div>
+                @endif
+            </div>
+
+            @if ($withdrawableSummary['cash_commission_offset'] > 0)
+                <p class="mt-2 text-[11px] text-darkbrown-500">
+                    Termasuk komisi transaksi tunai {{ $formatRupiah($withdrawableSummary['cash_commission_offset']) }}; komisi ini sudah diperhitungkan di atas.
+                </p>
+            @endif
+
+            @if ($isNegativeBalance)
+                <div role="status" class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                    Saldo negatif <strong>{{ $formatRupiah(abs($netBalance)) }}</strong>. Tidak ada transfer untuk saldo negatif; kekurangan ini akan dipotong dari pencairan berikutnya.
+                </div>
+            @endif
         </div>
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -160,31 +214,27 @@
                     </div>
 
                     @if ($settlement)
-                        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                             <div class="rounded-xl border border-wheat-200 bg-wheat-50 p-3">
-                                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-400">Bruto QRIS/Transfer</p>
-                                <p class="mt-1 text-sm font-bold text-darkbrown-800">Rp {{ number_format((float) $settlement->gross_qris, 0, ',', '.') }}</p>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-400">Dana Online</p>
+                                <p class="mt-1 text-sm font-bold text-darkbrown-800">{{ $formatRupiah((float) $settlement->gross_qris) }}</p>
                             </div>
                             <div class="rounded-xl border border-wheat-200 bg-wheat-50 p-3">
                                 <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-400">Denda</p>
-                                <p class="mt-1 text-sm font-bold text-darkbrown-800">Rp {{ number_format((float) $settlement->gross_fine_qris, 0, ',', '.') }}</p>
+                                <p class="mt-1 text-sm font-bold text-darkbrown-800">{{ $formatRupiah((float) $settlement->gross_fine_qris) }}</p>
                             </div>
                             <div class="rounded-xl border border-wheat-200 bg-wheat-50 p-3">
                                 <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-400">Komisi</p>
-                                <p class="mt-1 text-sm font-bold text-red-600">− Rp {{ number_format((float) $settlement->commission_total, 0, ',', '.') }}</p>
+                                <p class="mt-1 text-sm font-bold text-red-600">− {{ $formatRupiah((float) $settlement->commission_total) }}</p>
                             </div>
                             <div class="rounded-xl border border-wheat-200 bg-wheat-50 p-3">
-                                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-400">MDR Denda</p>
-                                <p class="mt-1 text-sm font-bold text-red-600">− Rp {{ number_format((float) $settlement->fine_fee_total, 0, ',', '.') }}</p>
-                            </div>
-                            <div class="rounded-xl border border-wheat-200 bg-wheat-50 p-3">
-                                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-400">Komisi Tunai</p>
-                                <p class="mt-1 text-sm font-bold text-darkbrown-800">Rp {{ number_format((float) $settlement->cash_commission_offset, 0, ',', '.') }}</p>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-400">Termasuk Komisi Tunai</p>
+                                <p class="mt-1 text-sm font-bold text-darkbrown-800">{{ $formatRupiah((float) $settlement->cash_commission_offset) }}</p>
                             </div>
                             <div class="rounded-xl border border-avocado-200 bg-avocado-50 p-3">
                                 <p class="text-[10px] font-bold uppercase tracking-wider text-avocado-700">Net Payout</p>
                                 <p class="mt-1 text-sm font-extrabold {{ (float) $invoice->total < 0 ? 'text-red-600' : 'text-avocado-800' }}">
-                                    Rp {{ number_format((float) $invoice->total, 0, ',', '.') }}
+                                    {{ $formatSignedRupiah((float) $invoice->total) }}
                                 </p>
                             </div>
                         </div>
@@ -192,9 +242,14 @@
                         @if ((float) $settlement->adjustment_amount !== 0.0)
                             <p class="mt-3 rounded-xl border border-sunglow-300 bg-sunglow-50 px-3 py-2 text-[11px] text-goldenrod-800">
                                 Penyesuaian carry-forward:
-                                {{ (float) $settlement->adjustment_amount < 0 ? '−' : '+' }}
-                                Rp {{ number_format(abs((float) $settlement->adjustment_amount), 0, ',', '.') }}
+                                {{ $formatSignedRupiah((float) $settlement->adjustment_amount) }}
                                 dari batch sebelumnya.
+                            </p>
+                        @endif
+
+                        @if ((float) $invoice->total < 0)
+                            <p class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                                Batch ini tidak ditransfer ke rekening. Kekurangan {{ $formatRupiah(abs((float) $invoice->total)) }} akan dipotong dari batch berikutnya.
                             </p>
                         @endif
 

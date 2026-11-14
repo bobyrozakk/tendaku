@@ -256,8 +256,6 @@ class RevenueReportService
                 COALESCE(SUM(CASE WHEN payments.payment_type <> 'fine' THEN payments.amount ELSE 0 END), 0) as gross_revenue,
                 COALESCE(SUM(CASE WHEN payments.payment_type <> 'fine' AND payments.payment_method <> 'cash' THEN payments.amount ELSE 0 END), 0) as gross_non_cash,
                 COALESCE(SUM(CASE WHEN payments.payment_type = 'fine' AND payments.payment_method <> 'cash' THEN payments.amount ELSE 0 END), 0) as gross_fine_non_cash,
-                COALESCE(SUM(CASE WHEN payments.payment_type <> 'fine' AND payments.payment_method <> 'cash' THEN payments.gateway_fee_amount ELSE 0 END), 0) as gateway_fee_total,
-                COALESCE(SUM(CASE WHEN payments.payment_type = 'fine' AND payments.payment_method <> 'cash' THEN payments.gateway_fee_amount ELSE 0 END), 0) as fine_fee_total,
                 COALESCE(SUM(CASE WHEN payments.escrow_status = 'held' THEN payments.amount ELSE 0 END), 0) as escrow_held,
                 COUNT(*) as transaction_count
             ")
@@ -312,9 +310,8 @@ class RevenueReportService
                 $nonCashCommission = (float) ($commission->non_cash_commission ?? 0);
                 $grossNonCash = (float) ($payment->gross_non_cash ?? 0);
                 $grossFineNonCash = (float) ($payment->gross_fine_non_cash ?? 0);
-                $fineFeeTotal = (float) ($payment->fine_fee_total ?? 0);
 
-                $payoutEstimate = $grossNonCash + $grossFineNonCash - $nonCashCommission - $fineFeeTotal - $cashCommission;
+                $payoutEstimate = $grossNonCash + $grossFineNonCash - $nonCashCommission - $cashCommission;
 
                 return [
                     'vendor_id' => $vendorId,
@@ -476,7 +473,6 @@ class RevenueReportService
             'payments.payment_method',
             'payments.payment_channel',
             'payments.amount',
-            'payments.gateway_fee_amount',
             'payments.escrow_status',
             'payments.settlement_id',
             'payments.paid_at',
@@ -509,7 +505,6 @@ class RevenueReportService
                 'payment_channel' => $row->payment_channel ? (string) $row->payment_channel : null,
                 'amount' => (float) $row->amount,
                 'commission_amount' => (float) ($row->commission_amount ?? 0),
-                'gateway_fee_amount' => (float) $row->gateway_fee_amount,
                 'escrow_status' => (string) $row->escrow_status,
                 'settlement_id' => $row->settlement_id !== null ? (int) $row->settlement_id : null,
                 'paid_at' => $row->paid_at !== null ? Carbon::parse($row->paid_at) : null,
@@ -525,9 +520,7 @@ class RevenueReportService
         $paymentRow = $this->paymentQuery($filters)
             ->selectRaw("
                 COALESCE(SUM(CASE WHEN payments.payment_type <> 'fine' THEN payments.amount ELSE 0 END), 0) as gross_revenue,
-                COALESCE(SUM(CASE WHEN payments.payment_type <> 'fine' THEN payments.gateway_fee_amount ELSE 0 END), 0) as gateway_fee_total,
                 COALESCE(SUM(CASE WHEN payments.payment_type = 'fine' THEN payments.amount ELSE 0 END), 0) as fine_gross,
-                COALESCE(SUM(CASE WHEN payments.payment_type = 'fine' THEN payments.gateway_fee_amount ELSE 0 END), 0) as fine_fee_total,
                 COUNT(*) as transaction_count,
                 COUNT(DISTINCT payments.vendor_id) as vendor_count
             ")
@@ -542,7 +535,6 @@ class RevenueReportService
             ->where('payments.escrow_status', 'held')
             ->sum('payments.amount');
 
-        $gatewayFeeTotal = (float) ($paymentRow->gateway_fee_total ?? 0);
         $vendorCount = (int) ($paymentRow->vendor_count ?? 0);
         $transferFee = (float) config('monetization.settlement.transfer_fee', 3500);
         $transferFeeTotal = $transferFee * $vendorCount;
@@ -551,15 +543,13 @@ class RevenueReportService
             'gross_revenue' => (float) ($paymentRow->gross_revenue ?? 0),
             'commission' => $commission,
             'cash_commission' => $cashCommission,
-            'gateway_fee_total' => $gatewayFeeTotal,
             'fine_gross' => (float) ($paymentRow->fine_gross ?? 0),
-            'fine_fee_total' => (float) ($paymentRow->fine_fee_total ?? 0),
             'escrow_held' => $escrowHeld,
             'transaction_count' => (int) ($paymentRow->transaction_count ?? 0),
             'vendor_count' => $vendorCount,
             'transfer_fee' => $transferFee,
             'transfer_fee_total' => $transferFeeTotal,
-            'platform_net' => $commission - $gatewayFeeTotal - $transferFeeTotal,
+            'platform_net' => $commission - $transferFeeTotal,
         ];
     }
 

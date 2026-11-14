@@ -598,8 +598,7 @@ class MidtransService
         $code = $rental->booking_code;
 
         if ($payment->payment_type === PaymentType::Dp->value) {
-            $dpPct = app(PaymentService::class)
-                ->resolveDpPercentage($rental->vendor?->dp_percentage);
+            $dpPct = app(PaymentService::class)->dpPercentage();
 
             return [[
                 'id' => "DP-{$code}",

@@ -16,19 +16,10 @@ class PaymentService
         private readonly CommissionService $commissions,
     ) {}
 
-    //  persen DP dari grand_total.
-    public function defaultDpPercentage(): int
+    //  DP selalu memakai persentase global, bukan pengaturan per vendor.
+    public function dpPercentage(): int
     {
         return (int) config('payment.dp_percentage', 50);
-    }
-
-    public function resolveDpPercentage(int|float|string|null $vendorPercentage = null): int
-    {
-        $percentage = (int) $vendorPercentage;
-
-        return ($percentage >= 1 && $percentage <= 100)
-            ? $percentage
-            : $this->defaultDpPercentage();
     }
 
     public function calculateDpAmount(
@@ -38,7 +29,7 @@ class PaymentService
     ): int {
         $base = max(0, (int) round($subtotal) + (int) round($deliveryFee) - (int) round($discount));
 
-        return intdiv($base * $this->defaultDpPercentage() + 99, 100);
+        return intdiv($base * $this->dpPercentage() + 99, 100);
     }
 
     public function generateOrderId(string $bookingCode, ?string $paymentMethod, int $sequence = 1): string

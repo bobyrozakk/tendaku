@@ -1,3 +1,7 @@
+@php
+    $formatSignedRupiah = fn (float $value): string => ($value < 0 ? '− ' : '').'Rp '.number_format(abs($value), 0, ',', '.');
+@endphp
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -98,7 +102,7 @@
                 </thead>
                 <tbody class="divide-y divide-wheat-200">
                     <tr>
-                        <td class="px-4 py-3">Pendapatan bruto QRIS/Transfer</td>
+                        <td class="px-4 py-3">Dana online ditahan</td>
                         <td class="px-4 py-3 text-right font-semibold">Rp {{ number_format((float) $settlement->gross_qris, 0, ',', '.') }}</td>
                     </tr>
                     <tr>
@@ -108,10 +112,6 @@
                     <tr>
                         <td class="px-4 py-3">Komisi platform</td>
                         <td class="px-4 py-3 text-right font-semibold text-red-600">− Rp {{ number_format((float) $settlement->commission_total, 0, ',', '.') }}</td>
-                    </tr>
-                    <tr>
-                        <td class="px-4 py-3">MDR denda (potong vendor)</td>
-                        <td class="px-4 py-3 text-right font-semibold text-red-600">− Rp {{ number_format((float) $settlement->fine_fee_total, 0, ',', '.') }}</td>
                     </tr>
                     @if ((float) $settlement->adjustment_amount !== 0.0)
                         <tr>
@@ -124,7 +124,7 @@
                     <tr class="bg-avocado-50">
                         <td class="px-4 py-4 text-sm font-extrabold text-darkbrown-900">Total Net Payout</td>
                         <td class="px-4 py-4 text-right text-base font-extrabold {{ (float) $invoice->total < 0 ? 'text-red-600' : 'text-avocado-800' }}">
-                            Rp {{ number_format((float) $invoice->total, 0, ',', '.') }}
+                            {{ $formatSignedRupiah((float) $invoice->total) }}
                         </td>
                     </tr>
                 </tbody>
@@ -157,7 +157,7 @@
                                 @endif
                             </span>
                             <span class="shrink-0 font-semibold {{ (float) $item->net_amount < 0 ? 'text-red-600' : 'text-darkbrown-800' }}">
-                                Rp {{ number_format((float) $item->net_amount, 0, ',', '.') }}
+                                {{ $formatSignedRupiah((float) $item->net_amount) }}
                             </span>
                         </div>
                     @endforeach
@@ -169,7 +169,7 @@
                     <p class="font-bold text-darkbrown-900">Catatan</p>
                     <p class="mt-1">
                         Invoice ini diterbitkan otomatis saat batch settlement disetujui.
-                        Dana QRIS dilepas dari escrow setelah batch ditandai sudah dibayar.
+                        Dana online dilepas dari escrow setelah batch ditandai sudah dibayar.
                     </p>
                     <p class="mt-2">
                         Biaya transfer bank sebesar Rp {{ number_format((float) $settlement->transfer_fee, 0, ',', '.') }}

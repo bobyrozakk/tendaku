@@ -106,10 +106,10 @@ class SettlementTest extends TestCase
         $this->assertSame(200000.0, (float) $settlement->gross_fine_qris);
         $this->assertSame(75000.0, (float) $settlement->commission_total);
         $this->assertSame(25000.0, (float) $settlement->cash_commission_offset);
-        $this->assertSame(7000.0, (float) $settlement->gateway_fee_total);
-        $this->assertSame(1400.0, (float) $settlement->fine_fee_total);
+        $this->assertSame(0.0, (float) $settlement->gateway_fee_total);
+        $this->assertSame(0.0, (float) $settlement->fine_fee_total);
         $this->assertSame(3500.0, (float) $settlement->transfer_fee);
-        $this->assertSame(1123600.0, (float) $settlement->net_payout);
+        $this->assertSame(1125000.0, (float) $settlement->net_payout);
 
         $this->assertSame(3, SettlementItem::withoutGlobalScope('vendor')->count());
         $this->assertDatabaseHas('settlement_items', [
@@ -374,6 +374,11 @@ class SettlementTest extends TestCase
             'recognized_at' => Carbon::parse('2026-10-27 10:00:00'),
         ]);
 
+        $summary = $service->getWithdrawableSummary($vendor->id);
+
+        $this->assertSame(-25000.0, $summary['adjustment_total']);
+        $this->assertSame(925000.0, $summary['estimated_net']);
+
         $second = $service->buildWeeklyDraft(Carbon::parse('2026-10-26'))->first();
 
         $this->assertNotNull($second);
@@ -385,6 +390,116 @@ class SettlementTest extends TestCase
             'type' => 'adjustment',
             'net_amount' => -25000,
         ]);
+    }
+
+    public function test_payout_request_carries_a_previous_negative_balance_into_the_new_settlement(): void
+    {
+        $vendor = $this->createRevenueVendor();
+        $vendor->paymentSetting()->create([
+            'bank_name' => 'BCA',
+            'bank_account_number' => '1234567890',
+            'bank_account_name' => 'Owner Vendor',
+        ]);
+
+        [, $cashPayment] = $this->createPaidRevenuePayment($vendor, 500000, [
+            'booking_code' => 'TND-REQUEST-CASH-W1',
+            'payment_method' => 'cash',
+            'payment_channel' => null,
+            'escrow_status' => 'not_applicable',
+            'gateway_fee_amount' => 0,
+            'paid_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+        $this->createRevenueCommission($cashPayment, 25000, [
+            'base_amount' => 500000,
+            'recognized_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+
+        $service = app(SettlementService::class);
+        $first = $service->buildWeeklyDraft(Carbon::parse('2026-10-19'))->first();
+        $service->approve($first, $this->admin);
+        $service->markPaid($first, $this->admin, 'CASH-REQUEST-W1', '/proof-w1.jpg');
+
+        [, $onlinePayment] = $this->createPaidRevenuePayment($vendor, 1000000, [
+            'booking_code' => 'TND-REQUEST-ONLINE-W2',
+            'paid_at' => Carbon::parse('2026-10-27 10:00:00'),
+        ]);
+        $this->createRevenueCommission($onlinePayment, 50000, [
+            'base_amount' => 1000000,
+            'recognized_at' => Carbon::parse('2026-10-27 10:00:00'),
+        ]);
+
+        $settlement = $service->requestPayoutForVendor($vendor->id);
+
+        $this->assertSame(-25000.0, (float) $settlement->adjustment_amount);
+        $this->assertSame(925000.0, (float) $settlement->net_payout);
+    }
+
+    public function test_withdrawable_summary_matches_the_next_settlement_formula(): void
+    {
+        $vendor = $this->createRevenueVendor();
+
+        [, $onlinePayment] = $this->createPaidRevenuePayment($vendor, 1000000, [
+            'booking_code' => 'TND-SUM-ONLINE',
+            'paid_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+        $this->createRevenueCommission($onlinePayment, 50000, [
+            'base_amount' => 1000000,
+            'recognized_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+
+        [, $cashPayment] = $this->createPaidRevenuePayment($vendor, 500000, [
+            'booking_code' => 'TND-SUM-CASH',
+            'payment_method' => 'cash',
+            'payment_channel' => null,
+            'escrow_status' => 'not_applicable',
+            'gateway_fee_amount' => 0,
+            'paid_at' => Carbon::parse('2026-10-21 10:00:00'),
+        ]);
+        $this->createRevenueCommission($cashPayment, 25000, [
+            'base_amount' => 500000,
+            'recognized_at' => Carbon::parse('2026-10-21 10:00:00'),
+        ]);
+
+        [, $finePayment] = $this->createPaidRevenuePayment($vendor, 200000, [
+            'booking_code' => 'TND-SUM-FINE',
+            'payment_type' => 'fine',
+            'gateway_fee_amount' => 1400,
+            'paid_at' => Carbon::parse('2026-10-22 10:00:00'),
+        ]);
+
+        $service = app(SettlementService::class);
+        $summary = $service->getWithdrawableSummary($vendor->id);
+        $settlement = $service->buildWeeklyDraft(Carbon::parse('2026-10-19'))->first();
+
+        $this->assertSame(1200000.0, $summary['gross_total']);
+        $this->assertSame(75000.0, $summary['estimated_commission']);
+        $this->assertSame(0.0, $summary['adjustment_total']);
+        $this->assertSame(1125000.0, $summary['estimated_net']);
+        $this->assertSame((float) $settlement->net_payout, $summary['estimated_net']);
+    }
+
+    public function test_withdrawable_summary_reports_negative_balance_for_cash_only_rental(): void
+    {
+        $vendor = $this->createRevenueVendor();
+
+        [, $cashPayment] = $this->createPaidRevenuePayment($vendor, 500000, [
+            'booking_code' => 'TND-SUM-CASH-NEGATIVE',
+            'payment_method' => 'cash',
+            'payment_channel' => null,
+            'escrow_status' => 'not_applicable',
+            'gateway_fee_amount' => 0,
+            'paid_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+        $this->createRevenueCommission($cashPayment, 25000, [
+            'base_amount' => 500000,
+            'recognized_at' => Carbon::parse('2026-10-20 10:00:00'),
+        ]);
+
+        $summary = app(SettlementService::class)->getWithdrawableSummary($vendor->id);
+
+        $this->assertSame(0.0, $summary['gross_total']);
+        $this->assertSame(25000.0, $summary['estimated_commission']);
+        $this->assertSame(-25000.0, $summary['estimated_net']);
     }
 
     public function test_command_generates_the_week_draft_and_can_be_re_run_safely(): void

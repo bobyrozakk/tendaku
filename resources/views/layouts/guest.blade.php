@@ -8,7 +8,6 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
@@ -123,7 +122,7 @@
             </div>
         </div>
 
-        <p class="mt-8 text-center text-xs text-tendaku-brown/60 lg:mt-6 lg:text-left">
+        <p class="mt-8 text-center text-xs text-tendaku-brown/80 lg:mt-6 lg:text-left">
             &copy; {{ date('Y') }} Tendaku
         </p>
     </main>

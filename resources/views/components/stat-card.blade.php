@@ -38,7 +38,7 @@
 <div {{ $attributes->merge(['class' => "bg-white p-5 rounded-2xl border border-wheat-200 shadow-tendaku-sm transition duration-200 hover:shadow-tendaku-md flex flex-col justify-between {$theme['border']}"]) }}>
     {{-- Header: Judul di kiri, Icon di kanan --}}
     <div class="flex items-start justify-between gap-3">
-        <p class="text-[11px] font-bold uppercase tracking-wider text-darkbrown-500 leading-tight">{{ $title }}</p>
+        <p class="text-[11px] font-semibold leading-tight text-darkbrown-500">{{ $title }}</p>
         @if ($icon)
             <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 {{ $theme['iconBg'] }}">
                 {{ $icon }}
@@ -48,7 +48,7 @@
 
     {{-- Value: Angka utama berukuran besar, ruang penuh tanpa terhimpit icon --}}
     <div class="mt-2.5">
-        <div class="text-2xl sm:text-[28px] font-extrabold tracking-tight text-darkbrown-900 whitespace-nowrap overflow-hidden text-ellipsis">
+        <div class="font-admin-number text-2xl font-extrabold text-darkbrown-900 whitespace-nowrap overflow-hidden text-ellipsis sm:text-[28px]">
             {{ $value }}
         </div>
     </div>
@@ -71,7 +71,7 @@
                 </span>
             @endif
             @if ($description)
-                <span class="text-xs text-darkbrown-400 font-medium leading-tight truncate">{{ $description }}</span>
+                <span class="text-xs text-darkbrown-500 font-medium leading-tight truncate">{{ $description }}</span>
             @endif
         </div>
     @endif

@@ -77,6 +77,7 @@ class SettlementService
                 $periodEnd,
                 $vendorPayments,
                 $commissions,
+                $periodStart,
             );
 
             if ($settlement !== null) {
@@ -88,56 +89,41 @@ class SettlementService
     }
 
     /**
-     * Hitung ringkasan saldo yang siap ditarik oleh vendor.
+     * Hitung ringkasan saldo yang benar-benar dipegang platform untuk vendor.
+     *
+     * Pembayaran tunai tidak masuk gross karena uangnya sudah diterima vendor;
+     * komisi dari transaksi tunai tetap mengurangi saldo dan dapat membuat
+     * estimated_net negatif. Saldo negatif akan dibawa ke batch berikutnya.
      *
      * @return array{
      *     eligible_count: int,
      *     gross_total: float,
      *     estimated_commission: float,
+     *     cash_commission_offset: float,
+     *     adjustment_total: float,
      *     estimated_net: float
      * }
      */
     public function getWithdrawableSummary(int $vendorId): array
     {
-        $payments = Payment::withoutGlobalScope('vendor')
-            ->where('vendor_id', $vendorId)
-            ->where('status', 'paid')
-            ->whereNull('settlement_id')
-            ->whereIn('payment_type', PaymentType::values())
-            ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
-            ->where(function ($query): void {
-                $query->where(function ($cash): void {
-                    $cash->where('payment_method', 'cash')
-                        ->where('payment_type', '!=', 'fine');
-                })->orWhere('escrow_status', 'held');
-            })
-            ->get();
-
-        $gross = 0.0;
-        $commissionsTotal = 0.0;
-
-        if ($payments->isNotEmpty()) {
-            $commissions = PlatformCommission::withoutGlobalScope('vendor')
-                ->whereIn('payment_id', $payments->pluck('id'))
-                ->where('status', 'accrued')
-                ->get()
-                ->keyBy('payment_id');
-
-            foreach ($payments as $payment) {
-                if ($payment->payment_type === PaymentType::Fine->value && $payment->payment_method === 'cash') {
-                    continue;
-                }
-                $comm = (float) ($commissions->get($payment->getKey())?->amount ?? 0);
-                $gross += (float) $payment->amount;
-                $commissionsTotal += $comm;
-            }
-        }
+        $payments = $this->eligiblePaymentsForVendor($vendorId);
+        $commissions = $this->accruedCommissionsFor($payments);
+        $summary = $this->summarizeSettlementPayments($payments, $commissions);
+        $adjustment = $this->outstandingNegativeBalance($vendorId)['amount'];
+        $netPayout = $this->calculateNetPayout(
+            $summary['gross_qris'],
+            $summary['gross_fine_qris'],
+            $summary['commission_total'],
+            $adjustment,
+        );
 
         return [
             'eligible_count' => $payments->count(),
-            'gross_total' => $gross,
-            'estimated_commission' => $commissionsTotal,
-            'estimated_net' => max(0.0, $gross - $commissionsTotal),
+            'gross_total' => round($summary['gross_qris'] + $summary['gross_fine_qris'], 2),
+            'estimated_commission' => round($summary['commission_total'], 2),
+            'cash_commission_offset' => round($summary['cash_commission_offset'], 2),
+            'adjustment_total' => round($adjustment, 2),
+            'estimated_net' => $netPayout,
         ];
     }
 
@@ -162,37 +148,30 @@ class SettlementService
             throw new \RuntimeException('Anda sudah memiliki pengajuan pencairan yang sedang diproses (Batch #'.$activeSettlement->id.'). Tunggu hingga proses transfer selesai.');
         }
 
-        $payments = Payment::withoutGlobalScope('vendor')
-            ->where('vendor_id', $vendorId)
-            ->where('status', 'paid')
-            ->whereNull('settlement_id')
-            ->whereIn('payment_type', PaymentType::values())
-            ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
-            ->where(function ($query): void {
-                $query->where(function ($cash): void {
-                    $cash->where('payment_method', 'cash')
-                        ->where('payment_type', '!=', 'fine');
-                })->orWhere('escrow_status', 'held');
-            })
-            ->orderBy('id')
-            ->get();
+        $payments = $this->eligiblePaymentsForVendor($vendorId);
 
         if ($payments->isEmpty()) {
             throw new \RuntimeException('Tidak ada saldo pembayaran sewa selesai yang siap dicairkan saat ini.');
         }
 
-        $commissions = PlatformCommission::withoutGlobalScope('vendor')
-            ->whereIn('payment_id', $payments->pluck('id'))
-            ->where('status', 'accrued')
-            ->get()
-            ->keyBy('payment_id');
+        $commissions = $this->accruedCommissionsFor($payments);
+        [$pStart, $pEnd] = $this->resolvePayoutPeriod($vendorId);
 
-        $pStart = Carbon::today()->startOfWeek(Carbon::MONDAY);
-        $pEnd = Carbon::today()->endOfWeek(Carbon::SUNDAY);
+        $summary = $this->summarizeSettlementPayments($payments, $commissions);
+        $adjustment = $this->outstandingNegativeBalance($vendorId)['amount'];
+        $netPayout = $this->calculateNetPayout(
+            $summary['gross_qris'],
+            $summary['gross_fine_qris'],
+            $summary['commission_total'],
+            $adjustment,
+        );
 
-        if (Settlement::withoutGlobalScope('vendor')->where('vendor_id', $vendorId)->whereDate('period_start', $pStart->toDateString())->whereDate('period_end', $pEnd->toDateString())->exists()) {
-            $pStart = Carbon::now()->startOfDay();
-            $pEnd = Carbon::now()->endOfDay();
+        if ($netPayout <= 0) {
+            $deficit = 'Rp '.number_format(abs($netPayout), 0, ',', '.');
+
+            throw new \RuntimeException($netPayout < 0
+                ? "Saldo bersih Anda masih negatif ({$deficit}). Kekurangan ini akan dipotong dari pencairan berikutnya; pengajuan pencairan baru dapat dilakukan setelah saldo kembali positif."
+                : 'Belum ada saldo bersih yang dapat dicairkan saat ini.');
         }
 
         $settlement = $this->createDraftForVendor(
@@ -370,12 +349,201 @@ class SettlementService
             'period_end' => $settlement->period_end,
             'subtotal' => round($subtotal, 2),
             'commission_amount' => $settlement->commission_total,
-            'fee_amount' => round((float) $settlement->fine_fee_total, 2),
+            'fee_amount' => 0,
             'total' => $settlement->net_payout,
             'status' => $isPaid ? 'paid' : 'issued',
             'issued_at' => now(),
             'paid_at' => $isPaid ? $settlement->paid_at : null,
         ]);
+    }
+
+    /**
+     * @return Collection<int, Payment>
+     */
+    private function eligiblePaymentsForVendor(int $vendorId): Collection
+    {
+        return Payment::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'paid')
+            ->whereNull('settlement_id')
+            ->whereIn('payment_type', PaymentType::values())
+            ->whereHas('rental', fn ($query) => $query->where('status', 'completed'))
+            ->where(function ($query): void {
+                $query->where(function ($cash): void {
+                    $cash->where('payment_method', 'cash')
+                        ->where('payment_type', '!=', 'fine');
+                })->orWhere('escrow_status', 'held');
+            })
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * @param  Collection<int, Payment>  $payments
+     * @return Collection<int, PlatformCommission>
+     */
+    private function accruedCommissionsFor(Collection $payments): Collection
+    {
+        if ($payments->isEmpty()) {
+            return collect();
+        }
+
+        return PlatformCommission::withoutGlobalScope('vendor')
+            ->whereIn('payment_id', $payments->pluck('id'))
+            ->where('status', 'accrued')
+            ->get()
+            ->keyBy('payment_id');
+    }
+
+    /**
+     * Ringkas komponen settlement dari pembayaran yang sama untuk semua jalur.
+     *
+     * @param  Collection<int, Payment>  $payments
+     * @param  Collection<int, PlatformCommission>  $commissions
+     * @return array{
+     *     gross_qris: float,
+     *     gross_fine_qris: float,
+     *     commission_total: float,
+     *     cash_commission_offset: float,
+     *     has_non_cash_payment: bool,
+     *     items: list<array<string, mixed>>
+     * }
+     */
+    private function summarizeSettlementPayments(Collection $payments, Collection $commissions): array
+    {
+        $summary = [
+            'gross_qris' => 0.0,
+            'gross_fine_qris' => 0.0,
+            'commission_total' => 0.0,
+            'cash_commission_offset' => 0.0,
+            'has_non_cash_payment' => false,
+            'items' => [],
+        ];
+
+        foreach ($payments as $payment) {
+            $commission = $commissions->get($payment->getKey());
+            $commissionAmount = (float) ($commission?->amount ?? 0);
+            $isFine = $payment->payment_type === PaymentType::Fine->value;
+            $isCash = $payment->payment_method === 'cash';
+
+            if ($isFine && $isCash) {
+                // Denda tunai sudah diterima vendor; tidak masuk remitansi platform.
+                continue;
+            }
+
+            if ($isFine) {
+                $summary['gross_fine_qris'] += (float) $payment->amount;
+                $summary['has_non_cash_payment'] = true;
+
+                $summary['items'][] = [
+                    'payment_id' => $payment->getKey(),
+                    'platform_commission_id' => null,
+                    'type' => 'fine',
+                    'gross_amount' => $payment->amount,
+                    'commission_amount' => 0,
+                    'fee_amount' => 0,
+                    'net_amount' => round((float) $payment->amount, 2),
+                ];
+
+                continue;
+            }
+
+            if ($isCash) {
+                $summary['commission_total'] += $commissionAmount;
+                $summary['cash_commission_offset'] += $commissionAmount;
+
+                $summary['items'][] = [
+                    'payment_id' => $payment->getKey(),
+                    'platform_commission_id' => $commission?->getKey(),
+                    'type' => 'cash_commission',
+                    'gross_amount' => $payment->amount,
+                    'commission_amount' => $commissionAmount,
+                    'fee_amount' => 0,
+                    'net_amount' => -$commissionAmount,
+                ];
+
+                continue;
+            }
+
+            $summary['gross_qris'] += (float) $payment->amount;
+            $summary['commission_total'] += $commissionAmount;
+            $summary['has_non_cash_payment'] = true;
+
+            $summary['items'][] = [
+                'payment_id' => $payment->getKey(),
+                'platform_commission_id' => $commission?->getKey(),
+                'type' => 'payment',
+                'gross_amount' => $payment->amount,
+                'commission_amount' => $commissionAmount,
+                'fee_amount' => 0,
+                'net_amount' => round((float) $payment->amount - $commissionAmount, 2),
+            ];
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function resolvePayoutPeriod(int $vendorId): array
+    {
+        $periodStart = Carbon::today()->startOfWeek(Carbon::MONDAY);
+        $periodEnd = Carbon::today()->endOfWeek(Carbon::SUNDAY);
+
+        $weeklySettlementExists = Settlement::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->whereDate('period_start', $periodStart->toDateString())
+            ->whereDate('period_end', $periodEnd->toDateString())
+            ->exists();
+
+        if ($weeklySettlementExists) {
+            return [Carbon::now()->startOfDay(), Carbon::now()->endOfDay()];
+        }
+
+        return [$periodStart, $periodEnd];
+    }
+
+    /**
+     * Saldo negatif terbaru yang belum tertutup oleh batch positif setelahnya.
+     *
+     * @return array{amount: float, settlement: ?Settlement}
+     */
+    private function outstandingNegativeBalance(int $vendorId, ?Carbon $before = null): array
+    {
+        $query = Settlement::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->whereIn('status', ['draft', 'approved', 'paid']);
+
+        if ($before !== null) {
+            $query->where('period_end', '<', $before->toDateString());
+        }
+
+        $settlement = $query
+            ->orderByDesc('period_end')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($settlement === null || (float) $settlement->net_payout >= 0) {
+            return ['amount' => 0.0, 'settlement' => null];
+        }
+
+        return [
+            'amount' => (float) $settlement->net_payout,
+            'settlement' => $settlement,
+        ];
+    }
+
+    private function calculateNetPayout(
+        float $grossQris,
+        float $grossFineQris,
+        float $commissionTotal,
+        float $adjustment,
+    ): float {
+        return round(
+            $grossQris + $grossFineQris - $commissionTotal + $adjustment,
+            2,
+        );
     }
 
     /**
@@ -388,6 +556,7 @@ class SettlementService
         Carbon $periodEnd,
         Collection $payments,
         Collection $commissions,
+        ?Carbon $carryForwardBefore = null,
     ): ?Settlement {
         $alreadyExists = Settlement::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
@@ -405,87 +574,17 @@ class SettlementService
             return null;
         }
 
-        $previous = Settlement::withoutGlobalScope('vendor')
-            ->where('vendor_id', $vendorId)
-            ->where('period_end', '<', $periodStart->toDateString())
-            ->whereIn('status', ['draft', 'approved', 'paid'])
-            ->orderByDesc('period_end')
-            ->orderByDesc('id')
-            ->first();
+        $carryForward = $this->outstandingNegativeBalance($vendorId, $carryForwardBefore);
+        $adjustment = $carryForward['amount'];
+        $previous = $carryForward['settlement'];
 
-        $adjustment = $previous !== null && (float) $previous->net_payout < 0
-            ? (float) $previous->net_payout
-            : 0.0;
-
-        $grossQris = 0.0;
-        $grossFineQris = 0.0;
-        $commissionTotal = 0.0;
-        $gatewayFeeTotal = 0.0;
-        $fineFeeTotal = 0.0;
-        $cashCommissionOffset = 0.0;
-        $items = [];
-        $hasNonCashPayment = $payments->contains(fn (Payment $payment): bool => $payment->payment_method !== 'cash');
-
-        foreach ($payments as $payment) {
-            $commission = $commissions->get($payment->getKey());
-            $commissionAmount = (float) ($commission?->amount ?? 0);
-            $feeAmount = (float) $payment->gateway_fee_amount;
-            $isFine = $payment->payment_type === PaymentType::Fine->value;
-            $isCash = $payment->payment_method === 'cash';
-
-            if ($isFine && $isCash) {
-                // Denda tunai sudah diterima vendor; tidak masuk remitansi platform.
-                continue;
-            }
-
-            if ($isFine) {
-                $grossFineQris += (float) $payment->amount;
-                $fineFeeTotal += $feeAmount;
-
-                $items[] = [
-                    'payment_id' => $payment->getKey(),
-                    'platform_commission_id' => null,
-                    'type' => 'fine',
-                    'gross_amount' => $payment->amount,
-                    'commission_amount' => 0,
-                    'fee_amount' => $feeAmount,
-                    'net_amount' => round((float) $payment->amount - $feeAmount, 2),
-                ];
-
-                continue;
-            }
-
-            if ($isCash) {
-                $commissionTotal += $commissionAmount;
-                $cashCommissionOffset += $commissionAmount;
-
-                $items[] = [
-                    'payment_id' => $payment->getKey(),
-                    'platform_commission_id' => $commission?->getKey(),
-                    'type' => 'cash_commission',
-                    'gross_amount' => $payment->amount,
-                    'commission_amount' => $commissionAmount,
-                    'fee_amount' => 0,
-                    'net_amount' => -$commissionAmount,
-                ];
-
-                continue;
-            }
-
-            $grossQris += (float) $payment->amount;
-            $commissionTotal += $commissionAmount;
-            $gatewayFeeTotal += $feeAmount;
-
-            $items[] = [
-                'payment_id' => $payment->getKey(),
-                'platform_commission_id' => $commission?->getKey(),
-                'type' => 'payment',
-                'gross_amount' => $payment->amount,
-                'commission_amount' => $commissionAmount,
-                'fee_amount' => $feeAmount,
-                'net_amount' => round((float) $payment->amount - $commissionAmount, 2),
-            ];
-        }
+        $summary = $this->summarizeSettlementPayments($payments, $commissions);
+        $grossQris = $summary['gross_qris'];
+        $grossFineQris = $summary['gross_fine_qris'];
+        $commissionTotal = $summary['commission_total'];
+        $cashCommissionOffset = $summary['cash_commission_offset'];
+        $hasNonCashPayment = $summary['has_non_cash_payment'];
+        $items = $summary['items'];
 
         if (! $hasNonCashPayment && $commissionTotal <= 0 && $adjustment === 0.0) {
             return null;
@@ -508,9 +607,11 @@ class SettlementService
             : 0.0;
 
         // Biaya transfer adalah beban platform (PRD §4.4), bukan potongan hak vendor.
-        $netPayout = round(
-            $grossQris + $grossFineQris - $commissionTotal - $fineFeeTotal + $adjustment,
-            2,
+        $netPayout = $this->calculateNetPayout(
+            $grossQris,
+            $grossFineQris,
+            $commissionTotal,
+            $adjustment,
         );
 
         return DB::transaction(function () use (
@@ -522,8 +623,6 @@ class SettlementService
             $grossQris,
             $grossFineQris,
             $commissionTotal,
-            $gatewayFeeTotal,
-            $fineFeeTotal,
             $cashCommissionOffset,
             $transferFee,
             $adjustment,
@@ -538,8 +637,8 @@ class SettlementService
                 'gross_qris' => round($grossQris, 2),
                 'gross_fine_qris' => round($grossFineQris, 2),
                 'commission_total' => round($commissionTotal, 2),
-                'gateway_fee_total' => round($gatewayFeeTotal, 2),
-                'fine_fee_total' => round($fineFeeTotal, 2),
+                'gateway_fee_total' => 0,
+                'fine_fee_total' => 0,
                 'cash_commission_offset' => round($cashCommissionOffset, 2),
                 'transfer_fee' => round($transferFee, 2),
                 'adjustment_amount' => round($adjustment, 2),

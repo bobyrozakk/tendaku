@@ -158,7 +158,7 @@ class CheckoutSummaryBuilder
         $grandTotal = $deliveryFee === null ? null : max(0, $totalSubtotal - $discount);
 
         $payments = app(PaymentService::class);
-        $dpPercentage = $payments->resolveDpPercentage($vendor->dp_percentage);
+        $dpPercentage = $payments->dpPercentage();
 
         $dpAmount = $deliveryFee === null ? null : intdiv(
             max(0, $totalSubtotal + $deliveryFee - $discount) * $dpPercentage + 99,
