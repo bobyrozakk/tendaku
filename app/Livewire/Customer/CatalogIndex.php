@@ -5,8 +5,8 @@ namespace App\Livewire\Customer;
 use App\Models\ItemCategory;
 use App\Models\MasterItem;
 use App\Models\Vendor;
-use App\Services\Booking\AvailabilityService;
 use App\Services\Booking\CartService;
+use App\Services\Booking\CatalogAvailability;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -121,7 +121,7 @@ class CatalogIndex extends Component
      * 2. Periksa ketersediaan stok fisik sebelum masuk keranjang.
      * 3. Update counter keranjang di navbar dan trigger toast notifikasi.
      */
-    public function addToCart(int $masterItemId, AvailabilityService $availabilityService): void
+    public function addToCart(int $masterItemId, CatalogAvailability $availability): void
     {
         if (Auth::guest()) {
             $this->redirectRoute('login');
@@ -129,7 +129,7 @@ class CatalogIndex extends Component
             return;
         }
 
-        $masterItem = MasterItem::with(['vendor', 'category'])->findOrFail($masterItemId);
+        $masterItem = MasterItem::publicCatalog()->with(['vendor', 'category'])->findOrFail($masterItemId);
 
         $cartService = app(CartService::class);
         $user = Auth::user();
@@ -152,30 +152,21 @@ class CatalogIndex extends Component
             return;
         }
 
-        // Tentukan tanggal sewa (dari filter tanggal aktif atau default besok - lusa)
-        $pickupDate = (! empty($this->startDate) && Carbon::parse($this->startDate)->gte(Carbon::today()))
-            ? $this->startDate
-            : Carbon::tomorrow()->toDateString();
-
-        $returnDate = (! empty($this->endDate) && Carbon::parse($this->endDate)->gte(Carbon::parse($pickupDate)))
-            ? $this->endDate
-            : Carbon::parse($pickupDate)->addDay()->toDateString();
-
-        $pickupCarbon = Carbon::parse($pickupDate);
-        $returnCarbon = Carbon::parse($returnDate);
-        $durationDays = max(1, (int) $pickupCarbon->diffInDays($returnCarbon));
-
-        // Cek ketersediaan stok
-        $availableStock = $availabilityService->checkAvailability($masterItem->id, $pickupDate, $returnDate);
-        if ($availableStock < 1) {
+        $dateRange = $availability->dateRange($this->startDate, $this->endDate);
+        $availableStock = $availability->stock($masterItem->id, $dateRange);
+        if ($availableStock === null || $availableStock < 1) {
             $this->dispatch('notify', [
                 'type' => 'error',
-                'title' => 'Stok Habis',
-                'message' => "Maaf, stok {$masterItem->name} sedang tidak tersedia untuk tanggal yang dipilih.",
+                'title' => $availableStock === null ? 'Ketersediaan belum dapat diperiksa' : 'Tidak tersedia pada periode ini',
+                'message' => 'Periksa atau pilih jadwal lain melalui halaman Detail Produk.',
             ]);
 
             return;
         }
+
+        $pickupDate = $dateRange['start_date'];
+        $returnDate = $dateRange['end_date'];
+        $durationDays = max(1, (int) Carbon::parse($pickupDate)->diffInDays(Carbon::parse($returnDate)));
 
         $totalPrice = (int) $masterItem->daily_rate * $durationDays;
 
@@ -224,7 +215,7 @@ class CatalogIndex extends Component
         ]);
     }
 
-    public function render(AvailabilityService $availabilityService): View
+    public function render(CatalogAvailability $availability): View
     {
         $categories = ItemCategory::withCount(['items' => function ($query) {
             $query->publicCatalog();
@@ -235,13 +226,7 @@ class CatalogIndex extends Component
             ->get(['id', 'name']);
 
         $itemsQuery = MasterItem::publicCatalog()
-            ->with(['category', 'vendor'])
-            ->withCount(['units' => function ($query) {
-                // Stok katalog = unit yang benar-benar 'available' di DB
-                // (unit rented/maintenance/retired/lost tidak dihitung).
-                $query->where('status', 'available')
-                    ->whereNotIn('condition', ['damaged', 'lost']);
-            }]);
+            ->with(['category', 'vendor']);
 
         $trimmedSearch = trim($this->search);
         if ($trimmedSearch !== '') {
@@ -274,45 +259,21 @@ class CatalogIndex extends Component
             default => $itemsQuery->latest(),
         };
 
-        $hasValidDateRange = false;
-        if (! empty($this->startDate) && ! empty($this->endDate)) {
-            try {
-                $sDate = Carbon::parse($this->startDate);
-                $eDate = Carbon::parse($this->endDate);
-                if ($eDate->gte($sDate) && $sDate->gte(Carbon::today())) {
-                    $hasValidDateRange = true;
-                }
-            } catch (\Throwable) {
-                // Ignore parsing errors
+        $dateRange = $availability->dateRange($this->startDate, $this->endDate);
+        $dateStockMap = [];
+        if ($this->onlyAvailable) {
+            $candidateItems = (clone $itemsQuery)->setEagerLoads([])->get(['id']);
+            foreach ($candidateItems as $item) {
+                $dateStockMap[$item->id] = $availability->stock($item->id, $dateRange);
             }
-        }
-
-        // Jika filter "hanya yang tersedia" dicentang tanpa filter tanggal, pastikan unit fisik > 0
-        if ($this->onlyAvailable && ! $hasValidDateRange) {
-            $itemsQuery->whereHas('units', function ($query) {
-                $query->where('status', 'available')
-                    ->whereNotIn('condition', ['damaged', 'lost']);
-            });
+            $availableIds = array_keys(array_filter($dateStockMap, fn (?int $stock): bool => $stock !== null && $stock > 0));
+            $itemsQuery->whereIn('id', $availableIds);
         }
 
         $items = $itemsQuery->paginate(12);
-
-        $dateStockMap = [];
-        if ($hasValidDateRange) {
-            foreach ($items->items() as $item) {
-                $dateStockMap[$item->id] = $availabilityService->checkAvailability(
-                    $item->id,
-                    $this->startDate,
-                    $this->endDate
-                );
-            }
-
-            // Jika user memilih filter tanggal dan juga mencentang "hanya yang tersedia"
-            if ($this->onlyAvailable) {
-                $filteredItems = $items->getCollection()->filter(function ($item) use ($dateStockMap) {
-                    return ($dateStockMap[$item->id] ?? 0) > 0;
-                });
-                $items->setCollection($filteredItems->values());
+        foreach ($items as $item) {
+            if (! array_key_exists($item->id, $dateStockMap)) {
+                $dateStockMap[$item->id] = $availability->stock($item->id, $dateRange);
             }
         }
 
@@ -321,6 +282,7 @@ class CatalogIndex extends Component
             'vendors' => $vendors,
             'items' => $items,
             'dateStockMap' => $dateStockMap,
+            'dateRange' => $dateRange,
         ]);
     }
 }

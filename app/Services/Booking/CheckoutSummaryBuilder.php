@@ -133,8 +133,8 @@ class CheckoutSummaryBuilder
                 Carbon::parse($cart['return_date'])->toDateString()
             );
 
-            // Jumlah yang ditagih = jumlah yang ditampilkan (tidak melebihi stok).
-            $qty = min($requestedQty, $stock);
+            $quantityLimit = max(1, app(AvailabilityService::class)->getCandidateUnitsQuery($itemModel->id)->count());
+            $qty = min($requestedQty, $quantityLimit);
 
             $dailyRate = (int) $itemModel->daily_rate;
             $depositPerUnit = (int) $itemModel->deposit_amount;
@@ -150,7 +150,8 @@ class CheckoutSummaryBuilder
                 $dailyRate,
                 $depositPerUnit,
                 $subtotal,
-                $stock
+                $stock,
+                $quantityLimit
             );
         }
 
@@ -273,7 +274,8 @@ class CheckoutSummaryBuilder
         int $dailyRate,
         int $depositPerUnit,
         int $subtotal,
-        int $realStock
+        ?int $realStock,
+        int $quantityLimit
     ): array {
         return [
             'id' => $item->id,
@@ -286,29 +288,20 @@ class CheckoutSummaryBuilder
             'deposit_per_unit' => $depositPerUnit,
             'qty' => $qty,
             'stock' => $realStock,
-            'max_qty' => $realStock,
+            'max_qty' => $quantityLimit,
             'subtotal' => $subtotal,
             'icon' => $item->category?->icon,
         ];
     }
 
     /**
-     * Stok unit yang bisa disewa untuk rentang tanggal keranjang (minimal 1).
+     * Ketersediaan untuk periode acuan; tidak digunakan sebagai batas pemilihan jadwal lain.
      */
-    private function stockFor(MasterItem $item, string $pickupDate, string $returnDate): int
+    private function stockFor(MasterItem $item, string $pickupDate, string $returnDate): ?int
     {
-        $available = app(AvailabilityService::class)->checkAvailability(
-            $item->id,
-            $pickupDate,
-            $returnDate
-        );
+        $availability = app(CatalogAvailability::class);
 
-        return max(
-            1,
-            $available ?: $item->units()
-                ->where('status', '!=', 'retired')
-                ->count()
-        );
+        return $availability->stock($item->id, $availability->dateRange($pickupDate, $returnDate));
     }
 
     private function paymentMethods(): array

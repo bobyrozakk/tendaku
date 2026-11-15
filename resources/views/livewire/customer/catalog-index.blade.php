@@ -249,6 +249,11 @@
         </div>
     </div>
 
+    <x-stock-period :date-range="$dateRange" class="mb-4" />
+    @if($onlyAvailable && in_array(null, $dateStockMap, true))
+        <p class="text-xs text-darkbrown-600 mb-4">Ketersediaan belum dapat diperiksa untuk sebagian peralatan. Nonaktifkan filter untuk memilih jadwal lain.</p>
+    @endif
+
     <!-- Grid Card Produk -->
     @if($items->count() > 0)
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -256,9 +261,8 @@
                 @php
                     $rate = (float) $item->daily_rate;
                     $formattedRate = number_format($rate, 0, ',', '.');
-                    $unitCount = isset($dateStockMap[$item->id]) 
-                        ? $dateStockMap[$item->id] 
-                        : ($item->units_count ?? 0);
+                    $unitCount = $dateStockMap[$item->id] ?? null;
+                    $detailUrl = route('customer.product.show', ['id' => $item->id] + ($dateRange ?? ['start_date' => $startDate, 'end_date' => $endDate]));
                     $img = $item->image_url ?: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80';
                     $catName = $item->category?->name ?? 'Alat Outdoor';
                     $vendorName = $item->vendor?->name ?? 'Tendaku Vendor';
@@ -325,17 +329,7 @@
                             </p>
 
                             <div class="pt-1 flex flex-wrap items-center gap-1.5">
-                                @if($unitCount > 0)
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-avocado-500"></span>
-                                        Stok: {{ $unitCount }} Unit
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                        Stok Habis
-                                    </span>
-                                @endif
+                                <x-stock-status :stock="$unitCount" />
                                 <span class="text-[11px] text-darkbrown-500 font-medium">| {{ $item->dominant_condition }}</span>
                             </div>
                         </div>
@@ -356,7 +350,7 @@
 
                         @if($unitCount > 0)
                             <div class="flex items-center gap-2">
-                                <a href="{{ route('customer.product.show', $item->id) }}" 
+                                <a href="{{ $detailUrl }}"
                                    class="btn-tendaku-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
                                     Lihat Detail
                                 </a>
@@ -376,15 +370,9 @@
                                 @endauth
                             </div>
                         @else
-                            <button type="button" 
-                                    disabled 
-                                    class="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center block bg-wheat-200 text-darkbrown-400 border border-wheat-300 cursor-not-allowed select-none opacity-80 shadow-none"
-                                    title="Stok peralatan sedang tidak tersedia">
-                                <span class="flex items-center justify-center gap-1.5">
-                                    <i data-lucide="ban" class="w-3.5 h-3.5 opacity-50"></i>
-                                    Stok Habis
-                                </span>
-                            </button>
+                            <a href="{{ $detailUrl }}" class="btn-tendaku-secondary w-full py-2.5 px-3 rounded-xl text-xs font-bold text-center block">
+                                Pilih Jadwal Lain
+                            </a>
                         @endif
                     </div>
                 </article>
