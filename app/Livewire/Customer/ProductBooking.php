@@ -2,10 +2,10 @@
 
 namespace App\Livewire\Customer;
 
-use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Services\Booking\AvailabilityService;
 use App\Services\Booking\CartService;
+use App\Services\Booking\CatalogAvailability;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -44,16 +44,20 @@ class ProductBooking extends Component
     /**
      * Inisialisasi properti saat komponen dimuat.
      */
-    public function mount(MasterItem $product): void
+    public function mount(MasterItem $product, ?string $startDate = null, ?string $endDate = null): void
     {
         $this->product = $product;
         $this->quantity = 1;
         $this->duration_days = 1;
 
-        $this->pickup_date = Carbon::tomorrow()->format('Y-m-d');
+        $dateRange = app(CatalogAvailability::class)->dateRange($startDate, $endDate);
+        $this->pickup_date = $dateRange['start_date'] ?? $startDate ?? '';
+        $this->return_date = $dateRange['end_date'] ?? $endDate ?? '';
         $this->pickup_time = '09:00';
 
-        $this->syncReturnFromDuration();
+        if ($dateRange !== null) {
+            $this->duration_days = max(1, (int) Carbon::parse($this->pickup_date)->diffInDays(Carbon::parse($this->return_date)));
+        }
 
         // Cek produk pada keranjang multi-item maupun struktur lama.
         $cart = app(CartService::class)->get(Auth::user());
@@ -242,27 +246,15 @@ class ProductBooking extends Component
      * Hitung stok unit yang tersedia.
      */
     #[Computed]
-    public function availableStock(): int
+    public function availableStock(): ?int
     {
         if (empty($this->pickup_date) || empty($this->return_date)) {
-            return ItemUnit::withoutGlobalScope('vendor')
-                ->where('master_item_id', $this->product->id)
-                ->where('status', 'available')
-                ->count();
+            return null;
         }
 
-        try {
-            return app(AvailabilityService::class)->checkAvailability(
-                $this->product->id,
-                $this->pickup_date,
-                $this->return_date
-            );
-        } catch (\Throwable) {
-            return ItemUnit::withoutGlobalScope('vendor')
-                ->where('master_item_id', $this->product->id)
-                ->where('status', 'available')
-                ->count();
-        }
+        $availability = app(CatalogAvailability::class);
+
+        return $availability->stock($this->product->id, $availability->dateRange($this->pickup_date, $this->return_date));
     }
 
     /**
@@ -405,10 +397,11 @@ class ProductBooking extends Component
     }
 
     /**
-     * Validasi jadwal, durasi, dan stok sebelum pilihan dipakai.
+     * Validasi jadwal, durasi, dan jumlah unit sebelum membuka halaman Booking.
      */
     private function validateSelection(): bool
     {
+        unset($this->availableStock);
         $this->validate();
 
         if (! $this->validateReturnDateTime()) {
@@ -420,6 +413,12 @@ class ProductBooking extends Component
                 'return_date',
                 'Durasi sewa harus minimal 1 hari.'
             );
+
+            return false;
+        }
+
+        if ($this->availableStock === null) {
+            $this->addError('quantity', 'Ketersediaan belum dapat diperiksa. Silakan coba lagi.');
 
             return false;
         }
@@ -524,6 +523,10 @@ class ProductBooking extends Component
 
     public function render(): View
     {
-        return view('livewire.customer.product-booking');
+        return view('livewire.customer.product-booking', [
+            'dateRange' => $this->pickup_date && $this->return_date
+                ? app(CatalogAvailability::class)->dateRange($this->pickup_date, $this->return_date)
+                : null,
+        ]);
     }
 }

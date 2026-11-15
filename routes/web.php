@@ -32,7 +32,7 @@ use App\Livewire\Kasir\ProfileKasir;
 use Illuminate\Support\Facades\Route;
 
 // 1. Beranda (Home)
-Route::view('/', 'welcome')->name('home');
+Route::get('/', [CatalogController::class, 'home'])->name('home');
 
 // Keranjang Sewa
 Route::get('/keranjang', [CartController::class, 'index'])->name('customer.cart.index');

@@ -1,7 +1,7 @@
 <x-layouts.customer>
     <x-slot name="header">
         <div class="flex items-center gap-2 text-xs font-semibold text-darkbrown-600 mb-2">
-            <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-700 transition flex items-center gap-1.5">
+            <a href="{{ route('customer.catalog.index', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="hover:text-avocado-700 transition flex items-center gap-1.5">
                 <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
                 <span>Kembali ke Katalog</span>
             </a>
@@ -26,7 +26,6 @@
         $mainImage = $itemImages->first() ?: $fallbackPlaceholder;
         $galleryImages = $itemImages->isNotEmpty() ? $itemImages->all() : [$fallbackPlaceholder];
 
-        $bookedDatesJson = json_encode($bookedDates ?? []);
     @endphp
 
     <!-- Container Utama Detail Produk -->
@@ -219,7 +218,7 @@
 
             <!-- Kolom Kanan: Livewire ProductBooking Component (5 cols) -->
             <div class="lg:col-span-5 space-y-6">
-                <livewire:customer.product-booking :product="$item" />
+                <livewire:customer.product-booking :product="$item" :start-date="$startDate" :end-date="$endDate" />
             </div>
 
         </div>
