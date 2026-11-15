@@ -385,10 +385,33 @@ class ProductBooking extends Component
      */
     public function checkoutNow(): ?string
     {
+        if (! $this->validateAvailableSelection()) {
+            return null;
+        }
+
+        return $this->openDirectCheckout();
+    }
+
+    /** Buka pemilihan jadwal tanpa membuat reservasi atau mengubah keranjang member. */
+    public function chooseSchedule(): ?string
+    {
+        $availability = app(CatalogAvailability::class);
+        if ($availability->dateRange($this->pickup_date, $this->return_date) === null) {
+            $dateRange = $availability->dateRange();
+            $this->pickup_date = $dateRange['start_date'];
+            $this->return_date = $dateRange['end_date'];
+            $this->duration_days = 1;
+        }
+
         if (! $this->validateSelection()) {
             return null;
         }
 
+        return $this->openDirectCheckout();
+    }
+
+    private function openDirectCheckout(): ?string
+    {
         app(CartService::class)->setDirect($this->selectionData());
 
         $this->redirectRoute('checkout.index', ['direct' => 1]);
@@ -401,7 +424,6 @@ class ProductBooking extends Component
      */
     private function validateSelection(): bool
     {
-        unset($this->availableStock);
         $this->validate();
 
         if (! $this->validateReturnDateTime()) {
@@ -414,6 +436,16 @@ class ProductBooking extends Component
                 'Durasi sewa harus minimal 1 hari.'
             );
 
+            return false;
+        }
+
+        return true;
+    }
+
+    private function validateAvailableSelection(): bool
+    {
+        unset($this->availableStock);
+        if (! $this->validateSelection()) {
             return false;
         }
 
@@ -470,7 +502,7 @@ class ProductBooking extends Component
      */
     private function addSelectionToCart(): ?array
     {
-        if (! $this->validateSelection()) {
+        if (! $this->validateAvailableSelection()) {
             return null;
         }
 

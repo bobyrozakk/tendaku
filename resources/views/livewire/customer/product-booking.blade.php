@@ -187,28 +187,27 @@
                 <div class="space-y-2 pt-1">
                     <button
                         type="button"
-                        wire:click="checkoutNow"
+                        wire:click="{{ $canSubmit ? 'checkoutNow' : 'chooseSchedule' }}"
                         id="btn-checkout"
                         wire:loading.attr="disabled"
                         wire:loading.class="opacity-75 cursor-wait"
                         @class([
                             'w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md transition-all duration-200',
                             'flex items-center justify-center gap-2',
-                            'btn-tendaku-primary hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer' => $canSubmit,
-                            'bg-wheat-200 text-darkbrown-400 cursor-not-allowed opacity-60' => !$canSubmit,
+                            'btn-tendaku-primary hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer',
                         ])
                     >
-                        <span wire:loading.remove wire:target="checkoutNow" class="flex items-center gap-2">
+                        <span wire:loading.remove wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
                             @if(!$canSubmit)
                                 <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                                <span>Stok Tidak Mencukupi</span>
+                                <span>Pilih Jadwal Lain</span>
                             @else
                                 <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
                                 <span>Checkout Sekarang</span>
                             @endif
                         </span>
 
-                        <span wire:loading wire:target="checkoutNow" class="flex items-center gap-2">
+                        <span wire:loading wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
                             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -253,23 +252,21 @@
 
                         <button
                             type="button"
-                            wire:click="checkoutNow"
+                            wire:click="{{ $canSubmit ? 'checkoutNow' : 'chooseSchedule' }}"
                             id="btn-sewa-sekarang"
                             wire:loading.attr="disabled"
                             wire:loading.class="opacity-75 cursor-wait"
                             @class([
                                 'w-full py-3 px-3 rounded-xl font-extrabold text-xs shadow-md transition-all duration-150',
                                 'flex items-center justify-center gap-1.5',
-                                'btn-tendaku-primary hover:shadow-lg cursor-pointer' => $canSubmit,
-                                'bg-wheat-200 text-darkbrown-400 cursor-not-allowed opacity-60' => !$canSubmit,
+                                'btn-tendaku-primary hover:shadow-lg cursor-pointer',
                             ])
-                            @disabled(!$canSubmit)
                         >
-                            <span wire:loading.remove wire:target="checkoutNow" class="flex items-center gap-1.5">
+                            <span wire:loading.remove wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-1.5">
                                 <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                                <span>Sewa Sekarang</span>
+                                <span>{{ $canSubmit ? 'Sewa Sekarang' : 'Pilih Jadwal Lain' }}</span>
                             </span>
-                            <span wire:loading wire:target="checkoutNow" class="flex items-center gap-1.5">
+                            <span wire:loading wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-1.5">
                                 <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>

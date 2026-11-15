@@ -195,6 +195,9 @@
 
                         </div>
                         <p x-show="errors.dates" x-text="errors.dates" x-cloak class="mt-2 text-sm text-red-700"></p>
+                        @if(in_array(null, array_column($booking['items'], 'stock'), true))
+                            <p x-show="shippingState !== 'ready'" class="mt-2 text-sm text-darkbrown-600">Ketersediaan belum dapat diperiksa. Pilih jadwal; stok akan diperiksa kembali sebelum booking diproses.</p>
+                        @endif
                     </div>
 
                     <!-- Peralatan -->
@@ -230,12 +233,7 @@
                                             </button>
                                         </div>
 
-                                        <!-- Badge peringatan jika stok terbatas -->
-                                        <template x-if="item.max_qty <= 2">
-                                            <span class="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full shadow-2xs">
-                                                <span>Sisa <strong x-text="item.max_qty"></strong> unit!</span>
-                                            </span>
-                                        </template>
+                                        <span class="text-[11px] text-darkbrown-500">Ketersediaan mengikuti jadwal yang dipilih.</span>
                                     </div>
                                 </li>
                             </template>

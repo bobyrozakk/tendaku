@@ -9,14 +9,18 @@ use App\Models\ItemUnit;
 use App\Models\MasterItem;
 use App\Models\Rental;
 use App\Models\RentalDetail;
+use App\Models\User;
 use App\Models\Vendor;
+use App\Services\Booking\AvailabilityService;
 use App\Services\Booking\CartService;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\TestWith;
+use RuntimeException;
 use Tests\TestCase;
 
 class CatalogStockConsistencyTest extends TestCase
@@ -57,6 +61,35 @@ class CatalogStockConsistencyTest extends TestCase
             ->assertSeeText('17 Nov 2026')->assertSeeText('18 Nov 2026');
     }
 
+    public function test_full_reservation_keeps_another_schedule_accessible(): void
+    {
+        $item = $this->createProduct(2);
+        $this->reserve($item, 2);
+
+        $this->get(route('home'))->assertSeeText('Tidak tersedia pada periode ini');
+        $this->get(route('customer.catalog.index'))->assertSeeText('Tidak tersedia pada periode ini')
+            ->assertSeeText('Pilih Jadwal Lain');
+        $component = Livewire::test(ProductBooking::class, ['product' => $item])
+            ->assertSet('availableStock', 0)->assertSeeText('Tidak tersedia pada periode ini')
+            ->assertSee('wire:click="chooseSchedule"', false)
+            ->assertDontSee('wire:model.live="pickup_date"', false)
+            ->assertDontSee('wire:model.live="duration_days"', false);
+        $this->assertActionDisabled($component->html(), 'btn-checkout', false);
+        $component->call('chooseSchedule')->assertHasNoErrors()
+            ->assertRedirect(route('checkout.index', ['direct' => 1]));
+
+        $this->get(route('checkout.index', ['direct' => 1]))->assertOk()
+            ->assertViewHas('booking', fn (array $booking): bool => $booking['items'][0]['stock'] === 0
+                && $booking['items'][0]['max_qty'] === 2 && $booking['items'][0]['qty'] === 1
+                && in_array('2026-11-17', $booking['booked_dates'], true));
+        $this->get(route('checkout.index', ['direct' => 1, 'pickup_date' => '2026-11-20', 'return_date' => '2026-11-22']))
+            ->assertOk()->assertViewHas('booking', fn (array $booking): bool => $booking['items'][0]['stock'] === 2
+                && $booking['pickup_date_iso'] === '2026-11-20' && $booking['rental_days'] === 2);
+        $this->assertSame('2026-11-20', session(CartService::DIRECT_SESSION_KEY.'.pickup_date'));
+        $this->assertSame('2026-11-22', session(CartService::DIRECT_SESSION_KEY.'.return_date'));
+        $this->assertDatabaseCount('rentals', 1);
+    }
+
     public function test_filtered_dates_survive_navigation_to_detail_and_checkout(): void
     {
         $item = $this->createProduct(1);
@@ -94,6 +127,71 @@ class CatalogStockConsistencyTest extends TestCase
             ->set('onlyAvailable', true)->assertViewHas('items', fn ($items): bool => $items->total() === 0);
     }
 
+    public function test_catalog_and_detail_cart_actions_use_the_displayed_dates_and_stock(): void
+    {
+        $item = $this->createProduct(1);
+        $this->reserve($item, 1);
+        $customer = User::factory()->create();
+        $this->actingAs($customer);
+
+        Livewire::test(CatalogIndex::class)->call('addToCart', $item->id)
+            ->assertDispatched('notify', fn ($event, $parameters): bool => $parameters[0]['type'] === 'error');
+        $this->assertNull(session(CartService::SESSION_KEY));
+        Livewire::test(CatalogIndex::class)->set('startDate', '2026-11-22')->set('endDate', '2026-11-24')
+            ->call('addToCart', $item->id)->assertHasNoErrors();
+        $this->assertSame('2026-11-22', $customer->fresh()->cart['pickup_date']);
+        $this->assertSame('2026-11-24', $customer->fresh()->cart['return_date']);
+        $this->assertSame($item->vendor_id, $customer->fresh()->cart['vendor_id']);
+
+        $component = Livewire::test(ProductBooking::class, ['product' => $item])->assertSet('availableStock', 0)
+            ->assertSee('wire:click="chooseSchedule"', false);
+        $this->assertActionDisabled($component->html(), 'btn-masuk-keranjang', true);
+        $this->assertActionDisabled($component->html(), 'btn-sewa-sekarang', false);
+        $savedCart = $customer->fresh()->cart;
+        $component->call('chooseSchedule')->assertHasNoErrors()->assertRedirect(route('checkout.index', ['direct' => 1]));
+        $this->assertSame($savedCart, $customer->fresh()->cart);
+        $this->assertDatabaseCount('rentals', 1);
+        $component->call('addToCart')->assertHasErrors('quantity');
+        $component->set('pickup_date', '2026-11-22')->set('duration_days', 2)->call('addToCart')->assertHasNoErrors();
+        $this->assertSame('2026-11-22', $customer->fresh()->cart['pickup_date']);
+        $this->assertSame('2026-11-24', $customer->fresh()->cart['return_date']);
+    }
+
+    public function test_check_failures_block_cart_but_allow_schedule_selection(): void
+    {
+        $item = $this->createProduct(2);
+        Exceptions::fake();
+        $exception = new RuntimeException('Availability connection failed');
+        $this->partialMock(AvailabilityService::class)->shouldReceive('checkAvailability')->andThrow($exception);
+
+        $this->get(route('home'))->assertSeeText('Ketersediaan belum dapat diperiksa')->assertDontSeeText('Stok: 2 Unit');
+        $this->get(route('customer.catalog.index'))->assertSeeText('Ketersediaan belum dapat diperiksa')
+            ->assertSeeText('Pilih Jadwal Lain');
+        Livewire::test(CatalogIndex::class)->set('onlyAvailable', true)
+            ->assertSeeText('Ketersediaan belum dapat diperiksa')
+            ->assertViewHas('items', fn ($items): bool => $items->total() === 0);
+        $this->get(route('customer.product.show', $item->id))->assertOk()->assertSeeText('Ketersediaan belum dapat diperiksa');
+        Livewire::test(ProductBooking::class, ['product' => $item])->assertSet('availableStock', null)
+            ->call('checkoutNow')->assertHasErrors('quantity');
+        $this->assertNull(session(CartService::DIRECT_SESSION_KEY));
+        Livewire::test(ProductBooking::class, ['product' => $item])->call('chooseSchedule')
+            ->assertHasNoErrors()->assertRedirect(route('checkout.index', ['direct' => 1]));
+        $this->get(route('checkout.index', ['direct' => 1]))->assertOk()
+            ->assertSeeText('Ketersediaan belum dapat diperiksa')
+            ->assertViewHas('booking', fn (array $booking): bool => $booking['items'][0]['stock'] === null);
+        app(CartService::class)->clearDirect();
+        $this->actingAs(User::factory()->create());
+        Livewire::test(CatalogIndex::class)->call('addToCart', $item->id);
+        $this->assertNull(session(CartService::SESSION_KEY));
+        Livewire::test(ProductBooking::class, ['product' => $item])->call('addToCart')->assertHasErrors('quantity');
+        $this->assertNull(session(CartService::SESSION_KEY));
+        Livewire::test(ProductBooking::class, ['product' => $item])->call('chooseSchedule')
+            ->assertHasNoErrors()->assertRedirect(route('checkout.index', ['direct' => 1]));
+        $this->assertNull(session(CartService::SESSION_KEY));
+        $this->assertDatabaseCount('rentals', 0);
+        Exceptions::assertReported(RuntimeException::class);
+    }
+
     #[TestWith(['2026-11-15', '2026-11-17'])]
     #[TestWith(['2026-11-20', '2026-11-19'])]
     #[TestWith(['2026-02-30', '2026-11-19'])]
@@ -108,6 +206,50 @@ class CatalogStockConsistencyTest extends TestCase
         $this->get(route('home', $dates))->assertSeeText('Ketersediaan belum dapat diperiksa');
         $this->get(route('customer.catalog.index', $dates))->assertSeeText('Ketersediaan belum dapat diperiksa');
         $this->get(route('customer.product.show', ['id' => $item->id] + $dates))->assertSeeText('Ketersediaan belum dapat diperiksa');
+    }
+
+    public function test_invalid_reference_dates_can_be_replaced_on_the_booking_page(): void
+    {
+        $item = $this->createProduct(1);
+
+        Livewire::test(ProductBooking::class, ['product' => $item, 'startDate' => 'invalid', 'endDate' => '2026-11-19'])
+            ->assertSet('availableStock', null)->call('chooseSchedule')->assertHasNoErrors()
+            ->assertRedirect(route('checkout.index', ['direct' => 1]));
+
+        $this->assertSame('2026-11-17', session(CartService::DIRECT_SESSION_KEY.'.pickup_date'));
+        $this->assertSame('2026-11-18', session(CartService::DIRECT_SESSION_KEY.'.return_date'));
+        $this->get(route('checkout.index', ['direct' => 1]))->assertOk();
+        $this->assertDatabaseCount('rentals', 0);
+    }
+
+    public function test_schedule_selection_preserves_a_member_cart_from_another_vendor(): void
+    {
+        $item = $this->createProduct(1);
+        $this->reserve($item, 1);
+        $otherItem = $this->createProduct(1);
+        $customer = User::factory()->create();
+        $this->actingAs($customer);
+        Livewire::test(CatalogIndex::class)->call('addToCart', $otherItem->id);
+        $savedCart = $customer->fresh()->cart;
+
+        Livewire::test(ProductBooking::class, ['product' => $item])->call('chooseSchedule')
+            ->assertHasNoErrors()->assertRedirect(route('checkout.index', ['direct' => 1]));
+
+        $this->assertSame($savedCart, $customer->fresh()->cart);
+        $this->assertSame($item->vendor_id, session(CartService::DIRECT_SESSION_KEY.'.vendor_id'));
+        $this->assertSame($item->id, session(CartService::DIRECT_SESSION_KEY.'.master_item_id'));
+        $this->assertDatabaseCount('rentals', 1);
+    }
+
+    public function test_schedule_selection_normalizes_quantity_without_reserving_stock(): void
+    {
+        $item = $this->createProduct(0);
+
+        Livewire::test(ProductBooking::class, ['product' => $item])->set('quantity', 0)
+            ->assertSet('quantity', 1)->call('chooseSchedule')->assertHasNoErrors();
+
+        $this->assertSame(1, session(CartService::DIRECT_SESSION_KEY.'.quantity'));
+        $this->assertDatabaseCount('rentals', 0);
     }
 
     public function test_unrentable_units_and_inactive_vendors_are_not_advertised_as_available(): void
@@ -154,6 +296,15 @@ class CatalogStockConsistencyTest extends TestCase
                 'item_unit_id' => null, 'daily_rate_snapshot' => 50000, 'is_returned' => false,
             ]);
         }
+    }
+
+    private function assertActionDisabled(string $html, string $id, bool $disabled): void
+    {
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        $button = $document->getElementById($id);
+        $this->assertNotNull($button);
+        $this->assertSame($disabled, $button->hasAttribute('disabled'));
     }
 
     /** Only an isolated in-memory schema is created; no migration or seeder is executed. */
