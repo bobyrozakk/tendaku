@@ -10,6 +10,7 @@ use App\Models\Rental;
 use App\Models\RentalDetail;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\Booking\CartService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
@@ -96,10 +97,11 @@ class ProductBookingTest extends TestCase
         Livewire::test(ProductBooking::class, ['product' => $product])
             ->call('addToCart')
             ->assertHasNoErrors()
-            ->assertRedirect(route('checkout.index'));
+            ->assertRedirect(route('checkout.index', ['direct' => 1]));
 
-        $this->assertSame($product->id, session('booking_cart.master_item_id'));
-        $this->assertSame(1, session('booking_cart.qty'));
+        $this->assertNull(session('booking_cart'));
+        $this->assertSame($product->id, session('direct_checkout_cart.master_item_id'));
+        $this->assertSame(1, session('direct_checkout_cart.qty'));
     }
 
     public function test_guest_checkout_now_uses_only_the_current_selection(): void
@@ -112,11 +114,47 @@ class ProductBookingTest extends TestCase
             ->set('quantity', 2)
             ->call('checkoutNow')
             ->assertHasNoErrors()
-            ->assertRedirect(route('checkout.index'));
+            ->assertRedirect(route('checkout.index', ['direct' => 1]));
 
-        $this->assertSame($product->id, session('booking_cart.master_item_id'));
-        $this->assertSame(2, session('booking_cart.qty'));
-        $this->assertCount(1, session('booking_cart.items'));
+        $this->assertNull(session('booking_cart'));
+        $this->assertSame($product->id, session('direct_checkout_cart.master_item_id'));
+        $this->assertSame(2, session('direct_checkout_cart.qty'));
+        $this->assertCount(1, session('direct_checkout_cart.items'));
+    }
+
+    public function test_member_checkout_now_redirects_without_adding_to_cart(): void
+    {
+        $customer = User::factory()->create();
+        $this->actingAs($customer);
+
+        $product = $this->createProduct();
+        $this->createUnit($product, 'TD-001');
+        $this->createUnit($product, 'TD-002');
+
+        app(CartService::class)->addItem([
+            'master_item_id' => $product->id,
+            'vendor_id' => $this->vendor->id,
+            'vendor_name' => $this->vendor->name,
+            'product_name' => $product->name,
+            'daily_rate' => 45000,
+            'qty' => 1,
+            'pickup_date' => '2026-10-10',
+            'return_date' => '2026-10-11',
+            'pickup_time' => '09:00',
+            'return_time' => '09:00',
+        ], $customer);
+
+        Livewire::test(ProductBooking::class, ['product' => $product])
+            ->set('quantity', 2)
+            ->call('checkoutNow')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('checkout.index', ['direct' => 1]));
+
+        // Pilihan langsung tidak mengubah keranjang yang sudah ada.
+        $this->assertSame(1, session('booking_cart.qty'));
+        $this->assertSame(1, $customer->fresh()->cart['qty']);
+        $this->assertSame($product->id, session('direct_checkout_cart.master_item_id'));
+        $this->assertSame(2, session('direct_checkout_cart.qty'));
     }
 
     public function test_member_still_adds_product_to_cart_without_redirect(): void
@@ -281,6 +319,8 @@ class ProductBookingTest extends TestCase
             ->set('pickup_date', $pickup)
             ->set('return_date', $return)
             ->set('quantity', 2)
+            ->call('addToCart')
+            ->assertHasNoErrors()
             ->call('proceedToBooking')
             ->assertHasNoErrors()
             ->assertRedirect(route('checkout.index'));

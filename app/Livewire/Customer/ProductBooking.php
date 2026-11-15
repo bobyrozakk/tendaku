@@ -389,36 +389,30 @@ class ProductBooking extends Component
     }
 
     /**
-     * Tambahkan pilihan lalu langsung buka checkout.
-     * Guest memulai checkout dari pilihan saat ini tanpa melewati halaman keranjang.
+     * Buka checkout langsung dari pilihan saat ini tanpa menambah keranjang.
      */
     public function checkoutNow(): ?string
     {
-        $result = $this->addSelectionToCart(Auth::guest());
-
-        if ($result === null) {
+        if (! $this->validateSelection()) {
             return null;
         }
 
-        $this->inCart = true;
+        app(CartService::class)->setDirect($this->selectionData());
 
-        $this->dispatch('cart-updated', count: $result['total_count']);
-        $this->redirectRoute('checkout.index');
+        $this->redirectRoute('checkout.index', ['direct' => 1]);
 
         return null;
     }
 
     /**
-     * Validasi pilihan lalu simpan ke keranjang.
-     *
-     * @return array{status: 'success', cart: array<string, mixed>, total_count: int}|null
+     * Validasi jadwal, durasi, dan stok sebelum pilihan dipakai.
      */
-    private function addSelectionToCart(bool $replaceCart = false): ?array
+    private function validateSelection(): bool
     {
         $this->validate();
 
         if (! $this->validateReturnDateTime()) {
-            return null;
+            return false;
         }
 
         if ($this->totalDays <= 0) {
@@ -427,26 +421,29 @@ class ProductBooking extends Component
                 'Durasi sewa harus minimal 1 hari.'
             );
 
-            return null;
+            return false;
         }
 
-        // Validasi ketersediaan stok.
         if ($this->quantity > $this->availableStock) {
             $this->addError(
                 'quantity',
                 "Stok tidak mencukupi. Hanya tersedia {$this->availableStock} unit untuk tanggal yang dipilih."
             );
 
-            return null;
+            return false;
         }
 
-        $cartService = app(CartService::class);
+        return true;
+    }
 
-        if ($replaceCart) {
-            $cartService->clear();
-        }
-
-        $cartData = [
+    /**
+     * Data pilihan produk untuk keranjang maupun checkout langsung.
+     *
+     * @return array<string, mixed>
+     */
+    private function selectionData(): array
+    {
+        return [
             'master_item_id' => $this->product->id,
             'product_id' => $this->product->id,
             'product_name' => $this->product->name,
@@ -465,10 +462,22 @@ class ProductBooking extends Component
             'vendor_name' => $this->product->vendor?->name ?? 'Vendor',
             'category_name' => $this->product->category?->name,
         ];
+    }
+
+    /**
+     * Validasi pilihan lalu simpan ke keranjang.
+     *
+     * @return array{status: 'success', cart: array<string, mixed>, total_count: int}|null
+     */
+    private function addSelectionToCart(): ?array
+    {
+        if (! $this->validateSelection()) {
+            return null;
+        }
 
         // Pengecekan vendor dan penambahan item ditangani CartService.
-        $result = $cartService->addItem(
-            $cartData,
+        $result = app(CartService::class)->addItem(
+            $this->selectionData(),
             Auth::user()
         );
 

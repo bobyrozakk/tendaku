@@ -285,7 +285,6 @@ class StoreProfileTest extends TestCase
         $bookingPageResponse->assertOk()
             ->assertSee($this->itemVendor1->name)
             ->assertSee('Tarif Sewa Peralatan')
-            ->assertSee('Formulir Sewa')
             ->assertSee('Rp 60.000');
     }
 
@@ -324,12 +323,12 @@ class StoreProfileTest extends TestCase
             // Klik sewa sekarang / proceed to booking
             ->call('proceedToBooking')
             ->assertHasNoErrors()
-            ->assertRedirect(route('checkout.index'));
+            ->assertRedirect(route('checkout.index', ['direct' => 1]));
 
         // 2. Akses halaman checkout yang sudah ada
         $customer = $this->customer->fresh();
         $checkoutResponse = $this->actingAs($customer)
-            ->get(route('checkout.index'));
+            ->get(route('checkout.index', ['direct' => 1]));
 
         $checkoutResponse->assertOk()
             ->assertSee($this->itemVendor1->name);

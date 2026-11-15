@@ -29,7 +29,7 @@ class CheckoutAvailabilityController extends Controller
                 }
             }
         } else {
-            $cartData = $cart->get(Auth::user());
+            $cartData = $cart->checkoutCart(Auth::user());
             if (is_array($cartData)) {
                 $rawItems = ! empty($cartData['items']) && is_array($cartData['items'])
                     ? array_values($cartData['items'])

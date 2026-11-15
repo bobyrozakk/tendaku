@@ -12,6 +12,12 @@ class CartService
     public const SESSION_KEY = 'booking_cart';
 
     /**
+     * Pilihan "Sewa Sekarang" yang hanya berlaku untuk satu sesi checkout.
+     * Sengaja disimpan terpisah agar tidak menambah isi keranjang.
+     */
+    public const DIRECT_SESSION_KEY = 'direct_checkout_cart';
+
+    /**
      * Ambil data keranjang saat ini.
      * Jika user terautentikasi dan session belum ada, pulihkan dari database user.
      *
@@ -49,8 +55,6 @@ class CartService
         $cart = $this->get($user);
 
         $newItemVendorId = (int) ($itemData['vendor_id'] ?? 0);
-        $masterItemId = (int) ($itemData['master_item_id'] ?? $itemData['product_id'] ?? 0);
-        $qtyToAdd = max(1, (int) ($itemData['qty'] ?? $itemData['quantity'] ?? 1));
 
         // Aturan PM & Bisnis: 1 keranjang sewa hanya boleh dari 1 vendor toko yang sama
         if ($cart !== null && ! empty($cart['vendor_id']) && (int) $cart['vendor_id'] !== $newItemVendorId) {
@@ -60,47 +64,18 @@ class CartService
             ];
         }
 
+        // Keranjang menjadi sumber pilihan utama setelah pengguna menambah item.
+        $this->clearDirect();
+
         if ($cart === null) {
-            $cart = [
-                'vendor_id' => $newItemVendorId,
-                'vendor_name' => $itemData['vendor_name'] ?? 'Vendor',
-                'pickup_date' => $itemData['pickup_date'] ?? now()->addDay()->toDateString(),
-                'return_date' => $itemData['return_date'] ?? now()->addDays(2)->toDateString(),
-                'pickup_time' => $itemData['pickup_time'] ?? '10:00',
-                'return_time' => $itemData['return_time'] ?? '16:00',
-                'duration_days' => max(1, (int) ($itemData['duration_days'] ?? $itemData['total_days'] ?? 1)),
-                'total_days' => max(1, (int) ($itemData['total_days'] ?? $itemData['duration_days'] ?? 1)),
-                'items' => [],
-            ];
+            $cart = $this->baseCart($itemData);
         }
 
         if (array_key_exists('pickup_date', $itemData) || array_key_exists('return_date', $itemData)) {
             $cart = $this->withDates($cart, $itemData);
         }
 
-        $durationDays = max(1, (int) ($cart['total_days'] ?? 1));
-        $dailyRate = (int) ($itemData['daily_rate'] ?? 0);
-
-        if (isset($cart['items'][$masterItemId])) {
-            $existingQty = (int) ($cart['items'][$masterItemId]['qty'] ?? 1);
-            $newQty = $existingQty + $qtyToAdd;
-            $cart['items'][$masterItemId]['qty'] = $newQty;
-            $cart['items'][$masterItemId]['quantity'] = $newQty;
-            $cart['items'][$masterItemId]['total_price'] = $dailyRate * $newQty * $durationDays;
-        } else {
-            $cart['items'][$masterItemId] = [
-                'master_item_id' => $masterItemId,
-                'product_name' => $itemData['product_name'] ?? '',
-                'product_image' => $itemData['product_image'] ?? '',
-                'daily_rate' => $dailyRate,
-                'qty' => $qtyToAdd,
-                'quantity' => $qtyToAdd,
-                'category_name' => $itemData['category_name'] ?? '',
-                'duration_days' => $durationDays,
-                'total_price' => $dailyRate * $qtyToAdd * $durationDays,
-            ];
-        }
-
+        $cart = $this->appendItem($cart, $itemData);
         $cart = $this->recalculateSummary($cart);
         $this->set($cart, $user);
 
@@ -109,6 +84,63 @@ class CartService
             'cart' => $cart,
             'total_count' => (int) ($cart['qty'] ?? 1),
         ];
+    }
+
+    /**
+     * Simpan pilihan "Sewa Sekarang" sebagai sesi checkout sekali pakai.
+     * Tidak disimpan ke keranjang maupun ke data user.
+     *
+     * @param  array<string, mixed>  $itemData
+     * @return array<string, mixed>
+     */
+    public function setDirect(array $itemData): array
+    {
+        $cart = $this->baseCart($itemData);
+
+        if (array_key_exists('pickup_date', $itemData) || array_key_exists('return_date', $itemData)) {
+            $cart = $this->withDates($cart, $itemData);
+        }
+
+        $cart = $this->recalculateSummary($this->appendItem($cart, $itemData));
+
+        Session::put(self::DIRECT_SESSION_KEY, $cart);
+
+        return $cart;
+    }
+
+    /**
+     * Ambil pilihan checkout langsung yang sedang aktif.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getDirect(): ?array
+    {
+        $cart = Session::get(self::DIRECT_SESSION_KEY);
+
+        if (! is_array($cart) || empty($cart['master_item_id'])) {
+            return null;
+        }
+
+        return $this->normalizeCart($cart);
+    }
+
+    /**
+     * Hapus pilihan checkout langsung tanpa menyentuh keranjang.
+     */
+    public function clearDirect(): void
+    {
+        Session::forget(self::DIRECT_SESSION_KEY);
+    }
+
+    /**
+     * Data yang dipakai halaman checkout: pilihan langsung bila ada,
+     * jika tidak memakai keranjang biasa.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function checkoutCart(?User $user = null): ?array
+    {
+        return $this->getDirect() ?? $this->get($user);
     }
 
     /**
@@ -170,6 +202,24 @@ class CartService
         if ($cart !== null) {
             $this->set($this->withDates($cart, $dates), $user);
         }
+    }
+
+    /**
+     * Update tanggal pada konteks checkout yang sedang aktif.
+     *
+     * @param  array{pickup_date: string, return_date: string, pickup_time?: string, return_time?: string}  $dates
+     */
+    public function updateCheckoutDates(array $dates, ?User $user = null): void
+    {
+        $direct = $this->getDirect();
+
+        if ($direct !== null) {
+            Session::put(self::DIRECT_SESSION_KEY, $this->withDates($direct, $dates));
+
+            return;
+        }
+
+        $this->updateDates($dates, $user);
     }
 
     /**
@@ -258,6 +308,7 @@ class CartService
     public function clear(?User $user = null): void
     {
         Session::forget(self::SESSION_KEY);
+        Session::forget(self::DIRECT_SESSION_KEY);
 
         $user ??= Auth::user();
 
@@ -273,6 +324,8 @@ class CartService
      */
     public function syncOnLogin(User $user): void
     {
+        $this->clearDirect();
+
         if (is_array($user->cart) && ! empty($user->cart['master_item_id'])) {
             Session::put(self::SESSION_KEY, $this->normalizeCart($user->cart));
         } else {
@@ -297,6 +350,67 @@ class CartService
         }
 
         Session::forget(self::SESSION_KEY);
+        $this->clearDirect();
+    }
+
+    /**
+     * Kerangka cart baru untuk satu vendor.
+     *
+     * @param  array<string, mixed>  $itemData
+     * @return array<string, mixed>
+     */
+    private function baseCart(array $itemData): array
+    {
+        return [
+            'vendor_id' => (int) ($itemData['vendor_id'] ?? 0),
+            'vendor_name' => $itemData['vendor_name'] ?? 'Vendor',
+            'pickup_date' => $itemData['pickup_date'] ?? now()->addDay()->toDateString(),
+            'return_date' => $itemData['return_date'] ?? now()->addDays(2)->toDateString(),
+            'pickup_time' => $itemData['pickup_time'] ?? '10:00',
+            'return_time' => $itemData['return_time'] ?? '16:00',
+            'duration_days' => max(1, (int) ($itemData['duration_days'] ?? $itemData['total_days'] ?? 1)),
+            'total_days' => max(1, (int) ($itemData['total_days'] ?? $itemData['duration_days'] ?? 1)),
+            'items' => [],
+        ];
+    }
+
+    /**
+     * Tambahkan satu item ke cart (tanpa menyimpannya).
+     *
+     * @param  array<string, mixed>  $cart
+     * @param  array<string, mixed>  $itemData
+     * @return array<string, mixed>
+     */
+    private function appendItem(array $cart, array $itemData): array
+    {
+        $masterItemId = (int) ($itemData['master_item_id'] ?? $itemData['product_id'] ?? 0);
+        $qtyToAdd = max(1, (int) ($itemData['qty'] ?? $itemData['quantity'] ?? 1));
+        $durationDays = max(1, (int) ($cart['total_days'] ?? 1));
+        $dailyRate = (int) ($itemData['daily_rate'] ?? 0);
+
+        if (isset($cart['items'][$masterItemId])) {
+            $existingQty = (int) ($cart['items'][$masterItemId]['qty'] ?? 1);
+            $newQty = $existingQty + $qtyToAdd;
+            $cart['items'][$masterItemId]['qty'] = $newQty;
+            $cart['items'][$masterItemId]['quantity'] = $newQty;
+            $cart['items'][$masterItemId]['total_price'] = $dailyRate * $newQty * $durationDays;
+
+            return $cart;
+        }
+
+        $cart['items'][$masterItemId] = [
+            'master_item_id' => $masterItemId,
+            'product_name' => $itemData['product_name'] ?? '',
+            'product_image' => $itemData['product_image'] ?? '',
+            'daily_rate' => $dailyRate,
+            'qty' => $qtyToAdd,
+            'quantity' => $qtyToAdd,
+            'category_name' => $itemData['category_name'] ?? '',
+            'duration_days' => $durationDays,
+            'total_price' => $dailyRate * $qtyToAdd * $durationDays,
+        ];
+
+        return $cart;
     }
 
     /**

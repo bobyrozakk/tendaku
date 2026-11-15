@@ -21,7 +21,7 @@ class ShippingPreviewController extends Controller
             if (isset($dates['pickup_time'])) {
                 $dates['return_time'] = $dates['pickup_time'];
             }
-            $cart->updateDates($dates, $request->user());
+            $cart->updateCheckoutDates($dates, $request->user());
         }
 
         return response()->json($result);

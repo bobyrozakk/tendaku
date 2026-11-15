@@ -179,6 +179,9 @@ class CartController extends Controller
         $dates = $this->cartService->validateRentalDates($dates);
         $this->cartService->updateDates($dates, $user);
 
+        // Checkout dari keranjang selalu memakai isi keranjang.
+        $this->cartService->clearDirect();
+
         return redirect()->route('checkout.index');
     }
 }

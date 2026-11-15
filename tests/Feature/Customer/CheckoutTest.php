@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\Booking\CartService;
 use App\Services\Payment\MidtransService;
 use App\Services\ReturnReminderService;
 use Carbon\Carbon;
@@ -359,6 +360,63 @@ class CheckoutTest extends TestCase
         $this->assertSame('6281299999999', $notification->recipient_phone);
         $this->assertSame(ReturnReminderService::TYPE_H_MINUS_ONE, $notification->type);
         $this->assertSame('sent', $notification->status);
+    }
+
+    /**
+     * "Sewa Sekarang" memakai pilihan langsung tanpa mengubah keranjang.
+     */
+    public function test_direct_checkout_does_not_modify_existing_cart(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        $this->actingAs($customer);
+
+        $cart = app(CartService::class);
+
+        $cart->addItem([
+            'master_item_id' => $this->item->id,
+            'vendor_id' => $this->vendor->id,
+            'vendor_name' => $this->vendor->name,
+            'product_name' => $this->item->name,
+            'daily_rate' => 45000,
+            'qty' => 1,
+            'pickup_date' => '2026-10-11',
+            'return_date' => '2026-10-13',
+            'pickup_time' => '09:00',
+            'return_time' => '09:00',
+        ], $customer);
+
+        $cart->setDirect([
+            'master_item_id' => $this->item->id,
+            'vendor_id' => $this->vendor->id,
+            'vendor_name' => $this->vendor->name,
+            'product_name' => $this->item->name,
+            'daily_rate' => 45000,
+            'qty' => 2,
+            'pickup_date' => '2026-10-12',
+            'return_date' => '2026-10-14',
+            'pickup_time' => '09:00',
+            'return_time' => '09:00',
+        ]);
+
+        $this->post(route('checkout.store'), [
+            'pickup_method' => 'self_pickup',
+            'payment_option' => 'full',
+            'payment_channel' => 'qris',
+            'pickup_date' => '2026-10-12',
+            'return_date' => '2026-10-14',
+            'pickup_time' => '09:00',
+        ])->assertRedirect();
+
+        $rental = Rental::withoutGlobalScopes()->sole();
+
+        $this->assertSame('2026-10-12', $rental->pickup_date->toDateString());
+        $this->assertSame('2026-10-14', $rental->return_date->toDateString());
+        $this->assertSame(2, $rental->details()->count());
+
+        // Hanya pilihan langsung yang dibersihkan; keranjang tetap utuh.
+        $this->assertNull(session('direct_checkout_cart'));
+        $this->assertSame(1, session('booking_cart.qty'));
+        $this->assertSame(1, $customer->fresh()->cart['qty']);
     }
 
     /**

@@ -94,7 +94,7 @@ class CheckoutShippingService
      */
     private function regularContext(array $input, ?User $customer): array
     {
-        $cart = $this->cart->get($customer);
+        $cart = $this->cart->checkoutCart($customer);
         if ($cart === null || empty($cart['items'])) {
             throw new ShippingPreviewException('checkout_context_missing', 'Pilih produk melalui keranjang atau checkout produk terlebih dahulu.');
         }

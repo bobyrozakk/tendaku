@@ -34,6 +34,14 @@ class CheckoutController extends Controller
     public function index(Request $request): View|RedirectResponse
     {
         $cartService = app(CartService::class);
+        $isDirectCheckout = $request->boolean('direct')
+            && $cartService->getDirect() !== null;
+
+        // Checkout biasa tidak boleh memakai sisa pilihan "Sewa Sekarang".
+        if (! $isDirectCheckout) {
+            $cartService->clearDirect();
+        }
+
         if ($request->hasAny(['pickup_date', 'return_date'])) {
             try {
                 $cartService->validateRentalDates($request->only(['pickup_date', 'return_date']));
@@ -43,11 +51,11 @@ class CheckoutController extends Controller
             }
         }
         // Mendukung parameter langsung produk/alat jika diarahkan langsung dari profil toko atau katalog
-        if ($request->filled('item_id') || $request->filled('product_id')) {
+        if (! $isDirectCheckout && ($request->filled('item_id') || $request->filled('product_id'))) {
             $itemId = (int) ($request->query('item_id') ?: $request->query('product_id'));
             $masterItem = MasterItem::with('vendor', 'category')->find($itemId);
             if ($masterItem) {
-                app(CartService::class)->addItem([
+                $cartService->addItem([
                     'master_item_id' => $masterItem->id,
                     'product_id' => $masterItem->id,
                     'product_name' => $masterItem->name,
@@ -63,7 +71,9 @@ class CheckoutController extends Controller
             }
         }
 
-        $cart = $this->cart();
+        $cart = $isDirectCheckout
+            ? $cartService->getDirect()
+            : $this->cart();
 
         if ($cart === null) {
             return redirect()
@@ -75,8 +85,24 @@ class CheckoutController extends Controller
         }
 
         if ($request->has(['pickup_date', 'return_date'])) {
-            $cartService->updateDates($request->only(['pickup_date', 'return_date']), Auth::user());
-            $cart = $this->cart();
+            $dates = $request->only(['pickup_date', 'return_date']);
+
+            if ($isDirectCheckout) {
+                $cartService->updateCheckoutDates($dates, Auth::user());
+                $cart = $cartService->getDirect();
+            } else {
+                $cartService->updateDates($dates, Auth::user());
+                $cart = $this->cart();
+            }
+        }
+
+        if ($cart === null) {
+            return redirect()
+                ->route('customer.catalog.index')
+                ->with(
+                    'warning',
+                    'Silakan pilih alat camping yang ingin disewa terlebih dahulu.'
+                );
         }
 
         try {
@@ -115,7 +141,9 @@ class CheckoutController extends Controller
         CheckoutService $checkout,
         CheckoutShippingService $shipping,
     ): JsonResponse|RedirectResponse {
-        $cart = $this->cart();
+        $cartService = app(CartService::class);
+        $directCheckout = $cartService->getDirect() !== null;
+        $cart = $cartService->checkoutCart(Auth::user());
 
         if ($cart === null) {
             return $this->failure(
@@ -218,8 +246,12 @@ class CheckoutController extends Controller
                 $this->accessGuard->grantGuest($rental);
             }
 
-            // Keranjang dibersihkan setelah checkout berhasil diproses
-            app(CartService::class)->clear(Auth::user());
+            // Pilihan "Sewa Sekarang" dibersihkan tanpa menghapus keranjang biasa.
+            if ($directCheckout) {
+                $cartService->clearDirect();
+            } else {
+                $cartService->clear(Auth::user());
+            }
 
             if ($request->expectsJson()) {
                 return response()->json([
