@@ -30,3 +30,6 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 supabase/.temp
+/tests/selenium/
+__pycache__/
+*.pyc
