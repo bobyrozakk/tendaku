@@ -9,6 +9,8 @@ const source = ['components/location-picker.js', 'components/checkout-address.js
 function page(fetch) {
     let factory;
     const timers = new Map();
+    const events = [];
+    const watches = {};
     let nextTimer = 0;
     vm.runInNewContext(source, {
         document: { addEventListener: (_, callback) => callback() },
@@ -16,7 +18,8 @@ function page(fetch) {
         AbortController, FormData, fetch,
         setTimeout: (callback) => { timers.set(++nextTimer, callback); return nextTimer; },
         clearTimeout: (id) => timers.delete(id), clearInterval() {},
-        window: {},
+        CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
+        window: { dispatchEvent: event => events.push(event) },
     });
     const component = factory({
         items: [{ id: 1, qty: 2, max_qty: 4, price_per_day: 50000 }],
@@ -28,10 +31,10 @@ function page(fetch) {
         needsName: false, needsPhone: false, needsNik: false,
     });
     component.$nextTick = () => {};
-    component.$watch = (_, callback) => { component.inputChanged = callback; };
+    component.$watch = (key, callback) => { watches[key] = callback; };
     component.scrollToError = () => {};
     component.playHandoff = async () => {};
-    return { component, run: async () => { const pending = [...timers.values()]; timers.clear(); for (const callback of pending) await callback(); } };
+    return { component, watches, run: async () => { const pending = [...timers.values()]; timers.clear(); for (const callback of pending) await callback(); }, events };
 }
 function quote(overrides = {}) {
     return { success: true, status: 'ready', pickup_method: 'delivery', distance_km: 12.34,
@@ -53,14 +56,28 @@ test('delivery without address stays incomplete with unknown fee and disabled su
     assert.equal(component.formatRupiah(null), '\u2014');
 });
 
+test('rental date changes dispatch the booking weather range', async () => {
+    const { component, watches, events, run } = page(async () => response(quote()));
+    component.init();
+    component.pickupDate = '2090-02-01';
+    component.returnDate = '2090-02-03';
+    watches.pickupDate();
+    await run();
+
+    const weatherEvents = events.filter(event => event.type === 'booking-weather-updated');
+    assert.equal(weatherEvents.length, 1);
+    assert.equal(weatherEvents[0].detail.pickupDate, '2090-02-01');
+    assert.equal(weatherEvents[0].detail.returnDate, '2090-02-03');
+});
+
 test('quantity and address changes invalidate the total immediately and debounce into one current request', async () => {
     const calls = [];
-    const { component, run } = page(async (_, options) => { calls.push(JSON.parse(options.body)); return response(quote({ total_weight_kg: 9.75 })); });
+    const { component, watches, run } = page(async (_, options) => { calls.push(JSON.parse(options.body)); return response(quote({ total_weight_kg: 9.75 })); });
     component.init();
     component.items[0].qty = 3;
     component.selectedAddressId = 2;
     assert.equal(component.canSubmitBooking, false);
-    component.inputChanged();
+    watches.shippingInputKey();
     await run();
     assert.equal(calls.length, 1);
     assert.equal(calls[0].items[0].qty, 3);

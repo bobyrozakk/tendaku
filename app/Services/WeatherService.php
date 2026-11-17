@@ -12,7 +12,7 @@ use Throwable;
  * Service prakiraan cuaca spot camping (Open-Meteo — gratis, tanpa API key).
  *
  * Kontrak keluaran JSON-nya ada di `docs/contract.md` §7 dan dipakai langsung oleh
- * Andini untuk `WeatherCalendar` + banner peringatan.
+ * panel cuaca halaman Booking (`BookingWeather`) + banner peringatan.
  */
 class WeatherService
 {
@@ -85,6 +85,51 @@ class WeatherService
     public function availableSpots(): array
     {
         return (array) config('weather.spots', []);
+    }
+
+    /**
+     * Tebak spot cuaca dari nama kota vendor.
+     *
+     * Dipakai sebagai lokasi default panel cuaca pada halaman Booking.
+     * Pelanggan tetap dapat mengganti spot lewat dropdown di panel tersebut.
+     */
+    public function spotForCity(?string $city): string
+    {
+        $spots = (array) config('weather.spots', []);
+        $default = (string) config('weather.default_spot', 'gunung_bromo');
+
+        if (! array_key_exists($default, $spots)) {
+            $default = (string) (array_key_first($spots) ?? 'gunung_bromo');
+        }
+
+        $normalizedCity = $this->normalizeLabel((string) $city);
+
+        if ($normalizedCity === '') {
+            return $default;
+        }
+
+        foreach ($spots as $key => $spot) {
+            $label = $this->normalizeLabel((string) ($spot['label'] ?? $key));
+
+            if ($label === $normalizedCity || $this->shortLocationName($label) === $normalizedCity) {
+                return (string) $key;
+            }
+        }
+
+        foreach ($spots as $key => $spot) {
+            $label = $this->shortLocationName(
+                $this->normalizeLabel((string) ($spot['label'] ?? $key))
+            );
+
+            if ($label !== '' && (
+                str_contains($normalizedCity, $label)
+                || str_contains($label, $normalizedCity)
+            )) {
+                return (string) $key;
+            }
+        }
+
+        return $default;
     }
 
     /**
@@ -162,5 +207,21 @@ class WeatherService
     protected function normalizeSpot(string $spot): string
     {
         return str_replace([' ', '-', '/'], '_', strtolower(trim($spot)));
+    }
+
+    /**
+     * Normalisasi nama lokasi untuk pencocokan kota vendor.
+     */
+    protected function normalizeLabel(string $value): string
+    {
+        return trim((string) preg_replace('/\s+/', ' ', mb_strtolower($value)));
+    }
+
+    /**
+     * Hapus prefiks "Kota"/"Kabupaten" agar nama lokasi mudah dicocokkan.
+     */
+    protected function shortLocationName(string $label): string
+    {
+        return trim((string) preg_replace('/^(kota|kabupaten)\s+/', '', $label));
     }
 }

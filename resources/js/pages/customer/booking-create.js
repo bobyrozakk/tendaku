@@ -361,7 +361,20 @@ document.addEventListener("alpine:init", () => {
                 }
             });
             this.$watch("shippingInputKey", () => this.scheduleShipping());
+            this.$watch("pickupDate", () => this.dispatchWeatherRange());
+            this.$watch("returnDate", () => this.dispatchWeatherRange());
             this.scheduleShipping();
+        },
+
+        dispatchWeatherRange() {
+            window.dispatchEvent(
+                new CustomEvent("booking-weather-updated", {
+                    detail: {
+                        pickupDate: this.pickupDate,
+                        returnDate: this.returnDate,
+                    },
+                }),
+            );
         },
 
         get shippingInputKey() {

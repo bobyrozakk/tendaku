@@ -185,6 +185,16 @@
                     </div>
                 </div>
 
+                {{-- Panel cuaca: prakiraan mengikuti tanggal sewa yang dipilih --}}
+                @auth
+                    <livewire:customer.booking-weather
+                        :vendor-city="$vendor['city'] ?? ''"
+                        :pickup-date="$cartSummary['pickup_date'] ?? ''"
+                        :return-date="$cartSummary['return_date'] ?? ''"
+                        key="cart-booking-weather"
+                    />
+                @endauth
+
                 {{-- Bar Checkout & Ringkasan Total --}}
                 <div class="bg-white rounded-2xl border border-wheat-200 shadow-tendaku p-5 sm:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                     <div class="flex items-center gap-3">
@@ -210,12 +220,23 @@
                                   x-text="'Rp ' + cartTotal.toLocaleString('id-ID')"></span>
                         </div>
 
-                        <form method="POST" action="{{ route('customer.cart.checkout') }}">
+                        <form method="POST" action="{{ route('customer.cart.checkout') }}"
+                              x-data="{
+                                  syncWeather() {
+                                      window.dispatchEvent(new CustomEvent('booking-weather-updated', {
+                                          detail: {
+                                              pickupDate: this.$refs.pickupDate?.value ?? '',
+                                              returnDate: this.$refs.returnDate?.value ?? '',
+                                          },
+                                      }));
+                                  },
+                              }">
                             @csrf
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 <label class="text-xs font-semibold text-darkbrown-700">
                                     Tanggal mulai sewa
                                     <input type="date" name="pickup_date" required min="{{ now()->toDateString() }}"
+                                           x-ref="pickupDate" @change="syncWeather()"
                                            value="{{ old('pickup_date', $cartSummary['pickup_date']) }}"
                                            class="block w-full mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
                                     <x-input-error :messages="$errors->get('pickup_date')" class="mt-1" />
@@ -223,6 +244,7 @@
                                 <label class="text-xs font-semibold text-darkbrown-700">
                                     Tanggal pengembalian
                                     <input type="date" name="return_date" required min="{{ now()->toDateString() }}"
+                                           x-ref="returnDate" @change="syncWeather()"
                                            value="{{ old('return_date', $cartSummary['return_date']) }}"
                                            class="block w-full mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
                                     <x-input-error :messages="$errors->get('return_date')" class="mt-1" />

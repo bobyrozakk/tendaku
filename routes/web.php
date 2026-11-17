@@ -129,11 +129,6 @@ Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
         ->name('customer.packages.show');
 });
 
-// Prakiraan Cuaca Spot Camping (wajib login & verified)
-Route::view('/cuaca', 'customer.weather.index')
-    ->middleware(['auth', 'verified'])
-    ->name('customer.weather.index');
-
 // Alias Route URL langsung (untuk backward compatibility & kemudahan akses)
 Route::get('checkout', fn () => redirect()->route('checkout.index'));
 Route::get('booking/status/{code}', fn ($code) => redirect()->route('booking.status', ['code' => $code]));

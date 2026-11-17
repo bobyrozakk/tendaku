@@ -8,11 +8,12 @@ function page(kind, fetch) {
     let timerId = 0;
     const timers = new Map();
     const pickerRefreshes = [];
-    const window = { addEventListener() {}, refreshLocationPicker: (...args) => pickerRefreshes.push(args) };
+    const window = { addEventListener() {}, dispatchEvent() {}, refreshLocationPicker: (...args) => pickerRefreshes.push(args) };
     const context = {
         document: { addEventListener: (_, callback) => callback() },
         Alpine: { data: (_, callback) => { factory = callback; } },
         AbortController, FormData, fetch, window,
+        CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
         setTimeout: callback => { timers.set(++timerId, callback); return timerId; },
         clearTimeout: id => timers.delete(id), clearInterval() {},
     };

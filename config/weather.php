@@ -16,6 +16,21 @@ return [
 
     'timezone' => env('WEATHER_TIMEZONE', 'Asia/Jakarta'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Batas & Default Prakiraan
+    |--------------------------------------------------------------------------
+    |
+    | Open-Meteo menyediakan prakiraan harian maksimal 16 hari ke depan.
+    | `forecast_horizon_days` dipakai panel cuaca Booking untuk menandai
+    | tanggal sewa yang belum bisa diprediksi.
+    |
+    */
+
+    'forecast_horizon_days' => (int) env('WEATHER_FORECAST_HORIZON_DAYS', 16),
+
+    'default_spot' => env('WEATHER_DEFAULT_SPOT', 'gunung_bromo'),
+
     'timeout' => (int) env('WEATHER_TIMEOUT', 10),
 
     'retry_times' => (int) env('WEATHER_RETRY_TIMES', 2),

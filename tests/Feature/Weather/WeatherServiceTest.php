@@ -229,6 +229,17 @@ class WeatherServiceTest extends TestCase
         $this->assertArrayHasKey('kota_batu', $spots);
     }
 
+    public function test_it_guesses_the_weather_spot_from_the_vendor_city(): void
+    {
+        $service = app(WeatherService::class);
+
+        $this->assertSame('kota_probolinggo', $service->spotForCity('Probolinggo'));
+        $this->assertSame('kota_batu', $service->spotForCity('Batu'));
+        $this->assertSame('kota_malang', $service->spotForCity('Malang'));
+        $this->assertSame('kabupaten_malang', $service->spotForCity('Kabupaten Malang'));
+        $this->assertSame('gunung_bromo', $service->spotForCity(null));
+    }
+
     /**
      * Payload contoh respons Open-Meteo.
      *
