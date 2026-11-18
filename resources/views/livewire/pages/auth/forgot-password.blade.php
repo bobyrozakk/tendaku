@@ -41,7 +41,7 @@ new #[Layout('layouts.guest')] class extends Component
     <x-slot:subheading>Masukkan email akunmu. Kami kirim tautan untuk membuat password baru.</x-slot:subheading>
 
     @if (session('status'))
-        <div role="status" class="mb-6 rounded-lg border border-tendaku-brown/15 bg-tendaku-avocado/10 px-4 py-3 text-sm text-tendaku-brown">
+        <div role="status" class="mb-6 rounded-lg border border-white/20 bg-tendaku-avocado/20 px-4 py-3 text-sm text-white">
             {{ session('status') }}
         </div>
     @endif
@@ -56,8 +56,8 @@ new #[Layout('layouts.guest')] class extends Component
         <x-auth.button class="w-full">Kirim tautan reset</x-auth.button>
     </form>
 
-    <p class="mt-8 text-sm text-tendaku-brown/70">
+    <p class="mt-8 text-sm text-white/80">
         Ingat passwordnya?
-        <a href="{{ route('login') }}" wire:navigate class="font-semibold text-tendaku-moss underline-offset-4 hover:underline">Kembali masuk</a>
+        <a href="{{ route('login') }}" wire:navigate class="font-semibold text-avocado-300 underline-offset-4 hover:text-avocado-200 hover:underline">Kembali masuk</a>
     </p>
 </div>

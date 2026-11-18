@@ -34,7 +34,7 @@
                 <a
                     href="{{ route('password.request') }}"
                     wire:navigate
-                    class="rounded font-medium text-tendaku-moss underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-avocado"
+                    class="rounded font-medium text-avocado-300 underline-offset-4 hover:text-avocado-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-300"
                 >
                     Lupa password?
                 </a>
@@ -44,14 +44,14 @@
 
     <label
         for="remember_me"
-        class="flex items-center gap-2.5 text-sm text-tendaku-brown"
+        class="flex items-center gap-2.5 text-sm text-white"
     >
         <input
             wire:model="form.remember"
             id="remember_me"
             name="remember"
             type="checkbox"
-            class="h-4 w-4 rounded border-tendaku-brown/15 text-tendaku-moss focus:ring-2 focus:ring-tendaku-moss"
+            class="h-4 w-4 rounded border-tendaku-brown/15 text-avocado-300 focus:ring-2 focus:ring-avocado-300"
         >
 
         Tetap masuk di perangkat ini
@@ -69,12 +69,12 @@
 @endif
 
 @if ($showRegisterLink ?? true)
-    <p class="mt-8 text-sm text-tendaku-brown/70">
+    <p     class="mt-8 text-sm text-white/80">
         Belum punya akun?
         <a
             href="{{ route('register') }}"
             wire:navigate
-            class="font-semibold text-tendaku-moss underline-offset-4 hover:underline"
+            class="font-semibold text-avocado-300 underline-offset-4 hover:text-avocado-200 hover:underline"
         >
             Daftar
         </a>

@@ -40,39 +40,83 @@ new #[Layout('layouts.guest')] class extends Component
         aria-hidden="true"
     ></div>
 
+    {{-- Heading & subheading dirender di layout (di luar komponen), jadi diganti lewat event account-type-changed --}}
     <x-slot:heading>
-        {{ $form->account_type === 'vendor' ? 'Daftar Mitra Vendor' : 'Buat akun Tendaku' }}
+        <span
+            x-data="{ t: '{{ $form->account_type }}' }"
+            x-on:account-type-changed.window="t = $event.detail.type"
+        >
+            <span
+                x-show="t !== 'vendor'"
+                @if ($form->account_type === 'vendor') style="display: none" @endif
+            >Buat akun Tendaku</span>
+            <span
+                x-show="t === 'vendor'"
+                @if ($form->account_type !== 'vendor') style="display: none" @endif
+            >Mulai bersama Tendaku</span>
+        </span>
     </x-slot:heading>
 
     <x-slot:subheading>
-        {{ $form->account_type === 'vendor'
-            ? 'Buka rental peralatan camping Anda dan jangkau ribuan penyewa.'
-            : 'Daftar sekali, lalu sewa tenda dan perlengkapan lain kapan saja.' }}
+        <span
+            x-data="{ t: '{{ $form->account_type }}' }"
+            x-on:account-type-changed.window="t = $event.detail.type"
+        >
+            <span
+                x-show="t !== 'vendor'"
+                @if ($form->account_type === 'vendor') style="display: none" @endif
+            >Daftar sekali, lalu sewa tenda dan perlengkapan lain kapan saja.</span>
+            <span
+                x-show="t === 'vendor'"
+                @if ($form->account_type !== 'vendor') style="display: none" @endif
+            >Daftarkan usaha rentalmu dan jangkau lebih banyak pelanggan melalui Tendaku.</span>
+        </span>
     </x-slot:subheading>
 
     {{-- Switch Tipe Akun --}}
-    <div class="mb-6 flex rounded-full border border-tendaku-brown/15 bg-tendaku-wheat/60 p-1 shadow-inner">
-        <button
-            type="button"
-            x-on:click="type = 'customer'; $dispatch('account-type-changed', { type: 'customer' })"
-            x-bind:class="type === 'customer'
-                ? 'bg-tendaku-avocado text-white shadow-sm'
-                : 'text-tendaku-brown/70 hover:text-tendaku-brown'"
-            class="flex-1 rounded-full py-2.5 text-xs font-bold transition-all sm:text-sm lg:py-2"
+    <div class="mb-5 flex justify-center">
+        <div
+            class="relative inline-flex items-center rounded-full border border-white/15 bg-black/10 p-1 backdrop-blur-xl"
+            x-data
         >
-            Customer
-        </button>
+            {{-- Sliding background --}}
+            <div
+                class="absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full
+                       bg-tendaku-avocado/70 backdrop-blur-xl
+                       ring-1 ring-white/15
+                       shadow-[0_3px_15px_rgba(91,106,52,0.3)]
+                       transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                x-bind:class="type === 'vendor' ? 'translate-x-full' : 'translate-x-0'"
+            ></div>
 
-        <button
-            type="button"
-            x-on:click="type = 'vendor'; $dispatch('account-type-changed', { type: 'vendor' })"
-            x-bind:class="type === 'vendor'
-                ? 'bg-tendaku-avocado text-white shadow-sm'
-                : 'text-tendaku-brown/70 hover:text-tendaku-brown'"
-            class="flex-1 rounded-full py-2.5 text-xs font-bold transition-all sm:text-sm lg:py-2"
-        >
-            Mitra Rental
-        </button>
+            <button
+                type="button"
+                x-on:click="type = 'customer'; $dispatch('account-type-changed', { type: 'customer' })"
+                class="relative z-10 w-28 rounded-full px-4 py-1.5 text-xs font-semibold
+                       transition-colors duration-300 sm:text-sm"
+                x-bind:class="
+                    type === 'customer'
+                        ? 'text-white'
+                        : 'text-white/45 hover:text-white/75'
+                "
+            >
+                Customer
+            </button>
+
+            <button
+                type="button"
+                x-on:click="type = 'vendor'; $dispatch('account-type-changed', { type: 'vendor' })"
+                class="relative z-10 w-28 rounded-full px-4 py-1.5 text-xs font-semibold
+                       transition-colors duration-300 sm:text-sm"
+                x-bind:class="
+                    type === 'vendor'
+                        ? 'text-white'
+                        : 'text-white/45 hover:text-white/75'
+                "
+            >
+                Partner
+            </button>
+        </div>
     </div>
 
     @include('livewire.pages.auth.partials.register-form')
@@ -83,11 +127,13 @@ new #[Layout('layouts.guest')] class extends Component
         ])
     </div>
 
-    <p class="mt-8 text-sm text-tendaku-brown/70 lg:mt-5">
+    <p class="mt-8 text-sm text-white/80 lg:mt-5">
         Sudah punya akun?
-        <a href="{{ route('login') }}"
-           wire:navigate.hover
-           class="font-semibold text-tendaku-moss underline-offset-4 hover:underline" > Masuk
+
+        <a  href="{{ route('login') }}"
+            wire:navigate.hover
+            class="font-semibold text-avocado-300 underline-offset-4 hover:text-avocado-200 hover:underline" >
+            Masuk
         </a>
     </p>
 </div>

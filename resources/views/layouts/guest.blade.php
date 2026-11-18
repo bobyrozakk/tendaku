@@ -44,7 +44,7 @@
     </style>
 </head>
 
-<body class="min-h-screen overflow-x-hidden bg-[#FAF6ED] font-sans text-tendaku-brown antialiased">
+<body class="min-h-screen overflow-x-hidden bg-[#0F0E3A] font-sans text-tendaku-brown antialiased">
     <x-toast />
 
     {{-- Bentuk lengkung pemisah panel gambar dan form --}}
@@ -55,17 +55,35 @@
         focusable="false" >
         <defs>
             <clipPath id="scene-blob" clipPathUnits="objectBoundingBox">
-                <path d="M0 0 H0.9 C0.99 0.16 0.8 0.32 0.86 0.5 C0.92 0.68 1 0.84 0.9 1 H0 Z" />
+                <path d="M0 0 H0.94 C0.99 0.16 0.8 0.32 0.86 0.5 C0.92 0.68 1 0.84 0.9 1 H0 Z" />
             </clipPath>
         </defs>
     </svg>
 
+    {{-- Foto latar --}}
+    @persist('auth-bg')
+        <div class="fixed inset-0 z-0" aria-hidden="true">
+            <img
+                src="{{ asset('images/login-page.jpg') }}"
+                alt=""
+                decoding="async"
+                class="h-full w-full object-cover object-center"
+            >
+        </div>
+    @endpersist
+
     @php($wide = request()->routeIs('register'))
 
     <div
-        class="flex min-h-screen w-full flex-col lg:grid {{ $wide ? 'lg:grid-cols-2' : 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' }}"
+        class="relative z-10 flex min-h-screen w-full flex-col lg:grid {{ $wide ? 'lg:grid-cols-2' : 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' }}"
     >
-        {{-- Panel kiri: foto (dipertahankan antar halaman) + teks yang berganti sesuai halaman --}}
+        {{-- Layer kaca (desktop) --}}
+        <div
+            class="pointer-events-none absolute inset-0 hidden bg-[#0F0E3A]/55 backdrop-blur-xl backdrop-saturate-150 lg:block"
+            aria-hidden="true"
+        ></div>
+
+        {{-- Panel kiri --}}
         <div class="relative h-56 sm:h-64 w-full flex-shrink-0 lg:h-auto lg:min-h-screen">
             @persist('auth-aside')
                 <aside class="scene-blob absolute inset-0 overflow-hidden bg-[#0F0E3A]">
@@ -76,10 +94,8 @@
                         fetchpriority="high"
                         class="absolute inset-0 h-full w-full object-cover object-center"
                     >
-
-                    {{-- Gradasi supaya logo, tulisan, dan copyright tetap terbaca di atas foto --}}
                     <div
-                        class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/45"
+                        class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/40"
                         aria-hidden="true"
                     ></div>
                 </aside>
@@ -108,7 +124,8 @@
             >
                 <a
                     href="{{ url('/') }}"
-                    class="inline-flex items-center rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-wheat"
+                    class="inline-flex w-fit self-start items-center rounded-xl
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-wheat"
                     aria-label="Beranda Tendaku"
                 >
                     <img
@@ -174,17 +191,17 @@
 
         {{-- Panel form --}}
         <main
-            class="relative z-10 -mt-6 flex flex-1 flex-col justify-between rounded-t-[2rem] bg-[#FAF6ED] px-6 pt-8 pb-8 shadow-[-2px_-8px_24px_rgba(15,14,58,0.12)] sm:px-10 lg:mt-0 lg:rounded-none lg:shadow-none lg:min-h-screen lg:px-10 xl:px-14 lg:py-8 lg:overflow-y-auto"
+            class="relative z-10 -mt-6 flex flex-1 flex-col justify-between rounded-t-[2rem] border-t border-white/20 bg-gradient-to-br from-white/25 via-white/15 to-white/10 px-6 pt-8 pb-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),-2px_-8px_24px_rgba(15,14,58,0.18)] backdrop-blur-2xl backdrop-saturate-150 sm:px-10 lg:mt-0 lg:rounded-none lg:border-0 lg:bg-none lg:shadow-none lg:backdrop-blur-none lg:backdrop-saturate-100 lg:min-h-screen lg:px-10 xl:px-14 lg:py-8 lg:overflow-y-auto"
         >
             <div class="auth-compact mx-auto w-full {{ $wide ? 'max-w-sm xl:max-w-xl' : 'max-w-sm' }} my-auto py-2">
                 @isset($heading)
-                    <h1 class="font-display text-3xl sm:text-4xl font-normal text-tendaku-brown">
+                    <h1 class="font-display text-3xl sm:text-4xl font-normal text-white">
                         {{ $heading }}
                     </h1>
                 @endisset
 
                 @isset($subheading)
-                    <p class="mt-2 text-sm sm:text-base leading-relaxed text-tendaku-brown/70">
+                    <p class="mt-2 text-sm sm:text-base leading-relaxed text-white/80">
                         {{ $subheading }}
                     </p>
                 @endisset
