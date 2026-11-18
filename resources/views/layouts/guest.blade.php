@@ -9,7 +9,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite([
+        'resources/css/app.css',
+        'resources/js/app.js',
+        'resources/css/pages/auth/fog-glass.css',
+        'resources/js/pages/auth/fog-glass.js',
+    ])
 
     <style>
         [x-cloak] {
@@ -57,6 +62,12 @@
             <clipPath id="scene-blob" clipPathUnits="objectBoundingBox">
                 <path d="M0 0 H0.94 C0.99 0.16 0.8 0.32 0.86 0.5 C0.92 0.68 1 0.84 0.9 1 H0 Z" />
             </clipPath>
+            <clipPath id="auth-fog-standard" clipPathUnits="objectBoundingBox">
+                <path d="M0.564 0 C0.594 0.16 0.48 0.32 0.516 0.5 C0.552 0.68 0.6 0.84 0.54 1 H1 V0 Z" />
+            </clipPath>
+            <clipPath id="auth-fog-register" clipPathUnits="objectBoundingBox">
+                <path d="M0.47 0 C0.495 0.16 0.4 0.32 0.43 0.5 C0.46 0.68 0.5 0.84 0.45 1 H1 V0 Z" />
+            </clipPath>
         </defs>
     </svg>
 
@@ -74,28 +85,36 @@
 
     @php($wide = request()->routeIs('register'))
 
+    {{-- Embun di atas foto latar (desktop). Kursor menghapus embun, lalu menutup lagi. --}}
+    <canvas
+        class="auth-fog fixed inset-0 z-[5] h-full w-full {{ $wide ? 'auth-fog--register' : 'auth-fog--standard' }}"
+        data-auth-fog
+        data-src="{{ asset('images/login-page.jpg') }}"
+        aria-hidden="true"
+    ></canvas>
+
     <div
         class="relative z-10 flex min-h-screen w-full flex-col lg:grid {{ $wide ? 'lg:grid-cols-2' : 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' }}"
     >
-        {{-- Layer kaca (desktop) --}}
+        {{-- Layer kaca cadangan. Disembunyikan saat canvas embun aktif. --}}
         <div
-            class="pointer-events-none absolute inset-0 hidden bg-[#0F0E3A]/55 backdrop-blur-xl backdrop-saturate-150 lg:block"
+            class="auth-fog-fallback pointer-events-none absolute inset-0 bg-[#0F0E3A]/55 backdrop-blur-xl backdrop-saturate-150 {{ $wide ? 'auth-fog-fallback--register' : 'auth-fog-fallback--standard' }}"
             aria-hidden="true"
         ></div>
 
         {{-- Panel kiri --}}
         <div class="relative h-56 sm:h-64 w-full flex-shrink-0 lg:h-auto lg:min-h-screen">
             @persist('auth-aside')
-                <aside class="scene-blob absolute inset-0 overflow-hidden bg-[#0F0E3A]">
+                <aside class="scene-blob absolute inset-0 overflow-hidden">
                     <img
                         src="{{ asset('images/login-page.jpg') }}"
                         alt=""
                         decoding="async"
-                        fetchpriority="high"
-                        class="absolute inset-0 h-full w-full object-cover object-center"
+                        class="absolute inset-0 h-full w-full object-cover object-center lg:hidden"
                     >
+
                     <div
-                        class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/40"
+                        class="absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-black/20"
                         aria-hidden="true"
                     ></div>
                 </aside>
@@ -191,7 +210,7 @@
 
         {{-- Panel form --}}
         <main
-            class="relative z-10 -mt-6 flex flex-1 flex-col justify-between rounded-t-[2rem] border-t border-white/20 bg-gradient-to-br from-white/25 via-white/15 to-white/10 px-6 pt-8 pb-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),-2px_-8px_24px_rgba(15,14,58,0.18)] backdrop-blur-2xl backdrop-saturate-150 sm:px-10 lg:mt-0 lg:rounded-none lg:border-0 lg:bg-none lg:shadow-none lg:backdrop-blur-none lg:backdrop-saturate-100 lg:min-h-screen lg:px-10 xl:px-14 lg:py-8 lg:overflow-y-auto"
+            class="relative z-10 -mt-6 flex flex-1 flex-col justify-between rounded-t-[2rem] border-t border-white/20 bg-gradient-to-br from-white/30 via-white/22 to-white/16 px-6 pt-8 pb-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),-2px_-8px_24px_rgba(15,14,58,0.18)] backdrop-blur-md backdrop-saturate-150 sm:px-10 lg:mt-0 lg:rounded-none lg:border-0 lg:bg-none lg:shadow-none lg:backdrop-blur-none lg:backdrop-saturate-100 {{ $wide ? 'lg:h-screen' : 'lg:min-h-screen' }} lg:px-10 xl:px-14 lg:py-8 lg:overflow-y-auto"
         >
             <div class="auth-compact mx-auto w-full {{ $wide ? 'max-w-sm xl:max-w-xl' : 'max-w-sm' }} my-auto py-2">
                 @isset($heading)

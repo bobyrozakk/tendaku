@@ -50,7 +50,7 @@
                 label="Deskripsi Toko (Opsional)"
                 type="textarea"
                 wire:model="form.description"
-                rows="3"
+                rows="2"
                 placeholder="Contoh: tenda, matras, kompor"
             />
         </div>

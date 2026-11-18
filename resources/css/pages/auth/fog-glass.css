@@ -1,0 +1,44 @@
+/* Fog canvas and fallback only appear on desktop. */
+.auth-fog {
+    display: none;
+    pointer-events: none;
+    contain: strict;
+}
+
+/* Kaca cadangan bila JavaScript atau canvas tidak tersedia. */
+.auth-fog-fallback {
+    display: none;
+    background-image:
+        radial-gradient(
+            60% 50% at 20% 30%,
+            rgba(255, 255, 255, 0.1),
+            transparent
+        ),
+        radial-gradient(
+            55% 55% at 75% 75%,
+            rgba(255, 255, 255, 0.08),
+            transparent
+        ),
+        linear-gradient(rgba(236, 241, 255, 0.14), rgba(236, 241, 255, 0.14));
+}
+
+body:has([data-auth-fog][data-ready]) .auth-fog-fallback {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .auth-fog,
+    .auth-fog-fallback {
+        display: block;
+    }
+
+    .auth-fog--standard,
+    .auth-fog-fallback--standard {
+        clip-path: url(#auth-fog-standard);
+    }
+
+    .auth-fog--register,
+    .auth-fog-fallback--register {
+        clip-path: url(#auth-fog-register);
+    }
+}

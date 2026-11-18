@@ -8,7 +8,7 @@
     $describedBy = $hasError ? $id . '-error' : ($hint ? $id . '-hint' : null);
 
     $inputClass = 'block w-full border bg-white px-5 py-3 text-base text-tendaku-brown '
-        . ($isTextarea ? 'min-h-24 resize-y rounded-2xl ' : 'rounded-full ')
+        . ($isTextarea ? 'min-h-20 resize-y rounded-2xl ' : 'rounded-full ')
         . 'placeholder:text-tendaku-brown/45 focus:border-tendaku-avocado focus:outline-none focus:ring-4 focus:ring-tendaku-avocado/20 '
         . ($hasError ? 'border-red-600' : 'border-tendaku-brown/15')
         . ($isPassword ? ' pr-14' : '');
