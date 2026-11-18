@@ -17,13 +17,12 @@ class Pickup extends Component
     use WithFileUploads;
     use WithPagination;
 
-    // Tab Management: 'ready' (Siap Diambil) | 'overdue' (Belum Diambil / Lewat Jadwal)
-    public $activeTab = 'ready';
+    // Tab Management: 'siap' (Siap Diambil) | 'belum_diambil' (Belum Diambil / Lewat Jadwal)
+    public $activeTab = 'siap';
 
     public $searchPickup = '';
 
     public $selectedPickupId = null;
-
     protected $paginationTheme = 'tailwind';
 
     public function updatingSearchPickup(): void
@@ -31,8 +30,9 @@ class Pickup extends Component
         $this->resetPage();
     }
 
-    public function updatedActiveTab(): void
+    public function setTab(string $tab): void
     {
+        $this->activeTab = $tab;
         $this->resetPage();
         $this->selectedPickupId = null;
         $this->loadDefaultPickup();
@@ -268,41 +268,44 @@ class Pickup extends Component
     public function getCountsProperty(): array
     {
         $vendorId = Auth::user()?->vendor_id;
-        $today = Carbon::today()->format('Y-m-d');
+        $today = Carbon::today();
 
         $base = Rental::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
             ->where('status', 'confirmed');
 
         $readyCount = (clone $base)
-            ->where('pickup_date', '>=', $today)
+            ->whereDate('pickup_date', '>=', $today)
             ->count();
 
         $overdueCount = (clone $base)
-            ->where('pickup_date', '<', $today)
+            ->whereDate('pickup_date', '<', $today)
+            ->whereDate('return_date', '>=', $today)
             ->count();
 
         return [
             'ready' => $readyCount,
             'overdue' => $overdueCount,
+            'siap' => $readyCount,
+            'belum_diambil' => $overdueCount,
         ];
     }
 
     private function pickupOrdersQuery()
     {
         $vendorId = Auth::user()?->vendor_id;
-        $today = Carbon::today()->format('Y-m-d');
+        $today = Carbon::today();
 
         return Rental::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
             ->where('status', 'confirmed')
-            ->when($this->activeTab === 'ready', function ($q) use ($today) {
-                // Jadwal pickup hari ini atau mendatang yang belum diambil
-                $q->where('pickup_date', '>=', $today);
-            })
-            ->when($this->activeTab === 'overdue', function ($q) use ($today) {
-                // Jadwal pickup sudah lewat dari hari ini tapi belum diambil
-                $q->where('pickup_date', '<', $today);
+            ->when($this->activeTab === 'belum_diambil', function ($q) use ($today) {
+                // Terlewat pickup tapi belum melewati tanggal pengembalian
+                $q->whereDate('pickup_date', '<', $today)
+                    ->whereDate('return_date', '>=', $today);
+            }, function ($q) use ($today) {
+                // Siap pickup (hari ini atau mendatang)
+                $q->whereDate('pickup_date', '>=', $today);
             })
             ->when($this->searchPickup, function ($q) {
                 $s = trim($this->searchPickup);
@@ -326,6 +329,10 @@ class Pickup extends Component
 
     private function formatRentalToArray(Rental $rental): array
     {
+        $today = Carbon::today();
+        $isOverduePickup = $rental->pickup_date->lt($today);
+        $daysLate = $isOverduePickup ? (int) $rental->pickup_date->diffInDays($today) : 0;
+
         $customerName = $rental->customer?->name ?? $rental->guest_name;
         $phone = $rental->customer?->phone ?? $rental->guest_phone ?? '-';
         $period = $rental->pickup_date->format('d M Y').' - '.$rental->return_date->format('d M Y').' ('.$rental->rental_days.' Hari)';
@@ -389,13 +396,29 @@ class Pickup extends Component
             'remaining_amount' => $remainingAmount,
             'is_fully_paid' => $isFullyPaid,
             'payment_status' => $paymentStatus,
-            'status' => $isOverdue ? 'Terlambat Diambil' : 'Siap Pickup',
+            'status' => $isOverduePickup ? 'Belum Diambil' : 'Siap Pickup',
+            'is_overdue_pickup' => $isOverduePickup,
+            'days_late' => $daysLate,
             'allocated_units' => $allocatedUnits,
         ];
     }
 
     public function render()
     {
+        $vendorId = Auth::user()?->vendor_id;
+        $today = Carbon::today();
+
+        // Hitung count untuk masing-masing tab
+        $baseCounts = Rental::withoutGlobalScope('vendor')
+            ->where('vendor_id', $vendorId)
+            ->where('status', 'confirmed');
+
+        $readyCount = (clone $baseCounts)->whereDate('pickup_date', '>=', $today)->count();
+        $overdueCount = (clone $baseCounts)
+            ->whereDate('pickup_date', '<', $today)
+            ->whereDate('return_date', '>=', $today)
+            ->count();
+
         $paginated = $this->pickupOrdersQuery()->paginate(10);
         $totalCount = $paginated->total();
 
@@ -405,7 +428,8 @@ class Pickup extends Component
         return view('livewire.kasir.pickup', [
             'filteredOrders' => $transformed,
             'totalCount' => $totalCount,
-            'counts' => $this->counts,
+            'readyCount' => $readyCount,
+            'overdueCount' => $overdueCount,
         ]);
     }
 }

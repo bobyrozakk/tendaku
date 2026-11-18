@@ -77,12 +77,13 @@
                         @php
                             $isSelected = $this->activeOrder && $this->activeOrder->id === $rental->id;
                             $custName = $rental->customer?->name ?? $rental->guest_name;
+                            $isExpiredUnpickedRental = $rental->status === 'confirmed' && \Carbon\Carbon::today()->gt($rental->return_date);
                             $isLate = \Carbon\Carbon::today()->gt($rental->return_date);
                         @endphp
                         <div wire:click="selectRental({{ $rental->id }})"
                              class="group relative overflow-hidden bg-white rounded-2xl border p-4 cursor-pointer transition-all duration-200 {{ $isSelected ? 'border-avocado-500 shadow-md ring-2 ring-avocado-500/20' : 'border-wheat-200/90 hover:border-wheat-300 hover:shadow-sm hover:translate-x-0.5' }}">
 
-                            <div class="absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-200 {{ $isSelected ? 'bg-avocado-600' : ($isLate ? 'bg-red-500' : 'bg-wheat-300 group-hover:bg-avocado-400') }}"></div>
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-200 {{ $isSelected ? 'bg-avocado-600' : ($isExpiredUnpickedRental ? 'bg-rose-500' : ($isLate ? 'bg-red-500' : 'bg-wheat-300 group-hover:bg-avocado-400')) }}"></div>
 
                             <div class="pl-2 space-y-3">
                                 <div class="flex items-start justify-between gap-2">
@@ -100,7 +101,12 @@
                                         </div>
                                     </div>
 
-                                    @if($rental->ktp_collateral_status === 'held')
+                                    @if($isExpiredUnpickedRental)
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 shrink-0">
+                                            <i data-lucide="clock" class="w-3 h-3 text-rose-600"></i>
+                                            Kedaluwarsa (Tidak Diambil)
+                                        </span>
+                                    @elseif($rental->ktp_collateral_status === 'held')
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 shrink-0">
                                             <i data-lucide="id-card" class="w-3 h-3 text-amber-700"></i>
                                             KTP Ditahan
@@ -119,7 +125,12 @@
                                 </div>
 
                                 <div class="flex items-center justify-between pt-1">
-                                    @if($isLate)
+                                    @if($isExpiredUnpickedRental)
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                            Tidak Pernah Diambil
+                                        </span>
+                                    @elseif($isLate)
                                         <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
                                             Terlambat Kembalikan
@@ -172,7 +183,15 @@
                                 </div>
 
                                 <div class="flex items-center gap-2">
-                                    @if($this->activeOrder->ktp_collateral_status === 'held')
+                                    @if($this->isExpiredUnpicked)
+                                        <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-900 border border-rose-200 shadow-sm">
+                                            <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-600"></i>
+                                            <div>
+                                                <div class="text-[10px] uppercase font-black text-rose-700 leading-none">Status Pesanan</div>
+                                                <div class="leading-tight font-extrabold">Kedaluwarsa (Tidak Diambil)</div>
+                                            </div>
+                                        </div>
+                                    @elseif($this->activeOrder->ktp_collateral_status === 'held')
                                         <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200/90 shadow-sm">
                                             <span class="text-base">🪪</span>
                                             <div>
@@ -249,15 +268,25 @@
                                             <div class="p-4 space-y-4 bg-white"
                                                  wire:key="inspection-item-{{ $detail->id }}"
                                                  x-data="{
+                                                     isExpired: @js($this->isExpiredUnpicked),
                                                      cond: @entangle('inspectionNotes.' . $detail->id).live,
                                                      fee: @entangle('damageFees.' . $detail->id).live,
                                                      setCond(val) {
+                                                         if (this.isExpired) return;
                                                          this.cond = val;
                                                          if (val === 'good') {
                                                              this.fee = 0;
                                                          }
                                                      }
                                                  }">
+
+                                                @if($this->isExpiredUnpicked)
+                                                    <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-xs text-amber-900 font-semibold">
+                                                        <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                                        <span>Pesanan tidak pernah diambil oleh penyewa. Kondisi unit tetap Baik dan tab Hilang / Rusak dinonaktifkan.</span>
+                                                    </div>
+                                                @endif
+
                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     {{-- Radio Badge / Card Pilihan Kondisi --}}
                                                     <div>
@@ -272,6 +301,7 @@
                                                                        name="condition_ui_{{ $detail->id }}"
                                                                        value="good"
                                                                        x-model="cond"
+                                                                       :disabled="isExpired"
                                                                        @change="if (cond === 'good') fee = 0"
                                                                        class="sr-only">
                                                                 <i data-lucide="check" class="w-4 h-4"></i>
@@ -279,24 +309,26 @@
                                                             </label>
 
                                                             {{-- Tombol Card: Rusak --}}
-                                                            <label :class="cond === 'damaged' ? 'bg-amber-500 text-white border-amber-600 shadow-sm shadow-amber-500/25 ring-2 ring-amber-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800'"
+                                                            <label :class="isExpired ? 'opacity-40 bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed select-none' : (cond === 'damaged' ? 'bg-amber-500 text-white border-amber-600 shadow-sm shadow-amber-500/25 ring-2 ring-amber-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800')"
                                                                    class="py-2.5 px-2 rounded-xl text-xs font-bold transition-all duration-100 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none">
                                                                 <input type="radio"
                                                                        name="condition_ui_{{ $detail->id }}"
                                                                        value="damaged"
                                                                        x-model="cond"
+                                                                       :disabled="isExpired"
                                                                        class="sr-only">
                                                                 <i data-lucide="alert-triangle" class="w-4 h-4"></i>
                                                                 <span class="text-[11px] leading-tight">Rusak</span>
                                                             </label>
 
                                                             {{-- Tombol Card: Hilang --}}
-                                                            <label :class="cond === 'lost' ? 'bg-rose-600 text-white border-rose-700 shadow-sm shadow-rose-600/25 ring-2 ring-rose-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800'"
+                                                            <label :class="isExpired ? 'opacity-40 bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed select-none' : (cond === 'lost' ? 'bg-rose-600 text-white border-rose-700 shadow-sm shadow-rose-600/25 ring-2 ring-rose-400/40' : 'bg-wheat-50/60 text-darkbrown-700 border-wheat-200 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-800')"
                                                                    class="py-2.5 px-2 rounded-xl text-xs font-bold transition-all duration-100 flex flex-col items-center justify-center gap-1 border cursor-pointer select-none">
                                                                 <input type="radio"
                                                                        name="condition_ui_{{ $detail->id }}"
                                                                        value="lost"
                                                                        x-model="cond"
+                                                                       :disabled="isExpired"
                                                                        class="sr-only">
                                                                 <i data-lucide="x-circle" class="w-4 h-4"></i>
                                                                 <span class="text-[11px] leading-tight">Hilang</span>
@@ -309,7 +341,7 @@
                                                         <div class="flex items-center justify-between mb-2">
                                                             <label class="text-xs font-bold text-darkbrown-800 flex items-center gap-1.5">
                                                                 <span>Denda Kerusakan / Ganti Rugi</span>
-                                                                <span x-show="cond === 'damaged' || cond === 'lost'"
+                                                                <span x-show="!isExpired && (cond === 'damaged' || cond === 'lost')"
                                                                       x-cloak
                                                                       class="px-1.5 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-700 border border-rose-300 animate-pulse">
                                                                     Wajib Diisi
@@ -318,16 +350,16 @@
                                                         </div>
                                                         <div class="relative">
                                                             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-xs font-bold"
-                                                                  :class="cond === 'good' ? 'text-darkbrown-300' : (((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'text-rose-600' : 'text-darkbrown-400')">
+                                                                  :class="(isExpired || cond === 'good') ? 'text-darkbrown-300' : (((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'text-rose-600' : 'text-darkbrown-400')">
                                                                 Rp
                                                             </span>
                                                             <input type="number"
                                                                    min="0"
                                                                    step="1000"
                                                                    x-model.number="fee"
-                                                                   :disabled="cond === 'good'"
-                                                                   :placeholder="cond === 'good' ? '0 (Kondisi Baik - Tanpa Denda)' : 'Masukkan nominal denda...'"
-                                                                   :class="cond === 'good' ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed select-none' : (((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'bg-rose-50/70 border-rose-400 text-rose-900 focus:ring-2 focus:ring-rose-500/30 focus:border-rose-600 ring-1 ring-rose-400' : 'bg-wheat-50/50 border-wheat-300 text-darkbrown-900 focus:bg-white focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-500')"
+                                                                   :disabled="isExpired || cond === 'good'"
+                                                                   :placeholder="(isExpired || cond === 'good') ? '0 (Kondisi Baik - Tanpa Denda)' : 'Masukkan nominal denda...'"
+                                                                   :class="(isExpired || cond === 'good') ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed select-none' : (((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'bg-rose-50/70 border-rose-400 text-rose-900 focus:ring-2 focus:ring-rose-500/30 focus:border-rose-600 ring-1 ring-rose-400' : 'bg-wheat-50/50 border-wheat-300 text-darkbrown-900 focus:bg-white focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-500')"
                                                                    class="w-full text-xs font-bold pl-10 pr-3.5 py-2.5 rounded-xl transition duration-150 shadow-sm" />
                                                         </div>
 
@@ -432,10 +464,10 @@
                                         {{ !$isAllItemsInspected ? 'disabled' : '' }}>
                                     @if(!$isAllItemsInspected)
                                         <i data-lucide="lock" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                                        <span>Selesai Retur & Serahkan KTP</span>
+                                        <span>{{ $this->isExpiredUnpicked ? 'Selesaikan Pesanan Kedaluwarsa' : 'Selesai Retur & Serahkan KTP' }}</span>
                                     @else
                                         <i data-lucide="check" class="w-4 h-4"></i>
-                                        <span>Selesai Retur & Serahkan KTP (Completed)</span>
+                                        <span>{{ $this->isExpiredUnpicked ? 'Selesaikan & Pulihkan Unit (Completed)' : 'Selesai Retur & Serahkan KTP (Completed)' }}</span>
                                     @endif
                                 </button>
                             </div>

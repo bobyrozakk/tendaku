@@ -74,9 +74,17 @@ class ReturnFlow extends Component
     private function loadDefaultActive(): void
     {
         $vendorId = Auth::user()?->vendor_id;
+        $today = Carbon::today();
+
         $first = Rental::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
-            ->where('status', 'picked_up')
+            ->where(function ($q) use ($today) {
+                $q->where('status', 'picked_up')
+                    ->orWhere(function ($sub) use ($today) {
+                        $sub->where('status', 'confirmed')
+                            ->whereDate('return_date', '<', $today);
+                    });
+            })
             ->when($this->searchOrder, function ($q) {
                 $q->where(function ($sub) {
                     $sub->where('booking_code', 'like', "%{$this->searchOrder}%")
@@ -105,15 +113,37 @@ class ReturnFlow extends Component
 
         $order = $this->getActiveOrderProperty();
         if ($order) {
+            $isExpiredUnpicked = $this->getIsExpiredUnpickedProperty();
+
             foreach ($order->details as $detail) {
-                $this->inspectionNotes[$detail->id] = $detail->condition_after ?? 'good';
-                $this->damageFees[$detail->id] = (float) ($detail->damage_fee ?? 0);
-                $this->itemNotes[$detail->id] = $detail->checklist_notes ?? '';
-                if ($detail->is_returned) {
-                    $this->returnedItems[$detail->id] = true;
+                if ($isExpiredUnpicked) {
+                    // Pesanan tidak diambil hingga lewat tanggal kembali:
+                    // Unit fisik tidak pernah dibawa penyewa, otomatis kondisinya Baik (good) dan bebas denda
+                    $this->inspectionNotes[$detail->id] = 'good';
+                    $this->damageFees[$detail->id] = 0;
+                    $this->itemNotes[$detail->id] = 'Unit tidak diambil penyewa hingga lewat tanggal kembali.';
+                    // Biarkan kasir meninjau lembar kerja, kasir dapat mengonfirmasi atau klik selesai
+                    $this->returnedItems[$detail->id] = false;
+                } else {
+                    $this->inspectionNotes[$detail->id] = $detail->condition_after ?? 'good';
+                    $this->damageFees[$detail->id] = (float) ($detail->damage_fee ?? 0);
+                    $this->itemNotes[$detail->id] = $detail->checklist_notes ?? '';
+                    if ($detail->is_returned) {
+                        $this->returnedItems[$detail->id] = true;
+                    }
                 }
             }
         }
+    }
+
+    public function getIsExpiredUnpickedProperty(): bool
+    {
+        $order = $this->getActiveOrderProperty();
+        if (! $order) {
+            return false;
+        }
+
+        return $order->status === 'confirmed' && Carbon::today()->gt($order->return_date);
     }
 
     public function getActiveOrderProperty()
@@ -140,6 +170,10 @@ class ReturnFlow extends Component
 
     public function setCondition($detailId, $condition)
     {
+        if ($this->isExpiredUnpicked) {
+            return;
+        }
+
         $this->inspectionNotes[$detailId] = $condition;
         $this->resetErrorBag("damageFees.{$detailId}");
 
@@ -300,7 +334,9 @@ class ReturnFlow extends Component
         // Siapkan struk untuk dicetak
         $this->prepareReceipt($order);
 
-        $msg = "Pengembalian {$order->booking_code} selesai! KTP telah diserahkan kembali & status transaksi 'completed'.";
+        $msg = $this->isExpiredUnpicked
+            ? "Penyelesaian transaksi kedaluwarsa {$order->booking_code} selesai! Semua unit telah dikembalikan ke stok siap pakai."
+            : "Pengembalian {$order->booking_code} selesai! KTP telah diserahkan kembali & status transaksi 'completed'.";
         session()->flash('message', $msg);
         $this->dispatch('toast', [
             'type' => 'success',
@@ -415,6 +451,11 @@ class ReturnFlow extends Component
             return 0;
         }
 
+        // Jika pesanan kedaluwarsa/tidak pernah diambil oleh penyewa, tidak dikenakan denda keterlambatan retur
+        if ($this->isExpiredUnpicked) {
+            return 0;
+        }
+
         if (Carbon::today()->gt($order->return_date)) {
             $lateDays = abs((int) Carbon::today()->diffInDays($order->return_date));
             // Jumlah late fee per day dari snapshot detail
@@ -440,10 +481,17 @@ class ReturnFlow extends Component
     {
         $vendorId = Auth::user()?->vendor_id;
 
-        // 1. Transaksi aktif yang siap diretur (status: picked_up)
+        // 1. Transaksi aktif yang siap diretur (status: picked_up ATAU confirmed yang telah lewat return_date)
+        $today = Carbon::today();
         $activeRentals = Rental::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
-            ->where('status', 'picked_up')
+            ->where(function ($q) use ($today) {
+                $q->where('status', 'picked_up')
+                    ->orWhere(function ($sub) use ($today) {
+                        $sub->where('status', 'confirmed')
+                            ->whereDate('return_date', '<', $today);
+                    });
+            })
             ->when($this->searchOrder, function ($q) {
                 $q->where(function ($sub) {
                     $sub->where('booking_code', 'like', "%{$this->searchOrder}%")

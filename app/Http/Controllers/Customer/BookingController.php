@@ -91,6 +91,7 @@ class BookingController extends Controller
             'customer',
             'details.masterItem',
             'details.itemUnit',
+            'returnedBy',
             'payments' => fn ($query) => $query->latest('id'),
         ]);
 
