@@ -1,13 +1,11 @@
-<form wire:submit="register" class="space-y-5" novalidate>
+<form wire:submit="register" class="space-y-5 lg:space-y-4" novalidate>
     @csrf
 
     @if ($form->account_type === 'vendor')
         {{-- Section 1: Data Toko / Rental --}}
-        <div class="space-y-4 rounded-2xl bg-tendaku-wheat/30 p-4 border border-tendaku-brown/10">
-            <div class="flex items-center gap-2 text-tendaku-brown pb-1 border-b border-tendaku-brown/10">
-                <svg class="w-4 h-4 text-tendaku-moss" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
+        <div class="grid grid-cols-1 gap-x-4 gap-y-5 xl:grid-cols-2 lg:gap-y-4">
+            <div class="flex items-center gap-2 text-tendaku-brown pb-1 border-b border-tendaku-brown/10 xl:col-span-2">
+                <i data-lucide="building-2" class="w-4 h-4 text-tendaku-moss"></i>
                 <h3 class="text-xs font-bold uppercase tracking-wider text-tendaku-brown/80">
                     Informasi Toko / Usaha Rental
                 </h3>
@@ -19,32 +17,34 @@
                 wire:model="form.store_name"
                 placeholder="Contoh: Tendaku Outdoor Rental"
                 required
-                autofocus/>
+                autofocus
+            />
             <x-auth.field
                 name="form.city"
                 label="Kota / Kabupaten"
                 wire:model="form.city"
-                placeholder="Contoh: Bandung, Jakarta Selatan, Malang"
-                required/>
+                placeholder="Contoh: Malang"
+                required
+            />
             <x-auth.field
                 name="form.store_address"
                 label="Alamat Toko / Titik Pengambilan Alat"
                 wire:model="form.store_address"
-                placeholder="Alamat lengkap tempat pengambilan alat camping"
-                required/>
+                placeholder="Alamat lengkap toko"
+                required
+            />
             <x-auth.field
                 name="form.description"
                 label="Deskripsi Toko (Opsional)"
                 wire:model="form.description"
-                placeholder="Spesialis sewa tenda dome, matras, kompor portabel, dll."/>
+                placeholder="Contoh: tenda, matras, kompor"
+            />
         </div>
 
         {{-- Section 2: Data Pemilik Toko (Vendor Owner) --}}
-        <div class="space-y-4 pt-1">
-            <div class="flex items-center gap-2 text-tendaku-brown px-1 pb-1">
-                <svg class="w-4 h-4 text-tendaku-moss" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+        <div class="grid grid-cols-1 gap-x-4 gap-y-5 xl:grid-cols-2 lg:gap-y-4">
+            <div class="flex items-center gap-2 text-tendaku-brown pb-1 border-b border-tendaku-brown/10 xl:col-span-2">
+                <i data-lucide="user-round" class="w-4 h-4 text-tendaku-moss"></i>
                 <h3 class="text-xs font-bold uppercase tracking-wider text-tendaku-brown/80">
                     Informasi Akun Pemilik (Owner)
                 </h3>
@@ -54,9 +54,10 @@
                 name="form.name"
                 label="Nama Lengkap Pemilik"
                 wire:model="form.name"
-                placeholder="Nama Lengkap Penanggung Jawab"
+                placeholder="Nama penanggung jawab"
                 autocomplete="name"
-                required/>
+                required
+            />
             <x-auth.field
                 name="form.email"
                 label="Email"
@@ -64,7 +65,8 @@
                 wire:model="form.email"
                 placeholder="owner@gmail.com"
                 autocomplete="username"
-                required/>
+                required
+            />
             <x-auth.field
                 name="form.phone"
                 label="Nomor HP"
@@ -74,7 +76,8 @@
                 placeholder="081234567890"
                 maxlength="13"
                 autocomplete="tel"
-                required/>
+                required
+            />
             <x-auth.field
                 name="form.nik"
                 label="NIK"
@@ -82,7 +85,8 @@
                 placeholder="Masukkan NIK 16 digit"
                 inputmode="numeric"
                 maxlength="16"
-                required/>
+                required
+            />
             <x-auth.field
                 name="form.password"
                 label="Password"
@@ -90,7 +94,8 @@
                 wire:model="form.password"
                 placeholder="Password"
                 autocomplete="new-password"
-                required/>
+                required
+            />
             <x-auth.field
                 name="form.password_confirmation"
                 label="Ulangi Password"
@@ -98,7 +103,8 @@
                 wire:model="form.password_confirmation"
                 placeholder="Ulangi password"
                 autocomplete="new-password"
-                required/>
+                required
+            />
         </div>
 
         <x-auth.button class="w-full">
@@ -107,61 +113,73 @@
 
     @else
         {{-- Form Penyewa (Customer) --}}
-        <x-auth.field
-            name="form.name"
-            label="Nama lengkap"
-            wire:model="form.name"
-            placeholder="Nama Lengkap"
-            autocomplete="name"
-            required
-            autofocus/>
-        <x-auth.field
-            name="form.email"
-            label="Email"
-            type="email"
-            wire:model="form.email"
-            placeholder="nama@gmail.com"
-            autocomplete="username"
-            required/>
-        <x-auth.field
-            name="form.phone"
-            label="Nomor telepon"
-            type="tel"
-            inputmode="tel"
-            wire:model="form.phone"
-            placeholder="081234567890"
-            maxlength="13"
-            autocomplete="tel"
-            required/>
-        <x-auth.field
-            name="form.nik"
-            label="NIK (Nomor Induk Kependudukan)"
-            wire:model="form.nik"
-            placeholder="Masukkan NIK 16 digit"
-            inputmode="numeric"
-            maxlength="16"
-            required/>
-        <x-auth.field
-            name="form.address"
-            label="Alamat"
-            wire:model="form.address"
-            placeholder="Alamat lengkap (opsional)"/>
-        <x-auth.field
-            name="form.password"
-            label="Password"
-            type="password"
-            wire:model="form.password"
-            placeholder="Password"
-            autocomplete="new-password"
-            required/>
-        <x-auth.field
-            name="form.password_confirmation"
-            label="Ulangi password"
-            type="password"
-            wire:model="form.password_confirmation"
-            placeholder="Ulangi password"
-            autocomplete="new-password"
-            required/>
+        <div class="grid grid-cols-1 gap-x-4 gap-y-5 xl:grid-cols-2 lg:gap-y-4">
+            <x-auth.field
+                name="form.name"
+                label="Nama lengkap"
+                wire:model="form.name"
+                placeholder="Nama Lengkap"
+                autocomplete="name"
+                required
+                autofocus
+            />
+            <x-auth.field
+                name="form.email"
+                label="Email"
+                type="email"
+                wire:model="form.email"
+                placeholder="nama@gmail.com"
+                autocomplete="username"
+                required
+            />
+            <x-auth.field
+                name="form.phone"
+                label="Nomor telepon"
+                type="tel"
+                inputmode="tel"
+                wire:model="form.phone"
+                placeholder="081234567890"
+                maxlength="13"
+                autocomplete="tel"
+                required
+            />
+            <x-auth.field
+                name="form.nik"
+                label="NIK (Nomor Induk Kependudukan)"
+                wire:model="form.nik"
+                placeholder="Masukkan NIK 16 digit"
+                inputmode="numeric"
+                maxlength="16"
+                required
+            />
+            <div class="xl:col-span-2">
+                <x-auth.field
+                    name="form.address"
+                    label="Alamat"
+                    wire:model="form.address"
+                    placeholder="Alamat lengkap (opsional)"
+                />
+            </div>
+            <x-auth.field
+                name="form.password"
+                label="Password"
+                type="password"
+                wire:model="form.password"
+                placeholder="Password"
+                autocomplete="new-password"
+                required
+            />
+            <x-auth.field
+                name="form.password_confirmation"
+                label="Ulangi password"
+                type="password"
+                wire:model="form.password_confirmation"
+                placeholder="Ulangi password"
+                autocomplete="new-password"
+                required
+            />
+        </div>
+
         <x-auth.button class="w-full">
             Buat akun
         </x-auth.button>

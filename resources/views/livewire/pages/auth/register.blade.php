@@ -10,7 +10,10 @@ new #[Layout('layouts.guest')] class extends Component
 
     public function setAccountType(string $type): void
     {
-        $this->form->account_type = in_array($type, ['customer', 'vendor'], true) ? $type : 'customer';
+        $this->form->account_type = in_array($type, ['customer', 'vendor'], true)
+            ? $type
+            : 'customer';
+
         $this->resetErrorBag();
     }
 
@@ -21,11 +24,22 @@ new #[Layout('layouts.guest')] class extends Component
     {
         $this->form->store();
 
-        $this->redirect(route('verification.notice', absolute: false), navigate: true);
+        $this->redirect(
+            route('verification.notice', absolute: false),
+            navigate: true
+        );
     }
 }; ?>
 
 <div>
+    {{-- Sinkronkan tipe akun awal ke teks panel kiri --}}
+    <div
+        x-data
+        x-init="$dispatch('account-type-changed', { type: '{{ $form->account_type }}' })"
+        class="hidden"
+        aria-hidden="true"
+    ></div>
+
     <x-slot:heading>
         {{ $form->account_type === 'vendor' ? 'Daftar Mitra Vendor' : 'Buat akun Tendaku' }}
     </x-slot:heading>
@@ -36,22 +50,27 @@ new #[Layout('layouts.guest')] class extends Component
             : 'Daftar sekali, lalu sewa tenda dan perlengkapan lain kapan saja.' }}
     </x-slot:subheading>
 
-    <!-- Switch Tipe Akun (Customer vs Vendor Owner) -->
-    <div class="mb-6 flex rounded-full bg-tendaku-wheat/60 p-1 border border-tendaku-brown/15 shadow-inner">
+    {{-- Switch Tipe Akun --}}
+    <div class="mb-6 flex rounded-full border border-tendaku-brown/15 bg-tendaku-wheat/60 p-1 shadow-inner">
         <button
             type="button"
             wire:click="setAccountType('customer')"
-            class="flex-1 rounded-full py-2.5 text-xs sm:text-sm font-bold transition-all {{ $form->account_type === 'customer' ? 'bg-tendaku-avocado text-white shadow-sm' : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}"
+            x-on:click="$dispatch('account-type-changed', { type: 'customer' })"
+            class="flex-1 rounded-full py-2.5 text-xs font-bold transition-all sm:text-sm lg:py-2 {{ $form->account_type === 'customer'
+                ? 'bg-tendaku-avocado text-white shadow-sm'
+                : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}"
         >
-            Penyewa (Customer)
+            Customer
         </button>
 
         <button
             type="button"
             wire:click="setAccountType('vendor')"
-            class="flex-1 rounded-full py-2.5 text-xs sm:text-sm font-bold transition-all {{ $form->account_type === 'vendor' ? 'bg-tendaku-avocado text-white shadow-sm' : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}"
-        >
-            Mitra Rental (Vendor)
+            x-on:click="$dispatch('account-type-changed', { type: 'vendor' })"
+            class="flex-1 rounded-full py-2.5 text-xs font-bold transition-all sm:text-sm lg:py-2 {{ $form->account_type === 'vendor'
+                ? 'bg-tendaku-avocado text-white shadow-sm'
+                : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}" >
+            Mitra Rental
         </button>
     </div>
 
@@ -63,8 +82,11 @@ new #[Layout('layouts.guest')] class extends Component
         ])
     @endif
 
-    <p class="mt-8 text-sm text-tendaku-brown/70">
+    <p class="mt-8 text-sm text-tendaku-brown/70 lg:mt-5">
         Sudah punya akun?
-        <a href="{{ route('login') }}" wire:navigate class="font-semibold text-tendaku-moss underline-offset-4 hover:underline">Masuk</a>
+        <a href="{{ route('login') }}"
+           wire:navigate.hover
+           class="font-semibold text-tendaku-moss underline-offset-4 hover:underline" > Masuk
+        </a>
     </p>
 </div>
