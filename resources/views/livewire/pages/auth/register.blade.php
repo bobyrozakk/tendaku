@@ -31,7 +31,7 @@ new #[Layout('layouts.guest')] class extends Component
     }
 }; ?>
 
-<div>
+<div x-data="{ type: $wire.entangle('form.account_type') }">
     {{-- Sinkronkan tipe akun awal ke teks panel kiri --}}
     <div
         x-data
@@ -54,33 +54,34 @@ new #[Layout('layouts.guest')] class extends Component
     <div class="mb-6 flex rounded-full border border-tendaku-brown/15 bg-tendaku-wheat/60 p-1 shadow-inner">
         <button
             type="button"
-            wire:click="setAccountType('customer')"
-            x-on:click="$dispatch('account-type-changed', { type: 'customer' })"
-            class="flex-1 rounded-full py-2.5 text-xs font-bold transition-all sm:text-sm lg:py-2 {{ $form->account_type === 'customer'
+            x-on:click="type = 'customer'; $dispatch('account-type-changed', { type: 'customer' })"
+            x-bind:class="type === 'customer'
                 ? 'bg-tendaku-avocado text-white shadow-sm'
-                : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}"
+                : 'text-tendaku-brown/70 hover:text-tendaku-brown'"
+            class="flex-1 rounded-full py-2.5 text-xs font-bold transition-all sm:text-sm lg:py-2"
         >
             Customer
         </button>
 
         <button
             type="button"
-            wire:click="setAccountType('vendor')"
-            x-on:click="$dispatch('account-type-changed', { type: 'vendor' })"
-            class="flex-1 rounded-full py-2.5 text-xs font-bold transition-all sm:text-sm lg:py-2 {{ $form->account_type === 'vendor'
+            x-on:click="type = 'vendor'; $dispatch('account-type-changed', { type: 'vendor' })"
+            x-bind:class="type === 'vendor'
                 ? 'bg-tendaku-avocado text-white shadow-sm'
-                : 'text-tendaku-brown/70 hover:text-tendaku-brown' }}" >
+                : 'text-tendaku-brown/70 hover:text-tendaku-brown'"
+            class="flex-1 rounded-full py-2.5 text-xs font-bold transition-all sm:text-sm lg:py-2"
+        >
             Mitra Rental
         </button>
     </div>
 
     @include('livewire.pages.auth.partials.register-form')
 
-    @if ($form->account_type === 'customer')
+    <div x-show="type === 'customer'">
         @include('livewire.pages.auth.partials.google-auth-button', [
             'label' => 'Daftar dengan Google',
         ])
-    @endif
+    </div>
 
     <p class="mt-8 text-sm text-tendaku-brown/70 lg:mt-5">
         Sudah punya akun?
