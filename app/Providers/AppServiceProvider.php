@@ -28,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (str_contains(request()->getHost(), 'ngrok')) {
+            URL::forceScheme('https');
+        }
+
         $this->registerDevCommands();
 
         Blade::anonymousComponentPath(resource_path('views/layouts'), 'layouts');

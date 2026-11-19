@@ -33,6 +33,18 @@ class GoogleAuthenticationTest extends TestCase
         $response->assertRedirect();
     }
 
+    public function test_google_redirect_uses_the_configured_callback_url_on_any_host(): void
+    {
+        $response = $this->get('http://127.0.0.1/auth/google/redirect');
+
+        $response->assertRedirect();
+
+        $this->assertStringContainsString(
+            'redirect_uri='.urlencode('http://localhost/auth/google/callback'),
+            (string) $response->headers->get('Location'),
+        );
+    }
+
     public function test_google_user_with_verified_email_can_register(): void
     {
         Notification::fake();
@@ -70,6 +82,24 @@ class GoogleAuthenticationTest extends TestCase
         $this->assertSame('vendor_admin', $vendorAdmin->fresh()->role);
         $this->assertTrue($vendorAdmin->fresh()->hasVerifiedEmail());
         $this->assertAuthenticatedAs($vendorAdmin);
+    }
+
+    public function test_google_login_links_a_verified_email_to_an_existing_customer_account(): void
+    {
+        $customer = User::factory()->create([
+            'email' => 'google-customer@example.com',
+            'role' => 'customer',
+            'google_id' => null,
+        ]);
+
+        $this->fakeGoogleUser();
+
+        $response = $this->get(route('google.callback'));
+
+        $response->assertRedirect(route('home'));
+        $this->assertDatabaseCount('users', 1);
+        $this->assertSame('google-user-123', $customer->fresh()->google_id);
+        $this->assertAuthenticatedAs($customer);
     }
 
     public function test_google_registration_requires_a_verified_provider_email(): void
