@@ -19,6 +19,8 @@ Route::middleware('guest')->group(function () {
     Volt::route('login/supadmin', 'pages.auth.superadmin-login')
         ->name('superadmin.login');
 
+    Route::redirect('login/superadmin', '/login/supadmin');
+
     Volt::route('login', 'pages.auth.login')
         ->name('login');
 
