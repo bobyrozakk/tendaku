@@ -178,7 +178,9 @@ class CheckoutController extends Controller
                 );
         }
 
-        if ($request->user() === null) {
+        $user = $request->user();
+
+        if ($user === null) {
             $request->validate([
                 'guest_name' => ['required', 'string', 'max:100'],
                 'guest_phone' => ['required', 'string', 'max:20'],
@@ -188,6 +190,23 @@ class CheckoutController extends Controller
                 'guest_phone.required' => 'Nomor telepon wajib diisi untuk pemesanan tanpa akun.',
                 'guest_id_number.required' => 'Nomor KTP wajib diisi untuk pemesanan tanpa akun.',
             ]);
+        } else {
+            $missingIdentityRules = [];
+
+            if (blank($user->phone)) {
+                $missingIdentityRules['phone'] = ['required'];
+            }
+
+            if (blank($user->nik)) {
+                $missingIdentityRules['nik'] = ['required'];
+            }
+
+            if ($missingIdentityRules !== []) {
+                $request->validate($missingIdentityRules, [
+                    'phone.required' => 'Nomor ponsel wajib diisi.',
+                    'nik.required' => 'NIK wajib diisi.',
+                ]);
+            }
         }
 
         try {

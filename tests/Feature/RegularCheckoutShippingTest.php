@@ -38,7 +38,10 @@ class RegularCheckoutShippingTest extends TestCase
         foreach (range(1, 4) as $unit) {
             ItemUnit::create(['vendor_id' => $vendor->id, 'master_item_id' => $item->id, 'unit_code' => 'UNIT-'.$unit, 'status' => 'available']);
         }
-        $customer = User::factory()->create(['role' => 'customer']);
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'nik' => '1234567890123456',
+        ]);
         $address = CustomerAddress::factory()->for($customer)->withCoordinates()->create();
         app(CartService::class)->addItem(['master_item_id' => $item->id, 'vendor_id' => $vendor->id, 'quantity' => 2, 'pickup_date' => now()->addDay()->toDateString(), 'return_date' => now()->addDays(2)->toDateString()], $customer);
 

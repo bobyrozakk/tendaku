@@ -740,11 +740,9 @@ document.addEventListener("alpine:init", () => {
                 e.name = "Isi nama lengkap sesuai KTP.";
             if (
                 this.needsPhone &&
-                !/^(\+62|62|0)8[0-9]{8,12}$/.test(
-                    this.phone.replace(/[\s-]/g, ""),
-                )
+                !/^[0-9]{10,13}$/.test(this.phone)
             ) {
-                e.phone = "Nomor WhatsApp belum valid. Contoh: 081234567890";
+                e.phone = "Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.";
             }
             if (this.needsNik && !/^\d{16}$/.test(this.nik))
                 e.nik = "NIK harus 16 digit angka.";

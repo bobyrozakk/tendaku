@@ -370,11 +370,116 @@
                                                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">Wajib Diunggah</span>
                                             @endif
                                         </div>
-                                        <p class="text-[11px] text-darkbrown-600">Ambil/unggah foto penyewa fisik saat serah terima barang.</p>
+                                        <p class="text-[11px] text-darkbrown-600">Unggah foto JPG, PNG, atau WebP. Foto besar dikompres otomatis sebelum diunggah.</p>
                                     </div>
 
                                     <!-- Photo Upload Input & Thumbnail Preview -->
-                                    <div class="space-y-2">
+                                    <div
+                                        class="space-y-2"
+                                        x-data="{
+                                            uploadError: '',
+                                            isPreparingPhoto: false,
+                                            async prepareTenantPhoto(event) {
+                                                const file = event.target.files?.[0];
+                                                const maxBytes = 1850000;
+
+                                                if (!file) {
+                                                    return;
+                                                }
+
+                                                this.uploadError = '';
+
+                                                if (!file.type.startsWith('image/')) {
+                                                    this.uploadError = 'Pilih file foto dengan format gambar.';
+                                                    event.target.value = '';
+                                                    return;
+                                                }
+
+                                                if (file.size > 20 * 1024 * 1024) {
+                                                    this.uploadError = 'Ukuran foto asli maksimal 20 MB.';
+                                                    event.target.value = '';
+                                                    return;
+                                                }
+
+                                                let uploadFile = file;
+                                                let bitmap = null;
+
+                                                try {
+                                                    if (
+                                                        file.size > maxBytes
+                                                        || !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+                                                    ) {
+                                                        this.isPreparingPhoto = true;
+                                                        bitmap = await createImageBitmap(file);
+
+                                                        const canvas = document.createElement('canvas');
+                                                        let scale = Math.min(1, 1920 / Math.max(bitmap.width, bitmap.height));
+                                                        let quality = 0.82;
+                                                        let compressedBlob = null;
+
+                                                        for (let attempt = 0; attempt < 7; attempt++) {
+                                                            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+                                                            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+                                                            const context = canvas.getContext('2d');
+
+                                                            if (!context) {
+                                                                throw new Error('Canvas tidak tersedia.');
+                                                            }
+
+                                                            context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+                                                            compressedBlob = await new Promise((resolve) => {
+                                                                canvas.toBlob(resolve, 'image/jpeg', quality);
+                                                            });
+
+                                                            if (!compressedBlob) {
+                                                                throw new Error('Foto tidak dapat dikompres.');
+                                                            }
+
+                                                            if (compressedBlob.size <= maxBytes) {
+                                                                break;
+                                                            }
+
+                                                            if (quality > 0.52) {
+                                                                quality -= 0.1;
+                                                            } else {
+                                                                scale *= 0.75;
+                                                            }
+                                                        }
+
+                                                        if (!compressedBlob || compressedBlob.size > maxBytes) {
+                                                            this.uploadError = 'Foto terlalu besar untuk diproses. Coba gunakan foto lain.';
+                                                            event.target.value = '';
+                                                            return;
+                                                        }
+
+                                                        uploadFile = new File(
+                                                            [compressedBlob],
+                                                            file.name.replace(/\.[^.]+$/, '') + '.jpg',
+                                                            { type: 'image/jpeg', lastModified: Date.now() },
+                                                        );
+                                                    }
+
+                                                    this.isPreparingPhoto = false;
+                                                    this.$wire.upload(
+                                                        'tenantPhoto',
+                                                        uploadFile,
+                                                        () => {},
+                                                        () => {
+                                                            this.uploadError = 'Upload foto gagal. Periksa koneksi lalu coba lagi.';
+                                                            event.target.value = '';
+                                                        },
+                                                    );
+                                                } catch {
+                                                    this.uploadError = 'Format foto tidak bisa dibaca. Coba unggah JPG, PNG, atau WebP.';
+                                                    event.target.value = '';
+                                                } finally {
+                                                    this.isPreparingPhoto = false;
+                                                    bitmap?.close();
+                                                }
+                                            },
+                                        }"
+                                    >
                                         @if($tenantPhoto)
                                             <div class="p-2 rounded-xl bg-white border border-emerald-300 text-center space-y-1.5 shadow-sm">
                                                 <img src="{{ $tenantPhoto->temporaryUrl() }}" alt="Preview Foto Penyewa" class="h-24 mx-auto object-cover rounded-lg border border-wheat-200 shadow-inner" />
@@ -394,9 +499,16 @@
 
                                         <label class="w-full cursor-pointer flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition duration-200 shadow-sm {{ $this->isPhotoVerified ? 'bg-white text-emerald-800 border-2 border-emerald-300 hover:bg-emerald-50' : 'bg-avocado-600 hover:bg-avocado-700 text-white' }}">
                                             <i data-lucide="camera" class="w-4 h-4"></i>
-                                            <span>{{ $this->isPhotoVerified ? 'Ganti Foto Penyewa' : 'Upload / Ambil Foto' }}</span>
-                                            <input type="file" wire:model="tenantPhoto" accept="image/*" class="hidden" />
+                                            <span x-text="isPreparingPhoto ? 'Menyiapkan foto...' : '{{ $this->isPhotoVerified ? 'Ganti Foto Penyewa' : 'Upload / Ambil Foto' }}'"></span>
+                                            <input
+                                                type="file"
+                                                x-on:change="prepareTenantPhoto($event)"
+                                                accept="image/*"
+                                                class="hidden"
+                                                :disabled="isPreparingPhoto"
+                                            />
                                         </label>
+                                        <p x-cloak x-show="uploadError" x-text="uploadError" class="text-[10px] text-red-600 font-semibold"></p>
                                         @error('tenantPhoto')
                                             <p class="text-[10px] text-red-600 font-semibold">{{ $message }}</p>
                                         @enderror

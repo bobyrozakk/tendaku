@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Customer;
 
-use App\Services\PhoneNumberNormalizer;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -27,8 +26,6 @@ class StoreCheckoutRequest extends FormRequest
      */
     public function rules(): array
     {
-        $isGuest = $this->user() === null;
-
         return [
             'pickup_method' => ['required', 'string', 'in:self_pickup,delivery'],
             'payment_option' => ['nullable', 'string', 'in:full,dp'],
@@ -44,13 +41,13 @@ class StoreCheckoutRequest extends FormRequest
 
             // Data identitas guest (divalidasi di controller setelah pengecekan keranjang & delivery guard)
             'guest_name' => ['nullable', 'string', 'max:100'],
-            'guest_phone' => ['nullable', 'string', 'max:20'],
+            'guest_phone' => ['nullable', 'string', 'regex:/^[0-9]{10,13}$/'],
             'guest_id_number' => ['nullable', 'string', 'max:30'],
 
             // Data penyewa akun jika belum lengkap di profil
             'name' => ['nullable', 'string', 'max:100'],
-            'phone' => ['nullable', 'string', 'max:20'],
-            'nik' => ['nullable', 'string', 'max:30'],
+            'phone' => ['nullable', 'string', 'regex:/^[0-9]{10,13}$/'],
+            'nik' => ['nullable', 'string', 'regex:/^[0-9]{16}$/'],
 
             // Delivery & alamat
             'customer_address_id' => ['nullable', 'integer', 'exists:customer_addresses,id'],
@@ -72,23 +69,6 @@ class StoreCheckoutRequest extends FormRequest
             ) {
                 $validator->errors()->add('pickup_time', 'Jam ambil tidak boleh di masa lalu.');
             }
-
-            if ($this->user() !== null) {
-                return;
-            }
-
-            $phone = $this->input('guest_phone');
-
-            if ($validator->errors()->has('guest_phone') || ! is_string($phone)) {
-                return;
-            }
-
-            if (PhoneNumberNormalizer::normalize($phone) === null) {
-                $validator->errors()->add(
-                    'guest_phone',
-                    'Nomor WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx.'
-                );
-            }
         });
     }
 
@@ -104,7 +84,12 @@ class StoreCheckoutRequest extends FormRequest
             'payment_option.in' => 'Opsi pembayaran tidak valid. Pilih antara pembayaran penuh atau uang muka (DP).',
             'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
             'guest_phone.required' => 'Nomor telepon wajib diisi untuk pemesanan tanpa akun.',
+            'guest_phone.regex' => 'Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.',
             'guest_id_number.required' => 'Nomor KTP wajib diisi untuk pemesanan tanpa akun.',
+            'phone.required' => 'Nomor ponsel wajib diisi.',
+            'phone.regex' => 'Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.',
+            'nik.required' => 'NIK wajib diisi.',
+            'nik.regex' => 'NIK harus terdiri dari 16 digit angka.',
             'customer_address_id.exists' => 'Alamat pengantaran yang dipilih tidak valid.',
         ];
     }

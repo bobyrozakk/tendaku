@@ -8,6 +8,7 @@ use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -62,6 +63,26 @@ class KasirPortalTest extends TestCase
         $this->get(route('kasir.units'))->assertOk()->assertSeeLivewire('kasir.item-unit-list');
         $this->get(route('kasir.pickup'))->assertOk()->assertSeeLivewire('kasir.pickup');
         $this->get(route('kasir.return'))->assertOk()->assertSeeLivewire('kasir.return-flow');
+    }
+
+    public function test_kasir_can_upload_a_supported_tenant_photo_within_the_limit(): void
+    {
+        $this->actingAs($this->kasir);
+
+        Livewire::test(Pickup::class)
+            ->set('tenantPhoto', UploadedFile::fake()->image('tenant-photo.jpg')->size(1800))
+            ->assertSet('tenantPhotoUploaded', true)
+            ->assertHasNoErrors();
+    }
+
+    public function test_kasir_cannot_upload_a_tenant_photo_above_the_limit(): void
+    {
+        $this->actingAs($this->kasir);
+
+        Livewire::test(Pickup::class)
+            ->set('tenantPhoto', UploadedFile::fake()->image('tenant-photo.jpg')->size(2100))
+            ->assertHasErrors(['tenantPhoto' => 'max'])
+            ->assertSet('tenantPhotoUploaded', false);
     }
 
     public function test_old_vendor_routes_redirect_to_kasir(): void

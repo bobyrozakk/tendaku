@@ -23,6 +23,7 @@ class Pickup extends Component
     public $searchPickup = '';
 
     public $selectedPickupId = null;
+
     protected $paginationTheme = 'tailwind';
 
     public function updatingSearchPickup(): void
@@ -80,10 +81,10 @@ class Pickup extends Component
         $this->pickupSuccessMessage = null;
     }
 
-    public function updatedTenantPhoto()
+    public function updatedTenantPhoto(): void
     {
         $this->validate([
-            'tenantPhoto' => 'nullable|image|max:5120', // max 5MB
+            'tenantPhoto' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
         $this->tenantPhotoUploaded = true;
     }
