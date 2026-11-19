@@ -167,9 +167,13 @@ Route::get('dashboard', function () {
         return redirect()->route('kasir.dashboard');
     }
 
-    return view('dashboard');
+    if ($user?->isSuperAdmin()) {
+        return view('dashboard');
+    }
+
+    return redirect()->route('home');
 })
-    ->middleware(['auth', 'verified', 'role:super_admin,vendor_owner,vendor_admin'])
+    ->middleware(['auth', 'role:super_admin,vendor_owner,vendor_admin'])
     ->name('dashboard');
 
 Route::view('profile', 'profile')
@@ -177,7 +181,7 @@ Route::view('profile', 'profile')
     ->name('profile');
 
 // Rute Super Admin — laporan pendapatan platform (monetisasi).
-Route::middleware(['super_admin', 'verified'])
+Route::middleware(['super_admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
