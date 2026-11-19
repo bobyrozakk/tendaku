@@ -10,12 +10,10 @@ use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Services\Booking\CartService;
-use App\Services\Payment\MidtransService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -65,13 +63,6 @@ class RegularCheckoutShippingTest extends TestCase
         }]);
     }
 
-    private function mockPaymentGateway(): void
-    {
-        $this->mock(MidtransService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('createTransaction')->once()->andReturn('shipping-snap');
-        });
-    }
-
     /** @param array<string, mixed> $input
      * @return array<string, mixed>
      */
@@ -89,7 +80,6 @@ class RegularCheckoutShippingTest extends TestCase
         $this->fakeRoute();
         $input = $this->confirmedInput($this->input($c));
         Cache::flush();
-        $this->mockPaymentGateway();
         $this->postJson(route('checkout.store'), $input + ['delivery_fee' => 0, 'rate_per_km' => 0, 'weight_kg' => 0, 'distance_km' => 0, 'latitude' => 0, 'longitude' => 0])->assertOk()->assertJsonPath('payment_amount', 126680);
         $rental = Rental::sole();
         $this->assertSame('26680.00', $rental->delivery_fee);
@@ -98,11 +88,11 @@ class RegularCheckoutShippingTest extends TestCase
         $this->assertSame($c['address']->id, $rental->customer_address_id);
         $this->assertSame($c['address']->toDeliverySnapshot(), $rental->delivery_address);
         $this->assertSame(2, $rental->details()->count());
-        $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseCount('payments', 0);
         Http::assertSentCount(2);
         $this->postJson(route('checkout.store'), $input)->assertUnprocessable();
         $this->assertDatabaseCount('rentals', 1);
-        $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseCount('payments', 0);
     }
 
     public static function changedContexts(): array
@@ -140,9 +130,9 @@ class RegularCheckoutShippingTest extends TestCase
         $latest = $this->postJson(route('checkout.store'), $input)->assertStatus(409)->json('shipping');
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
-        $this->mockPaymentGateway();
         $this->postJson(route('checkout.store'), array_replace($input, ['expected_delivery_fee' => $latest['delivery_fee'], 'expected_shipping_context' => $latest['shipping_context']]))->assertOk()->assertJsonPath('payment_amount', 139020);
         $this->assertSame('39020.00', Rental::sole()->delivery_fee);
+        $this->assertDatabaseCount('payments', 0);
         Http::assertSentCount(1);
     }
 
@@ -206,10 +196,10 @@ class RegularCheckoutShippingTest extends TestCase
     {
         $this->context();
         Http::fake();
-        $this->mockPaymentGateway();
         $this->postJson(route('checkout.store'), ['pickup_method' => 'self_pickup', 'guest_name' => 'Guest Camping', 'guest_phone' => '081234567890', 'guest_id_number' => '1234567890123456', 'delivery_fee' => 999999])->assertOk()->assertJsonPath('payment_amount', 100000);
         $this->assertSame('0.00', Rental::sole()->delivery_fee);
         $this->assertNull(Rental::sole()->user_id);
+        $this->assertDatabaseCount('payments', 0);
         Http::assertNothingSent();
     }
 
