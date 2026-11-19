@@ -260,6 +260,118 @@ class BookingWeatherTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_halaman_checkout_booking_menampilkan_panel_cuaca_untuk_member(): void
+    {
+        $vendor = Vendor::create([
+            'name' => 'Probolinggo Outdoor',
+            'slug' => 'probolinggo-outdoor-checkout',
+            'phone' => '081234567890',
+            'address' => 'Probolinggo',
+            'city' => 'Probolinggo',
+            'status' => 'active',
+        ]);
+        $category = ItemCategory::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Tenda',
+            'slug' => 'tenda-checkout',
+        ]);
+        $item = MasterItem::create([
+            'vendor_id' => $vendor->id,
+            'category_id' => $category->id,
+            'name' => 'Tenda Dome',
+            'slug' => 'tenda-dome-checkout',
+            'daily_rate' => 50000,
+            'is_active' => true,
+        ]);
+        ItemUnit::create([
+            'vendor_id' => $vendor->id,
+            'master_item_id' => $item->id,
+            'unit_code' => 'TENDA-CHK-1',
+            'status' => 'available',
+        ]);
+
+        $user = User::factory()->create(['role' => 'customer']);
+
+        app(CartService::class)->set([
+            'master_item_id' => $item->id,
+            'vendor_id' => $vendor->id,
+            'pickup_date' => '2026-11-16',
+            'return_date' => '2026-11-18',
+            'pickup_time' => '09:00',
+            'return_time' => '09:00',
+            'total_days' => 2,
+            'quantity' => 1,
+            'daily_rate' => 50000,
+            'product_name' => 'Tenda Dome',
+        ], $user);
+
+        Http::fake();
+
+        $this->actingAs($user)
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee('Cuaca Masa Sewa')
+            ->assertSee('Menyiapkan prakiraan cuaca untuk periode sewa')
+            ->assertSee('booking-weather-updated', false);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_halaman_checkout_booking_menampilkan_banner_kunci_untuk_guest(): void
+    {
+        $vendor = Vendor::create([
+            'name' => 'Malang Outdoor',
+            'slug' => 'malang-outdoor-guest',
+            'phone' => '081234567891',
+            'address' => 'Malang',
+            'city' => 'Malang',
+            'status' => 'active',
+        ]);
+        $category = ItemCategory::create([
+            'vendor_id' => $vendor->id,
+            'name' => 'Tenda',
+            'slug' => 'tenda-guest',
+        ]);
+        $item = MasterItem::create([
+            'vendor_id' => $vendor->id,
+            'category_id' => $category->id,
+            'name' => 'Tenda Dome',
+            'slug' => 'tenda-dome-guest',
+            'daily_rate' => 50000,
+            'is_active' => true,
+        ]);
+        ItemUnit::create([
+            'vendor_id' => $vendor->id,
+            'master_item_id' => $item->id,
+            'unit_code' => 'TENDA-GST-1',
+            'status' => 'available',
+        ]);
+
+        app(CartService::class)->set([
+            'master_item_id' => $item->id,
+            'vendor_id' => $vendor->id,
+            'pickup_date' => '2026-11-16',
+            'return_date' => '2026-11-18',
+            'pickup_time' => '09:00',
+            'return_time' => '09:00',
+            'total_days' => 2,
+            'quantity' => 1,
+            'daily_rate' => 50000,
+            'product_name' => 'Tenda Dome',
+        ]);
+
+        Http::fake();
+
+        $this->get(route('checkout.index'))
+            ->assertOk()
+            ->assertDontSee('Cuaca Masa Sewa')
+            ->assertSee('Prakiraan Cuaca Masa Sewa')
+            ->assertSee('Khusus Member')
+            ->assertSee('Masuk Akun');
+
+        Http::assertNothingSent();
+    }
+
     /**
      * Render komponen cuaca langsung tanpa placeholder lazy loading.
      *

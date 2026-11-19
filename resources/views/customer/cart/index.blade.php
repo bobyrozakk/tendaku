@@ -193,6 +193,29 @@
                         :return-date="$cartSummary['return_date'] ?? ''"
                         key="cart-booking-weather"
                     />
+                @else
+                    <div class="rounded-2xl border border-wheat-200 bg-gradient-to-r from-wheat-50/80 to-white p-5 shadow-tendaku-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="flex items-start sm:items-center gap-3.5">
+                            <div class="w-11 h-11 rounded-2xl bg-wheat-200/60 border border-wheat-300/80 text-darkbrown-600 flex items-center justify-center shrink-0">
+                                <x-icon name="cloud-sun" class="w-6 h-6" />
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-sm sm:text-base font-extrabold text-darkbrown-900">Prakiraan Cuaca Masa Sewa</h3>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                        <x-icon name="lock" class="w-3 h-3" />
+                                        Khusus Member
+                                    </span>
+                                </div>
+                                <p class="text-xs text-darkbrown-600 mt-1">
+                                    Prakiraan cuaca harian dan peringatan cuaca ekstrem di lokasi camping hanya dapat diakses oleh akun terdaftar.
+                                </p>
+                            </div>
+                        </div>
+                        <a href="{{ route('login') }}" class="btn-tendaku-secondary text-xs font-bold px-4 py-2 shrink-0">
+                            Masuk Akun
+                        </a>
+                    </div>
                 @endauth
 
                 {{-- Bar Checkout & Ringkasan Total --}}
@@ -223,11 +246,15 @@
                         <form method="POST" action="{{ route('customer.cart.checkout') }}"
                               x-data="{
                                   syncWeather() {
+                                      const detail = {
+                                          pickupDate: this.$refs.pickupDate?.value ?? '',
+                                          returnDate: this.$refs.returnDate?.value ?? '',
+                                      };
+                                      if (typeof window !== 'undefined' && window.Livewire?.dispatch) {
+                                          window.Livewire.dispatch('booking-weather-updated', detail);
+                                      }
                                       window.dispatchEvent(new CustomEvent('booking-weather-updated', {
-                                          detail: {
-                                              pickupDate: this.$refs.pickupDate?.value ?? '',
-                                              returnDate: this.$refs.returnDate?.value ?? '',
-                                          },
+                                          detail: detail,
                                       }));
                                   },
                               }">
