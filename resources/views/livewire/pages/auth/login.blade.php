@@ -42,6 +42,17 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::flash('success', $redirectService->getWelcomeMessage($user));
 
+        if ($user->isSuperAdmin()) {
+            session()->forget('url.intended');
+
+            $this->redirect(
+                route('dashboard', absolute: false),
+                navigate: false
+            );
+
+            return;
+        }
+
         $intended = session('url.intended');
 
         if ($intended && (

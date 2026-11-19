@@ -21,7 +21,9 @@ new #[Layout('layouts.superadmin-guest')] class extends Component
         $user = auth()->user();
         Session::flash('success', $redirectService->getWelcomeMessage($user));
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: false);
+        session()->forget('url.intended');
+
+        $this->redirect(route('dashboard', absolute: false), navigate: false);
     }
 }; ?>
 

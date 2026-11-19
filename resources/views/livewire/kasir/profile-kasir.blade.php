@@ -23,9 +23,18 @@
 
             {{-- Brand Logo & User Pill --}}
             <div class="flex items-center gap-3">
-                <a href="{{ url('/') }}" class="hidden sm:inline-flex items-center gap-2" title="Tendaku">
-                    <x-application-logo size="sm" :withText="false" />
-                    <span class="font-extrabold text-sm tracking-tight text-darkbrown-900 font-serif">Tendaku</span>
+                <a href="{{ url('/') }}"
+                   class="hidden sm:inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-150 hover:opacity-90 shadow-sm"
+                   style="background: linear-gradient(135deg, #1e1a10 0%, #2b2202 100%); border: 1px solid rgba(255,255,255,0.12);"
+                   title="Tendaku — Kembali ke Beranda"
+                   aria-label="Tendaku Home">
+                    <img src="{{ asset('images/Logo.svg') }}"
+                         alt="Tendaku Logo"
+                         class="h-7 w-auto object-contain block"
+                         style="filter: brightness(1.7) contrast(1.1) drop-shadow(0 1px 2px rgba(0,0,0,0.5));">
+                    <span class="text-[11px] font-bold tracking-wider uppercase text-wheat-200 border-l border-white/20 pl-2.5">
+                        Portal Kasir
+                    </span>
                 </a>
 
                 <form method="POST" action="{{ route('logout') }}" class="inline-block">

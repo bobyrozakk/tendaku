@@ -20,21 +20,29 @@ class RedirectIfUnverified
     {
         $user = $request->user();
 
+        // Superadmin tidak dibatasi oleh verifikasi email
+        if ($user?->isSuperAdmin()) {
+            return $next($request);
+        }
+
         if ($user instanceof MustVerifyEmail && ! $user->hasVerifiedEmail()) {
-            // Rute verifikasi email, logout, dan endpoint Livewire diizinkan tetap berjalan
+            // Rute verifikasi email, logout, endpoint Livewire, serta alur checkout & status booking diizinkan
             if ($request->routeIs(
                 'verification.notice',
                 'verification.verify',
                 'verification.send',
-                'logout'
-            ) || $request->is('verify-email*', 'logout', 'livewire*')) {
+                'logout',
+                'checkout.*',
+                'booking.*'
+            ) || $request->is('verify-email*', 'logout', 'livewire*', 'katalog/booking*')) {
                 return $next($request);
             }
 
             // Jika user mencoba ke halaman publik (Home, Katalog, Toko, Design System),
             // keluarkan dari sesi akun agar dapat mengakses halaman secara bebas sebagai GUEST.
             if ($request->routeIs('home', 'customer.catalog.index', 'customer.product.show', 'customer.stores.show', 'design-system')
-                || $request->is('/', 'katalog*', 'toko*', 'design-system*')
+                || $request->is('/', 'toko*', 'design-system*')
+                || ($request->is('katalog*') && ! $request->is('katalog/booking*'))
             ) {
                 Auth::logout();
                 $request->session()->invalidate();

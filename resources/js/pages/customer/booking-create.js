@@ -367,12 +367,19 @@ document.addEventListener("alpine:init", () => {
         },
 
         dispatchWeatherRange() {
+            const detail = {
+                pickupDate: this.pickupDate,
+                returnDate: this.returnDate,
+            };
+            if (typeof this.$dispatch === "function") {
+                this.$dispatch("booking-weather-updated", detail);
+            }
+            if (typeof window !== "undefined" && window.Livewire?.dispatch) {
+                window.Livewire.dispatch("booking-weather-updated", detail);
+            }
             window.dispatchEvent(
                 new CustomEvent("booking-weather-updated", {
-                    detail: {
-                        pickupDate: this.pickupDate,
-                        returnDate: this.returnDate,
-                    },
+                    detail: detail,
                 }),
             );
         },
