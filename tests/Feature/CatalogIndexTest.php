@@ -216,6 +216,12 @@ class CatalogIndexTest extends TestCase
             ->assertSee('Tenda Consina 4P')
             ->assertDontSee('Kompor Portable');
 
+        // Pencarian tidak membedakan huruf besar/kecil (relevan untuk PostgreSQL).
+        Livewire::test(CatalogIndex::class)
+            ->set('search', 'consina')
+            ->assertSee('Tenda Consina 4P')
+            ->assertDontSee('Kompor Portable');
+
         // Filter vendor
         Livewire::test(CatalogIndex::class)
             ->set('vendorId', $vendor2->id)
@@ -233,6 +239,29 @@ class CatalogIndexTest extends TestCase
             ->call('selectCategory', $categoryCooking->id)
             ->assertSee('Kompor Portable')
             ->assertDontSee('Tenda Consina 4P');
+    }
+
+    public function test_clear_price_and_date_filters_reset_the_selected_ranges(): void
+    {
+        Livewire::test(CatalogIndex::class)
+            ->set('minPrice', '10000')
+            ->set('maxPrice', '50000')
+            ->set('startDate', '2026-10-11')
+            ->set('endDate', '2026-10-12')
+            ->call('clearPriceRange')
+            ->assertSet('minPrice', null)
+            ->assertSet('maxPrice', null)
+            ->call('clearDateRange')
+            ->assertSet('startDate', null)
+            ->assertSet('endDate', null);
+    }
+
+    public function test_incomplete_date_filter_asks_for_the_missing_end_date(): void
+    {
+        Livewire::test(CatalogIndex::class)
+            ->set('startDate', '2026-10-11')
+            ->set('onlyAvailable', true)
+            ->assertSee('Lengkapi tanggal mulai dan selesai untuk memeriksa ketersediaan alat.');
     }
 
     public function test_catalog_pagination(): void

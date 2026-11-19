@@ -1,201 +1,186 @@
-<div class="space-y-8 py-2">
-    <!-- Section Filter & Search Bar -->
-    <section class="card-tendaku p-6 rounded-2xl bg-white shadow-tendaku border border-wheat-200">
-        <div class="space-y-5">
-            <!-- Row 1: Search & Reset -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                <!-- Input Real-time Search -->
-                <div class="lg:col-span-8 relative">
-                    <label for="search" class="block text-xs font-bold uppercase text-darkbrown-600 mb-1.5 tracking-wider">
-                        <i data-lucide="search" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                        Cari Alat Camping Real-Time
-                    </label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            id="search" 
-                            wire:model.live.debounce.300ms="search"
-                            placeholder="Cari nama alat (contoh: Tenda Consina, SB Eiger, Kompor, Carrier)..." 
-                            class="input-tendaku w-full pl-10 pr-10 py-3 rounded-xl text-sm font-medium focus:ring-2 focus:ring-avocado-500 border-wheat-300"
-                        />
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-wheat-500">
-                            <i data-lucide="search" class="w-4 h-4 text-darkbrown-400"></i>
-                        </div>
-                        
-                        @if(!empty($search))
-                            <button 
-                                type="button" 
-                                wire:click="$set('search', '')" 
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-darkbrown-400 hover:text-darkbrown-700 transition"
+@php
+    $hasSearch = filled($search);
+    $hasCategory = $categoryId !== null;
+    $hasVendor = $vendorId !== null;
+    $hasMinPrice = filled($minPrice);
+    $hasMaxPrice = filled($maxPrice);
+    $hasPrice = $hasMinPrice || $hasMaxPrice;
+    $hasStartDate = filled($startDate);
+    $hasEndDate = filled($endDate);
+    $hasDates = $hasStartDate || $hasEndDate;
+    $hasSort = $sort !== 'latest';
+    $hasActiveFilters = $hasSearch || $hasCategory || $hasVendor || $hasPrice || $hasDates || $onlyAvailable || $hasSort;
+    $hasAdvancedFilters = $hasVendor || $hasPrice || $hasDates || $onlyAvailable;
+
+    $advancedFilterCount = collect([
+        $hasVendor,
+        $hasPrice,
+        $hasDates,
+        $onlyAvailable,
+    ])->filter()->count();
+
+    $selectedCategory = $hasCategory ? $categories->firstWhere('id', $categoryId) : null;
+    $selectedVendor = $hasVendor ? $vendors->firstWhere('id', $vendorId) : null;
+
+    $sortLabels = [
+        'latest' => 'Terbaru',
+        'price_asc' => 'Harga termurah',
+        'price_desc' => 'Harga termahal',
+        'name_asc' => 'Nama A-Z',
+    ];
+
+    $formatRupiah = static fn (?string $value): string => filled($value)
+        ? 'Rp '.number_format((float) $value, 0, ',', '.')
+        : '';
+
+    $formatDate = static function (?string $value): string {
+        if (! filled($value)) {
+            return '';
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->format('d M Y');
+        } catch (\Throwable) {
+            return $value;
+        }
+    };
+
+    $priceFilterLabel = match (true) {
+        $hasMinPrice && $hasMaxPrice => $formatRupiah($minPrice).' – '.$formatRupiah($maxPrice),
+        $hasMinPrice => 'Mulai '.$formatRupiah($minPrice),
+        $hasMaxPrice => 'Sampai '.$formatRupiah($maxPrice),
+        default => '',
+    };
+
+    $dateFilterLabel = match (true) {
+        $hasStartDate && $hasEndDate => $formatDate($startDate).' – '.$formatDate($endDate),
+        $hasStartDate => 'Mulai '.$formatDate($startDate),
+        $hasEndDate => 'Sampai '.$formatDate($endDate),
+        default => '',
+    };
+@endphp
+
+<div
+    class="space-y-6"
+    x-data="{ filtersOpen: @js($hasAdvancedFilters) }"
+>
+    {{-- Panel pencarian & filter --}}
+    <section
+        aria-labelledby="catalog-filter-heading"
+        class="relative overflow-hidden rounded-3xl border border-wheat-200 bg-white shadow-tendaku-sm"
+    >
+        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-avocado-500 via-sunglow-300 to-goldenrod-400" aria-hidden="true"></div>
+        <h2 id="catalog-filter-heading" class="sr-only">Pencarian dan filter katalog</h2>
+
+        <div class="space-y-4 p-4 pt-5 sm:p-5 sm:pt-6">
+            {{-- Pencarian --}}
+            <div class="flex flex-col gap-2.5 sm:flex-row">
+                <form wire:submit.prevent role="search" class="relative min-w-0 flex-1">
+                    <label for="catalog-search" class="sr-only">Cari alat camping</label>
+                    <i data-lucide="search" class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-darkbrown-400" aria-hidden="true"></i>
+                    <input
+                        type="search"
+                        id="catalog-search"
+                        name="search"
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="Cari tenda, kompor, carrier..."
+                        autocomplete="off"
+                        class="input-tendaku h-12 w-full pl-11 pr-16 text-sm font-medium [&::-webkit-search-cancel-button]:appearance-none"
+                    />
+                    <div class="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+                        <span
+                            wire:loading
+                            wire:target="search"
+                            class="mr-1 inline-block h-4 w-4 animate-spin rounded-full border-2 border-avocado-600 border-t-transparent"
+                            aria-hidden="true"
+                        ></span>
+                        @if ($hasSearch)
+                            <button
+                                type="button"
+                                wire:click="$set('search', '')"
+                                class="inline-flex h-8 w-8 items-center justify-center rounded-full text-darkbrown-400 transition hover:bg-wheat-100 hover:text-darkbrown-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                                 title="Hapus Pencarian"
+                                aria-label="Hapus pencarian"
                             >
-                                <i data-lucide="x" class="w-4 h-4"></i>
+                                <i data-lucide="x" class="h-4 w-4" aria-hidden="true"></i>
                             </button>
                         @endif
                     </div>
-                </div>
+                </form>
 
-                <!-- Action Button & Reset Filter -->
-                <div class="lg:col-span-4 flex items-end">
-                    @if(!empty($search) || !is_null($categoryId) || !is_null($vendorId) || !empty($minPrice) || !empty($maxPrice) || $sort !== 'latest' || !empty($startDate) || !empty($endDate))
-                        <button 
-                            type="button" 
-                            wire:click="resetFilters" 
-                            class="btn-tendaku-secondary w-full py-3 px-4 rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 hover:border-red-300 hover:text-red-700 transition"
-                            title="Reset Semua Filter"
-                        >
-                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-                            <span>Reset Filter</span>
-                        </button>
-                    @else
-                        <div class="w-full py-3 px-4 rounded-xl bg-wheat-50 border border-wheat-200 text-xs font-semibold text-darkbrown-600 flex items-center justify-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full bg-avocado-500 animate-ping"></span>
-                            <span>Pencarian Real-Time Aktif</span>
-                        </div>
+                <button
+                    type="button"
+                    @click="filtersOpen = !filtersOpen"
+                    :aria-expanded="filtersOpen ? 'true' : 'false'"
+                    aria-controls="catalog-advanced-filters"
+                    class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-wheat-300 bg-wheat-100 px-4 text-sm font-semibold text-darkbrown-800 transition hover:bg-wheat-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
+                >
+                    <i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i>
+                    <span x-text="filtersOpen ? 'Tutup Filter' : 'Filter'">Filter</span>
+                    @if ($advancedFilterCount > 0)
+                        <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-avocado-600 px-1 text-[10px] font-bold text-white" aria-hidden="true">
+                            {{ $advancedFilterCount }}
+                        </span>
                     @endif
-                </div>
+                    <i
+                        data-lucide="chevron-down"
+                        class="h-4 w-4 transition-transform duration-200 motion-reduce:transition-none"
+                        :class="filtersOpen ? 'rotate-180' : ''"
+                        aria-hidden="true"
+                    ></i>
+                </button>
             </div>
 
-            <!-- Row 2: Advance Filters (Vendor, Harga Min/Max, Tanggal Sewa, Urutan) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-wheat-100">
-                <!-- Filter Vendor -->
-                <div>
-                    <label for="vendor_id" class="block text-xs font-bold uppercase text-darkbrown-600 mb-1 tracking-wider">
-                        <i data-lucide="store" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                        Vendor / Toko
-                    </label>
-                    <select 
-                        id="vendor_id"
-                        wire:model.live="vendorId"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                    >
-                        <option value="">Semua Vendor</option>
-                        @foreach($vendors as $ven)
-                            <option value="{{ $ven->id }}">{{ $ven->name }}</option>
-                        @endforeach
-                    </select>
+            {{-- Kategori --}}
+            <div class="space-y-2">
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-[11px] font-bold uppercase tracking-[.18em] text-darkbrown-500">Kategori</span>
+                    <span class="hidden text-[11px] font-medium text-darkbrown-400 sm:inline">
+                        Pilih satu kategori untuk mempersempit hasil
+                    </span>
                 </div>
 
-                <!-- Rentang Harga -->
-                <div>
-                    <label class="block text-xs font-bold uppercase text-darkbrown-600 mb-1 tracking-wider">
-                        <i data-lucide="tag" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                        Rentang Harga / Hari
-                    </label>
-                    <div class="flex items-center gap-1.5">
-                        <input 
-                            type="number" 
-                            wire:model.live.debounce.400ms="minPrice" 
-                            placeholder="Min" 
-                            class="input-tendaku w-1/2 py-2 px-2.5 rounded-xl text-xs font-medium border-wheat-300"
-                        />
-                        <span class="text-xs text-wheat-500">-</span>
-                        <input 
-                            type="number" 
-                            wire:model.live.debounce.400ms="maxPrice" 
-                            placeholder="Maks" 
-                            class="input-tendaku w-1/2 py-2 px-2.5 rounded-xl text-xs font-medium border-wheat-300"
-                        />
-                    </div>
-                </div>
-
-                <!-- Urutan (Sort) -->
-                <div>
-                    <label for="sort" class="block text-xs font-bold uppercase text-darkbrown-600 mb-1 tracking-wider">
-                        <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                        Urutkan
-                    </label>
-                    <select 
-                        id="sort"
-                        wire:model.live="sort"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                    >
-                        <option value="latest">Terbaru</option>
-                        <option value="price_asc">Harga: Termurah</option>
-                        <option value="price_desc">Harga: Termahal</option>
-                        <option value="name_asc">Nama (A-Z)</option>
-                    </select>
-                </div>
-
-                <!-- Tanggal Sewa (Cek Stok) -->
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="block text-xs font-bold uppercase text-darkbrown-600 tracking-wider">
-                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                            Cek Tanggal
-                        </label>
-                        <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-semibold text-darkbrown-700 hover:text-avocado-700 transition select-none">
-                            <input 
-                                type="checkbox" 
-                                wire:model.live="onlyAvailable" 
-                                class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500 w-3.5 h-3.5"
-                            />
-                            <span>Hanya Stok Tersedia</span>
-                        </label>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <input 
-                            type="date" 
-                            wire:model.live="startDate" 
-                            min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                            class="input-tendaku w-1/2 py-2 px-2 rounded-xl text-[11px] font-medium border-wheat-300"
-                            title="Tanggal Mulai"
-                        />
-                        <span class="text-xs text-wheat-500">→</span>
-                        <input 
-                            type="date" 
-                            wire:model.live="endDate" 
-                            min="{{ $startDate ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
-                            class="input-tendaku w-1/2 py-2 px-2 rounded-xl text-[11px] font-medium border-wheat-300"
-                            title="Tanggal Selesai"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filter Kategori Tabs (Pills) -->
-            <div>
-                <label class="block text-xs font-bold uppercase text-darkbrown-600 mb-2 tracking-wider">
-                    <i data-lucide="layers" class="w-3.5 h-3.5 text-darkbrown-500 inline-block mr-1 align-sub"></i>
-                    Filter Kategori:
-                </label>
-                <div class="flex flex-wrap items-center gap-2 pt-1">
-                    <button 
+                <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none sm:-mx-6 sm:px-6 lg:mx-0 lg:flex-wrap lg:px-0">
+                    <button
                         type="button"
-                        wire:click="selectCategory(null)" 
-                        class="px-4 py-2 rounded-xl text-xs font-bold transition-all border inline-flex items-center gap-1.5 {{ is_null($categoryId) ? 'bg-darkbrown-800 text-wheat-200 border-darkbrown-900 shadow-md scale-[1.02]' : 'bg-wheat-100 text-darkbrown-800 border-wheat-300 hover:bg-wheat-200' }}"
+                        wire:click="selectCategory(null)"
+                        aria-pressed="{{ is_null($categoryId) ? 'true' : 'false' }}"
+                        class="inline-flex min-h-[2.5rem] shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ is_null($categoryId) ? 'border-avocado-700 bg-avocado-600 text-white shadow-sm' : 'border-wheat-300 bg-white text-darkbrown-700 hover:border-avocado-400 hover:bg-wheat-50' }}"
                     >
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                        <i data-lucide="sparkles" class="h-3.5 w-3.5" aria-hidden="true"></i>
                         <span>Semua Kategori</span>
                     </button>
-                    @foreach($categories as $cat)
+
+                    @foreach ($categories as $cat)
                         @php
                             $isActive = $categoryId === $cat->id;
-                            $catIcon = match(strtolower($cat->icon ?? '')) {
+                            $catIcon = match (strtolower($cat->icon ?? '')) {
                                 'tent' => 'tent',
                                 'moon' => 'moon',
                                 'flame' => 'flame',
                                 'sun', 'flashlight' => 'flashlight',
                                 'bag', 'backpack' => 'backpack',
-                                default => match(true) {
+                                default => match (true) {
                                     str_contains(strtolower($cat->name), 'tenda') => 'tent',
                                     str_contains(strtolower($cat->name), 'sleep') || str_contains(strtolower($cat->name), 'tidur') => 'moon',
                                     str_contains(strtolower($cat->name), 'masak') || str_contains(strtolower($cat->name), 'cook') => 'flame',
                                     str_contains(strtolower($cat->name), 'lampu') || str_contains(strtolower($cat->name), 'light') => 'flashlight',
                                     str_contains(strtolower($cat->name), 'tas') || str_contains(strtolower($cat->name), 'carrier') || str_contains(strtolower($cat->name), 'bag') => 'backpack',
-                                    default => 'tag'
-                                }
+                                    default => 'tag',
+                                },
                             };
                         @endphp
-                        <button 
+
+                        <button
                             type="button"
                             wire:click="selectCategory({{ $cat->id }})"
-                            class="px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5 {{ $isActive ? 'bg-avocado-600 text-white border-avocado-700 shadow-md scale-[1.02]' : 'bg-white text-darkbrown-700 border-wheat-300 hover:border-avocado-400 hover:bg-wheat-50' }}"
+                            aria-pressed="{{ $isActive ? 'true' : 'false' }}"
+                            class="inline-flex min-h-[2.5rem] shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isActive ? 'border-avocado-700 bg-avocado-600 text-white shadow-sm' : 'border-wheat-300 bg-white text-darkbrown-700 hover:border-avocado-400 hover:bg-wheat-50' }}"
                         >
-                            <i data-lucide="{{ $catIcon }}" class="w-3.5 h-3.5"></i>
+                            <i data-lucide="{{ $catIcon }}" class="h-3.5 w-3.5" aria-hidden="true"></i>
                             <span>{{ $cat->name }}</span>
-                            @if(isset($cat->items_count))
-                                <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] {{ $isActive ? 'bg-avocado-800 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
+                            @if (isset($cat->items_count))
+                                <span class="ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] {{ $isActive ? 'bg-avocado-800 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
                                     {{ $cat->items_count }}
                                 </span>
                             @endif
@@ -203,205 +188,494 @@
                     @endforeach
                 </div>
             </div>
+
+            {{-- Filter lanjutan --}}
+            <div
+                id="catalog-advanced-filters"
+                role="region"
+                aria-label="Filter lanjutan"
+                x-cloak
+                x-show="filtersOpen"
+                class="border-t border-wheat-100 pt-4"
+            >
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <div>
+                        <label for="catalog-vendor" class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+                            Vendor / Toko
+                        </label>
+                        <select
+                            id="catalog-vendor"
+                            wire:model.live="vendorId"
+                            class="input-tendaku h-11 w-full px-3 text-sm font-medium"
+                        >
+                            <option value="">Semua Vendor</option>
+                            @foreach ($vendors as $ven)
+                                <option value="{{ $ven->id }}">{{ $ven->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+                            Rentang Harga / Hari
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <div class="relative min-w-0 flex-1">
+                                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-400" aria-hidden="true">Rp</span>
+                                <input
+                                    type="number"
+                                    inputmode="numeric"
+                                    min="0"
+                                    step="1000"
+                                    wire:model.live.debounce.400ms="minPrice"
+                                    placeholder="Min"
+                                    aria-label="Harga minimum per hari"
+                                    class="input-tendaku h-11 w-full pl-9 pr-2 text-sm font-medium"
+                                />
+                            </div>
+                            <span class="text-xs text-darkbrown-400" aria-hidden="true">–</span>
+                            <div class="relative min-w-0 flex-1">
+                                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-400" aria-hidden="true">Rp</span>
+                                <input
+                                    type="number"
+                                    inputmode="numeric"
+                                    min="0"
+                                    step="1000"
+                                    wire:model.live.debounce.400ms="maxPrice"
+                                    placeholder="Maks"
+                                    aria-label="Harga maksimum per hari"
+                                    class="input-tendaku h-11 w-full pl-9 pr-2 text-sm font-medium"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+                            Tanggal Sewa
+                        </span>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="block min-w-0">
+                                <span class="mb-1 block text-[11px] font-semibold text-darkbrown-600">Mulai</span>
+                                <input
+                                    type="date"
+                                    wire:model.live="startDate"
+                                    min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
+                                    class="input-tendaku h-11 w-full px-3 text-xs font-medium"
+                                />
+                            </label>
+                            <label class="block min-w-0">
+                                <span class="mb-1 block text-[11px] font-semibold text-darkbrown-600">Selesai</span>
+                                <input
+                                    type="date"
+                                    wire:model.live="endDate"
+                                    min="{{ $startDate ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
+                                    class="input-tendaku h-11 w-full px-3 text-xs font-medium"
+                                />
+                            </label>
+                        </div>
+                    </div>
+
+                    <label class="flex cursor-pointer items-start justify-between gap-3 rounded-2xl border border-wheat-200 bg-wheat-50/60 p-3.5 transition hover:border-avocado-300 sm:col-span-2 xl:col-span-4">
+                        <span class="flex min-w-0 items-start gap-2.5">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-avocado-700 shadow-sm">
+                                <i data-lucide="calendar-check" class="h-4 w-4" aria-hidden="true"></i>
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block text-xs font-bold text-darkbrown-900">Hanya tampilkan yang tersedia</span>
+                                <span class="mt-0.5 block text-[11px] leading-relaxed text-darkbrown-500">
+                                    Sembunyikan alat yang sudah penuh pada tanggal sewa yang dipilih.
+                                </span>
+                            </span>
+                        </span>
+                        <input
+                            type="checkbox"
+                            wire:model.live="onlyAvailable"
+                            role="switch"
+                            class="peer sr-only"
+                        />
+                        <span
+                            class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-wheat-300 transition after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:bg-avocado-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-avocado-500 peer-focus-visible:ring-offset-2"
+                            aria-hidden="true"
+                        ></span>
+                    </label>
+                </div>
+            </div>
+
+            {{-- Ringkasan filter aktif --}}
+            @if ($hasActiveFilters)
+                <div class="flex flex-wrap items-center gap-2 border-t border-wheat-100 pt-4">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">Filter aktif</span>
+
+                    @if ($hasSearch)
+                        <span class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-[11px] font-semibold text-avocado-900">
+                            <i data-lucide="search" class="h-3 w-3" aria-hidden="true"></i>
+                            <span class="max-w-[12rem] truncate">“{{ $search }}”</span>
+                            <button
+                                type="button"
+                                wire:click="$set('search', '')"
+                                class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                                aria-label="Hapus filter pencarian"
+                            >
+                                <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                            </button>
+                        </span>
+                    @endif
+
+                    @if ($hasCategory)
+                        <span class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-[11px] font-semibold text-avocado-900">
+                            <i data-lucide="layers" class="h-3 w-3" aria-hidden="true"></i>
+                            <span class="max-w-[12rem] truncate">{{ $selectedCategory?->name ?? 'Kategori' }}</span>
+                            <button
+                                type="button"
+                                wire:click="selectCategory(null)"
+                                class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                                aria-label="Hapus filter kategori"
+                            >
+                                <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                            </button>
+                        </span>
+                    @endif
+
+                    @if ($hasVendor)
+                        <span class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-[11px] font-semibold text-avocado-900">
+                            <i data-lucide="store" class="h-3 w-3" aria-hidden="true"></i>
+                            <span class="max-w-[12rem] truncate">{{ $selectedVendor?->name ?? 'Vendor' }}</span>
+                            <button
+                                type="button"
+                                wire:click="$set('vendorId', null)"
+                                class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                                aria-label="Hapus filter vendor"
+                            >
+                                <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                            </button>
+                        </span>
+                    @endif
+
+                    @if ($hasPrice)
+                        <span class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-[11px] font-semibold text-avocado-900">
+                            <i data-lucide="tag" class="h-3 w-3" aria-hidden="true"></i>
+                            <span class="max-w-[14rem] truncate">{{ $priceFilterLabel }}</span>
+                            <button
+                                type="button"
+                                wire:click="clearPriceRange"
+                                class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                                aria-label="Hapus filter harga"
+                            >
+                                <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                            </button>
+                        </span>
+                    @endif
+
+                    @if ($hasDates)
+                        <span class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-[11px] font-semibold text-avocado-900">
+                            <i data-lucide="calendar" class="h-3 w-3" aria-hidden="true"></i>
+                            <span class="max-w-[15rem] truncate">{{ $dateFilterLabel }}</span>
+                            <button
+                                type="button"
+                                wire:click="clearDateRange"
+                                class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                                aria-label="Hapus filter tanggal"
+                            >
+                                <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                            </button>
+                        </span>
+                    @endif
+
+                    @if ($onlyAvailable)
+                        <span class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-[11px] font-semibold text-avocado-900">
+                            <i data-lucide="calendar-check" class="h-3 w-3" aria-hidden="true"></i>
+                            <span>Hanya stok tersedia</span>
+                            <button
+                                type="button"
+                                wire:click="$set('onlyAvailable', false)"
+                                class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                                aria-label="Hapus filter ketersediaan"
+                            >
+                                <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                            </button>
+                        </span>
+                    @endif
+
+                    @if ($hasSort)
+                        <span class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-[11px] font-semibold text-avocado-900">
+                            <i data-lucide="arrow-up-down" class="h-3 w-3" aria-hidden="true"></i>
+                            <span>Urutkan: {{ $sortLabels[$sort] ?? 'Terbaru' }}</span>
+                            <button
+                                type="button"
+                                wire:click="$set('sort', 'latest')"
+                                class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                                aria-label="Kembalikan urutan ke terbaru"
+                            >
+                                <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
+                            </button>
+                        </span>
+                    @endif
+
+                    <button
+                        type="button"
+                        wire:click="resetFilters"
+                        class="ml-auto inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-[11px] font-bold text-darkbrown-500 transition hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                    >
+                        <i data-lucide="rotate-ccw" class="h-3 w-3" aria-hidden="true"></i>
+                        Hapus semua
+                    </button>
+                </div>
+            @endif
         </div>
     </section>
 
     @guest
-        <section class="flex flex-col gap-3 rounded-2xl border border-avocado-200 bg-avocado-50/80 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-start gap-2.5">
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-avocado-100 text-avocado-700">
-                    <i data-lucide="lock" class="w-4 h-4"></i>
+        <section class="flex flex-col gap-3 rounded-2xl border border-avocado-200 bg-avocado-50/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-avocado-700 shadow-sm">
+                    <i data-lucide="lock" class="h-4 w-4" aria-hidden="true"></i>
                 </span>
                 <div>
                     <p class="text-xs font-bold text-avocado-900">Keranjang khusus member</p>
-                    <p class="mt-0.5 text-xs text-avocado-800">
+                    <p class="mt-0.5 text-xs leading-relaxed text-avocado-800">
                         Masuk atau daftar dulu untuk menambahkan alat ke keranjang dan melanjutkan penyewaan.
                     </p>
                 </div>
             </div>
             <div class="flex items-center gap-2 sm:shrink-0">
-                <a href="{{ route('login') }}" class="btn-tendaku-secondary !px-3.5 !py-2 text-xs">Masuk</a>
-                <a href="{{ route('register') }}" class="btn-tendaku-primary !px-3.5 !py-2 text-xs">Daftar</a>
+                <a href="{{ route('login') }}" class="btn-tendaku-secondary min-h-[44px] px-4 text-xs">Masuk</a>
+                <a href="{{ route('register') }}" class="btn-tendaku-primary min-h-[44px] px-4 text-xs">Daftar</a>
             </div>
         </section>
     @endguest
 
-    <!-- Product Grid Header & Status Summary -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-wheat-200 pb-3 gap-2">
-        <div>
-            <h2 class="text-xl font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
-                <span>Daftar Peralatan Tersedia</span>
-                <span wire:loading class="text-xs font-semibold text-avocado-700 bg-avocado-50 border border-avocado-200 px-2.5 py-0.5 rounded-full animate-pulse">
-                    Memuat data...
-                </span>
-            </h2>
-            <p class="text-xs text-darkbrown-600 mt-0.5">
-                @if($items->total() > 0)
-                    Menampilkan {{ $items->firstItem() }}-{{ $items->lastItem() }} dari {{ $items->total() }} unit siap sewa untuk camping kamu.
-                @else
-                    Tidak ada peralatan yang ditemukan.
-                @endif
-            </p>
-        </div>
-        <div class="flex items-center gap-2 text-xs text-darkbrown-600 font-medium bg-wheat-100 px-3 py-1.5 rounded-lg border border-wheat-200 self-start sm:self-auto">
-            <i data-lucide="shield-check" class="w-4 h-4 text-avocado-600 shrink-0"></i>
-            <span>Jaminan: <strong>KTP Asli saat Pickup (Tanpa Deposit)</strong></span>
-        </div>
-    </div>
+    {{-- Header hasil --}}
+    <section aria-labelledby="catalog-results-heading" class="space-y-4">
+        <div class="flex flex-col gap-3 border-b border-wheat-200 pb-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 id="catalog-results-heading" class="font-heading text-xl font-extrabold tracking-tight text-darkbrown-900">
+                        Daftar Peralatan Tersedia
+                    </h2>
+                    <span wire:loading class="inline-flex animate-pulse items-center gap-1 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-0.5 text-[11px] font-semibold text-avocado-800">
+                        Memuat data...
+                    </span>
+                </div>
+                <p class="mt-1 text-xs text-darkbrown-600" role="status" aria-live="polite">
+                    @if ($items->total() > 0)
+                        Menampilkan {{ $items->firstItem() }}–{{ $items->lastItem() }} dari {{ $items->total() }} unit siap sewa untuk camping kamu.
+                    @else
+                        Tidak ada peralatan yang ditemukan.
+                    @endif
+                </p>
+                <div class="mt-1.5 flex items-start gap-1.5 text-xs text-darkbrown-600">
+                    <i data-lucide="calendar" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-avocado-600" aria-hidden="true"></i>
+                    <x-stock-period :date-range="$dateRange" />
+                </div>
+            </div>
 
-    <x-stock-period :date-range="$dateRange" class="mb-4" />
-    @if($onlyAvailable && in_array(null, $dateStockMap, true))
-        <p class="text-xs text-darkbrown-600 mb-4">Ketersediaan belum dapat diperiksa untuk sebagian peralatan. Nonaktifkan filter untuk memilih jadwal lain.</p>
-    @endif
+            <div class="flex w-full shrink-0 flex-col gap-1.5 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">Urutkan</span>
+                <div class="relative w-full sm:w-auto">
+                    <i data-lucide="arrow-up-down" class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-darkbrown-400" aria-hidden="true"></i>
+                    <select
+                        id="catalog-sort"
+                        wire:model.live="sort"
+                        aria-label="Urutkan peralatan"
+                        class="input-tendaku h-10 w-full pl-9 pr-8 text-xs font-semibold sm:min-w-[10.5rem]"
+                    >
+                        <option value="latest">Terbaru</option>
+                        <option value="price_asc">Harga: Termurah</option>
+                        <option value="price_desc">Harga: Termahal</option>
+                        <option value="name_asc">Nama (A-Z)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
 
-    <!-- Grid Card Produk -->
-    @if($items->count() > 0)
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            @foreach($items as $item)
-                @php
-                    $rate = (float) $item->daily_rate;
-                    $formattedRate = number_format($rate, 0, ',', '.');
-                    $unitCount = $dateStockMap[$item->id] ?? null;
-                    $detailUrl = route('customer.product.show', ['id' => $item->id] + ($dateRange ?? ['start_date' => $startDate, 'end_date' => $endDate]));
-                    $img = $item->image_url ?: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80';
-                    $catName = $item->category?->name ?? 'Alat Outdoor';
-                    $vendorName = $item->vendor?->name ?? 'Tendaku Vendor';
-                @endphp
-                <article wire:key="catalog-item-{{ $item->id }}" class="card-tendaku group flex h-full flex-col overflow-hidden rounded-2xl border border-wheat-200 bg-white transition-all duration-300 hover:shadow-tendaku-glow">
-                    <div class="flex flex-1 flex-col">
-                        <!-- Thumbnail Image Container -->
-                        <div class="relative aspect-[4/3] bg-wheat-100 overflow-hidden">
-                            <img 
-                                src="{{ $img }}" 
+        @if ($onlyAvailable && in_array(null, $dateStockMap, true))
+            <div class="flex items-start gap-2.5 rounded-xl border border-goldenrod-200 bg-goldenrod-50 px-3.5 py-3 text-xs text-goldenrod-900" role="status">
+                <i data-lucide="alert-triangle" class="mt-0.5 h-4 w-4 shrink-0 text-goldenrod-600" aria-hidden="true"></i>
+                <p>Ketersediaan belum dapat diperiksa untuk sebagian peralatan. Nonaktifkan filter untuk memilih jadwal lain.</p>
+            </div>
+        @endif
+
+        {{-- Grid produk --}}
+        @if ($items->count() > 0)
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4" wire:loading.class="opacity-60">
+                @foreach ($items as $item)
+                    @php
+                        $rate = (float) $item->daily_rate;
+                        $formattedRate = number_format($rate, 0, ',', '.');
+                        $unitCount = $dateStockMap[$item->id] ?? null;
+                        $detailUrl = route('customer.product.show', ['id' => $item->id] + ($dateRange ?? ['start_date' => $startDate, 'end_date' => $endDate]));
+                        $img = $item->image_url ?: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80';
+                        $vendorName = $item->vendor?->name ?? 'Tendaku Vendor';
+                    @endphp
+
+                    <article
+                        wire:key="catalog-item-{{ $item->id }}"
+                        class="group flex h-full flex-col overflow-hidden rounded-2xl border border-wheat-200/90 bg-white shadow-tendaku-sm transition duration-300 hover:-translate-y-1 hover:border-avocado-300 hover:shadow-tendaku-lg focus-within:ring-2 focus-within:ring-avocado-500/30 motion-reduce:transform-none motion-reduce:transition-none"
+                    >
+                        <div class="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-wheat-100 via-white to-sunglow-100">
+                            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-darkbrown-500" aria-hidden="true">
+                                <i data-lucide="image" class="h-8 w-8"></i>
+                                <span class="text-[11px] font-semibold">Foto belum tersedia</span>
+                            </div>
+
+                            <img
+                                src="{{ $img }}"
                                 alt="{{ $item->name }}"
-                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                width="640"
+                                height="480"
                                 loading="lazy"
+                                decoding="async"
+                                onerror="this.style.display='none'"
+                                class="relative h-full w-full object-cover transition duration-500 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none"
                             />
-                            <!-- Top Badges -->
-                            <div class="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                                <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-darkbrown-900/80 text-wheat-200 backdrop-blur-md border border-wheat-300/30">
-                                    {{ $catName }}
-                                </span>
-                                <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-avocado-600 text-white shadow-md">
+
+                            <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-darkbrown-900/50 via-darkbrown-900/0 to-transparent" aria-hidden="true"></div>
+
+                            <div class="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
+                                <x-stock-status :stock="$unitCount" size="sm" class="shadow-sm" />
+                                <span class="inline-flex items-center rounded-full border border-sunglow-200/70 bg-sunglow-300/95 px-2.5 py-1 text-[11px] font-bold text-darkbrown-900 shadow-sm">
                                     Tanpa Deposit
                                 </span>
                             </div>
-                            <!-- Cart quick-add icon (pojok kanan bawah thumbnail) -->
-                            @if($unitCount > 0 && auth()->check())
-                                <button
-                                    type="button"
-                                    wire:click.stop="addToCart({{ $item->id }})"
-                                    wire:loading.attr="disabled"
-                                    title="Tambah ke Keranjang"
-                                    aria-label="Tambah {{ $item->name }} ke keranjang"
-                                    class="absolute bottom-3 right-3 w-9 h-9 rounded-xl bg-white/95 backdrop-blur-sm border border-wheat-200 flex items-center justify-center text-darkbrown-700 hover:bg-avocado-600 hover:text-white hover:border-avocado-600 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg z-10 cursor-pointer group/cart"
-                                >
-                                    <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
-                                        <i data-lucide="shopping-cart" class="w-4 h-4 transition-transform group-hover/cart:scale-110"></i>
-                                    </span>
-                                    <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block w-3.5 h-3.5 border-2 border-avocado-600 border-t-transparent rounded-full animate-spin"></span>
-                                </button>
-                            @endif
                         </div>
 
-                        <!-- Content Info -->
-                        <div class="p-5 space-y-3">
-                            @if($item->vendor)
-                                <a href="{{ route('customer.stores.show', $item->vendor->slug ?? $item->vendor_id) }}" 
-                                   class="group/store inline-flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800 hover:text-avocado-700 transition max-w-full"
-                                   title="Kunjungi Toko {{ $vendorName }}">
-                                    <i data-lucide="store" class="w-3.5 h-3.5 text-goldenrod-600 group-hover/store:text-avocado-600 flex-shrink-0 transition-colors"></i>
+                        <div class="flex flex-1 flex-col gap-2.5 p-4 sm:p-5">
+                            @if ($item->vendor)
+                                <a
+                                    href="{{ route('customer.stores.show', $item->vendor->slug ?? $item->vendor_id) }}"
+                                    class="group/store inline-flex min-w-0 items-center gap-1.5 py-1 text-xs font-semibold text-goldenrod-800 transition hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
+                                    title="Kunjungi Toko {{ $vendorName }}"
+                                >
+                                    <i data-lucide="store" class="h-3.5 w-3.5 shrink-0 text-goldenrod-600 transition-colors group-hover/store:text-avocado-600" aria-hidden="true"></i>
                                     <span class="truncate underline-offset-2 group-hover/store:underline">{{ $vendorName }}</span>
                                 </a>
                             @else
-                                <div class="flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800">
-                                    <i data-lucide="store" class="w-3.5 h-3.5 text-goldenrod-600 flex-shrink-0"></i>
+                                <div class="flex min-w-0 items-center gap-1.5 py-1 text-xs font-semibold text-goldenrod-800">
+                                    <i data-lucide="store" class="h-3.5 w-3.5 shrink-0 text-goldenrod-600" aria-hidden="true"></i>
                                     <span class="truncate">{{ $vendorName }}</span>
                                 </div>
                             @endif
 
-                            <h3 class="font-extrabold text-base text-darkbrown-900 line-clamp-2 leading-snug group-hover:text-avocado-700 transition-colors font-heading">
-                                {{ $item->name }}
+                            <h3 class="min-w-0 font-heading text-base font-extrabold leading-snug tracking-tight text-darkbrown-900 transition-colors group-hover:text-avocado-700">
+                                <a href="{{ $detailUrl }}" class="line-clamp-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2">
+                                    {{ $item->name }}
+                                </a>
                             </h3>
 
-                            <p class="text-xs text-darkbrown-600 line-clamp-2 leading-relaxed">
+                            <p class="line-clamp-2 text-xs leading-relaxed text-darkbrown-600">
                                 {{ $item->description ?? 'Peralatan outdoor kualitas standar pendakian gunung, steril & siap pakai.' }}
                             </p>
 
-                            <div class="pt-1 flex flex-wrap items-center gap-1.5">
-                                <x-stock-status :stock="$unitCount" />
-                                <span class="text-[11px] text-darkbrown-500 font-medium">| {{ $item->dominant_condition }}</span>
+                            <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-darkbrown-500">
+                                @if ($item->dominant_condition)
+                                    <span class="inline-flex items-center gap-1">
+                                        <i data-lucide="shield-check" class="h-3 w-3 text-avocado-600" aria-hidden="true"></i>
+                                        {{ $item->dominant_condition }}
+                                    </span>
+                                @endif
+                                @if ($item->item_age)
+                                    <span class="text-wheat-400" aria-hidden="true">•</span>
+                                    <span>{{ $item->item_age }}</span>
+                                @endif
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Card Footer Price & Action -->
-                    <div class="mt-auto border-t border-wheat-100 p-5 pt-0">
-                        <div class="flex items-baseline justify-between py-3">
-                            <div>
-                                <span class="text-xs text-darkbrown-500 block font-medium">Harga Sewa</span>
-                                <div class="flex items-baseline gap-1">
-                                    <span class="text-lg font-extrabold text-darkbrown-900 font-heading">Rp {{ $formattedRate }}</span>
-                                    <span class="text-xs text-darkbrown-500 font-medium">/hari</span>
+                        <div class="border-t border-wheat-100 p-4 pt-3 sm:p-5 sm:pt-3">
+                            <div class="flex items-end justify-between gap-3 pb-3">
+                                <div class="min-w-0">
+                                    <span class="block text-[11px] font-semibold uppercase tracking-wider text-darkbrown-500">Harga sewa</span>
+                                    <div class="flex items-baseline gap-1">
+                                        <span class="font-heading text-lg font-extrabold tracking-tight text-darkbrown-900 sm:text-xl">Rp {{ $formattedRate }}</span>
+                                        <span class="text-[11px] font-semibold text-darkbrown-500">/hari</span>
+                                    </div>
                                 </div>
                             </div>
-                            <span class="text-[10px] text-wheat-500">{{ $item->item_age }}</span>
-                        </div>
 
-                        @if($unitCount > 0)
-                            <div class="flex items-center gap-2">
-                                <a href="{{ $detailUrl }}"
-                                   class="btn-tendaku-primary flex-1 py-2.5 px-3 rounded-xl text-xs font-bold text-center block shadow-md hover:shadow-lg transition-all">
-                                    Lihat Detail
+                            @if ($unitCount > 0)
+                                <div class="flex items-center gap-2">
+                                    <a href="{{ $detailUrl }}" class="btn-tendaku-primary min-h-[44px] flex-1 px-3 text-xs">
+                                        Lihat Detail
+                                    </a>
+                                    @auth
+                                        <button
+                                            type="button"
+                                            wire:click.stop="addToCart({{ $item->id }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="addToCart({{ $item->id }})"
+                                            title="Tambah ke Keranjang"
+                                            aria-label="Tambah {{ $item->name }} ke keranjang"
+                                            class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-2 border-avocado-600 text-avocado-700 transition hover:bg-avocado-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 active:scale-95 disabled:cursor-wait disabled:opacity-60 motion-reduce:transform-none"
+                                        >
+                                            <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
+                                                <i data-lucide="shopping-cart" class="h-4 w-4" aria-hidden="true"></i>
+                                            </span>
+                                            <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-avocado-600 border-t-transparent"></span>
+                                        </button>
+                                    @endauth
+                                </div>
+                            @else
+                                <a href="{{ $detailUrl }}" class="btn-tendaku-secondary min-h-[44px] w-full px-3 text-xs">
+                                    Pilih Jadwal Lain
                                 </a>
-                                @auth
-                                    <button type="button"
-                                        wire:click.stop="addToCart({{ $item->id }})"
-                                        wire:loading.attr="disabled"
-                                        title="Tambah ke Keranjang"
-                                        aria-label="Tambah {{ $item->name }} ke keranjang"
-                                        class="flex-shrink-0 w-10 h-10 rounded-xl border-2 border-avocado-600 text-avocado-700 hover:bg-avocado-600 hover:text-white transition-all flex items-center justify-center shadow-sm hover:shadow-md active:scale-95 cursor-pointer"
-                                    >
-                                        <span wire:loading.remove wire:target="addToCart({{ $item->id }})">
-                                            <i data-lucide="shopping-cart" class="w-4 h-4"></i>
-                                        </span>
-                                        <span wire:loading wire:target="addToCart({{ $item->id }})" class="inline-block w-3.5 h-3.5 border-2 border-avocado-600 border-t-transparent rounded-full animate-spin"></span>
-                                    </button>
-                                @endauth
-                            </div>
-                        @else
-                            <a href="{{ $detailUrl }}" class="btn-tendaku-secondary w-full py-2.5 px-3 rounded-xl text-xs font-bold text-center block">
-                                Pilih Jadwal Lain
-                            </a>
-                        @endif
-                    </div>
-                </article>
-            @endforeach
-        </div>
+                            @endif
+                        </div>
+                    </article>
+                @endforeach
+            </div>
 
-        <!-- Pagination Links -->
-        <div class="mt-8">
-            {{ $items->links() }}
-        </div>
-    @else
-        <!-- Empty State -->
-        <div class="card-tendaku-warm p-12 text-center rounded-2xl border border-wheat-300 my-8">
-            <div class="w-16 h-16 bg-wheat-200 text-darkbrown-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i data-lucide="search-x" class="w-8 h-8 text-darkbrown-600"></i>
+            <div class="pt-2">
+                {{ $items->links('vendor.pagination.tendaku') }}
             </div>
-            <h3 class="text-lg font-bold text-darkbrown-900 font-heading">Peralatan Tidak Ditemukan</h3>
-            <p class="text-sm text-darkbrown-600 max-w-md mx-auto mt-2">
-                Maaf, tidak ada alat camping yang cocok dengan filter atau kata kunci pencarian yang dipilih saat ini.
-            </p>
-            <div class="mt-6">
-                <button 
-                    type="button" 
-                    wire:click="resetFilters" 
-                    class="btn-tendaku-primary py-2.5 px-6 rounded-xl text-sm font-bold inline-block"
-                >
-                    Lihat Semua Peralatan
-                </button>
+        @else
+            {{-- Empty state --}}
+            <div class="rounded-3xl border border-dashed border-wheat-300 bg-gradient-to-b from-white to-wheat-50/60 px-5 py-12 text-center sm:px-8">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-wheat-100 text-darkbrown-600 shadow-inner">
+                    <i data-lucide="search-x" class="h-8 w-8" aria-hidden="true"></i>
+                </div>
+                <h3 class="mt-4 font-heading text-lg font-bold text-darkbrown-900">Belum ada alat yang cocok</h3>
+                <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-darkbrown-600">
+                    @if ($hasSearch)
+                        Tidak ada hasil untuk “{{ $search }}”. Coba kata kunci lain atau hapus beberapa filter.
+                    @elseif ($hasDates && (! $hasStartDate || ! $hasEndDate))
+                        Lengkapi tanggal mulai dan selesai untuk memeriksa ketersediaan alat.
+                    @elseif ($onlyAvailable)
+                        Tidak ada alat yang tersedia pada tanggal yang dipilih. Coba geser tanggal atau nonaktifkan filter ketersediaan.
+                    @else
+                        Tidak ada alat camping yang cocok dengan filter yang dipilih saat ini.
+                    @endif
+                </p>
+
+                <div class="mt-6 flex flex-wrap justify-center gap-2">
+                    <button type="button" wire:click="resetFilters" class="btn-tendaku-primary min-h-[44px] px-5 text-sm">
+                        <i data-lucide="rotate-ccw" class="h-4 w-4" aria-hidden="true"></i>
+                        Lihat Semua Peralatan
+                    </button>
+                    @if ($hasSearch)
+                        <button type="button" wire:click="$set('search', '')" class="btn-tendaku-secondary min-h-[44px] px-4 text-sm">
+                            Hapus pencarian
+                        </button>
+                    @endif
+                </div>
+
+                @if ($categories->isNotEmpty())
+                    <div class="mt-7 border-t border-wheat-200 pt-5">
+                        <p class="text-[11px] font-bold uppercase tracking-[.18em] text-darkbrown-500">Coba kategori lain</p>
+                        <div class="mt-3 flex flex-wrap justify-center gap-2">
+                            @foreach ($categories->take(4) as $cat)
+                                <button
+                                    type="button"
+                                    wire:click="selectCategory({{ $cat->id }})"
+                                    class="inline-flex min-h-[2.25rem] items-center gap-1.5 rounded-xl border border-wheat-300 bg-white px-3 py-1.5 text-xs font-semibold text-darkbrown-700 transition hover:border-avocado-400 hover:bg-wheat-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
+                                >
+                                    <i data-lucide="tag" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    {{ $cat->name }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </div>
-        </div>
-    @endif
+        @endif
+    </section>
 </div>

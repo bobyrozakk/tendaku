@@ -96,6 +96,20 @@ class CatalogIndex extends Component
         $this->resetPage();
     }
 
+    public function clearPriceRange(): void
+    {
+        $this->minPrice = null;
+        $this->maxPrice = null;
+        $this->resetPage();
+    }
+
+    public function clearDateRange(): void
+    {
+        $this->startDate = null;
+        $this->endDate = null;
+        $this->resetPage();
+    }
+
     public function resetFilters(): void
     {
         $this->reset([
@@ -231,8 +245,8 @@ class CatalogIndex extends Component
         $trimmedSearch = trim($this->search);
         if ($trimmedSearch !== '') {
             $itemsQuery->where(function ($query) use ($trimmedSearch) {
-                $query->where('name', 'like', "%{$trimmedSearch}%")
-                    ->orWhere('description', 'like', "%{$trimmedSearch}%");
+                $query->whereLike('name', "%{$trimmedSearch}%", caseSensitive: false)
+                    ->orWhereLike('description', "%{$trimmedSearch}%", caseSensitive: false);
             });
         }
 
