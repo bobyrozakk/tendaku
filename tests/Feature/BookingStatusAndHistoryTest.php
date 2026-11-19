@@ -184,13 +184,14 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertStatus(404);
     }
 
-    public function test_guest_can_access_booking_status_with_matching_phone_or_signed_url(): void
+    public function test_guest_can_access_booking_status_with_token_legacy_phone_or_signed_url(): void
     {
         $guestRental = Rental::create([
             'vendor_id' => $this->vendor->id,
             'user_id' => null,
             'guest_name' => 'Anto Tamu',
             'guest_phone' => '081298765432',
+            'guest_access_token_hash' => hash('sha256', 'guest-status-token'),
             'guest_id_number' => '3507111122223333',
             'booking_code' => 'TDK-2026-GUEST1',
             'pickup_date' => '2026-10-10',
@@ -208,30 +209,44 @@ class BookingStatusAndHistoryTest extends TestCase
             'daily_rate_snapshot' => 50000,
         ]);
 
-        // 1. Tanpa nomor telepon -> 403 Forbidden
+        // Tanpa kredensial akses -> 403 Forbidden.
         $responseWithoutPhone = $this->get(route('booking.status', $guestRental->booking_code));
         $responseWithoutPhone->assertStatus(403);
 
-        // 2. Dengan nomor telepon yang salah -> 403 Forbidden
+        // Kredensial yang salah -> 403 Forbidden.
         $responseWrongPhone = $this->get(route('booking.status', [
             'code' => $guestRental->booking_code,
             'phone' => '089999999999',
         ]));
         $responseWrongPhone->assertStatus(403);
 
-        // 3. Dengan nomor telepon yang cocok -> 200 OK
+        $responseWrongToken = $this->get(route('booking.status', [
+            'code' => $guestRental->booking_code,
+            'token' => 'wrong-token',
+        ]));
+        $responseWrongToken->assertStatus(403);
+
+        $responseValidToken = $this->get(route('booking.status', [
+            'code' => $guestRental->booking_code,
+            'token' => 'guest-status-token',
+        ]));
+        $responseValidToken->assertOk();
+        $this->flushSession();
+
+        // Nomor telepon tetap diterima untuk kompatibilitas dengan link lama.
         $responseValidPhone = $this->get(route('booking.status', [
             'code' => $guestRental->booking_code,
             'phone' => '081298765432',
         ]));
-        $responseValidPhone->assertStatus(200);
+        $responseValidPhone->assertOk();
         $responseValidPhone->assertSee('#TDK-2026-GUEST1');
         $responseValidPhone->assertSee('Tenda Consina 4P');
+        $this->flushSession();
 
-        // 4. Dengan signed URL -> 200 OK
+        // Signed URL tetap diterima untuk kompatibilitas.
         $signedUrl = URL::signedRoute('booking.status', ['code' => $guestRental->booking_code]);
         $responseSigned = $this->get($signedUrl);
-        $responseSigned->assertStatus(200);
+        $responseSigned->assertOk();
     }
 
     public function test_booking_status_displays_timeline_countdown_and_fines_correctly(): void
@@ -709,13 +724,14 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertSee('x-bind:src', false);
     }
 
-    public function test_guest_can_load_qris_image_with_booking_phone(): void
+    public function test_guest_can_load_qris_image_with_booking_token(): void
     {
         $rental = Rental::create([
             'vendor_id' => $this->vendor->id,
             'user_id' => null,
             'guest_name' => 'Anto Tamu',
             'guest_phone' => '081298765432',
+            'guest_access_token_hash' => hash('sha256', 'guest-qris-token'),
             'guest_id_number' => '3507111122223333',
             'booking_code' => 'TDK-2026-GQRIS1',
             'pickup_date' => '2026-10-10',
@@ -753,15 +769,12 @@ class BookingStatusAndHistoryTest extends TestCase
 
         $this->get(route('booking.status', [
             'code' => $rental->booking_code,
-            'phone' => $rental->guest_phone,
+            'token' => 'guest-qris-token',
         ]))
             ->assertOk()
-            ->assertSee('phone=081298765432');
+            ->assertDontSee('phone=081298765432');
 
-        $this->get(route('booking.qris-image', [
-            'code' => $rental->booking_code,
-            'phone' => $rental->guest_phone,
-        ]))
+        $this->get(route('booking.qris-image', $rental->booking_code))
             ->assertOk()
             ->assertHeader('content-type', 'image/png')
             ->assertContent('png-image-data');

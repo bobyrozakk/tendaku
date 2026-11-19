@@ -23,6 +23,7 @@ class Rental extends Model
         'booking_code',
         'guest_name',
         'guest_phone',
+        'guest_access_token_hash',
         'guest_id_number',
         'pickup_date',
         'pickup_time',
@@ -62,6 +63,7 @@ class Rental extends Model
 
     protected $hidden = [
         'guest_id_number',
+        'guest_access_token_hash',
     ];
 
     protected function casts(): array

@@ -228,9 +228,7 @@
             'syncUrl'       => route('booking.sync', $rental->booking_code),
             'csrf'          => csrf_token(),
             'vaUrl'         => route('booking.va', $rental->booking_code),
-            'qrisImageUrl'  => route('booking.qris-image', $rental->isGuest()
-                ? ['code' => $rental->booking_code, 'phone' => $rental->guest_phone]
-                : $rental->booking_code),
+            'qrisImageUrl'  => route('booking.qris-image', $rental->booking_code),
             'vaBanks'       => $vaBanks,
             'paymentMethod' => $isQrisPayment ? 'qris' : $vaBankKey,
             'isQrisPayment' => $isQrisPayment,
