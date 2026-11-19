@@ -23,7 +23,7 @@ class GoogleAuthController extends Controller
         }
 
         return Socialite::driver('google')
-            ->redirectUrl($request->getSchemeAndHttpHost().'/auth/google/callback')
+            ->redirectUrl($this->redirectUri())
             ->stateless()
             ->redirect();
     }
@@ -41,7 +41,7 @@ class GoogleAuthController extends Controller
         try {
             /** @var GoogleUser $googleUser */
             $googleUser = Socialite::driver('google')
-                ->redirectUrl($request->getSchemeAndHttpHost().'/auth/google/callback')
+                ->redirectUrl($this->redirectUri())
                 ->stateless()
                 ->user();
         } catch (InvalidStateException) {
@@ -104,5 +104,14 @@ class GoogleAuthController extends Controller
         $request->session()->flash('success', $welcomeMessage);
 
         return redirect()->intended($destination);
+    }
+
+    /**
+     * Redirect URI must match the one registered in Google Cloud Console,
+     * not the host used to open the app (e.g. 127.0.0.1 vs localhost).
+     */
+    private function redirectUri(): string
+    {
+        return (string) config('services.google.redirect');
     }
 }
