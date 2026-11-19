@@ -23,8 +23,8 @@ new class extends Component
             <div class="flex">
                 <!-- Logo -->
                 <div class="shrink-0 flex items-center">
-                    <a href="{{ route('dashboard') }}" wire:navigate>
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                    <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center px-2.5 py-1.5 rounded-xl transition-all duration-150 hover:opacity-90" style="background: linear-gradient(135deg, #1e1a10 0%, #2b2202 100%);">
+                        <img src="{{ asset('images/Logo.svg') }}" alt="Tendaku" class="block h-7 w-auto" style="filter: brightness(1.7) contrast(1.1) drop-shadow(0 1px 2px rgba(0,0,0,0.5));">
                     </a>
                 </div>
 

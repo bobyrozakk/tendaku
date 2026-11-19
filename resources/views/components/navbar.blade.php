@@ -10,15 +10,25 @@
            style="background: linear-gradient(180deg, #1e1a10 0%, #2b2202 60%, #1a1800 100%);">
 
         <!-- Brand Header -->
-        <div class="px-4 py-4 flex items-center gap-3 border-b overflow-hidden" style="border-color: rgba(255,255,255,0.08);">
-            <div class="p-1.5 rounded-xl shrink-0" style="background: rgba(108,139,8,0.18); border: 1px solid rgba(108,139,8,0.3);">
-                <x-application-logo size="md" :withText="false" />
-            </div>
-            <div class="flex-1 min-w-0 transition-opacity duration-200" :class="open ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'">
-                <h1 class="text-sm font-extrabold tracking-tight leading-none whitespace-nowrap" style="color: #f5e9c8;">Tendaku</h1>
-                <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest mt-1 whitespace-nowrap" style="color: rgba(245,233,200,0.45);">
-                    <span class="w-1.5 h-1.5 rounded-full bg-avocado-400 animate-pulse"></span>
-                    Portal Vendor
+        <div class="px-3 py-3 flex items-center gap-3 border-b overflow-hidden" style="border-color: rgba(255,255,255,0.08);">
+            {{-- Logo container — ukuran tetap 48x48 agar presisi di tengah saat collapsed (72px) --}}
+            <a href="{{ url('/') }}"
+               class="shrink-0 flex items-center justify-center rounded-xl transition-all duration-200 hover:opacity-90 shadow-sm"
+               style="width: 48px; height: 48px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);"
+               title="Tendaku — Kembali ke Beranda"
+               aria-label="Tendaku Home">
+                <img src="{{ asset('images/Logo.svg') }}"
+                     alt="Tendaku Logo"
+                     width="40" height="40"
+                     class="w-10 h-10 object-contain block"
+                     style="filter: brightness(1.7) contrast(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.5));">
+            </a>
+            {{-- Teks brand — tampil dengan transisi saat sidebar expanded --}}
+            <div class="flex-1 min-w-0 transition-all duration-200" :class="open ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 w-0 overflow-hidden pointer-events-none'">
+                <h1 class="text-sm font-extrabold tracking-tight leading-none whitespace-nowrap" style="color: #FAF6ED;">TENDAKU</h1>
+                <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mt-1 whitespace-nowrap" style="color: #D5A007;">
+                    <span class="w-1.5 h-1.5 rounded-full bg-avocado-400 animate-pulse" aria-hidden="true"></span>
+                    {{ auth()->check() && auth()->user()->isVendorOwner() ? 'Portal Owner' : 'Portal Kasir' }}
                 </span>
             </div>
         </div>
@@ -215,16 +225,80 @@
     </aside>
 
 @else
-    <!-- Customer Top Navigation Bar -->
-    <header x-data="{ mobileOpen: false }"
-            class="sticky top-0 z-40 backdrop-blur-md border-b"
-            style="background: rgba(22, 29, 21, 0.96); border-color: rgba(249, 227, 182, 0.15);">
-        <!-- Top Announcement Bar -->
-        <div class="text-darkbrown-900 text-[11px] sm:text-xs font-semibold py-1.5 px-4 text-center border-b border-wheat-300/60"
-             style="background: linear-gradient(90deg, #f9e3b6 0%, #fbce6b 40%, #f5d97a 60%, #f9e3b6 100%);">
-            ⛺ Promo Petualangan Spesial: Diskon Sewa Tenda Dome & Paket Camping Hemat Akhir Pekan!
-        </div>
+    @php
+        $isHome = request()->is('/') || request()->routeIs('home');
+    @endphp
 
+    <!-- Customer Top Navigation Bar Container -->
+    <div x-data="{
+        isHome: {{ $isHome ? 'true' : 'false' }},
+        isHovered: false,
+        mobileOpen: false,
+        isTouch: false,
+        headerHeight: 64,
+        lastScrollY: 0,
+        get isVisible() {
+            return this.isHome || this.isTouch || this.isHovered || this.mobileOpen;
+        },
+        updateHeight() {
+            if (this.$refs.navbarHeader) {
+                this.headerHeight = Math.max(this.$refs.navbarHeader.offsetHeight, 64);
+            }
+        },
+        init() {
+            if (!this.isHome) {
+                this.isTouch = !window.matchMedia('(hover: hover)').matches;
+                this.$nextTick(() => this.updateHeight());
+                window.addEventListener('resize', () => this.updateHeight(), { passive: true });
+                document.fonts?.ready?.then(() => this.updateHeight());
+                this.$watch('mobileOpen', () => this.$nextTick(() => this.updateHeight()));
+            }
+        },
+        handleMouseMove(e) {
+            if (this.isHome || this.mobileOpen) return;
+            // Deteksi jangkauan kursor: muncul saat kursor berada dalam jangkauan 70px dari atas layar
+            if (e.clientY <= 70) {
+                this.isHovered = true;
+            } else if (e.clientY > this.headerHeight && this.isHovered) {
+                this.isHovered = false;
+            }
+        },
+        handleScroll() {
+            if (this.isHome || this.mobileOpen) return;
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > this.lastScrollY && currentScrollY > 60 && this.isHovered) {
+                this.isHovered = false;
+            }
+            this.lastScrollY = currentScrollY;
+        }
+    }"
+    @if (!$isHome)
+        @mousemove.window.passive="handleMouseMove($event)"
+        @scroll.window.passive="handleScroll()"
+        @mouseleave.window="if (!isHome && !mobileOpen) isHovered = false"
+    @endif
+    >
+        @if (!$isHome)
+            {{-- Sensor hotspot transparan di area atas layar (tinggi 64px) untuk memicu hover instan --}}
+            <div class="fixed top-0 inset-x-0 h-16 z-40 pointer-events-auto"
+                 x-show="!isVisible"
+                 @mouseenter="isHovered = true"
+                 aria-hidden="true"></div>
+        @endif
+
+        <!-- Customer Top Navigation Bar -->
+        <header x-ref="navbarHeader"
+                @if (!$isHome)
+                    @mouseenter="isHovered = true"
+                    @mouseleave="isHovered = false"
+                    @focusin="isHovered = true"
+                    @focusout="isHovered = false"
+                    class="fixed top-0 inset-x-0 z-50 backdrop-blur-md border-b transition-all duration-300 ease-in-out"
+                    :class="isVisible ? 'translate-y-0 opacity-100 shadow-xl pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'"
+                @else
+                    class="sticky top-0 z-40 backdrop-blur-md border-b"
+                @endif
+                style="background: rgba(22, 29, 21, 0.96); border-color: rgba(249, 227, 182, 0.15);">
         <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
             <!-- Brand Logo -->
             <div class="flex items-center gap-6">
@@ -294,10 +368,6 @@
                     </a>
                 @endguest
 
-                <!-- Search -->
-                <a href="{{ url('/katalog') }}" class="p-2 text-wheat-300 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-150 flex items-center justify-center" title="Cari alat camping">
-                    <i data-lucide="search" class="w-5 h-5"></i>
-                </a>
 
                 <!-- Cart (khusus member yang sudah login) -->
                 @auth
@@ -446,4 +516,12 @@
             @endguest
         </div>
     </header>
+
+    @if (!$isHome)
+        {{-- Spacer dinamis: mendorong konten ke bawah (turun) secara sinkron saat topbar muncul, sehingga topbar tidak menutupi konten --}}
+        <div class="transition-all duration-300 ease-in-out overflow-hidden"
+             :style="isVisible ? 'height: ' + headerHeight + 'px;' : 'height: 0px;'"
+             aria-hidden="true"></div>
+    @endif
+    </div>
 @endif
