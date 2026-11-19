@@ -1,3 +1,5 @@
+@props(['title' => null, 'fullWidth' => false])
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
 <head>
@@ -29,7 +31,7 @@
 
     <x-toast />
 
-    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+    <main class="flex-1 w-full {{ $fullWidth ? '' : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8' }}">
         {{ $slot }}
     </main>
 
