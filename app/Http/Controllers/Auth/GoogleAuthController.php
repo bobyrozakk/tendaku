@@ -196,6 +196,7 @@ class GoogleAuthController extends Controller
         $redirectService = app(AuthRedirectService::class);
         $destination = $redirectService->getDestination($user, absolute: false);
         $welcomeMessage = $redirectService->getWelcomeMessage($user);
+        $redirectService->clearInaccessibleIntendedDestination($user);
 
         $request->session()->flash('success', $welcomeMessage);
 

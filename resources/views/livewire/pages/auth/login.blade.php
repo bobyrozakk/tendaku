@@ -63,6 +63,8 @@ new #[Layout('layouts.guest')] class extends Component
             session()->forget('url.intended');
         }
 
+        $redirectService->clearInaccessibleIntendedDestination($user);
+
         $this->redirectIntended(
             default: $redirectService->getDestination($user, absolute: false),
             navigate: false
