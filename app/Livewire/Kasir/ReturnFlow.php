@@ -200,12 +200,17 @@ class ReturnFlow extends Component
         // Auto update individual detail in DB
         $detail = RentalDetail::find($detailId);
         if ($detail) {
+            $lateDays = $this->lateDays;
+            $ratePerDay = (float) ($detail->late_fee_per_day_snapshot ?? 0);
+
             $detail->update([
                 'condition_after' => $condition,
                 'damage_fee' => $fee,
                 'checklist_notes' => $this->itemNotes[$detailId] ?? null,
                 'is_returned' => true,
                 'returned_at' => Carbon::now(),
+                'late_days' => $lateDays,
+                'late_fee' => $ratePerDay * $lateDays,
             ]);
 
             // Jika barang rusak/hilang atau dikembalikan, update item_unit juga
@@ -269,12 +274,16 @@ class ReturnFlow extends Component
             foreach ($order->details as $detail) {
                 $cond = $this->inspectionNotes[$detail->id] ?? 'good';
                 $damage = (float) ($this->damageFees[$detail->id] ?? 0);
+                $lateDays = $this->lateDays;
+                $ratePerDay = (float) ($detail->late_fee_per_day_snapshot ?? 0);
 
                 $detail->update([
                     'condition_after' => $cond,
                     'damage_fee' => $damage,
                     'is_returned' => true,
                     'returned_at' => $detail->returned_at ?? Carbon::now(),
+                    'late_days' => $lateDays,
+                    'late_fee' => $ratePerDay * $lateDays,
                 ]);
 
                 if ($detail->item_unit_id) {
@@ -444,6 +453,25 @@ class ReturnFlow extends Component
         $this->showReceiptModal = true;
     }
 
+    public function getLateDaysProperty(): int
+    {
+        $order = $this->getActiveOrderProperty();
+        if (! $order || $this->isExpiredUnpicked) {
+            return 0;
+        }
+
+        if (Carbon::today()->gt($order->return_date)) {
+            return (int) Carbon::today()->diffInDays(Carbon::parse($order->return_date));
+        }
+
+        return 0;
+    }
+
+    public function getIsLateProperty(): bool
+    {
+        return $this->lateDays > 0;
+    }
+
     public function getCalculatedLateFeeProperty(): float
     {
         $order = $this->getActiveOrderProperty();
@@ -456,15 +484,51 @@ class ReturnFlow extends Component
             return 0;
         }
 
-        if (Carbon::today()->gt($order->return_date)) {
-            $lateDays = abs((int) Carbon::today()->diffInDays($order->return_date));
-            // Jumlah late fee per day dari snapshot detail
-            $dailyLateRate = (float) ($order->details->sum('late_fee_per_day_snapshot') ?: 25000);
-
-            return (float) ($lateDays * $dailyLateRate);
+        $lateDays = $this->lateDays;
+        if ($lateDays <= 0) {
+            return (float) ($order->total_late_fee ?? 0);
         }
 
-        return (float) ($order->total_late_fee ?? 0);
+        // Hitung denda per detail × rate snapshot masing-masing × jumlah hari terlambat
+        $total = 0.0;
+        foreach ($order->details as $detail) {
+            $ratePerDay = (float) ($detail->late_fee_per_day_snapshot ?? 0);
+            $total += $ratePerDay * $lateDays;
+        }
+
+        return $total;
+    }
+
+    /**
+     * Rincian denda keterlambatan per item untuk ditampilkan di view.
+     *
+     * @return array<int, array{name: string, rate: float, late_days: int, subtotal: float}>
+     */
+    public function getLateFeeBreakdownProperty(): array
+    {
+        $order = $this->getActiveOrderProperty();
+        if (! $order || ! $this->isLate) {
+            return [];
+        }
+
+        $lateDays = $this->lateDays;
+        $breakdown = [];
+
+        foreach ($order->details as $detail) {
+            $rate = (float) ($detail->late_fee_per_day_snapshot ?? 0);
+            if ($rate <= 0) {
+                continue;
+            }
+
+            $breakdown[] = [
+                'name' => $detail->masterItem?->name ?? 'Item #'.$detail->id,
+                'rate' => $rate,
+                'late_days' => $lateDays,
+                'subtotal' => $rate * $lateDays,
+            ];
+        }
+
+        return $breakdown;
     }
 
     public function getTotalDamageFeeProperty(): float

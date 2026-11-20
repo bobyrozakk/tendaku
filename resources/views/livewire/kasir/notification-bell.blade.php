@@ -1,17 +1,15 @@
 <div wire:poll.10s class="relative" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false">
     <!-- Notification Bell Button -->
-    <button @click="open = !open"
+    <button @click="open = !open; $nextTick(() => { if (typeof window.renderLucideIcons === 'function') window.renderLucideIcons(); })"
             type="button"
-            class="relative p-2 rounded-xl transition-all duration-150 focus:outline-none"
-            :class="open ? 'bg-[#f0e8d4] text-[#2b2202]' : 'text-[#7a6840] hover:bg-[#f0e8d4] hover:text-[#2b2202]'"
+            class="relative w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150 focus:outline-none active:scale-95 cursor-pointer"
+            :class="open ? 'bg-wheat-100 text-darkbrown-900 border border-wheat-200' : 'text-darkbrown-500 hover:text-darkbrown-900 hover:bg-wheat-100/80 border border-transparent hover:border-wheat-200/80'"
             title="Notifikasi">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
+        <i data-lucide="bell" class="w-4 h-4"></i>
 
         @php $totalBadge = $pendingCount + $lostUnitCount; @endphp
         @if($totalBadge > 0)
-            <span class="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full {{ $lostUnitCount > 0 ? 'bg-rose-600' : 'bg-red-600' }} text-[10px] font-extrabold text-white ring-2 ring-white animate-pulse shadow-sm">
+            <span class="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-rose-600 text-[10px] font-mono font-black text-white ring-2 ring-white shadow-2xs">
                 {{ $totalBadge > 99 ? '99+' : $totalBadge }}
             </span>
         @endif

@@ -18,123 +18,94 @@
 </head>
 <body class="min-h-full font-sans antialiased text-darkbrown-800" style="background-color: #f2ede3;" x-data="{ showLogoutModal: false }">
     <div class="min-h-screen flex">
-        <!-- Vendor Shared Sidebar -->
-        <x-navbar role="vendor" />
+        <!-- Vendor / Kasir Sidebar -->
+        @if (auth()->check() && (auth()->user()->isVendorAdmin() || !auth()->user()->isVendorOwner()))
+            <x-navbar-kasir />
+        @else
+            <x-navbar role="vendor" />
+        @endif
 
         <!-- Content area (automatically resizes alongside sidebar) -->
         <div class="flex-1 flex flex-col min-w-0">
-            <!-- Top App Bar — matches dark sidebar tone -->
-            <div class="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 sm:px-6 py-3"
-                 style="background: #ffffff; border-bottom: 1px solid #e8e0cc;">
+            <!-- Top POS App Bar (Semi-Modern Taste-Skill Standard) -->
+            <header class="sticky top-0 z-20 flex items-center justify-between gap-4 px-4 sm:px-6 py-2.5 bg-white/95 backdrop-blur-md border-b border-wheat-200/90 shadow-2xs">
 
-                <!-- Left: Status Toko & Nama Toko -->
-
-                <!-- Left: Status Toko & Nama Toko -->
-                <div class="flex items-center gap-3">
-                    <!-- Status Operasional Toko -->
-                    <div
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border"
-                        style="background: rgba(108,139,8,0.08); color: #4e6506; border-color: rgba(108,139,8,0.25);"
-                    >
-                        <span
-                            class="w-2 h-2 rounded-full animate-pulse"
-                            style="background: #6c8b08;"
-                        ></span>
-                        <span>Toko Rental Buka</span>
-                    </div>
+                <!-- Left: Nama Toko Vendor -->
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <!-- Mobile Hamburger Button for Kasir / Vendor Sidebar -->
+                    <button type="button"
+                            @click="$dispatch('toggle-kasir-sidebar')"
+                            class="lg:hidden p-2 -ml-1.5 rounded-xl text-darkbrown-700 hover:bg-wheat-100 active:scale-95 transition-all"
+                            aria-label="Toggle Menu Sidebar">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
 
                     <!-- Nama Toko Vendor -->
-                    <span
-                        class="text-xs hidden sm:inline"
-                        style="color: #b8a882;"
-                    >
-                        • {{ auth()->user()?->vendor?->name ?? 'Tendaku Store' }}
-                    </span>
+                    <div class="flex items-center gap-2 text-darkbrown-900 min-w-0">
+                        <div class="w-7 h-7 rounded-lg bg-wheat-100 border border-wheat-200/90 flex items-center justify-center text-darkbrown-700 shrink-0">
+                            <i data-lucide="store" class="w-3.5 h-3.5 text-avocado-800"></i>
+                        </div>
+                        <span class="font-extrabold text-sm tracking-tight text-darkbrown-900 truncate">
+                            {{ auth()->user()?->vendor?->name ?? 'Tendaku Store Central' }}
+                        </span>
+                    </div>
                 </div>
 
-
-                <!-- Right: Actions -->
-                <div class="flex items-center gap-2">
+                <!-- Right: Notifications, Cashier Profile & Actions -->
+                <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
 
                     <!-- Notification Bell -->
                     @if (auth()->check() && (auth()->user()->isVendorAdmin() || auth()->user()->isVendorOwner()))
                         <livewire:kasir.notification-bell />
-                    @else
-                        <button class="relative p-2 rounded-xl transition-all duration-150"
-                                style="color: #7a6840;"
-                                onmouseover="this.style.background='#f0e8d4'; this.style.color='#2b2202';"
-                                onmouseout="this.style.background='transparent'; this.style.color='#7a6840';"
-                                title="Notifikasi Baru">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full border-2 border-white"
-                                  style="background: #d5a007;"></span>
-                        </button>
                     @endif
 
-                    <!-- View Website Link -->
-                    <!-- <a href="{{ url('/') }}"
-                       class="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150"
-                       style="background: #f0e8d4; color: #4a3520; border: 1px solid #ddd0b0;"
-                       onmouseover="this.style.background='#e6dcc5';"
-                       onmouseout="this.style.background='#f0e8d4';">
-                        <span>Lihat Website</span>
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                        </svg>
-                    </a> -->
+                    <!-- Vertical Divider -->
+                    <div class="w-px h-6 bg-wheat-200/90 mx-0.5"></div>
 
-                    <!-- Divider -->
-                    <div class="w-px h-6 mx-1" style="background: #e8e0cc;"></div>
+                    <!-- User Pill (Clickable Profile) -->
+                    @php
+                        $profileRoute = auth()->user()?->isVendorAdmin()
+                            ? route('kasir.profile')
+                            : route('profile');
+                        $userInitials = strtoupper(substr(auth()->user()->name ?? 'TK', 0, 2));
+                        $userRoleLabel = auth()->user()?->isVendorOwner()
+                            ? 'Owner'
+                            : (auth()->user()?->isVendorAdmin() ? 'Kasir' : 'Staf');
+                    @endphp
 
-                    <!-- User Pill (Clickable Profile) & Logout -->
-                    <div class="flex items-center gap-2">
-                        @php
-                            $profileRoute = auth()->user()?->isVendorAdmin()
-                                ? route('kasir.profile')
-                                : route('profile');
-                        @endphp
+                    <div class="flex items-center gap-1.5">
                         <a href="{{ $profileRoute }}"
                            wire:navigate
-                           class="flex items-center gap-2.5 p-1 -m-1 rounded-2xl hover:bg-wheat-100/80 transition-all duration-150 group cursor-pointer"
+                           class="flex items-center gap-2.5 p-1 pr-2 sm:pr-3 rounded-xl hover:bg-wheat-100/70 border border-transparent hover:border-wheat-200/80 active:scale-[0.98] transition-all duration-150 group cursor-pointer"
                            title="Lihat Profil Kasir">
-                            <div class="w-8 h-8 rounded-xl font-bold flex items-center justify-center text-xs text-white transition-transform group-hover:scale-105 duration-150 shadow-sm"
-                                 style="background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 2px 8px rgba(108,139,8,0.3);">
-                                {{ strtoupper(substr(auth()->user()->name ?? 'TK', 0, 2)) }}
+                            <div class="w-8 h-8 rounded-lg font-black flex items-center justify-center text-xs text-white bg-avocado-700 border border-avocado-600/40 shadow-2xs group-hover:bg-avocado-800 transition-colors">
+                                {{ $userInitials }}
                             </div>
                             <div class="hidden sm:block text-left">
-                                <p class="text-xs font-bold leading-none text-darkbrown-900 group-hover:text-avocado-800 transition-colors">
-                                    @if (auth()->user()?->isVendorOwner())
-                                        Owner ({{ auth()->user()->name }})
-                                    @elseif (auth()->user()?->isVendorAdmin())
-                                        Admin ({{ auth()->user()->name }})
-                                    @else
-                                        {{ auth()->user()?->name ?? 'Staf Vendor' }}
-                                    @endif
-                                </p>
-                                <p class="text-[10px] mt-0.5 truncate max-w-[120px] text-darkbrown-500 group-hover:text-darkbrown-700 transition-colors">
-                                    {{ auth()->user()?->isVendorOwner()
-                                        ? 'Vendor Owner Portal'
-                                        : (auth()->user()?->isVendorAdmin()
-                                            ? 'Vendor Admin Portal'
-                                            : 'Kasir & Admin Portal') }}
+                                <div class="flex items-center gap-1.5">
+                                    <p class="text-xs font-extrabold text-darkbrown-900 group-hover:text-avocado-800 transition-colors leading-none">
+                                        {{ auth()->user()->name ?? 'Kasir Toko' }}
+                                    </p>
+                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-wheat-200 text-darkbrown-800 border border-wheat-300/80 uppercase">
+                                        {{ $userRoleLabel }}
+                                    </span>
+                                </div>
+                                <p class="text-[10px] text-darkbrown-500 group-hover:text-darkbrown-700 transition-colors mt-0.5 font-medium truncate max-w-[140px]">
+                                    {{ auth()->user()?->vendor?->name ?? 'Tendaku Rental' }}
                                 </p>
                             </div>
                         </a>
 
-                        <!-- Trigger Modal Logout -->
+                        <!-- Trigger Modal Logout Button -->
                         <button type="button"
                                 @click="showLogoutModal = true"
-                                class="p-1.5 rounded-lg text-darkbrown-500 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                class="w-8 h-8 rounded-lg flex items-center justify-center text-darkbrown-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 active:scale-95 transition-all duration-150 cursor-pointer"
                                 title="Keluar / Logout">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
-            </div>
+            </header>
 
             <!-- Page Header Slot -->
             @if (isset($header))

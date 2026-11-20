@@ -12,23 +12,21 @@
     @endif
 
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {{-- Pill Navigation --}}
-        <div class="inline-flex p-1.5 bg-white/80 backdrop-blur-md rounded-2xl border border-wheat-300/80 shadow-sm">
+        {{-- Pill Navigation (Taste-skill Modern Kasir Segmented Control) --}}
+        <div class="inline-flex p-1 bg-wheat-200/60 rounded-xl border border-wheat-300/70 shrink-0">
             <button wire:click="$set('activeTab', 'return')"
-                class="flex items-center gap-2.5 py-2 px-5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer {{ $activeTab === 'return' ? 'text-white shadow-md' : 'text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100/70 font-semibold' }}"
-                style="{{ $activeTab === 'return' ? 'background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 14px rgba(78,101,6,0.3);' : '' }}">
-                <i data-lucide="clipboard-check" class="w-4 h-4 {{ $activeTab === 'return' ? 'text-white' : 'text-darkbrown-400' }}"></i>
-                <span>Inspeksi & Retur</span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-black {{ $activeTab === 'return' ? 'bg-white/20 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
+                class="flex items-center gap-2.5 py-2 px-5 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer active:scale-[0.97] {{ $activeTab === 'return' ? 'bg-white text-darkbrown-900 shadow-sm border border-wheat-200' : 'text-darkbrown-600 hover:text-darkbrown-900 hover:bg-white/40' }}">
+                <i data-lucide="clipboard-check" class="w-4 h-4 {{ $activeTab === 'return' ? 'text-avocado-700' : 'text-darkbrown-400' }}"></i>
+                <span>Inspeksi & retur</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-admin-number font-black {{ $activeTab === 'return' ? 'bg-avocado-100 text-avocado-900' : 'bg-wheat-300/70 text-darkbrown-700' }}">
                     {{ $activeRentalsList->count() }}
                 </span>
             </button>
 
             <button wire:click="$set('activeTab', 'history')"
-                class="flex items-center gap-2.5 py-2 px-5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer {{ $activeTab === 'history' ? 'text-white shadow-md' : 'text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100/70 font-semibold' }}"
-                style="{{ $activeTab === 'history' ? 'background: linear-gradient(135deg, #2b2202 0%, #3d3000 60%, #4a3c00 100%); box-shadow: 0 4px 14px rgba(43,34,2,0.3);' : '' }}">
-                <i data-lucide="history" class="w-4 h-4 {{ $activeTab === 'history' ? 'text-white' : 'text-darkbrown-400' }}"></i>
-                <span>Riwayat Transaksi</span>
+                class="flex items-center gap-2.5 py-2 px-5 rounded-lg text-xs font-bold transition-all duration-150 cursor-pointer active:scale-[0.97] {{ $activeTab === 'history' ? 'bg-white text-darkbrown-900 shadow-sm border border-wheat-200' : 'text-darkbrown-600 hover:text-darkbrown-900 hover:bg-white/40' }}">
+                <i data-lucide="history" class="w-4 h-4 {{ $activeTab === 'history' ? 'text-darkbrown-900' : 'text-darkbrown-400' }}"></i>
+                <span>Riwayat transaksi</span>
             </button>
         </div>
 
@@ -81,18 +79,18 @@
                             $isLate = \Carbon\Carbon::today()->gt($rental->return_date);
                         @endphp
                         <div wire:click="selectRental({{ $rental->id }})"
-                             class="group relative overflow-hidden bg-white rounded-2xl border p-4 cursor-pointer transition-all duration-200 {{ $isSelected ? 'border-avocado-500 shadow-md ring-2 ring-avocado-500/20' : 'border-wheat-200/90 hover:border-wheat-300 hover:shadow-sm hover:translate-x-0.5' }}">
+                             class="group relative overflow-hidden bg-white rounded-2xl border p-4 cursor-pointer transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.995] {{ $isSelected ? 'border-avocado-500 shadow-sm ring-2 ring-avocado-500/20' : 'border-wheat-200/90 hover:border-wheat-300 hover:shadow-tendaku-sm' }}">
 
-                            <div class="absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-200 {{ $isSelected ? 'bg-avocado-600' : ($isExpiredUnpickedRental ? 'bg-rose-500' : ($isLate ? 'bg-red-500' : 'bg-wheat-300 group-hover:bg-avocado-400')) }}"></div>
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-150 {{ $isSelected ? 'bg-avocado-600' : ($isExpiredUnpickedRental ? 'bg-rose-500' : ($isLate ? 'bg-red-500' : 'bg-wheat-300 group-hover:bg-avocado-500')) }}"></div>
 
                             <div class="pl-2 space-y-3">
                                 <div class="flex items-start justify-between gap-2">
-                                    <div class="flex items-center gap-2">
-                                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs {{ $isSelected ? 'bg-avocado-600 text-white' : 'bg-wheat-100 text-darkbrown-700' }}">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs {{ $isSelected ? 'bg-avocado-600 text-white' : 'bg-wheat-100 text-darkbrown-800' }} shadow-xs transition-colors">
                                             {{ strtoupper(substr($custName, 0, 1)) }}
                                         </div>
                                         <div>
-                                            <h4 class="font-extrabold text-sm text-darkbrown-900 leading-tight group-hover:text-avocado-700 transition-colors">
+                                            <h4 class="font-extrabold text-sm text-darkbrown-900 leading-tight group-hover:text-avocado-800 transition-colors">
                                                 {{ $custName }}
                                             </h4>
                                             <span class="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-darkbrown-500">
@@ -104,7 +102,7 @@
                                     @if($isExpiredUnpickedRental)
                                         <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300 shrink-0">
                                             <i data-lucide="clock" class="w-3 h-3 text-rose-600"></i>
-                                            Kedaluwarsa (Tidak Diambil)
+                                            Kedaluwarsa
                                         </span>
                                     @elseif($rental->ktp_collateral_status === 'held')
                                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-200 shrink-0">
@@ -117,34 +115,34 @@
                                 <div class="flex items-center justify-between text-xs pt-1 border-t border-wheat-100">
                                     <div class="flex items-center gap-1.5 text-darkbrown-600 text-[11px]">
                                         <i data-lucide="calendar" class="w-3.5 h-3.5 text-darkbrown-400"></i>
-                                        <span>Jatuh Tempo: <strong class="text-darkbrown-800">{{ $rental->return_date->format('d M Y') }}</strong></span>
+                                        <span>Jatuh tempo: <strong class="text-darkbrown-900 font-mono">{{ $rental->return_date->format('d M Y') }}</strong></span>
                                     </div>
-                                    <span class="text-[11px] font-bold text-darkbrown-500 bg-wheat-100 px-2 py-0.5 rounded-md">
+                                    <span class="text-[11px] font-bold text-darkbrown-700 font-admin-number bg-wheat-100 px-2 py-0.5 rounded-md tabular-nums">
                                         {{ $rental->details->count() }} Item
                                     </span>
                                 </div>
 
                                 <div class="flex items-center justify-between pt-1">
                                     @if($isExpiredUnpickedRental)
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                                            Tidak Pernah Diambil
+                                            Tidak pernah diambil
                                         </span>
                                     @elseif($isLate)
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                                            Terlambat Kembalikan
+                                            Terlambat
                                         </span>
                                     @else
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[10px] font-bold bg-avocado-50 text-avocado-700 border border-avocado-200">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-avocado-50 text-avocado-700 border border-avocado-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-avocado-500"></span>
-                                            Tepat Waktu
+                                            Tepat waktu
                                         </span>
                                     @endif
 
                                     <span class="text-xs font-bold flex items-center gap-1 {{ $isSelected ? 'text-avocado-700' : 'text-darkbrown-400 group-hover:text-darkbrown-700' }}">
                                         <span>Inspeksi</span>
-                                        <i data-lucide="chevron-right" class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"></i>
+                                        <i data-lucide="chevron-right" class="w-3.5 h-3.5 transition-transform duration-150 group-hover:translate-x-0.5"></i>
                                     </span>
                                 </div>
                             </div>
@@ -189,6 +187,16 @@
                                             <div>
                                                 <div class="text-[10px] uppercase font-black text-rose-700 leading-none">Status Pesanan</div>
                                                 <div class="leading-tight font-extrabold">Kedaluwarsa (Tidak Diambil)</div>
+                                            </div>
+                                        </div>
+                                    @elseif($this->isLate)
+                                        <div class="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-red-600 text-white shadow-md"
+                                             style="box-shadow: 0 4px 14px rgba(220,38,38,0.4);">
+                                            <span class="w-2 h-2 rounded-full bg-white animate-ping absolute opacity-75"></span>
+                                            <span class="w-2 h-2 rounded-full bg-white relative"></span>
+                                            <div>
+                                                <div class="text-[10px] uppercase font-black text-red-100 leading-none">Keterlambatan</div>
+                                                <div class="leading-tight font-extrabold">TERLAMBAT {{ $this->lateDays }} HARI</div>
                                             </div>
                                         </div>
                                     @elseif($this->activeOrder->ktp_collateral_status === 'held')
@@ -375,11 +383,10 @@
                                                 <div class="flex items-center justify-end pt-2 border-t border-wheat-100">
                                                     <button wire:click="markItemReturned({{ $detail->id }})"
                                                             :disabled="(cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)"
-                                                            :class="((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'bg-gray-200 text-gray-400 border border-gray-300 cursor-not-allowed opacity-80' : 'text-white shadow-sm cursor-pointer active:scale-95 hover:brightness-105'"
-                                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200"
-                                                            style="background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 12px rgba(78,101,6,0.25);">
+                                                            :class="((cond === 'damaged' || cond === 'lost') && (Number(fee) <= 0 || !fee)) ? 'bg-wheat-200 text-darkbrown-400 border border-wheat-300 cursor-not-allowed opacity-70' : 'bg-avocado-700 hover:bg-avocado-800 text-white shadow-xs cursor-pointer active:scale-[0.98]'"
+                                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-150">
                                                         <i data-lucide="check" class="w-4 h-4"></i>
-                                                        <span>Konfirmasi Fisik Item</span>
+                                                        <span>Konfirmasi fisik item</span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -395,6 +402,40 @@
                                 $isAllItemsInspected = ($totalItemsInOrder > 0 && $confirmedItemsCount >= $totalItemsInOrder);
                             @endphp
 
+                            {{-- Banner Keterlambatan (hanya tampil jika terlambat & bukan expired unpicked) --}}
+                            @if($this->isLate && !$this->isExpiredUnpicked)
+                                <div class="rounded-2xl border border-red-300 bg-red-50 p-4 space-y-2.5">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0">
+                                            <i data-lucide="clock-alert" class="w-4 h-4"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs font-black text-red-900 uppercase tracking-wide">
+                                                Keterlambatan {{ $this->lateDays }} Hari — Denda Berjalan Otomatis
+                                            </p>
+                                            <p class="text-[11px] text-red-700 font-medium">
+                                                Jatuh tempo: {{ $this->activeOrder->return_date->format('d M Y') }} · Hari ini: {{ \Carbon\Carbon::today()->format('d M Y') }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    @if(count($this->lateFeeBreakdown) > 0)
+                                        <div class="border-t border-red-200 pt-2.5 space-y-1.5">
+                                            <span class="text-[10px] font-black text-red-700 uppercase tracking-wider block">Rincian Denda per Item:</span>
+                                            @foreach($this->lateFeeBreakdown as $entry)
+                                                <div class="flex justify-between items-center text-[11px]">
+                                                    <span class="text-red-800 font-medium truncate max-w-[55%]">{{ $entry['name'] }}</span>
+                                                    <span class="text-red-900 font-bold shrink-0">
+                                                        Rp {{ number_format($entry['rate'], 0, ',', '.') }}/hari × {{ $entry['late_days'] }} hari
+                                                        = <span class="text-red-700 font-black">Rp {{ number_format($entry['subtotal'], 0, ',', '.') }}</span>
+                                                    </span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+
                             <div class="rounded-2xl p-5 border border-wheat-200 space-y-3 bg-gradient-to-br from-wheat-50/80 via-white to-wheat-100/40 shadow-sm">
                                 <div class="flex items-center justify-between pb-2 border-b border-wheat-200">
                                     <span class="text-xs font-bold text-darkbrown-700 uppercase tracking-wider">
@@ -407,7 +448,12 @@
 
                                 <div class="space-y-2 text-xs">
                                     <div class="flex justify-between items-center text-darkbrown-700">
-                                        <span class="font-medium">Denda Keterlambatan:</span>
+                                        <span class="font-medium">
+                                            Denda Keterlambatan:
+                                            @if($this->isLate && !$this->isExpiredUnpicked)
+                                                <span class="ml-1 text-[10px] font-black text-red-600">({{ $this->lateDays }} hari)</span>
+                                            @endif
+                                        </span>
                                         <span class="font-bold {{ (float)$this->calculatedLateFee > 0 ? 'text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200' : 'text-darkbrown-900' }}">
                                             Rp {{ number_format(abs((float)$this->calculatedLateFee), 0, ',', '.') }}
                                         </span>
@@ -459,15 +505,14 @@
                                 </div>
 
                                 <button wire:click="completeReturn"
-                                        class="w-full sm:w-auto py-3.5 px-8 rounded-xl font-black text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2.5 {{ $isAllItemsInspected ? 'text-white cursor-pointer shadow-lg active:scale-95' : 'bg-gray-100 text-gray-400 border border-gray-300 cursor-not-allowed opacity-80' }}"
-                                        style="{{ $isAllItemsInspected ? 'background: linear-gradient(135deg, #4e6506 0%, #5c7608 60%, #6c8b08 100%); box-shadow: 0 4px 18px rgba(78,101,6,0.35);' : '' }}"
+                                        class="w-full sm:w-auto py-3 px-7 rounded-xl font-extrabold text-xs tracking-wider transition-all duration-150 flex items-center justify-center gap-2.5 {{ $isAllItemsInspected ? 'bg-avocado-700 hover:bg-avocado-800 text-white cursor-pointer shadow-md shadow-avocado-950/10 active:scale-[0.98]' : 'bg-wheat-100 text-darkbrown-400 border border-wheat-300 cursor-not-allowed opacity-70' }}"
                                         {{ !$isAllItemsInspected ? 'disabled' : '' }}>
                                     @if(!$isAllItemsInspected)
-                                        <i data-lucide="lock" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                                        <span>{{ $this->isExpiredUnpicked ? 'Selesaikan Pesanan Kedaluwarsa' : 'Selesai Retur & Serahkan KTP' }}</span>
+                                        <i data-lucide="lock" class="w-4 h-4 text-darkbrown-400 shrink-0"></i>
+                                        <span>{{ $this->isExpiredUnpicked ? 'Selesaikan pesanan kedaluwarsa' : 'Selesai retur & serahkan KTP' }}</span>
                                     @else
-                                        <i data-lucide="check" class="w-4 h-4"></i>
-                                        <span>{{ $this->isExpiredUnpicked ? 'Selesaikan & Pulihkan Unit (Completed)' : 'Selesai Retur & Serahkan KTP (Completed)' }}</span>
+                                        <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                                        <span>{{ $this->isExpiredUnpicked ? 'Selesaikan & pulihkan unit' : 'Selesai retur & serahkan KTP' }}</span>
                                     @endif
                                 </button>
                             </div>

@@ -64,12 +64,13 @@ class Pos extends Component
 
         $order = $this->getSelectedOrderProperty();
         if ($order) {
-            // Auto-alokasikan unit fisik ber-barcode yang tersedia dari vendor jika belum ada unit_id
-            $vendorId = Auth::user()?->vendor_id;
-            $usedUnitIds = $order->details->pluck('item_unit_id')->filter()->all();
+            // Auto-alokasikan unit fisik ber-barcode HANYA jika ada detail yang belum punya item_unit_id
+            $unassignedDetails = $order->details->whereNull('item_unit_id');
+            if ($unassignedDetails->isNotEmpty()) {
+                $vendorId = Auth::user()?->vendor_id;
+                $usedUnitIds = $order->details->pluck('item_unit_id')->filter()->all();
 
-            foreach ($order->details as $detail) {
-                if (! $detail->item_unit_id) {
+                foreach ($unassignedDetails as $detail) {
                     $availableUnit = ItemUnit::withoutGlobalScope('vendor')
                         ->where('vendor_id', $vendorId)
                         ->where('master_item_id', $detail->master_item_id)
@@ -86,10 +87,9 @@ class Pos extends Component
                         $usedUnitIds[] = $availableUnit->id;
                     }
                 }
+                // Refresh relasi order details hanya jika ada alokasi baru
+                $order->load(['details.masterItem', 'details.itemUnit']);
             }
-
-            // Refresh relasi order details
-            $order->load(['details.masterItem', 'details.itemUnit']);
 
             $orderId = (string) $order->id;
             if (! isset($this->scannedUnits[$orderId])) {

@@ -84,10 +84,10 @@ new #[Layout('layouts.guest')] class extends Component
 
         <button wire:click="logout"
                 type="button"
-                class="rounded text-sm font-medium text-tendaku-brown/70 underline-offset-4 hover:text-tendaku-brown hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-tendaku-brown/40 cursor-pointer">
+                class="cursor-pointer rounded text-sm font-medium text-avocado-300 underline-offset-4 hover:text-avocado-200 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-300">
             Kembali
         </button>
     </div>
 
-    <p class="mt-8 text-sm text-tendaku-brown/70">Email belum masuk? Cek juga folder spam.</p>
+    <p class="mt-8 text-sm text-white">Email belum masuk? Cek juga folder spam.</p>
 </div>
