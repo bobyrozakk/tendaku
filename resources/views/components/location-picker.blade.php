@@ -11,7 +11,7 @@
     'defaultZoom' => 13,
     'selectedZoom' => 16,
     'label' => 'Titik Lokasi pada Peta',
-    'helpText' => 'Klik pada peta atau geser pin untuk menentukan titik lokasi yang presisi.',
+    'helpText' => 'Klik pada peta atau geser penanda lokasi untuk menentukan titik yang tepat.',
     'heightClass' => 'h-64 sm:h-72',
     'required' => false,
     'disabled' => false,
@@ -195,10 +195,10 @@
                 class="flex flex-wrap items-center gap-3 font-mono text-xs text-darkbrown-700"
             >
                 <span>
-                    Lat: <strong class="font-semibold text-darkbrown-900" x-text="formattedLatitude">{{ $initialLatitudeInputValue }}</strong>
+                    Lintang: <strong class="font-semibold text-darkbrown-900" x-text="formattedLatitude">{{ $initialLatitudeInputValue }}</strong>
                 </span>
                 <span>
-                    Lng: <strong class="font-semibold text-darkbrown-900" x-text="formattedLongitude">{{ $initialLongitudeInputValue }}</strong>
+                    Bujur: <strong class="font-semibold text-darkbrown-900" x-text="formattedLongitude">{{ $initialLongitudeInputValue }}</strong>
                 </span>
             </div>
         </div>

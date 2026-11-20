@@ -76,9 +76,18 @@ new class extends Component
         ], [
             'name.required' => 'Nama lengkap wajib diisi.',
             'email.required' => 'Alamat email wajib diisi.',
+            'email.string' => 'Alamat email harus berupa teks.',
+            'email.lowercase' => 'Alamat email harus menggunakan huruf kecil.',
+            'email.email' => 'Format alamat email tidak valid.',
+            'email.max' => 'Alamat email maksimal :max karakter.',
+            'email.unique' => 'Alamat email sudah digunakan.',
             'phone.required' => 'Nomor WhatsApp / telepon wajib diisi.',
             'phone.regex' => 'Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka.',
             'nik.digits' => 'NIK harus terdiri dari 16 digit angka.',
+            'name.string' => 'Nama lengkap harus berupa teks.',
+            'name.max' => 'Nama lengkap maksimal :max karakter.',
+            'address.string' => 'Alamat harus berupa teks.',
+            'address.max' => 'Alamat maksimal :max karakter.',
         ]);
 
         $validated['address'] = filled($validated['address'] ?? null) ? trim($validated['address']) : null;
@@ -129,13 +138,12 @@ new class extends Component
         </div>
 
         @if(! $isEditing)
-            <button 
-                type="button" 
+            <button
+                type="button"
                 wire:click="startEditing"
-                class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all self-start sm:self-auto"
+                class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all self-start sm:self-auto"
             >
-                <i data-lucide="edit-3" class="w-4 h-4"></i>
-                <span>{{ __('Edit Profil') }}</span>
+                <i data-lucide="pencil-sparkles" class="w-4 h-4"></i>
             </button>
         @endif
     </header>
@@ -153,9 +161,16 @@ new class extends Component
     @if(! $isEditing)
         @php
             $currentUser = Auth::user();
-            $maskedNik = $currentUser->nik 
+            $maskedNik = $currentUser->nik
                 ? (strlen($currentUser->nik) === 16 ? substr($currentUser->nik, 0, 4) . ' **** **** ' . substr($currentUser->nik, -4) : $currentUser->nik)
                 : null;
+            $roleLabel = match ($currentUser->role) {
+                'customer' => 'Pelanggan',
+                'vendor_owner' => 'Pemilik Vendor',
+                'vendor_admin' => 'Kasir Toko',
+                'super_admin' => 'Administrator',
+                default => 'Pengguna',
+            };
         @endphp
 
         <div class="mt-6 space-y-6">
@@ -169,15 +184,6 @@ new class extends Component
                         <h3 class="text-base sm:text-lg font-extrabold text-darkbrown-900 font-heading truncate">
                             {{ $currentUser->name }}
                         </h3>
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
-                            {{ ucfirst($currentUser->role ?? 'Customer') }}
-                        </span>
-                        @if($currentUser->hasVerifiedEmail())
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200 inline-flex items-center gap-1">
-                                <i data-lucide="badge-check" class="w-3 h-3 text-green-700"></i>
-                                Email Terverifikasi
-                            </span>
-                        @endif
                     </div>
                     <p class="text-xs text-darkbrown-600 truncate mt-0.5">
                         {{ $currentUser->email }}
@@ -230,31 +236,8 @@ new class extends Component
                     <p class="text-sm font-bold text-darkbrown-900 font-mono">
                         {{ $maskedNik ?: 'Belum diisi' }}
                     </p>
-                    <span class="text-[10px] text-darkbrown-500">Untuk jaminan penahanan KTP fisik saat pickup alat camping.</span>
+                    <span class="text-[10px] text-darkbrown-500">Untuk jaminan penahanan KTP fisik saat pengambilan alat camping.</span>
                 </div>
-
-                <!-- Alamat Domisili -->
-                <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1 md:col-span-2">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-darkbrown-500"></i>
-                        Alamat Lengkap
-                    </span>
-                    <p class="text-sm font-semibold text-darkbrown-800 leading-relaxed">
-                        {{ $currentUser->address ?: 'Alamat belum dilengkapi.' }}
-                    </p>
-                </div>
-            </div>
-
-            <!-- Tombol Edit Profil di Bawah Biodata -->
-            <div class="pt-2 flex justify-start">
-                <button 
-                    type="button" 
-                    wire:click="startEditing"
-                    class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
-                >
-                    <i data-lucide="edit-3" class="w-4 h-4"></i>
-                    <span>Edit Profil Biodata</span>
-                </button>
             </div>
         </div>
 
@@ -274,13 +257,13 @@ new class extends Component
                     <label for="name" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         Nama Lengkap <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        wire:model="name" 
-                        id="name" 
-                        type="text" 
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500" 
-                        required 
-                        autocomplete="name" 
+                    <input
+                        wire:model="name"
+                        id="name"
+                        type="text"
+                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                        required
+                        autocomplete="name"
                     />
                     <x-input-error class="mt-1.5" :messages="$errors->get('name')" />
                 </div>
@@ -290,13 +273,13 @@ new class extends Component
                     <label for="email" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         Alamat Email <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        wire:model="email" 
-                        id="email" 
-                        type="email" 
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500" 
-                        required 
-                        autocomplete="username" 
+                    <input
+                        wire:model="email"
+                        id="email"
+                        type="email"
+                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                        required
+                        autocomplete="username"
                     />
                     <x-input-error class="mt-1.5" :messages="$errors->get('email')" />
 
@@ -304,11 +287,11 @@ new class extends Component
                         <div class="mt-2 text-xs text-darkbrown-600">
                             {{ __('Email Anda belum terverifikasi.') }}
                             <button wire:click.prevent="sendVerification" class="underline text-avocado-700 hover:text-avocado-800 font-bold ml-1">
-                                {{ __('Kirim ulang link verifikasi') }}
+                                {{ __('Kirim ulang tautan verifikasi') }}
                             </button>
                             @if (session('status') === 'verification-link-sent')
                                 <p class="mt-1 text-xs font-bold text-green-700">
-                                    {{ __('Link verifikasi baru telah dikirimkan ke email Anda.') }}
+                                    {{ __('Tautan verifikasi baru telah dikirimkan ke email Anda.') }}
                                 </p>
                             @endif
                         </div>
@@ -320,13 +303,13 @@ new class extends Component
                     <label for="phone" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         Nomor WhatsApp / Telepon <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        wire:model="phone" 
-                        id="phone" 
-                        type="text" 
+                    <input
+                        wire:model="phone"
+                        id="phone"
+                        type="text"
                         placeholder="Contoh: 081234567890"
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500" 
-                        required 
+                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                        required
                     />
                     <x-input-error class="mt-1.5" :messages="$errors->get('phone')" />
                 </div>
@@ -336,13 +319,13 @@ new class extends Component
                     <label for="nik" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         NIK (Nomor Induk Kependudukan - 16 Digit)
                     </label>
-                    <input 
-                        wire:model="nik" 
-                        id="nik" 
-                        type="text" 
+                    <input
+                        wire:model="nik"
+                        id="nik"
+                        type="text"
                         maxlength="16"
                         placeholder="Contoh: 350704xxxxxxxxxx"
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500" 
+                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
                     />
                     <x-input-error class="mt-1.5" :messages="$errors->get('nik')" />
                 </div>
@@ -352,9 +335,9 @@ new class extends Component
                     <label for="address" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         Alamat Domisili Lengkap
                     </label>
-                    <textarea 
-                        wire:model="address" 
-                        id="address" 
+                    <textarea
+                        wire:model="address"
+                        id="address"
                         rows="3"
                         placeholder="Tuliskan nama jalan, RT/RW, kelurahan, kecamatan, dan kota..."
                         class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
@@ -365,16 +348,16 @@ new class extends Component
 
             <!-- Tombol Aksi Form -->
             <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
-                <button 
-                    type="submit" 
+                <button
+                    type="submit"
                     class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
                 >
                     <i data-lucide="check" class="w-4 h-4"></i>
                     <span>{{ __('Simpan Perubahan') }}</span>
                 </button>
 
-                <button 
-                    type="button" 
+                <button
+                    type="button"
                     wire:click="cancelEditing"
                     class="btn-tendaku-secondary inline-flex items-center gap-2 py-2.5 px-5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
                 >

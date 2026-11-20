@@ -11,10 +11,6 @@
                         Kelola biodata pribadi, data jaminan KTP, dan keamanan akun Tendaku Anda.
                     </p>
                 </div>
-                <div class="flex items-center gap-2 bg-avocado-50 border border-avocado-200 px-3.5 py-2 rounded-xl text-xs font-semibold text-avocado-900 shadow-sm self-start md:self-auto">
-                    <i data-lucide="shield-check" class="w-4 h-4 text-avocado-600"></i>
-                    <span>Customer Terdaftar</span>
-                </div>
             </div>
         </x-slot>
 
@@ -40,7 +36,7 @@
     <x-app-layout>
         <x-slot name="header">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Profile') }}
+                {{ __('Profil') }}
             </h2>
         </x-slot>
 

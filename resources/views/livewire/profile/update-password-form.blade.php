@@ -21,6 +21,19 @@ new class extends Component
             $validated = $this->validate([
                 'current_password' => ['required', 'string', 'current_password'],
                 'password' => ['required', 'string', Password::defaults(), 'confirmed'],
+            ], [
+                'current_password.required' => 'Kata sandi saat ini wajib diisi.',
+                'current_password.string' => 'Kata sandi saat ini harus berupa teks.',
+                'current_password.current_password' => 'Kata sandi saat ini tidak sesuai.',
+                'password.required' => 'Kata sandi baru wajib diisi.',
+                'password.string' => 'Kata sandi baru harus berupa teks.',
+                'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
+                'password.min' => 'Kata sandi baru minimal :min karakter.',
+                'password.letters' => 'Kata sandi baru harus mengandung huruf.',
+                'password.mixed' => 'Kata sandi baru harus mengandung huruf besar dan huruf kecil.',
+                'password.numbers' => 'Kata sandi baru harus mengandung angka.',
+                'password.symbols' => 'Kata sandi baru harus mengandung simbol.',
+                'password.uncompromised' => 'Kata sandi ini pernah muncul dalam kebocoran data. Silakan pilih kata sandi lain.',
             ]);
         } catch (ValidationException $e) {
             $this->reset('current_password', 'password', 'password_confirmation');
@@ -41,39 +54,37 @@ new class extends Component
 <section>
     <header>
         <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Update Password') }}
+            {{ __('Ubah Kata Sandi') }}
         </h2>
 
         <p class="mt-1 text-sm text-gray-600">
-            {{ __('Ensure your account is using a long, random password to stay secure.') }}
+            {{ __('Gunakan kata sandi yang panjang dan unik untuk menjaga keamanan akun Anda.') }}
         </p>
     </header>
 
     <form wire:submit="updatePassword" class="mt-6 space-y-6">
         <div>
-            <x-input-label for="update_password_current_password" :value="__('Current Password')" />
+            <x-input-label for="update_password_current_password" :value="__('Kata Sandi Saat Ini')" />
             <x-password-input wire:model="current_password" id="update_password_current_password" name="current_password" wrapper-class="mt-1 w-full" class="block w-full" autocomplete="current-password" />
             <x-input-error :messages="$errors->get('current_password')" class="mt-2" />
         </div>
 
         <div>
-            <x-input-label for="update_password_password" :value="__('New Password')" />
+            <x-input-label for="update_password_password" :value="__('Kata Sandi Baru')" />
             <x-password-input wire:model="password" id="update_password_password" name="password" wrapper-class="mt-1 w-full" class="block w-full" autocomplete="new-password" />
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
         <div>
-            <x-input-label for="update_password_password_confirmation" :value="__('Confirm Password')" />
+            <x-input-label for="update_password_password_confirmation" :value="__('Konfirmasi Kata Sandi Baru')" />
             <x-password-input wire:model="password_confirmation" id="update_password_password_confirmation" name="password_confirmation" wrapper-class="mt-1 w-full" class="block w-full" autocomplete="new-password" />
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
         <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Save') }}</x-primary-button>
+            <x-primary-button>{{ __('Simpan') }}</x-primary-button>
 
-            <x-action-message class="me-3" on="password-updated">
-                {{ __('Saved.') }}
-            </x-action-message>
+            <x-action-message class="me-3" on="password-updated">Kata sandi berhasil diperbarui.</x-action-message>
         </div>
     </form>
 </section>

@@ -143,15 +143,34 @@ new class extends Component
             'phone_number.required' => 'Nomor WhatsApp / telepon wajib diisi.',
             'phone_number.regex' => 'Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka.',
             'full_address.required' => 'Alamat lengkap wajib diisi.',
+            'label.string' => 'Label alamat harus berupa teks.',
+            'label.max' => 'Label alamat maksimal :max karakter.',
+            'recipient_name.string' => 'Nama penerima harus berupa teks.',
+            'recipient_name.max' => 'Nama penerima maksimal :max karakter.',
+            'full_address.string' => 'Alamat lengkap harus berupa teks.',
+            'full_address.max' => 'Alamat lengkap maksimal :max karakter.',
             'province.required' => 'Provinsi wajib diisi.',
+            'province.string' => 'Provinsi harus berupa teks.',
+            'province.max' => 'Provinsi maksimal :max karakter.',
             'city.required' => 'Kota atau kabupaten wajib diisi.',
+            'city.string' => 'Kota atau kabupaten harus berupa teks.',
+            'city.max' => 'Kota atau kabupaten maksimal :max karakter.',
             'district.required' => 'Kecamatan wajib diisi.',
-            'latitude.required_with' => 'Titik koordinat latitude wajib diisi jika longitude disertakan.',
-            'latitude.numeric' => 'Koordinat latitude harus berupa angka yang valid.',
-            'latitude.between' => 'Koordinat latitude harus berada antara -90 dan 90.',
-            'longitude.required_with' => 'Titik koordinat longitude wajib diisi jika latitude disertakan.',
-            'longitude.numeric' => 'Koordinat longitude harus berupa angka yang valid.',
-            'longitude.between' => 'Koordinat longitude harus berada antara -180 dan 180.',
+            'district.string' => 'Kecamatan harus berupa teks.',
+            'district.max' => 'Kecamatan maksimal :max karakter.',
+            'village.string' => 'Kelurahan atau desa harus berupa teks.',
+            'village.max' => 'Kelurahan atau desa maksimal :max karakter.',
+            'postal_code.string' => 'Kode pos harus berupa teks.',
+            'postal_code.max' => 'Kode pos maksimal :max karakter.',
+            'notes.string' => 'Catatan tambahan harus berupa teks.',
+            'notes.max' => 'Catatan tambahan maksimal :max karakter.',
+            'latitude.required_with' => 'Titik koordinat lintang wajib diisi jika bujur disertakan.',
+            'latitude.numeric' => 'Koordinat lintang harus berupa angka yang valid.',
+            'latitude.between' => 'Koordinat lintang harus berada antara -90 dan 90.',
+            'longitude.required_with' => 'Titik koordinat bujur wajib diisi jika lintang disertakan.',
+            'longitude.numeric' => 'Koordinat bujur harus berupa angka yang valid.',
+            'longitude.between' => 'Koordinat bujur harus berada antara -180 dan 180.',
+            'is_default.boolean' => 'Pilihan alamat utama tidak valid.',
         ]);
 
         $validated['latitude'] = $validated['latitude'] !== null
@@ -458,7 +477,7 @@ new class extends Component
                     @if ($editingId && ($latitude === null || $longitude === null || $latitude === '' || $longitude === ''))
                         <div class="mb-2.5 px-3 py-2 rounded-lg border border-wheat-300 bg-white text-xs text-darkbrown-700 flex items-center gap-2">
                             <span class="w-2 h-2 rounded-full bg-goldenrod-500 shrink-0" aria-hidden="true"></span>
-                            <span>Pin lokasi belum diatur untuk alamat ini. Klik pada peta di bawah untuk menambahkan titik koordinat pengantaran.</span>
+                            <span>Penanda lokasi belum diatur untuk alamat ini. Klik pada peta di bawah untuk menambahkan titik koordinat pengantaran.</span>
                         </div>
                     @endif
 
@@ -482,7 +501,7 @@ new class extends Component
                         class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500"
                     />
                     <label for="addr_is_default" class="text-xs font-semibold text-darkbrown-800 cursor-pointer">
-                        Jadikan sebagai alamat utama (default saat checkout)
+                        Jadikan sebagai alamat utama (pilihan otomatis saat pemesanan)
                     </label>
                 </div>
             </div>
@@ -540,7 +559,7 @@ new class extends Component
                             @else
                                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-wheat-100/80 text-darkbrown-600 border border-wheat-300 inline-flex items-center gap-1">
                                     <span class="w-1.5 h-1.5 rounded-full bg-goldenrod-500" aria-hidden="true"></span>
-                                    <span>Pin lokasi belum diatur</span>
+                                    <span>Penanda lokasi belum diatur</span>
                                 </span>
                             @endif
 
@@ -597,7 +616,7 @@ new class extends Component
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-darkbrown-900">Belum ada alamat tersimpan</h3>
-                    <p class="text-xs text-darkbrown-500 mt-0.5">Tambahkan alamat agar Anda dapat memilih opsi pengantaran (delivery) saat booking alat camping.</p>
+                    <p class="text-xs text-darkbrown-500 mt-0.5">Tambahkan alamat agar Anda dapat memilih opsi pengantaran saat memesan alat camping.</p>
                 </div>
                 @if (! $isCreating)
                     <button

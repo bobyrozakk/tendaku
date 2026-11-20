@@ -39,6 +39,20 @@ class ProfileKasir extends Component
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:500'],
+        ], [
+            'name.required' => 'Nama lengkap wajib diisi.',
+            'name.string' => 'Nama lengkap harus berupa teks.',
+            'name.max' => 'Nama lengkap maksimal :max karakter.',
+            'email.required' => 'Alamat email wajib diisi.',
+            'email.string' => 'Alamat email harus berupa teks.',
+            'email.lowercase' => 'Alamat email harus menggunakan huruf kecil.',
+            'email.email' => 'Format alamat email tidak valid.',
+            'email.max' => 'Alamat email maksimal :max karakter.',
+            'email.unique' => 'Alamat email sudah digunakan.',
+            'phone.string' => 'Nomor telepon harus berupa teks.',
+            'phone.max' => 'Nomor telepon maksimal :max karakter.',
+            'address.string' => 'Alamat harus berupa teks.',
+            'address.max' => 'Alamat maksimal :max karakter.',
         ]);
 
         $user->fill($validated);
