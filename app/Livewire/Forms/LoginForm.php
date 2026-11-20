@@ -40,7 +40,7 @@ class LoginForm extends Form
 
         $allowedRoles = $isSuperAdminLogin
             ? ['super_admin']
-            : ['customer', 'vendor_owner', 'vendor_admin', 'super_admin'];
+            : ['customer', 'vendor_owner', 'vendor_admin'];
 
         $user = Auth::user();
 

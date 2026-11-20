@@ -84,7 +84,7 @@ new #[Layout('layouts.superadmin-guest')] class extends Component
                     name="form.email"
                     type="email"
                     wire:model="form.email"
-                    placeholder="admin@tendaku.com"
+                    placeholder="gmail.com"
                     autocomplete="username"
                     required
                     autofocus

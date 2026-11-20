@@ -1,4 +1,4 @@
-@if (($showGoogleLogin ?? true) && filled(config('services.google.client_id')) && filled(config('services.google.client_secret')))
+@if (($showGoogleLogin ?? true) && filled(config('services.supabase.url')) && filled(config('services.supabase.anon_key')))
     <div class="mt-5">
         <p class="mb-3 text-center text-sm text-avocado-300">atau</p>
 
