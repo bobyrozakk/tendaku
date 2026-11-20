@@ -50,7 +50,9 @@
                                 <header class="flex items-start justify-between gap-3 p-4 sm:p-5">
                                     <div class="min-w-0">
                                         <h3 class="font-extrabold text-darkbrown-900 leading-snug">{{ $n['title'] }}</h3>
-                                        <p class="mt-0.5 text-sm text-darkbrown-600" x-text="descs['{{ $key }}'][state('{{ $key }}')]"></p>
+                                        @unless($key === 'pickup')
+                                            <p class="mt-0.5 text-sm text-darkbrown-600" x-text="descs['{{ $key }}'][state('{{ $key }}')]"></p>
+                                        @endunless
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0 text-right">
                                         <span x-show="times['{{ $key }}']" class="text-xs font-semibold text-darkbrown-500" x-text="times['{{ $key }}']">{{ $times[$key] }}</span>
@@ -58,11 +60,16 @@
                                             <span x-show="state('rental') !== 'todo'" x-cloak
                                                   class="px-2.5 py-0.5 rounded-full text-xs font-bold border bg-avocado-100 text-avocado-800 border-avocado-300"
                                                   x-text="state('rental') === 'active' ? 'Aktif' : 'Selesai'"></span>
-                                        @elseif($key === 'return')
-                                            <span x-show="state('return') !== 'todo'" x-cloak
-                                                  class="px-2.5 py-0.5 rounded-full text-xs font-bold border"
-                                                  :class="state('return') === 'done' ? 'bg-avocado-100 text-avocado-800 border-avocado-300' : 'bg-sunglow-100 text-goldenrod-900 border-sunglow-300'"
-                                                  x-text="state('return') === 'done' ? 'Dikembalikan' : ({{ $rental->returned_at ? 'true' : 'false' }} ? 'Diperiksa' : 'Belum kembali')"></span>
+                                        @elseif($key === 'done' && $isLateReturn)
+                                            <span x-show="state('done') !== 'todo'" x-cloak
+                                                  class="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-800">
+                                                Terlambat Dikembalikan
+                                            </span>
+                                        @elseif($key === 'done' && $status === 'returned')
+                                            <span x-show="state('done') !== 'todo'" x-cloak
+                                                  class="rounded-full border border-sunglow-300 bg-sunglow-100 px-2.5 py-0.5 text-xs font-bold text-goldenrod-900">
+                                                Menunggu Penyelesaian
+                                            </span>
                                         @endif
                                         @unless($key === 'created')
                                             <i
@@ -93,11 +100,7 @@
                                                 @case('rental')
                                                     @include('customer.booking.status.steps.rental')
                                                     @break
-                                                {{-- PENGEMBALIAN --}}
-                                                @case('return')
-                                                    @include('customer.booking.status.steps.return')
-                                                    @break
-                                                {{-- SELESAI --}}
+                                                {{-- PENGEMBALIAN & PENYELESAIAN --}}
                                                 @case('done')
                                                     @include('customer.booking.status.steps.done')
                                                     @break

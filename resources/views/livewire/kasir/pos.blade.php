@@ -81,10 +81,10 @@
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-darkbrown-400">
                         <i data-lucide="search" class="w-4 h-4"></i>
                     </div>
-                    <input 
-                        type="text" 
-                        wire:model.live.debounce.250ms="searchOrder" 
-                        placeholder="Cari Kode Booking / Nama..." 
+                    <input
+                        type="text"
+                        wire:model.live.debounce.250ms="searchOrder"
+                        placeholder="Cari Kode Booking / Nama..."
                         class="w-full text-xs pl-10 pr-3.5 py-2.5 bg-white border border-wheat-300 rounded-xl text-darkbrown-900 placeholder-darkbrown-400 focus:outline-none focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-600 transition"
                     />
                 </div>
@@ -127,12 +127,12 @@
                     }
                     $isReadyToApprove = ($totalItems > 0 && $assignedCount >= $totalItems);
                 @endphp
-                <div 
+                <div
                     wire:click="selectOrder({{ $order->id }})"
                     x-on:click="showValidationModal = true"
                     wire:loading.class="opacity-70 cursor-wait pointer-events-none"
                     class="group p-4 sm:p-5 hover:bg-wheat-50/70 active:scale-[0.998] transition-all duration-150 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    
+
                     {{-- Left column: Customer & Booking data --}}
                     <div class="flex items-start sm:items-center gap-3.5 min-w-0">
                         <div class="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0 {{ $isPending ? 'bg-wheat-100 text-darkbrown-800 border border-wheat-200 group-hover:bg-avocado-50 group-hover:border-avocado-300 group-hover:text-avocado-800' : 'bg-avocado-100 text-avocado-800 border border-avocado-200' }} transition-colors shadow-xs">
@@ -295,9 +295,9 @@
                                 </span>
                             @endif
 
-                            <button 
+                            <button
                                 type="button"
-                                x-on:click="showValidationModal = false" 
+                                x-on:click="showValidationModal = false"
                                 class="p-1.5 rounded-lg text-darkbrown-400 hover:text-darkbrown-800 hover:bg-wheat-200/60 transition-colors cursor-pointer"
                                 title="Tutup (Esc)">
                                 <i data-lucide="x" class="w-4 h-4"></i>
@@ -360,10 +360,10 @@
                                         <span>Membuka scanner...</span>
                                     </div>
                                     @if(!$allMatched)
-                                        <button 
+                                        <button
                                             type="button"
                                             x-on:click="showScanModal = true; $nextTick(() => { $refs.barcodeInput?.focus(); if (typeof window.renderLucideIcons === 'function') window.renderLucideIcons(); })"
-                                            wire:click="openScanModal" 
+                                            wire:click="openScanModal"
                                             wire:loading.attr="disabled"
                                             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 active:scale-95 transition cursor-pointer shadow-sm">
                                             <i data-lucide="scan-barcode" class="w-4 h-4"></i>
@@ -447,7 +447,7 @@
 
                     {{-- Modal Footer Bar --}}
                     <div class="px-6 py-4 border-t border-wheat-200 bg-wheat-50/70 flex items-center justify-between shrink-0">
-                        <button 
+                        <button
                             type="button"
                             x-on:click="showValidationModal = false"
                             class="px-4 py-2 rounded-xl text-xs font-bold text-darkbrown-700 hover:bg-wheat-200/60 transition cursor-pointer">
@@ -482,7 +482,7 @@
 
     {{-- MODAL SCAN & PENCOCOKAN BARCODE CEPAT --}}
     <template x-teleport="body">
-        <div 
+        <div
             x-show="showScanModal"
             x-transition:enter="transition ease-out duration-150"
             x-transition:enter-start="opacity-0"
@@ -494,8 +494,8 @@
             x-on:click.self="showScanModal = false"
             class="fixed inset-0 z-[110] flex items-center justify-center bg-darkbrown-950/60 p-4"
             style="display: none;">
-            
-            <div 
+
+            <div
                 x-show="showScanModal"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 scale-95"
@@ -504,7 +504,7 @@
                 x-transition:leave-start="opacity-100 scale-100"
                 x-transition:leave-end="opacity-0 scale-95"
                 class="w-full max-w-lg bg-white rounded-2xl border border-wheat-200 shadow-xl overflow-hidden relative">
-                
+
                 {{-- Header --}}
                 <div class="px-5 py-4 border-b border-wheat-200 bg-wheat-50/50 flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
@@ -516,9 +516,9 @@
                             <p class="text-[11px] text-darkbrown-500">Scan via hardware scanner atau pilih manual</p>
                         </div>
                     </div>
-                    <button 
+                    <button
                         type="button"
-                        x-on:click="showScanModal = false" 
+                        x-on:click="showScanModal = false"
                         class="p-1.5 rounded-lg text-darkbrown-400 hover:text-darkbrown-700 hover:bg-wheat-200/60 transition cursor-pointer">
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
@@ -530,12 +530,12 @@
                         <label class="text-xs font-bold text-darkbrown-800 block">Input Kode / Scan Fisik</label>
                         <div class="flex gap-2">
                             <div class="relative flex-1">
-                                <input 
+                                <input
                                     type="text"
                                     x-ref="barcodeInput"
-                                    wire:model="modalBarcode" 
-                                    class="w-full font-mono uppercase text-xs rounded-xl py-2.5 px-3 bg-wheat-50/30 border border-wheat-300 text-darkbrown-900 placeholder-darkbrown-400 focus:outline-none focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-600 transition" 
-                                    placeholder="Arahkan scanner ke barcode unit..." 
+                                    wire:model="modalBarcode"
+                                    class="w-full font-mono uppercase text-xs rounded-xl py-2.5 px-3 bg-wheat-50/30 border border-wheat-300 text-darkbrown-900 placeholder-darkbrown-400 focus:outline-none focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-600 transition"
+                                    placeholder="Arahkan scanner ke barcode unit..."
                                 />
                             </div>
                             <button type="submit" class="px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-avocado-700 hover:bg-avocado-800 active:scale-95 transition cursor-pointer shrink-0">
@@ -583,13 +583,18 @@
                                     <div wire:click="quickFillBarcode('{{ $allocatedUnit->barcode }}')"
                                          wire:loading.class="opacity-60 pointer-events-none"
                                          class="p-3 rounded-xl border transition flex items-center justify-between cursor-pointer {{ $isDone ? 'bg-emerald-50/50 border-emerald-300' : 'bg-white border-wheat-200 hover:border-avocado-400 hover:bg-wheat-50/50 active:scale-[0.99]' }}">
-                                        <div class="min-w-0 pr-2">
-                                            <p class="font-bold text-xs text-darkbrown-900 truncate">
-                                                {{ $dItem->masterItem?->name }}
-                                            </p>
-                                            <p class="text-[11px] text-darkbrown-500 font-mono mt-0.5">
-                                                Kode: <span class="font-bold text-darkbrown-700">{{ $allocatedUnit->unit_code }}</span> • {{ $allocatedUnit->condition }}
-                                            </p>
+                                        <div class="flex min-w-0 items-center gap-3 pr-2">
+                                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-avocado-200 bg-avocado-50 text-avocado-700">
+                                                <i data-lucide="scan-barcode" class="h-4 w-4"></i>
+                                            </span>
+                                            <div class="min-w-0">
+                                                <p class="truncate text-xs font-bold text-darkbrown-900">
+                                                    {{ $dItem->masterItem?->name }}
+                                                </p>
+                                                <p class="mt-0.5 font-mono text-[11px] text-darkbrown-500">
+                                                    Kode: <span class="font-bold text-darkbrown-700">{{ $allocatedUnit->unit_code }}</span> • {{ $allocatedUnit->condition }}
+                                                </p>
+                                            </div>
                                         </div>
                                         <div class="shrink-0 flex items-center gap-2">
                                             <span class="font-mono text-xs px-2 py-1 rounded bg-wheat-100 text-darkbrown-800 border border-wheat-200">
@@ -614,8 +619,8 @@
 
                 {{-- Footer --}}
                 <div class="px-5 py-3 border-t border-wheat-200 bg-wheat-50/50 flex justify-end">
-                    <button 
-                        type="button" 
+                    <button
+                        type="button"
                         x-on:click="showScanModal = false"
                         class="px-4 py-2 rounded-xl text-xs font-bold text-darkbrown-700 hover:bg-wheat-200/60 transition cursor-pointer">
                         Selesai Scan

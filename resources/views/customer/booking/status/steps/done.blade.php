@@ -123,7 +123,19 @@
                         <span>Biaya Sewa</span>
                         <span class="font-medium text-darkbrown-900">{{ $rupiah($rental->grand_total) }}</span>
                     </div>
-                    <div class="flex justify-between gap-3 text-darkbrown-600">
+                    @if($rental->total_late_fee > 0)
+                        <div class="flex justify-between gap-3 text-darkbrown-600">
+                            <span>Denda keterlambatan</span>
+                            <span class="font-medium text-darkbrown-900">{{ $rupiah($rental->total_late_fee) }}</span>
+                        </div>
+                    @endif
+                    @if($rental->total_damage_fee > 0)
+                        <div class="flex justify-between gap-3 text-darkbrown-600">
+                            <span>Denda kerusakan unit</span>
+                            <span class="font-medium text-darkbrown-900">{{ $rupiah($rental->total_damage_fee) }}</span>
+                        </div>
+                    @endif
+                    <div class="flex justify-between gap-3 border-t border-dashed border-wheat-300 pt-2 text-darkbrown-600">
                         <span>Total Denda</span>
                         <span class="font-medium text-darkbrown-900">{{ $rupiah($fineTotal) }}</span>
                     </div>

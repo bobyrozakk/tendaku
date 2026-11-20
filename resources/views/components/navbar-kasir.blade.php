@@ -1,20 +1,11 @@
 {{-- Kasir POS Sidebar Component (Modern POS Terminal Aesthetics with Hover-to-Expand & Mobile Drawer) --}}
-<aside x-data="{
+<div x-data="{
         open: false,
         mobileOpen: false
     }"
     @toggle-kasir-sidebar.window="mobileOpen = !mobileOpen"
     @keydown.escape.window="mobileOpen = false"
-    @mouseenter="open = true"
-    @mouseleave="open = false"
-    :class="{
-        'w-64': open,
-        'w-[74px]': !open,
-        '-translate-x-full lg:translate-x-0': !mobileOpen,
-        'translate-x-0 !w-64': mobileOpen
-    }"
-    class="fixed inset-y-0 left-0 lg:sticky lg:top-0 h-screen shrink-0 z-40 flex flex-col transition-all duration-200 ease-out shadow-2xl select-none"
-    style="background: #141b12; border-right: 1px solid rgba(255,255,255,0.08);">
+    class="contents">
 
     <!-- Mobile Overlay Backdrop -->
     <div x-show="mobileOpen"
@@ -28,6 +19,18 @@
          @click="mobileOpen = false"
          class="fixed inset-0 z-30 bg-darkbrown-950/75 backdrop-blur-sm lg:hidden pointer-events-auto">
     </div>
+
+    <aside
+    @mouseenter="open = true"
+    @mouseleave="open = false"
+    :class="{
+        'w-64': open,
+        'w-[74px]': !open,
+        '-translate-x-full lg:translate-x-0': !mobileOpen,
+        'translate-x-0 !w-64': mobileOpen
+    }"
+    class="fixed inset-y-0 left-0 lg:sticky lg:top-0 h-screen shrink-0 z-40 flex flex-col transition-all duration-200 ease-out shadow-2xl select-none"
+    style="background: #141b12; border-right: 1px solid rgba(255,255,255,0.08);">
 
     <!-- Top Header: POS Terminal Branding -->
     <div class="px-3 py-3.5 flex items-center justify-between border-b shrink-0 overflow-hidden"
@@ -172,3 +175,4 @@
         </div>
     </div>
 </aside>
+</div>

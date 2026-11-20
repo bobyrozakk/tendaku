@@ -161,6 +161,52 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertDontSee('TDK-2026-B8921'); // Bukan data dummy
     }
 
+    public function test_paid_pending_booking_shows_one_waiting_validation_status(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-PICKUP01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_method' => 'cash',
+            'channel' => 'cash',
+            'amount' => 150000,
+            'status' => 'paid',
+            'paid_at' => Carbon::now(),
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Menunggu Validasi')
+            ->assertSee('Pembayaran berhasil diverifikasi. Kasir sedang mencocokkan barcode dan kondisi fisik alat sebelum pesanan siap diambil.')
+            ->assertSee('Jadwal Penyewaan')
+            ->assertSee('Lokasi Pengambilan')
+            ->assertSee('Instruksi Pengambilan')
+            ->assertSee('Lihat Receipt Pesanan')
+            ->assertDontSee('Pending Validasi Kasir')
+            ->assertDontSee('Menunggu Pengecekan');
+    }
+
+    public function test_confirmed_booking_shows_ready_to_pick_up_status(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-PICKUP02', 'confirmed');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_method' => 'cash',
+            'channel' => 'cash',
+            'amount' => 150000,
+            'status' => 'paid',
+            'paid_at' => Carbon::now(),
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Siap Diambil')
+            ->assertDontSee('Tervalidasi Kasir');
+    }
+
     public function test_non_owner_is_forbidden_to_view_customer_booking_status(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-STATUS1', 'confirmed');
@@ -284,6 +330,28 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('Rp 20.000');
         $response->assertSee('Rp 220.000');
         $response->assertSee('Bayar denda');
+        $response->assertSee('Menunggu Penyelesaian');
+        $response->assertSee('id="node-done"', false);
+        $response->assertDontSee('id="node-return"', false);
+    }
+
+    public function test_late_return_is_marked_without_replacing_completed_timeline_status(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-LATE01', 'completed');
+        $rental->update([
+            'return_date' => '2026-10-12',
+            'actual_return_date' => '2026-10-13',
+            'returned_at' => Carbon::parse('2026-10-13 15:10:00'),
+            'completed_at' => Carbon::parse('2026-10-13 15:10:00'),
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Transaksi Selesai');
+        $response->assertSee('Terlambat Dikembalikan');
+        $response->assertSee('id="node-done"', false);
+        $response->assertDontSee('id="node-return"', false);
     }
 
     public function test_customer_downloads_order_receipt_as_pdf(): void
