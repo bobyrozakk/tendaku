@@ -157,11 +157,11 @@ class CatalogIndex extends Component
             && (int) $existingCart['vendor_id'] !== (int) $masterItem->vendor_id
         ) {
             $existingVendor = $existingCart['vendor_name'] ?? 'toko sebelumnya';
-            $this->dispatch('notify', [
-                'type' => 'warning',
-                'title' => 'Keranjang Beda Toko',
-                'message' => "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
-            ]);
+            $this->dispatch('notify',
+                type: 'warning',
+                title: 'Keranjang Beda Toko',
+                message: "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
+            );
 
             return;
         }
@@ -169,11 +169,11 @@ class CatalogIndex extends Component
         $dateRange = $availability->dateRange($this->startDate, $this->endDate);
         $availableStock = $availability->stock($masterItem->id, $dateRange);
         if ($availableStock === null || $availableStock < 1) {
-            $this->dispatch('notify', [
-                'type' => 'error',
-                'title' => $availableStock === null ? 'Ketersediaan belum dapat diperiksa' : 'Tidak tersedia pada periode ini',
-                'message' => 'Periksa atau pilih jadwal lain melalui halaman Detail Produk.',
-            ]);
+            $this->dispatch('notify',
+                type: 'error',
+                title: $availableStock === null ? 'Ketersediaan belum dapat diperiksa' : 'Tidak tersedia pada periode ini',
+                message: 'Periksa atau pilih jadwal lain melalui halaman Detail Produk.',
+            );
 
             return;
         }
@@ -208,11 +208,11 @@ class CatalogIndex extends Component
 
         if ($result['status'] === 'diff_vendor') {
             $existingVendor = $result['existing_vendor'] ?? 'toko sebelumnya';
-            $this->dispatch('notify', [
-                'type' => 'warning',
-                'title' => 'Keranjang Beda Toko',
-                'message' => "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
-            ]);
+            $this->dispatch('notify',
+                type: 'warning',
+                title: 'Keranjang Beda Toko',
+                message: "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
+            );
 
             return;
         }
@@ -222,11 +222,11 @@ class CatalogIndex extends Component
         // Update badge keranjang di navbar dan tampilkan notifikasi sukses
         $this->dispatch('cart-updated', count: $totalCount);
 
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'title' => 'Masuk Keranjang! 🛒',
-            'message' => "{$masterItem->name} berhasil ditambahkan ke keranjang.",
-        ]);
+        $this->dispatch('notify',
+            type: 'success',
+            title: 'Masuk Keranjang! 🛒',
+            message: "{$masterItem->name} berhasil ditambahkan ke keranjang.",
+        );
     }
 
     public function render(CatalogAvailability $availability): View

@@ -190,6 +190,19 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // Kasir Vendor 2
+        User::updateOrCreate(
+            ['email' => 'kasir2@tendaku.com'],
+            [
+                'name' => 'Kasir Mountaineer',
+                'password' => Hash::make('password'),
+                'role' => 'vendor_admin',
+                'vendor_id' => $vendor2->id,
+                'phone' => '082233445588',
+                'email_verified_at' => now(),
+            ]
+        );
+
         // -------------------------------------------------------------
         // 3b. VENDOR 3 (Bromo Camp Adventure - Status Pending Approval)
         // -------------------------------------------------------------

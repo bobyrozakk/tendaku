@@ -369,11 +369,11 @@ class ProductBooking extends Component
 
         $this->inCart = true;
 
-        $this->dispatch('notify', [
-            'type' => 'success',
-            'title' => 'Ditambahkan ke Keranjang! 🛒',
-            'message' => "{$this->product->name} ({$this->quantity} unit) berhasil masuk keranjang.",
-        ]);
+        $this->dispatch('notify',
+            type: 'success',
+            title: 'Ditambahkan ke Keranjang! 🛒',
+            message: "{$this->product->name} ({$this->quantity} unit) berhasil masuk keranjang.",
+        );
 
         $this->dispatch('cart-updated', count: $result['total_count']);
 
@@ -517,11 +517,11 @@ class ProductBooking extends Component
             $existingVendor = $result['existing_vendor']
                 ?? 'toko sebelumnya';
 
-            $this->dispatch('notify', [
-                'type' => 'warning',
-                'title' => 'Keranjang Beda Toko',
-                'message' => "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
-            ]);
+            $this->dispatch('notify',
+                type: 'warning',
+                title: 'Keranjang Beda Toko',
+                message: "Keranjangmu masih berisi produk dari {$existingVendor}. Sewa harus dari 1 vendor yang sama. Selesaikan atau kosongkan keranjang terlebih dahulu.",
+            );
 
             return null;
         }
