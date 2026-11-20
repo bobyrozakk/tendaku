@@ -67,6 +67,7 @@
         @if ($discount > 0)
             <tr><td>Diskon</td><td class="r">- Rp {{ number_format($discount, 0, ',', '.') }}</td></tr>
         @endif
+        <tr><td>Total Denda</td><td class="r">Rp {{ number_format($totalFine, 0, ',', '.') }}</td></tr>
     </table>
     <div class="divider"></div>
     <table>

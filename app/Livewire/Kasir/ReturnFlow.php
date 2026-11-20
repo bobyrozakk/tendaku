@@ -249,9 +249,25 @@ class ReturnFlow extends Component
             return;
         }
 
+        foreach ($order->details as $detail) {
+            $condition = $this->inspectionNotes[$detail->id] ?? 'good';
+            $fee = (float) ($this->damageFees[$detail->id] ?? 0);
+
+            if (in_array($condition, ['damaged', 'lost'], true) && $fee <= 0) {
+                $this->addError(
+                    "damageFees.{$detail->id}",
+                    'Denda wajib diisi minimal Rp 1 bila kondisi barang '.($condition === 'damaged' ? 'Rusak' : 'Hilang').'.'
+                );
+
+                return;
+            }
+        }
+
         // Hitung total denda
         $totalLateFee = (float) $this->calculatedLateFee;
-        $totalDamageFee = (float) $this->totalDamageFee;
+        $totalDamageFee = (float) $order->details->sum(
+            fn (RentalDetail $detail) => (float) ($this->damageFees[$detail->id] ?? 0)
+        );
         $totalFines = $totalLateFee + $totalDamageFee;
 
         // Jika ada denda dan belum dilunasi, buka modal pelunasan denda

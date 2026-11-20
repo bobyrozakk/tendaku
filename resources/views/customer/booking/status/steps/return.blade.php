@@ -181,14 +181,3 @@
         Bayar denda ({{ $rupiah($fineAmount) }})
     </button>
 @endif
-
-{{-- Tombol Simulasi Kasir / Testing Saja (hanya tampilan, TIDAK menulis ke database) --}}
-@if(app()->environment('local'))
-<div class="mt-4 pt-3 border-t border-dashed border-wheat-300">
-    <button type="button"
-            @click="activeNode = 'done'; justDone = 'return'"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold text-avocado-800 bg-avocado-100 hover:bg-avocado-200 border border-avocado-300 transition">
-        Selesaikan Pengembalian (test)
-    </button>
-</div>
-@endif

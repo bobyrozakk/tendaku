@@ -75,6 +75,7 @@ class BookingReceiptService
         $subtotal = (float) $rental->subtotal;
         $deliveryFee = (float) $rental->delivery_fee;
         $discount = (float) $rental->discount_amount;
+        $totalFine = (float) $rental->total_late_fee + (float) $rental->total_damage_fee;
 
         $adminFee = $rental->adminFee();
 
@@ -134,6 +135,7 @@ class BookingReceiptService
             'adminFee' => $adminFee,
             'deliveryFee' => $deliveryFee,
             'discount' => $discount,
+            'totalFine' => $totalFine,
             'grandTotal' => $grandTotal,
             'amountPaid' => $amountPaid,
             'balance' => $balance,

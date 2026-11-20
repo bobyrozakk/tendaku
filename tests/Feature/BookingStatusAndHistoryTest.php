@@ -289,6 +289,11 @@ class BookingStatusAndHistoryTest extends TestCase
     public function test_customer_downloads_order_receipt_as_pdf(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT01', 'confirmed');
+        $rental->update([
+            'total_late_fee' => 50000,
+            'total_damage_fee' => 20000,
+            'final_total' => 220000,
+        ]);
 
         $response = $this->actingAs($this->customer1)
             ->get(route('booking.receipt', $rental->booking_code));
@@ -305,6 +310,11 @@ class BookingStatusAndHistoryTest extends TestCase
     public function test_order_receipt_html_view_still_available_with_format_html(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT02', 'confirmed');
+        $rental->update([
+            'total_late_fee' => 50000,
+            'total_damage_fee' => 20000,
+            'final_total' => 220000,
+        ]);
 
         $response = $this->actingAs($this->customer1)
             ->get(route('booking.receipt', ['code' => $rental->booking_code, 'format' => 'html']));
@@ -314,6 +324,19 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('TDK-2026-RCPT02');
         $response->assertSee('Budi Penyewa');
         $response->assertSee('Tendaku Vendor Store');
+        $response->assertSee('Total Denda');
+        $response->assertSee('Rp 70.000');
+    }
+
+    public function test_order_receipt_shows_zero_fine_when_no_fines_were_recorded(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT03', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.receipt', ['code' => $rental->booking_code, 'format' => 'html']));
+
+        $response->assertSee('Total Denda');
+        $response->assertSee('Rp 0');
     }
 
     public function test_pay_returns_virtual_account_info_for_pending_rental(): void
