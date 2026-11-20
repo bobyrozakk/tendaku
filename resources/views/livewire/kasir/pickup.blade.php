@@ -1,280 +1,292 @@
 <div class="space-y-6" x-data="{ showPickupModal: false }" @close-pickup-modal.window="showPickupModal = false">
-    <!-- Success Notification Banner -->
+    {{-- Flash Success Toast Notification --}}
     @if($pickupSuccessMessage)
-        <div class="p-4 rounded-2xl bg-avocado-50 border border-avocado-300 text-avocado-900 flex items-center justify-between shadow-tendaku-sm animate-fade-in">
+        <div class="flex items-center justify-between gap-3 p-4 rounded-xl bg-avocado-50 border border-avocado-300 text-darkbrown-900 shadow-sm animate-fade-in" role="alert">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-avocado-600 text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
-                    <i data-lucide="check" class="w-5 h-5 text-white"></i>
+                <div class="w-8 h-8 rounded-lg bg-avocado-600 text-white flex items-center justify-center shrink-0">
+                    <i data-lucide="check" class="w-4 h-4"></i>
                 </div>
                 <div>
-                    <h4 class="font-extrabold text-sm">Serah Terima Berhasil!</h4>
-                    <p class="text-xs text-avocado-800 mt-0.5">{{ $pickupSuccessMessage }}</p>
+                    <p class="text-xs font-bold leading-tight">Serah Terima Berhasil!</p>
+                    <p class="text-[11px] text-darkbrown-600 mt-0.5">{{ $pickupSuccessMessage }}</p>
                 </div>
             </div>
-            <button wire:click="$set('pickupSuccessMessage', null)" class="text-avocado-700 hover:text-avocado-900 font-bold text-sm px-2.5 py-1 rounded-lg hover:bg-avocado-100 transition cursor-pointer">
+            <button type="button" wire:click="$set('pickupSuccessMessage', null)" class="text-darkbrown-400 hover:text-darkbrown-700 p-1 cursor-pointer">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>
         </div>
     @endif
 
-    <!-- Full-Width Card Antrean Pickup -->
-    <x-card padding="p-0">
-        <!-- Header Card & Search Filter -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-5 pt-5 pb-4 border-b border-wheat-200">
-            <div class="flex items-center gap-3">
-                <span class="p-2.5 rounded-xl bg-sunglow-100 text-darkbrown-800 border border-sunglow-200">
-                    <i data-lucide="package-check" class="w-5 h-5 text-darkbrown-800"></i>
-                </span>
+    {{-- Top Section: Operational Status Cards (POS Semi-Modern Standard) --}}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {{-- KPI 1: Siap Diambil Hari Ini --}}
+        <div class="bg-white p-5 rounded-2xl border border-wheat-200/90 shadow-sm relative overflow-hidden flex flex-col justify-between transition-all duration-150 hover:-translate-y-0.5 hover:shadow-tendaku-sm">
+            <div class="flex items-start justify-between gap-3">
                 <div>
-                    <div class="flex items-center gap-2">
-                        <h2 class="font-extrabold text-base text-darkbrown-900">Serah Terima & Pickup Alat</h2>
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold {{ $activeTab === 'belum_diambil' ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-sunglow-100 text-darkbrown-900 border border-sunglow-300' }}">
-                            <span class="w-1.5 h-1.5 rounded-full {{ $activeTab === 'belum_diambil' ? 'bg-rose-600' : 'bg-sunglow-600' }} animate-pulse"></span>
-                            {{ $totalCount ?? $filteredOrders->total() }} {{ $activeTab === 'belum_diambil' ? 'Belum Diambil' : 'Siap Pickup' }}
-                        </span>
+                    <span class="text-[11px] font-bold text-darkbrown-500 uppercase tracking-wider block">Siap diambil</span>
+                    <p class="text-4xl font-extrabold text-avocado-700 tracking-tight mt-1 font-admin-number tabular-nums">
+                        {{ $readyCount }}
+                    </p>
+                </div>
+                <div class="w-11 h-11 rounded-xl bg-avocado-100 text-avocado-800 border border-avocado-200 flex items-center justify-center shrink-0 shadow-xs">
+                    <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-wheat-100 flex items-center justify-between text-xs">
+                <span class="text-darkbrown-500 font-medium">Unit fisik telah siap di toko</span>
+                <span class="font-bold text-avocado-700">Antrean siap</span>
+            </div>
+        </div>
+
+        {{-- KPI 2: Belum Diambil / Lewat Jadwal --}}
+        <div class="bg-white p-5 rounded-2xl border border-wheat-200/90 shadow-sm relative overflow-hidden flex flex-col justify-between transition-all duration-150 hover:-translate-y-0.5 hover:shadow-tendaku-sm">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <span class="text-[11px] font-bold text-darkbrown-500 uppercase tracking-wider block">Lewat jadwal pickup</span>
+                    <p class="text-4xl font-extrabold {{ $overdueCount > 0 ? 'text-rose-600' : 'text-darkbrown-700' }} tracking-tight mt-1 font-admin-number tabular-nums">
+                        {{ $overdueCount }}
+                    </p>
+                </div>
+                <div class="w-11 h-11 rounded-xl {{ $overdueCount > 0 ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-wheat-100 text-darkbrown-700 border-wheat-200' }} border flex items-center justify-center shrink-0 shadow-xs">
+                    <i data-lucide="clock-alert" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-wheat-100 flex items-center justify-between text-xs">
+                <span class="text-darkbrown-500 font-medium">Belum diambil oleh penyewa</span>
+                <span class="font-bold {{ $overdueCount > 0 ? 'text-rose-700' : 'text-darkbrown-400' }}">
+                    {{ $overdueCount > 0 ? 'Perlu tindak lanjut' : 'Kedaluwarsa' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {{-- Main Workarea: Unified Workspace Card (No Cluttered Double Headers) --}}
+    <div class="bg-white rounded-2xl border border-wheat-200/90 shadow-sm overflow-hidden">
+        {{-- Section Bar: Search & Segmentation (Single Row Header) --}}
+        <div class="p-4 sm:p-5 border-b border-wheat-200/80 bg-wheat-50/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h2 class="text-base font-extrabold text-darkbrown-900 tracking-tight flex items-center gap-2">
+                    <i data-lucide="package-check" class="w-4 h-4 text-avocado-700"></i>
+                    <span>Antrean Serah Terima (Pickup)</span>
+                </h2>
+                <p class="text-xs text-darkbrown-500 mt-0.5">Pilih transaksi untuk verifikasi identitas dan serahkan unit sewa</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {{-- Search Bar --}}
+                <div class="relative w-full sm:w-64">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-darkbrown-400">
+                        <i data-lucide="search" class="w-4 h-4"></i>
                     </div>
-                    <p class="text-[11px] text-darkbrown-500">Verifikasi identitas dan serahkan unit fisik pesanan kepada pelanggan</p>
+                    <input 
+                        type="text" 
+                        wire:model.live.debounce.250ms="searchPickup" 
+                        placeholder="Cari ID Booking / Nama..." 
+                        class="w-full text-xs pl-10 pr-3.5 py-2.5 bg-white border border-wheat-300 rounded-xl text-darkbrown-900 placeholder-darkbrown-400 focus:outline-none focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-600 transition"
+                    />
                 </div>
-            </div>
 
-            <!-- Search Bar -->
-            <div class="w-full sm:w-80 relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-darkbrown-400">
-                    <i data-lucide="search" class="w-4 h-4"></i>
+                {{-- Segmented Tabs --}}
+                <div class="inline-flex p-1 bg-wheat-200/60 rounded-xl border border-wheat-300/70 shrink-0">
+                    <button wire:click="setTab('siap')"
+                        class="px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 flex items-center gap-2 cursor-pointer active:scale-[0.97] {{ $activeTab === 'siap' ? 'bg-white text-darkbrown-900 shadow-sm border border-wheat-200' : 'text-darkbrown-600 hover:text-darkbrown-900' }}">
+                        <span>Siap Diambil</span>
+                        <span class="px-1.5 py-0.5 text-[10px] rounded-full font-admin-number font-black {{ $activeTab === 'siap' ? 'bg-avocado-100 text-avocado-900' : 'bg-wheat-300/70 text-darkbrown-700' }}">
+                            {{ $readyCount }}
+                        </span>
+                    </button>
+                    <button wire:click="setTab('belum_diambil')"
+                        class="px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 flex items-center gap-2 cursor-pointer active:scale-[0.97] {{ $activeTab === 'belum_diambil' ? 'bg-white text-rose-950 shadow-sm border border-wheat-200' : 'text-darkbrown-600 hover:text-rose-900' }}">
+                        <span>Belum Diambil</span>
+                        <span class="px-1.5 py-0.5 text-[10px] rounded-full font-admin-number font-black {{ $activeTab === 'belum_diambil' ? 'bg-rose-100 text-rose-900' : 'bg-wheat-300/70 text-darkbrown-700' }}">
+                            {{ $overdueCount }}
+                        </span>
+                    </button>
                 </div>
-                <x-text-input 
-                    wire:model.live.debounce.250ms="searchPickup" 
-                    placeholder="Cari ID Booking atau Nama..." 
-                    class="w-full text-xs pl-9 py-2 bg-wheat-50/50 border-wheat-300 rounded-xl focus:bg-white"
-                />
             </div>
         </div>
 
-        <!-- 2 Tab Navigasi: Siap Diambil vs Belum Diambil -->
-        <div class="px-5 pt-4 pb-2 border-b border-wheat-200/80 bg-wheat-50/40 flex items-center gap-2 overflow-x-auto">
-            {{-- Tab 1: Siap Diambil --}}
-            <button 
-                type="button"
-                wire:click="setTab('siap')"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-150 cursor-pointer {{ $activeTab === 'siap' ? 'bg-darkbrown-900 text-white shadow-sm' : 'bg-white text-darkbrown-700 hover:bg-wheat-100/80 border border-wheat-200' }}"
-            >
-                <i data-lucide="calendar-check" class="w-3.5 h-3.5 {{ $activeTab === 'siap' ? 'text-sunglow-300' : 'text-darkbrown-400' }}"></i>
-                <span>Siap Diambil</span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-black {{ $activeTab === 'siap' ? 'bg-white/20 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
-                    {{ $readyCount }}
-                </span>
-            </button>
-
-            {{-- Tab 2: Belum Diambil (Lewat Jadwal) --}}
-            <button 
-                type="button"
-                wire:click="setTab('belum_diambil')"
-                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold transition-all duration-150 cursor-pointer {{ $activeTab === 'belum_diambil' ? 'bg-rose-700 text-white shadow-sm' : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200' }}"
-            >
-                <i data-lucide="alert-circle" class="w-3.5 h-3.5 {{ $activeTab === 'belum_diambil' ? 'text-white' : 'text-rose-500' }}"></i>
-                <span>Belum Diambil</span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-black {{ $activeTab === 'belum_diambil' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800' }}">
-                    {{ $overdueCount }}
-                </span>
-            </button>
-        </div>
-
-        <!-- Daftar Transaksi (Full-Width List) -->
-        <div class="p-5">
+        {{-- Orders List (Clean Divide-y Rows, No Bulky Nested Cards) --}}
+        <div class="divide-y divide-wheat-200/70">
             @forelse($filteredOrders as $order)
                 <div 
                     wire:click="selectPickup('{{ $order['id'] }}')" 
                     x-on:click="showPickupModal = true"
-                    class="group flex items-center justify-between p-4 mb-3 border rounded-2xl cursor-pointer transition-all duration-200 hover:border-avocado-400 hover:shadow-tendaku-sm {{ $order['is_overdue_pickup'] ? 'bg-rose-50/40 border-rose-200/90 hover:bg-rose-50/70' : 'bg-white border-wheat-200/90 hover:bg-wheat-50/50' }} last:mb-0"
-                >
-                    <!-- Left: Customer info & Booking ID -->
-                    <div class="flex items-center gap-4">
-                        <div class="p-2.5 rounded-xl {{ $order['is_overdue_pickup'] ? 'bg-rose-100 border border-rose-200 text-rose-700' : 'bg-wheat-100 border border-wheat-200 text-darkbrown-700' }} group-hover:bg-avocado-50 group-hover:border-avocado-200 group-hover:text-avocado-700 transition-colors shrink-0">
-                            <i data-lucide="{{ $order['is_overdue_pickup'] ? 'clock-alert' : 'user' }}" class="w-5 h-5"></i>
+                    class="group p-4 sm:p-5 hover:bg-wheat-50/70 active:scale-[0.998] transition-all duration-150 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 {{ $order['is_overdue_pickup'] ? 'bg-rose-50/30' : 'bg-white' }}">
+
+                    {{-- Left column: Customer info & Booking details --}}
+                    <div class="flex items-start sm:items-center gap-3.5 min-w-0">
+                        <div class="w-11 h-11 rounded-xl flex items-center justify-center font-extrabold text-sm shrink-0 {{ $order['is_overdue_pickup'] ? 'bg-rose-100 border border-rose-200 text-rose-800' : 'bg-wheat-100 border border-wheat-200 text-darkbrown-800' }} group-hover:bg-avocado-50 group-hover:border-avocado-300 group-hover:text-avocado-800 transition-colors shadow-xs">
+                            {{ strtoupper(substr($order['customer_name'], 0, 1)) }}
                         </div>
-                        <div>
-                            <div class="flex items-center gap-2 mb-0.5">
-                                <h4 class="font-extrabold text-darkbrown-900 text-sm">{{ $order['customer_name'] }}</h4>
-                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold bg-wheat-100 text-darkbrown-800 border border-wheat-200">
+
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-extrabold text-sm text-darkbrown-900 group-hover:text-avocado-800 transition-colors truncate">
+                                    {{ $order['customer_name'] }}
+                                </h3>
+                                <span class="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-wheat-100 text-darkbrown-700 border border-wheat-200">
                                     {{ $order['id'] }}
                                 </span>
                                 @if($order['is_overdue_pickup'])
-                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black bg-rose-100 text-rose-700 border border-rose-300">
-                                        <i data-lucide="alert-triangle" class="w-3 h-3"></i>
-                                        Terlambat {{ $order['days_late'] }} Hari
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-rose-800 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                                        <i data-lucide="alert-triangle" class="w-3 h-3 text-rose-600"></i>
+                                        Terlambat {{ $order['days_late'] }} hari
                                     </span>
                                 @endif
                             </div>
-                            <div class="flex items-center gap-3 text-[11px] text-darkbrown-500">
-                                <span class="flex items-center gap-1 font-medium {{ $order['is_overdue_pickup'] ? 'text-rose-700 font-bold' : '' }}">
+
+                            <div class="flex items-center gap-3 mt-1 text-xs text-darkbrown-500 flex-wrap">
+                                <span class="flex items-center gap-1.5 font-medium {{ $order['is_overdue_pickup'] ? 'text-rose-700 font-bold' : '' }}">
                                     <i data-lucide="calendar" class="w-3.5 h-3.5 {{ $order['is_overdue_pickup'] ? 'text-rose-600' : 'text-darkbrown-400' }} shrink-0"></i>
-                                    {{ $order['rental_period'] }}
+                                    <span>{{ $order['rental_period'] }}</span>
                                 </span>
-                                <span class="hidden sm:inline text-darkbrown-300">•</span>
-                                <span class="hidden sm:inline font-semibold text-darkbrown-600">{{ $order['phone'] }}</span>
+                                <span>•</span>
+                                <span class="flex items-center gap-1 font-mono text-darkbrown-600 font-medium">
+                                    <i data-lucide="phone" class="w-3.5 h-3.5 text-darkbrown-400"></i>
+                                    <span>{{ $order['phone'] }}</span>
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Right: Unit Count + Status Badge + Arrow -->
-                    <div class="flex items-center gap-4 shrink-0">
-                        <div class="text-right hidden sm:block">
-                            <p class="text-xs font-bold text-darkbrown-800">{{ count($order['allocated_units']) }} Unit Fisik</p>
-                            <p class="text-[10px] font-semibold {{ ($order['is_fully_paid'] ?? true) ? 'text-avocado-700' : 'text-amber-700 font-bold' }}">{{ $order['payment_status'] }}</p>
-                        </div>
-                        @if($order['is_overdue_pickup'])
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
-                                <span class="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></span>
-                                Belum Diambil
+                    {{-- Right column: Unit count, Financials & Actions --}}
+                    <div class="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-wheat-100">
+                        <div class="text-left sm:text-right">
+                            <span class="text-xs font-bold text-darkbrown-900 font-admin-number tabular-nums block">
+                                {{ count($order['allocated_units']) }} Unit Fisik
                             </span>
-                        @else
-                            <x-badge variant="sunglow" size="sm" :dot="true">
-                                {{ $order['status'] }}
-                            </x-badge>
-                        @endif
-                        <div class="text-wheat-400 group-hover:text-avocado-500 transition-colors">
-                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            <span class="text-[11px] font-semibold {{ ($order['is_fully_paid'] ?? true) ? 'text-avocado-700' : 'text-amber-700 font-bold' }}">
+                                {{ $order['payment_status'] }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            @if($order['is_overdue_pickup'])
+                                <span class="inline-flex items-center gap-1 text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 px-2.5 py-1 rounded-lg">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse"></span>
+                                    Belum diambil
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1 text-[11px] font-bold bg-sunglow-100 text-sunglow-900 border border-sunglow-300 px-2.5 py-1 rounded-lg">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-sunglow-600"></span>
+                                    Siap pickup
+                                </span>
+                            @endif
+
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-darkbrown-400 group-hover:text-avocado-800 group-hover:bg-wheat-100 transition-all duration-150 group-hover:translate-x-0.5">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             @empty
-                <div class="p-16 text-center text-xs text-darkbrown-500 space-y-2">
-                    <i data-lucide="file-question" class="w-12 h-12 mx-auto text-wheat-400"></i>
-                    <p class="font-bold text-darkbrown-700">Tidak ada transaksi ditemukan</p>
-                    <p class="text-[11px]">{{ $activeTab === 'belum_diambil' ? 'Tidak ada pesanan yang terlewat jadwal pickup.' : 'Tidak ada pesanan siap pickup hari ini atau mendatang.' }}</p>
+                <div class="py-16 text-center text-darkbrown-500 space-y-3 px-4">
+                    <div class="w-12 h-12 mx-auto rounded-2xl bg-wheat-100 border border-wheat-200 flex items-center justify-center text-darkbrown-400">
+                        <i data-lucide="inbox" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="font-extrabold text-sm text-darkbrown-800">Tidak ada antrean serah terima</p>
+                        <p class="text-xs text-darkbrown-500 max-w-sm mx-auto mt-1">
+                            {{ $searchPickup ? "Tidak ada pesanan yang sesuai dengan kata kunci '{$searchPickup}'." : ($activeTab === 'belum_diambil' ? 'Tidak ada pesanan yang terlewat jadwal pickup.' : 'Tidak ada pesanan siap pickup hari ini.') }}
+                        </p>
+                    </div>
                 </div>
             @endforelse
         </div>
 
         {{-- Pagination & Footer Summary --}}
-        <div class="px-5 py-4 border-t border-wheat-200/80 bg-wheat-50/30 flex flex-col sm:flex-row items-center justify-between gap-3">
-            {{-- Informasi Counter Data --}}
-            <div class="text-xs text-darkbrown-600 font-medium">
-                @if($filteredOrders->total() > 0)
-                    Menampilkan <span class="font-extrabold text-darkbrown-900">{{ $filteredOrders->firstItem() }}</span> – <span class="font-extrabold text-darkbrown-900">{{ $filteredOrders->lastItem() }}</span> dari <span class="font-extrabold text-avocado-800">{{ $filteredOrders->total() }}</span> pesanan {{ $activeTab === 'belum_diambil' ? 'belum diambil' : 'siap pickup' }}
-                @else
-                    Menampilkan <span class="font-bold text-darkbrown-900">0</span> pesanan {{ $activeTab === 'belum_diambil' ? 'belum diambil' : 'siap pickup' }}
+        @if($filteredOrders->hasPages() || $filteredOrders->total() > 0)
+            <div class="px-5 py-4 border-t border-wheat-200/80 bg-wheat-50/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="text-xs text-darkbrown-600 font-medium">
+                    Menampilkan <span class="font-bold text-darkbrown-900">{{ $filteredOrders->firstItem() ?? 0 }}</span> – <span class="font-bold text-darkbrown-900">{{ $filteredOrders->lastItem() ?? 0 }}</span> dari <span class="font-bold text-darkbrown-900">{{ $filteredOrders->total() }}</span> transaksi
+                </div>
+
+                @if($filteredOrders->hasPages())
+                    <div class="w-full sm:w-auto flex justify-center sm:justify-end">
+                        {{ $filteredOrders->links('kasir.pagination') }}
+                    </div>
                 @endif
             </div>
+        @endif
+    </div>
 
-            {{-- Navigation Links Pagination --}}
-            @if($filteredOrders->hasPages())
-                <div class="w-full sm:w-auto flex justify-center sm:justify-end">
-                    {{ $filteredOrders->links('kasir.pagination') }}
-                </div>
-            @endif
-        </div>
-    </x-card>
-
-    <!-- ==========================================
-         PICKUP / SERAH TERIMA MODAL (Center Popup Teleported to Body)
-         ========================================== -->
+    {{-- MODAL SERAH TERIMA & VERIFIKASI (Streamlined, Ergonomic & Semi-Modern) --}}
     @if($this->selectedOrder)
         <template x-teleport="body">
             <div 
                 x-show="showPickupModal"
-                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0"
                 x-transition:enter-end="opacity-100"
-                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave="transition ease-in duration-100"
                 x-transition:leave-start="opacity-100"
                 x-transition:leave-end="opacity-0"
-                class="fixed inset-0 z-[100] flex items-center justify-center bg-darkbrown-950/60 p-4"
+                class="fixed inset-0 z-[100] flex items-center justify-center bg-darkbrown-950/65 p-4"
                 x-on:click.self="showPickupModal = false"
+                x-on:keydown.escape.window="showPickupModal = false"
                 style="display: none;"
             >
                 <div 
                     x-show="showPickupModal"
-                    x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0 scale-95 translate-y-2"
-                    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-100"
                     x-transition:leave-start="opacity-100 scale-100"
                     x-transition:leave-end="opacity-0 scale-95"
-                    class="bg-white rounded-2xl border border-wheat-200 shadow-tendaku-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto"
+                    class="bg-white rounded-2xl border border-wheat-200 shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden relative"
                 >
-                    <!-- Modal Header -->
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 pt-5 pb-4 border-b border-wheat-200 sticky top-0 bg-white/95 backdrop-blur-md z-20 rounded-t-2xl">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-wheat-100 text-darkbrown-900 border border-wheat-200">
-                                    {{ $this->selectedOrder['id'] }}
-                                </span>
-                                <x-badge variant="sunglow" :dot="true">
-                                    {{ $this->selectedOrder['status'] }}
-                                </x-badge>
-                                @if($this->selectedOrder['is_fully_paid'] ?? true)
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                        {{ $this->selectedOrder['payment_status'] }}
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>
-                                        {{ $this->selectedOrder['payment_status'] }}
-                                    </span>
-                                @endif
+                    {{-- Modal Header Bar --}}
+                    <div class="px-6 py-4 border-b border-wheat-200 bg-wheat-50/50 flex items-center justify-between shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono text-xs font-black px-2.5 py-1 rounded bg-white text-darkbrown-900 border border-wheat-300 shadow-sm">
+                                {{ $this->selectedOrder['id'] }}
+                            </span>
+                            <div>
+                                <h3 class="text-sm font-extrabold text-darkbrown-900 leading-tight">
+                                    Serah Terima: {{ $this->selectedOrder['customer_name'] }}
+                                </h3>
+                                <p class="text-[11px] text-darkbrown-500">
+                                    {{ $this->selectedOrder['rental_period'] }}
+                                </p>
                             </div>
-                            <h2 class="text-xl font-extrabold text-darkbrown-900 tracking-tight">
-                                Serah Terima: {{ $this->selectedOrder['customer_name'] }}
-                            </h2>
                         </div>
 
-                        <!-- Action & Close -->
                         <div class="flex items-center gap-2">
+                            @if($this->selectedOrder['is_fully_paid'] ?? true)
+                                <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    Lunas
+                                </span>
+                            @else
+                                <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+                                    Sisa: Rp {{ number_format($this->selectedOrder['remaining_amount'] ?? 0, 0, ',', '.') }}
+                                </span>
+                            @endif
+
                             <button 
+                                type="button"
                                 x-on:click="showPickupModal = false" 
-                                class="p-2 rounded-xl text-darkbrown-400 hover:text-darkbrown-700 hover:bg-wheat-100 transition border border-transparent hover:border-wheat-200 cursor-pointer"
-                                title="Tutup"
-                            >
-                                <i data-lucide="x" class="w-5 h-5"></i>
+                                class="p-1.5 rounded-lg text-darkbrown-400 hover:text-darkbrown-800 hover:bg-wheat-200/60 transition-colors cursor-pointer"
+                                title="Tutup (Esc)">
+                                <i data-lucide="x" class="w-4 h-4"></i>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Modal Body (Scrollable) -->
-                    <div class="p-6 space-y-6">
+                    {{-- Modal Scrollable Body --}}
+                    <div class="p-6 overflow-y-auto space-y-5 flex-1">
 
-                        <!-- Info Grid Customer & Kontak -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                            <div class="p-3.5 rounded-2xl bg-wheat-50/70 border border-wheat-200/80 space-y-1">
-                                <span class="text-darkbrown-500 font-semibold block text-[11px]">Nomor Telepon / WhatsApp:</span>
-                                <div class="flex items-center justify-between">
-                                    <span class="font-extrabold text-darkbrown-900 text-sm flex items-center gap-2">
-                                        <i data-lucide="phone" class="w-4 h-4 text-emerald-700"></i>
-                                        {{ $this->selectedOrder['phone'] }}
-                                    </span>
-                                    {{-- Tombol Chat WA dengan Icon Resmi WhatsApp --}}
-                                    <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $this->selectedOrder['phone']) }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#25D366] hover:bg-[#20ba5a] px-3 py-1.5 rounded-xl shadow-sm hover:shadow transition-all active:scale-95">
-                                        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                                        </svg>
-                                        <span>Chat WA</span>
-                                    </a>
-                                </div>
-                            </div>
-
-                            <div class="p-3.5 rounded-2xl bg-wheat-50/70 border border-wheat-200/80 space-y-1">
-                                <span class="text-darkbrown-500 font-semibold block text-[11px]">Periode Sewa:</span>
-                                <span class="font-extrabold text-darkbrown-900 text-sm flex items-center gap-2">
-                                    <i data-lucide="calendar" class="w-4 h-4 text-emerald-700"></i>
-                                    {{ $this->selectedOrder['rental_period'] }}
-                                </span>
-                            </div>
-                        </div>
-
-                        {{-- Alert Pelunasan Tunai jika status sewa masih DP --}}
+                        {{-- Pelunasan Tunai Alert (Jika belum lunas) --}}
                         @if(!($this->selectedOrder['is_fully_paid'] ?? true))
-                            <div class="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-tendaku-sm">
-                                <div class="flex items-start sm:items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shrink-0 shadow-sm mt-0.5 sm:mt-0">
-                                        <i data-lucide="wallet" class="w-5 h-5 text-white"></i>
+                            <div class="p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 text-darkbrown-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                                        <i data-lucide="wallet" class="w-4 h-4"></i>
                                     </div>
-                                    <div>
-                                        <h4 class="font-extrabold text-sm text-darkbrown-900">Tagihan Belum Lunas (Sisa: Rp {{ number_format($this->selectedOrder['remaining_amount'] ?? 0, 0, ',', '.') }})</h4>
-                                        <p class="text-xs text-darkbrown-600 mt-0.5">
-                                            DP dibayar: <span class="font-bold text-darkbrown-800">Rp {{ number_format($this->selectedOrder['paid_amount'] ?? 0, 0, ',', '.') }}</span> dari total <span class="font-bold text-darkbrown-800">Rp {{ number_format($this->selectedOrder['grand_total'] ?? 0, 0, ',', '.') }}</span>. Terima sisa pembayaran tunai sebelum serah terima.
-                                        </p>
+                                    <div class="text-xs">
+                                        <p class="font-bold">Tagihan Belum Lunas (Sisa: Rp {{ number_format($this->selectedOrder['remaining_amount'] ?? 0, 0, ',', '.') }})</p>
+                                        <p class="text-[11px] text-darkbrown-600 mt-0.5">Terima pelunasan tunai kasir sebelum menyerahkan barang.</p>
                                     </div>
                                 </div>
                                 <button 
@@ -282,64 +294,59 @@
                                     wire:click="acceptCashPayment"
                                     wire:confirm="Terima pelunasan tunai sebesar Rp {{ number_format($this->selectedOrder['remaining_amount'] ?? 0, 0, ',', '.') }} dari penyewa?"
                                     wire:loading.attr="disabled"
-                                    wire:target="acceptCashPayment"
-                                    class="px-4 py-2.5 rounded-xl text-xs font-extrabold text-white bg-avocado-600 hover:bg-avocado-700 active:scale-95 transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
-                                >
-                                    <span wire:loading.remove wire:target="acceptCashPayment" class="flex items-center gap-1.5">
-                                        <i data-lucide="hand-coins" class="w-4 h-4"></i>
-                                        Terima Pelunasan Tunai
-                                    </span>
-                                    <span wire:loading wire:target="acceptCashPayment" class="flex items-center gap-1.5">
-                                        <svg class="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                                        </svg>
-                                        Memproses...
-                                    </span>
+                                    class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 active:scale-[0.98] transition shadow-xs shrink-0 cursor-pointer">
+                                    Terima Pelunasan Tunai
                                 </button>
                             </div>
                         @endif
 
-                        <!-- 1. Unit yang Akan Diserahkan -->
-                        <div class="space-y-3">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <h3 class="font-bold text-sm text-darkbrown-900 flex items-center gap-2">
-                                        <i data-lucide="box" class="w-4 h-4 text-avocado-600"></i>
-                                        Unit yang Akan Diserahkan
-                                    </h3>
+                        {{-- Quick Info Strip --}}
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div class="p-3 rounded-xl bg-wheat-50/70 border border-wheat-200 flex items-center justify-between">
+                                <span class="text-darkbrown-500 font-medium text-[11px]">Nomor WhatsApp:</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono font-bold text-darkbrown-900">{{ $this->selectedOrder['phone'] }}</span>
+                                    <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $this->selectedOrder['phone']) }}" target="_blank" class="inline-flex items-center gap-1 text-[11px] font-bold text-white bg-[#25D366] hover:bg-[#20ba5a] px-2 py-0.5 rounded-md transition active:scale-95 shadow-2xs">
+                                        Chat WA
+                                    </a>
                                 </div>
-                                <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
-                                    {{ count($this->selectedOrder['allocated_units']) }} Unit Dialokasikan
-                                </span>
                             </div>
+                            <div class="p-3 rounded-xl bg-wheat-50/70 border border-wheat-200 flex items-center justify-between">
+                                <span class="text-darkbrown-500 font-medium text-[11px]">Total Unit Fisik:</span>
+                                <span class="font-bold text-darkbrown-900 font-admin-number">{{ count($this->selectedOrder['allocated_units']) }} Barang Siap Serah</span>
+                            </div>
+                        </div>
 
-                            <!-- Tabel Unit Dialokasikan -->
+                        {{-- Unit Fisik yang Diserahkan --}}
+                        <div class="space-y-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-700 block">
+                                Rincian Unit Fisik Pesanan
+                            </span>
                             <div class="overflow-x-auto rounded-xl border border-wheat-200">
                                 <table class="w-full text-left text-xs">
-                                    <thead class="bg-wheat-100/70 text-darkbrown-800 font-bold uppercase tracking-wider">
+                                    <thead class="bg-wheat-100 text-darkbrown-800 font-bold uppercase tracking-wider">
                                         <tr>
-                                            <th class="py-3 px-4">Nama Barang</th>
-                                            <th class="py-3 px-4">Barcode Unit</th>
-                                            <th class="py-3 px-4 text-right">Status Alokasi</th>
+                                            <th class="py-2.5 px-4">Nama Barang</th>
+                                            <th class="py-2.5 px-4">Barcode Unit</th>
+                                            <th class="py-2.5 px-4 text-center">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-wheat-200 bg-white">
                                         @foreach($this->selectedOrder['allocated_units'] as $unit)
-                                            <tr class="hover:bg-wheat-50/70 transition-colors">
-                                                <td class="py-3.5 px-4 font-bold text-darkbrown-900 text-sm">
+                                            <tr class="hover:bg-wheat-50/50 transition-colors">
+                                                <td class="py-3 px-4 font-bold text-darkbrown-900">
                                                     {{ $unit['name'] }}
                                                 </td>
-                                                <td class="py-3.5 px-4 font-mono font-bold text-darkbrown-800">
-                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-wheat-100 border border-wheat-200 text-xs">
-                                                        <i data-lucide="scan-barcode" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                                                <td class="py-3 px-4 font-mono">
+                                                    <span class="px-2 py-0.5 rounded bg-wheat-100 text-darkbrown-800 border border-wheat-200 font-bold">
                                                         {{ $unit['barcode'] }}
                                                     </span>
                                                 </td>
-                                                <td class="py-3.5 px-4 text-right">
-                                                    <x-badge variant="avocado" size="sm" :dot="true">
-                                                        Ready ({{ $unit['status'] }})
-                                                    </x-badge>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-avocado-50 text-avocado-800 border border-avocado-200">
+                                                        <i data-lucide="check" class="w-3 h-3 text-avocado-600"></i>
+                                                        Siap
+                                                    </span>
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -348,212 +355,140 @@
                             </div>
                         </div>
 
-                        <!-- 2. Verifikasi Identitas & Foto Penyewa -->
-                        <div class="space-y-3">
-                            <h3 class="font-bold text-sm text-darkbrown-900 flex items-center gap-2">
-                                <i data-lucide="id-card" class="w-4 h-4 text-avocado-600"></i>
-                                Verifikasi Foto Penyewa & KTP
-                            </h3>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <!-- Foto Penyewa di Tempat -->
-                                <div class="p-4 rounded-2xl transition-all duration-200 border flex flex-col justify-between space-y-3 {{ $this->isPhotoVerified ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' : 'bg-wheat-50/70 border-wheat-200' }}">
-                                    <div>
-                                        <div class="flex justify-between items-center mb-1">
-                                            <span class="font-bold text-xs text-darkbrown-900">Foto Penyewa di Tempat</span>
-                                            @if($this->isPhotoVerified)
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
-                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
-                                                    Terverifikasi
-                                                </span>
-                                            @else
-                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">Wajib Diunggah</span>
-                                            @endif
-                                        </div>
-                                        <p class="text-[11px] text-darkbrown-600">Ambil/unggah foto penyewa fisik saat serah terima barang.</p>
-                                    </div>
-
-                                    <!-- Photo Upload Input & Thumbnail Preview -->
-                                    <div class="space-y-2">
-                                        @if($tenantPhoto)
-                                            <div class="p-2 rounded-xl bg-white border border-emerald-300 text-center space-y-1.5 shadow-sm">
-                                                <img src="{{ $tenantPhoto->temporaryUrl() }}" alt="Preview Foto Penyewa" class="h-24 mx-auto object-cover rounded-lg border border-wheat-200 shadow-inner" />
-                                                <span class="text-[10px] font-bold text-emerald-800 flex items-center justify-center gap-1">
-                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
-                                                    Foto Penyewa Siap
-                                                </span>
-                                            </div>
-                                        @elseif($this->isPhotoVerified)
-                                            <div class="p-2 rounded-xl bg-white border border-emerald-300 flex items-center gap-2 shadow-sm">
-                                                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
-                                                    <i data-lucide="check" class="w-4 h-4"></i>
-                                                </div>
-                                                <span class="text-xs font-bold text-emerald-800">Foto penyewa telah tersimpan</span>
-                                            </div>
+                        {{-- Verifikasi Foto & KTP (Compact 2 Columns) --}}
+                        <div class="space-y-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-700 block">
+                                Verifikasi Jaminan & Identitas
+                            </span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                {{-- Foto Penyewa --}}
+                                <div class="p-3.5 rounded-xl border flex flex-col justify-between space-y-2 {{ $this->isPhotoVerified ? 'bg-emerald-50/50 border-emerald-300' : 'bg-wheat-50/50 border-wheat-200' }}">
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-bold text-darkbrown-900">Foto Penyewa di Tempat</span>
+                                        @if($this->isPhotoVerified)
+                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                                                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                Terverifikasi
+                                            </span>
+                                        @else
+                                            <span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">Wajib</span>
                                         @endif
-
-                                        <label class="w-full cursor-pointer flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition duration-200 shadow-sm {{ $this->isPhotoVerified ? 'bg-white text-emerald-800 border-2 border-emerald-300 hover:bg-emerald-50' : 'bg-avocado-600 hover:bg-avocado-700 text-white' }}">
-                                            <i data-lucide="camera" class="w-4 h-4"></i>
-                                            <span>{{ $this->isPhotoVerified ? 'Ganti Foto Penyewa' : 'Upload / Ambil Foto' }}</span>
-                                            <input type="file" wire:model="tenantPhoto" accept="image/*" class="hidden" />
-                                        </label>
-                                        @error('tenantPhoto')
-                                            <p class="text-[10px] text-red-600 font-semibold">{{ $message }}</p>
-                                        @enderror
                                     </div>
+
+                                    @if($tenantPhoto)
+                                        <div class="p-1 rounded-lg bg-white border border-emerald-300 text-center">
+                                            <img src="{{ $tenantPhoto->temporaryUrl() }}" alt="Preview" class="h-20 mx-auto object-cover rounded" />
+                                        </div>
+                                    @endif
+
+                                    <label class="w-full cursor-pointer flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition shadow-xs {{ $this->isPhotoVerified ? 'bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50' : 'bg-avocado-700 hover:bg-avocado-800 text-white' }}">
+                                        <i data-lucide="camera" class="w-4 h-4"></i>
+                                        <span>{{ $this->isPhotoVerified ? 'Ganti Foto' : 'Ambil / Upload Foto' }}</span>
+                                        <input type="file" wire:model="tenantPhoto" accept="image/*" class="hidden" />
+                                    </label>
+                                    @error('tenantPhoto')
+                                        <p class="text-[10px] text-rose-600 font-semibold">{{ $message }}</p>
+                                    @enderror
                                 </div>
 
-                                <!-- Verifikasi KTP -->
-                                <div class="p-4 rounded-2xl transition-all duration-200 border flex flex-col justify-between space-y-3 {{ $tenantKtpUploaded ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' : 'bg-wheat-50/70 border-wheat-200' }}">
-                                    <div>
-                                        <div class="flex justify-between items-center mb-1">
-                                            <span class="font-bold text-xs text-darkbrown-900">Kartu Tanda Penduduk (KTP)</span>
-                                            @if($tenantKtpUploaded)
-                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
-                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
-                                                    Terverifikasi
-                                                </span>
-                                            @else
-                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">Belum Verified</span>
-                                            @endif
-                                        </div>
-                                        <p class="text-[11px] text-darkbrown-600">Verifikasi NIK dan foto KTP fisik penyewa sebagai jaminan sewa.</p>
-                                    </div>
-
-                                    <div>
+                                {{-- Verifikasi KTP Fisik --}}
+                                <div class="p-3.5 rounded-xl border flex flex-col justify-between space-y-2 {{ $tenantKtpUploaded ? 'bg-emerald-50/50 border-emerald-300' : 'bg-wheat-50/50 border-wheat-200' }}">
+                                    <div class="flex items-center justify-between">
+                                        <span class="font-bold text-darkbrown-900">KTP Fisik Asli</span>
                                         @if($tenantKtpUploaded)
-                                            <div class="p-3 rounded-xl bg-white border border-emerald-300 flex items-center justify-between shadow-sm mb-2">
-                                                <div class="flex items-center gap-2">
-                                                    <i data-lucide="id-card" class="w-4 h-4 text-emerald-700"></i>
-                                                    <span class="text-xs font-bold text-emerald-900">KTP Fisik Sudah Dicocokkan</span>
-                                                </div>
-                                                <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
-                                                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                                </span>
-                                            </div>
+                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                                                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                Ditahan
+                                            </span>
+                                        @else
+                                            <span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">Perlu Dicek</span>
                                         @endif
-
-                                        <button 
-                                            wire:click="markTenantKtpUploaded" 
-                                            type="button"
-                                            class="w-full py-2 px-3 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm flex items-center justify-center gap-1.5 {{ $tenantKtpUploaded ? 'bg-white text-emerald-800 border-2 border-emerald-300 cursor-default' : 'bg-avocado-600 hover:bg-avocado-700 text-white cursor-pointer active:scale-95' }}"
-                                            {{ $tenantKtpUploaded ? 'disabled' : '' }}
-                                        >
-                                            @if($tenantKtpUploaded)
-                                                <i data-lucide="check-check" class="w-4 h-4 text-emerald-600"></i>
-                                                <span>KTP Terverifikasi (Selesai)</span>
-                                            @else
-                                                <i data-lucide="id-card" class="w-4 h-4"></i>
-                                                <span>Verifikasi KTP Penyewa</span>
-                                            @endif
-                                        </button>
                                     </div>
+
+                                    <p class="text-[11px] text-darkbrown-600">Pastikan KTP asli ditahan sebagai jaminan sampai barang dikembalikan.</p>
+
+                                    <button 
+                                        wire:click="markTenantKtpUploaded" 
+                                        type="button"
+                                        class="w-full py-2 px-3 rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 {{ $tenantKtpUploaded ? 'bg-white text-emerald-800 border border-emerald-300 cursor-default' : 'bg-avocado-700 hover:bg-avocado-800 text-white cursor-pointer active:scale-[0.98]' }}"
+                                        {{ $tenantKtpUploaded ? 'disabled' : '' }}>
+                                        @if($tenantKtpUploaded)
+                                            <i data-lucide="check-check" class="w-4 h-4 text-emerald-600"></i>
+                                            <span>KTP Fisik Sudah Ditahan</span>
+                                        @else
+                                            <i data-lucide="id-card" class="w-4 h-4"></i>
+                                            <span>Cocokkan & Tahan KTP</span>
+                                        @endif
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- 3. Checklist Serah Terima Fisik (Interaktif Hijau Terang Saat Dicentang) -->
-                        <div class="p-5 rounded-2xl bg-wheat-50/70 border border-wheat-200 space-y-3">
-                            <h3 class="font-bold text-xs text-darkbrown-900 uppercase tracking-wider flex items-center gap-1.5">
-                                <i data-lucide="list-checks" class="w-4 h-4 text-avocado-600"></i>
-                                Checklist Serah Terima Fisik
-                            </h3>
+                        {{-- Checklist Serah Terima Fisik (Compact 3-Item Grid) --}}
+                        <div class="p-4 rounded-xl bg-wheat-50/60 border border-wheat-200 space-y-2.5">
+                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-700 block">
+                                Checklist Konfirmasi Kasir
+                            </span>
 
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                                {{-- Checklist 1: Identitas sesuai --}}
-                                <label class="p-3.5 rounded-2xl border transition-all duration-200 flex items-center gap-3 cursor-pointer select-none font-extrabold text-xs shadow-sm {{ $checkIdentity ? 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-300/60 shadow-emerald-950/10' : 'bg-white border-wheat-200 text-darkbrown-900 hover:border-avocado-300 hover:bg-wheat-50/50' }}">
-                                    <input 
-                                        type="checkbox" 
-                                        wire:model.live="checkIdentity" 
-                                        class="rounded-lg border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-5 h-5 transition cursor-pointer" 
-                                    />
-                                    <div class="flex-1 min-w-0">
-                                        <p class="leading-tight">Identitas Sesuai</p>
-                                        <p class="text-[10px] font-normal {{ $checkIdentity ? 'text-emerald-700 font-semibold' : 'text-darkbrown-400' }}">KTP & identitas cocok</p>
-                                    </div>
-                                    @if($checkIdentity)
-                                        <span class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-black text-xs shrink-0 animate-fade-in">
-                                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                        </span>
-                                    @endif
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <label class="p-2.5 rounded-xl border transition flex items-center gap-2.5 cursor-pointer text-xs {{ $checkIdentity ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold' : 'bg-white border-wheat-200 text-darkbrown-800' }}">
+                                    <input type="checkbox" wire:model.live="checkIdentity" class="rounded border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer" />
+                                    <span class="text-[11px] leading-tight">Identitas Sesuai</span>
                                 </label>
 
-                                {{-- Checklist 2: Semua unit sesuai --}}
-                                <label class="p-3.5 rounded-2xl border transition-all duration-200 flex items-center gap-3 cursor-pointer select-none font-extrabold text-xs shadow-sm {{ $checkUnits ? 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-300/60 shadow-emerald-950/10' : 'bg-white border-wheat-200 text-darkbrown-900 hover:border-avocado-300 hover:bg-wheat-50/50' }}">
-                                    <input 
-                                        type="checkbox" 
-                                        wire:model.live="checkUnits" 
-                                        class="rounded-lg border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-5 h-5 transition cursor-pointer" 
-                                    />
-                                    <div class="flex-1 min-w-0">
-                                        <p class="leading-tight">Semua Unit Sesuai</p>
-                                        <p class="text-[10px] font-normal {{ $checkUnits ? 'text-emerald-700 font-semibold' : 'text-darkbrown-400' }}">Barang fisik dicek kasir</p>
-                                    </div>
-                                    @if($checkUnits)
-                                        <span class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-black text-xs shrink-0 animate-fade-in">
-                                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                        </span>
-                                    @endif
+                                <label class="p-2.5 rounded-xl border transition flex items-center gap-2.5 cursor-pointer text-xs {{ $checkUnits ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold' : 'bg-white border-wheat-200 text-darkbrown-800' }}">
+                                    <input type="checkbox" wire:model.live="checkUnits" class="rounded border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer" />
+                                    <span class="text-[11px] leading-tight">Semua Unit Dicek</span>
                                 </label>
 
-                                {{-- Checklist 3: Barang diserahkan --}}
-                                <label class="p-3.5 rounded-2xl border transition-all duration-200 flex items-center gap-3 cursor-pointer select-none font-extrabold text-xs shadow-sm {{ $checkHandover ? 'bg-emerald-50 border-emerald-400 text-emerald-950 ring-2 ring-emerald-300/60 shadow-emerald-950/10' : 'bg-white border-wheat-200 text-darkbrown-900 hover:border-avocado-300 hover:bg-wheat-50/50' }}">
-                                    <input 
-                                        type="checkbox" 
-                                        wire:model.live="checkHandover" 
-                                        class="rounded-lg border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-5 h-5 transition cursor-pointer" 
-                                    />
-                                    <div class="flex-1 min-w-0">
-                                        <p class="leading-tight">Barang Diserahkan</p>
-                                        <p class="text-[10px] font-normal {{ $checkHandover ? 'text-emerald-700 font-semibold' : 'text-darkbrown-400' }}">Diterima oleh penyewa</p>
-                                    </div>
-                                    @if($checkHandover)
-                                        <span class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center font-black text-xs shrink-0 animate-fade-in">
-                                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                        </span>
-                                    @endif
+                                <label class="p-2.5 rounded-xl border transition flex items-center gap-2.5 cursor-pointer text-xs {{ $checkHandover ? 'bg-emerald-50 border-emerald-300 text-emerald-950 font-bold' : 'bg-white border-wheat-200 text-darkbrown-800' }}">
+                                    <input type="checkbox" wire:model.live="checkHandover" class="rounded border-wheat-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer" />
+                                    <span class="text-[11px] leading-tight">Barang Diserahkan</span>
                                 </label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Sticky Modal Footer (Melayang di Bawah Modal) -->
-                    <div class="sticky bottom-0 bg-white/95 backdrop-blur-md px-6 py-4 border-t border-wheat-200 rounded-b-2xl shadow-lg z-20 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <div class="w-full sm:w-auto">
+                    {{-- Modal Footer Bar --}}
+                    <div class="px-6 py-4 border-t border-wheat-200 bg-wheat-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                        <div class="text-xs font-semibold">
                             @if(!($this->selectedOrder['is_fully_paid'] ?? true))
-                                <div class="text-[11px] font-semibold text-red-800 bg-red-50 px-3 py-1.5 rounded-xl border border-red-200 flex items-center gap-1.5">
-                                    <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 shrink-0"></i>
-                                    <span>Tagihan belum lunas. Terima pelunasan tunai sebelum serah terima.</span>
-                                </div>
+                                <span class="text-amber-800 flex items-center gap-1.5">
+                                    <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600"></i>
+                                    Tagihan belum lunas.
+                                </span>
                             @elseif(!$this->isPickupReady)
-                                <div class="text-[11px] font-semibold text-amber-800 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 flex items-center gap-1.5">
-                                    <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                                    <span>Lengkapi foto, KTP, dan 3 checklist untuk konfirmasi.</span>
-                                </div>
+                                <span class="text-darkbrown-600 flex items-center gap-1.5">
+                                    <i data-lucide="info" class="w-4 h-4 text-darkbrown-400"></i>
+                                    Lengkapi foto, KTP, dan 3 checklist untuk konfirmasi.
+                                </span>
                             @else
-                                <div class="text-[11px] font-extrabold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-300 flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span>Semua syarat lengkap! Siap konfirmasi serah terima.</span>
-                                </div>
+                                <span class="text-emerald-800 font-bold flex items-center gap-1.5">
+                                    <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i>
+                                    Semua syarat lengkap!
+                                </span>
                             @endif
                         </div>
 
-                        <!-- Tombol Konfirmasi Dinamis (Abu-abu saat disabled, Hijau Gradasi Aktif saat ready) -->
-                        <div class="w-full sm:w-auto">
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            <button 
+                                type="button"
+                                x-on:click="showPickupModal = false"
+                                class="px-4 py-2 rounded-xl text-xs font-bold text-darkbrown-700 hover:bg-wheat-200/60 transition cursor-pointer">
+                                Tutup
+                            </button>
+
                             <button 
                                 type="button"
                                 wire:click="confirmPickup"
-                                class="w-full sm:w-auto py-2.5 px-6 rounded-xl font-extrabold text-xs tracking-wider uppercase transition-all duration-200 shadow-sm flex items-center justify-center gap-2 {{ $this->isPickupReady ? 'bg-gradient-to-r from-emerald-600 to-avocado-600 hover:from-emerald-500 hover:to-avocado-500 text-white cursor-pointer shadow-lg shadow-emerald-600/30 ring-2 ring-emerald-400/50 hover:scale-[1.02] active:scale-[0.98]' : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-300 opacity-80' }}"
-                                {{ !$this->isPickupReady ? 'disabled' : '' }}
-                            >
+                                class="px-5 py-2.5 rounded-xl font-bold text-xs transition duration-150 flex items-center gap-2 {{ $this->isPickupReady ? 'bg-avocado-700 hover:bg-avocado-800 text-white cursor-pointer shadow-sm active:scale-[0.98]' : 'bg-wheat-200 text-darkbrown-400 border border-wheat-300 cursor-not-allowed opacity-70' }}"
+                                {{ !$this->isPickupReady ? 'disabled' : '' }}>
                                 @if(!$this->isPickupReady)
-                                    <i data-lucide="lock" class="w-4 h-4 text-amber-600 shrink-0"></i>
-                                    <span>Konfirmasi Serah Terima Barang</span>
+                                    <i data-lucide="lock" class="w-4 h-4 text-darkbrown-400"></i>
+                                    <span>Konfirmasi Serah Terima</span>
                                 @else
-                                    <span class="p-0.5 rounded-md bg-white/20">
-                                        <i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>
-                                    </span>
-                                    <span>Konfirmasi Serah Terima Barang</span>
+                                    <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                                    <span>Konfirmasi Serah Terima</span>
                                 @endif
                             </button>
                         </div>
