@@ -62,9 +62,9 @@
                                             <span x-show="times['{{ $key }}']" class="text-xs font-semibold text-darkbrown-500" x-text="times['{{ $key }}']">{{ $times[$key] }}</span>
                                         @endunless
                                         @if($key === 'rental')
-                                            <span x-show="state('rental') !== 'todo'" x-cloak
+                                            <span x-show="state('rental') === 'active'" x-cloak
                                                   class="px-2.5 py-0.5 rounded-full text-xs font-bold border bg-avocado-100 text-avocado-800 border-avocado-300"
-                                                  x-text="state('rental') === 'active' ? 'Aktif' : 'Selesai'"></span>
+                                                  x-text="'Aktif'"></span>
                                         @elseif($key === 'done' && $isLateReturn)
                                             <span x-show="state('done') !== 'todo'" x-cloak
                                                   class="rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-bold text-red-800">

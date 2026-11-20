@@ -126,8 +126,10 @@
             'cimb'    => 'CIMB Niaga',
             'qris'    => 'QRIS',
         ];
-        $vaBankKey = strtolower((string) ($vaInfo['bank'] ?? ''));
-        $vaBankKey = array_key_exists($vaBankKey, $vaBanks) ? $vaBankKey : 'bca';
+        $selectedBank = strtolower((string) ($onlinePayment?->payment_channel ?? ''));
+        $selectedBank = str_replace('_va', '', $selectedBank);
+        $vaBankKey = strtolower((string) ($vaInfo['bank'] ?? $selectedBank));
+        $vaBankKey = array_key_exists($vaBankKey, $vaBanks) ? $vaBankKey : '';
 
         $fineAmount = $rental->total_late_fee + $rental->total_damage_fee;
         $hasDenda   = ($rental->total_late_fee > 0 || $rental->total_damage_fee > 0);
@@ -183,7 +185,11 @@
                 ? $fmtDateTime($paidPayment->paid_at)
                 : ($status === 'pending' && $rental->expires_at ? 'Batas ' . $fmtDateTime($rental->expires_at) : ''),
             'pickup'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : $fmtDate($rental->pickup_date),
-            'rental'  => $rental->picked_up_at ? 'Aktif sejak ' . $fmtDateTime($rental->picked_up_at) : '',
+            'rental'  => in_array($status, ['returned', 'completed'], true)
+                ? ($rental->returned_at
+                    ? 'Dikembalikan pada ' . $fmtDateTime($rental->returned_at)
+                    : ($rental->actual_return_date ? 'Dikembalikan pada ' . $fmtDate($rental->actual_return_date) : ''))
+                : ($rental->picked_up_at ? 'Aktif sejak ' . $fmtDateTime($rental->picked_up_at) : ''),
             'done'    => $fmtDateTime(
                 $rental->completed_at
                     ?? $rental->returned_at
@@ -247,6 +253,7 @@
             'qrisImageUrl'  => route('booking.qris-image', $rental->booking_code),
             'vaBanks'       => $vaBanks,
             'paymentMethod' => $isQrisPayment ? 'qris' : $vaBankKey,
+            'bookingCode'   => $rental->booking_code,
             'isQrisPayment' => $isQrisPayment,
             'qrisAvailable' => (bool) $qrisInfo,
             'qrisRawUrl'    => $qrisInfo['qr_code_url'] ?? null,

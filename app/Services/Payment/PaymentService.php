@@ -122,11 +122,35 @@ class PaymentService
     }
 
     //  Payment pending untuk denda via Midtrans.
-    public function createOnlineFinePayment(Rental $rental, int $fineAmount, int $attempt = 1): Payment
-    {
+    public function createOnlineFinePayment(
+        Rental $rental,
+        int $fineAmount,
+        int $attempt = 1,
+        ?string $method = null,
+    ): Payment {
         $this->assertFineAmount($fineAmount);
 
-        return $this->createMidtransPayment($rental, PaymentType::Fine->value, $fineAmount, $attempt);
+        if ($method !== null && $method !== 'qris') {
+            throw new InvalidArgumentException('Denda online kasir hanya mendukung QRIS.');
+        }
+
+        if ($method === 'qris' && $attempt === 1) {
+            // Avoid reusing sandbox order IDs from earlier attempts or local database restores.
+            $attempt = (int) now()->format('ymdHis');
+        }
+
+        $extra = $method === null
+            ? []
+            : ['payment_channel' => $method, 'method' => $method];
+
+        return $this->createMidtransPayment(
+            $rental,
+            PaymentType::Fine->value,
+            $fineAmount,
+            $attempt,
+            $extra,
+            $method,
+        );
     }
 
     // ── Pembayaran tunai (kasir)

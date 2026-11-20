@@ -125,7 +125,7 @@ class LostItemFlowTest extends TestCase
             ->set("damageFees.{$this->detail->id}", 250000)
             ->set("returnedItems.{$this->detail->id}", true)
             ->set('finePaymentMethod', 'cash')
-            ->set('finePaidSuccess', true)
+            ->set('cashTendered', 250000)
             ->call('completeReturn');
 
         // 1. Status unit berubah jadi lost
@@ -177,7 +177,6 @@ class LostItemFlowTest extends TestCase
             ->set("inspectionNotes.{$this->detail->id}", 'lost')
             ->set("damageFees.{$this->detail->id}", 0)
             ->set("returnedItems.{$this->detail->id}", true)
-            ->set('finePaidSuccess', true)
             ->call('completeReturn')
             ->assertHasErrors(["damageFees.{$this->detail->id}"]);
 

@@ -396,6 +396,8 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('Transaksi Selesai');
         $response->assertSee('Terlambat Dikembalikan');
         $response->assertSee('Alat dikembalikan 1 hari setelah batas');
+        $response->assertSee('Dikembalikan pada 13 Oct 2026, 15:10');
+        $response->assertDontSee('Aktif sejak 13 Oct 2026, 15:10');
         $response->assertSee('id="node-done"', false);
         $response->assertDontSee('id="node-return"', false);
 
@@ -477,6 +479,7 @@ class BookingStatusAndHistoryTest extends TestCase
             'vendor_id' => $this->vendor->id,
             'payment_type' => 'full',
             'channel' => 'midtrans',
+            'payment_channel' => 'bca_va',
             'order_id' => 'TDK-2026-SNAP01-FULL-1',
             'amount' => 150000,
             'status' => 'pending',
@@ -518,6 +521,28 @@ class BookingStatusAndHistoryTest extends TestCase
                     'va_number' => '1234567890',
                 ],
             ]);
+    }
+
+    public function test_pay_requires_a_bank_to_be_selected(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-SNAP02', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-SNAP02-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldNotReceive('chargeBankTransfer');
+        });
+
+        $this->actingAs($this->customer1)
+            ->postJson(route('booking.pay', $rental->booking_code))
+            ->assertUnprocessable()
+            ->assertJson(['message' => 'Pilih bank terlebih dahulu.']);
     }
 
     public function test_pay_returns_qris_details_and_persists_the_midtrans_response(): void
@@ -660,6 +685,7 @@ class BookingStatusAndHistoryTest extends TestCase
             'vendor_id' => $this->vendor->id,
             'payment_type' => 'full',
             'channel' => 'midtrans',
+            'payment_channel' => 'bca_va',
             'order_id' => 'TDK-2026-VA01-FULL-1',
             'amount' => 150000,
             'status' => 'pending',
@@ -691,6 +717,31 @@ class BookingStatusAndHistoryTest extends TestCase
             ->get(route('booking.status', $rental->booking_code))
             ->assertOk()
             ->assertSee('1234567890');
+    }
+
+    public function test_status_page_does_not_select_a_bank_or_generate_a_va_until_selected(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-VA02', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-VA02-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldNotReceive('chargeBankTransfer');
+        });
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertOk()
+            ->assertSee('x-text="vaBanks[vaBank] || (vaBank ? vaBank.toUpperCase() : \'-\')">-</span>', false)
+            ->assertSee('x-text="bookingCode">TDK-2026-VA02</div>', false)
+            ->assertDontSee('TDK-2026-VA02-FULL-1</div>', false);
     }
 
     public function test_sync_payment_status_endpoint_returns_payment_status(): void

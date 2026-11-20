@@ -650,33 +650,44 @@
         </div>
     @endif
 
-    {{-- MODAL PELUNASAN DENDA (Tunai & QRIS Realtime Simulator) --}}
+    {{-- MODAL PELUNASAN DENDA (Tunai & QRIS Midtrans) --}}
     @if($showFineModal)
+        @php
+            $fineQrisPayment = $finePaymentMethod === 'qris' ? $this->fineQrisPayment : null;
+            $fineQrisImageUrl = $finePaymentMethod === 'qris' ? $this->fineQrisImageUrl : null;
+        @endphp
         <div class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-darkbrown-950/70 backdrop-blur-sm animate-fade-in">
             <div class="bg-white w-full max-w-lg rounded-3xl border border-wheat-300 shadow-2xl overflow-hidden">
                 <div class="p-5 text-white flex justify-between items-center"
                      style="background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 60%, #b91c1c 100%);">
                     <div class="flex items-center gap-2.5">
                         <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white text-base">
-                            ⚠️
+                            <i data-lucide="triangle-alert" class="h-4 w-4"></i>
                         </div>
                         <div>
                             <h3 class="text-base font-black tracking-tight text-white">Pelunasan Denda Retur</h3>
                             <p class="text-xs text-red-200">Total Denda: Rp {{ number_format($this->totalCharge, 0, ',', '.') }}</p>
                         </div>
                     </div>
-                    <button wire:click="$set('showFineModal', false)" class="text-white/80 hover:text-white p-1 rounded-lg">✕</button>
+                    <button wire:click="closeFineModal"
+                            wire:loading.attr="disabled"
+                            wire:target="closeFineModal"
+                            class="text-white/80 hover:text-white p-1 rounded-lg">
+                        <i data-lucide="x" class="h-4 w-4"></i>
+                    </button>
                 </div>
 
-                <div class="p-6 space-y-5 text-xs">
+                <div class="p-6 space-y-5 text-xs" wire:loading.class="pointer-events-none opacity-60" wire:target="selectFinePaymentMethod">
                     {{-- Pilihan Metode Pembayaran Denda --}}
                     <div>
                         <label class="block text-xs font-bold text-darkbrown-800 mb-2">Pilih Cara Pembayaran Denda:</label>
                         <div class="grid grid-cols-2 gap-3">
                             <button type="button"
-                                    wire:click="$set('finePaymentMethod', 'cash')"
+                                    wire:click="selectFinePaymentMethod('cash')"
+                                    wire:loading.attr="disabled"
+                                    wire:target="selectFinePaymentMethod"
                                     class="p-3.5 rounded-2xl border text-left flex items-center gap-3 transition cursor-pointer {{ $finePaymentMethod === 'cash' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-500/20' : 'border-wheat-200 bg-white hover:bg-wheat-50' }}">
-                                <span class="text-xl">💵</span>
+                                <i data-lucide="banknote" class="h-5 w-5 shrink-0 text-avocado-700"></i>
                                 <div>
                                     <h4 class="font-bold text-darkbrown-900 text-xs">Tunai (Cash)</h4>
                                     <p class="text-[10px] text-darkbrown-500">Terima uang tunai di kasir</p>
@@ -684,9 +695,11 @@
                             </button>
 
                             <button type="button"
-                                    wire:click="$set('finePaymentMethod', 'qris')"
+                                    wire:click="selectFinePaymentMethod('qris')"
+                                    wire:loading.attr="disabled"
+                                    wire:target="selectFinePaymentMethod"
                                     class="p-3.5 rounded-2xl border text-left flex items-center gap-3 transition cursor-pointer {{ $finePaymentMethod === 'qris' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-500/20' : 'border-wheat-200 bg-white hover:bg-wheat-50' }}">
-                                <span class="text-xl">📱</span>
+                                <i data-lucide="qr-code" class="h-5 w-5 shrink-0 text-avocado-700"></i>
                                 <div>
                                     <h4 class="font-bold text-darkbrown-900 text-xs">QRIS Dinamis</h4>
                                     <p class="text-[10px] text-darkbrown-500">Scan QRIS Realtime</p>
@@ -695,41 +708,99 @@
                         </div>
                     </div>
 
-                    @if($finePaymentMethod === 'cash')
-                        <div class="p-4 rounded-2xl bg-wheat-50 border border-wheat-200 space-y-3">
-                            <label class="block font-bold text-darkbrown-800">Nominal Uang Diterima (Rp):</label>
-                            <input type="number" wire:model.live="cashTendered" class="w-full text-base font-black py-2.5 px-3 rounded-xl border border-wheat-300 bg-white" placeholder="{{ $this->totalCharge }}" />
-                            <div class="flex justify-between font-bold text-darkbrown-800 pt-2 border-t border-wheat-200">
-                                <span>Kembalian:</span>
-                                <span class="text-avocado-700 font-black">
-                                    Rp {{ number_format(max(0, (float)$cashTendered - $this->totalCharge), 0, ',', '.') }}
-                                </span>
+                    <div wire:loading.remove wire:target="selectFinePaymentMethod">
+                        @if($finePaymentMethod === 'cash')
+                            <div class="p-4 rounded-2xl bg-wheat-50 border border-wheat-200 space-y-3">
+                                <label class="block font-bold text-darkbrown-800">Nominal Uang Diterima (Rp):</label>
+                                <input type="number" wire:model.live="cashTendered" class="w-full text-base font-black py-2.5 px-3 rounded-xl border border-wheat-300 bg-white" placeholder="{{ $this->totalCharge }}" />
+                                <div class="flex justify-between font-bold text-darkbrown-800 pt-2 border-t border-wheat-200">
+                                    <span>Kembalian:</span>
+                                    <span class="text-avocado-700 font-black">
+                                        Rp {{ number_format(max(0, (float)$cashTendered - $this->totalCharge), 0, ',', '.') }}
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                    @else
-                        {{-- QRIS Simulation Modal / Interface --}}
-                        <div class="p-4 rounded-2xl bg-wheat-50 border border-wheat-200 text-center space-y-3">
-                            <div class="inline-block p-3 bg-white rounded-2xl shadow-sm border border-wheat-200">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data={{ urlencode('TENDAKU-FINE-'.$this->activeOrder?->booking_code.'-'.$this->totalCharge) }}"
-                                     alt="QRIS Pelunasan Denda"
-                                     class="w-36 h-36 mx-auto rounded-lg" />
-                                <span class="text-[10px] font-mono font-bold text-darkbrown-600 mt-2 block">NMID: ID102003920199</span>
+                        @else
+                            <div class="p-4 rounded-2xl bg-wheat-50 border border-wheat-200 text-center space-y-3">
+                                @if($fineQrisPayment?->status === 'pending' && $fineQrisPayment->qris_details)
+                                    @php
+                                        $midtransQrisUrl = $fineQrisPayment->qris_details['qr_code_url'];
+                                    @endphp
+                                    <div class="inline-block p-3 bg-white rounded-2xl shadow-sm border border-wheat-200">
+                                        <img src="{{ $fineQrisImageUrl }}"
+                                             alt="QRIS Midtrans untuk pelunasan denda"
+                                             class="w-40 h-40 mx-auto rounded-lg" />
+                                    </div>
+                                    <div class="text-[11px] text-darkbrown-600">
+                                        Bayar <strong>Rp {{ number_format($fineQrisPayment->amount, 0, ',', '.') }}</strong>
+                                        melalui QRIS Midtrans {{ config('services.midtrans.is_production') ? '' : 'Sandbox' }}.
+                                        Status pembayaran akan diverifikasi oleh Midtrans.
+                                    </div>
+                                    <div class="flex flex-wrap items-center justify-center gap-2">
+                                        <button type="button"
+                                                x-data="{ copied: false }"
+                                                aria-label="Salin URL QRIS Midtrans"
+                                                title="Salin URL QRIS Midtrans"
+                                                @click="navigator.clipboard.writeText(@js($midtransQrisUrl)).then(() => { copied = true; setTimeout(() => copied = false, 1800) })"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-wheat-300 bg-white text-darkbrown-700 hover:bg-wheat-100">
+                                            <i x-show="!copied" data-lucide="copy" class="h-3.5 w-3.5"></i>
+                                            <i x-show="copied" data-lucide="check" class="h-3.5 w-3.5"></i>
+                                        </button>
+                                        @unless(config('services.midtrans.is_production'))
+                                            <a href="https://simulator.sandbox.midtrans.com/v2/qris/index"
+                                               target="_blank"
+                                               rel="noopener noreferrer"
+                                               aria-label="Bayar di Midtrans Sandbox"
+                                               class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-avocado-700 px-3 text-[10px] font-bold text-white hover:bg-avocado-800">
+                                                Bayar
+                                            </a>
+                                        @endunless
+                                    </div>
+                                    @unless(config('services.midtrans.is_production'))
+                                        <p class="text-[10px] text-darkbrown-500">
+                                            Tempel URL yang disalin pada kolom QR Code Image Url di simulator Midtrans.
+                                        </p>
+                                    @endunless
+                                @elseif($fineQrisPayment?->status === 'paid')
+                                    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-800">
+                                        Pembayaran QRIS terverifikasi oleh Midtrans.
+                                    </div>
+                                @else
+                                    <p class="text-[11px] text-darkbrown-600">
+                                        QRIS belum tersedia. Ketuk pilihan QRIS untuk mencoba kembali.
+                                    </p>
+                                @endif
                             </div>
-                            <div class="text-[11px] text-darkbrown-600">
-                                Scan dengan aplikasi e-wallet / mobile banking pelanggan untuk melunasi denda sebesar <strong>Rp {{ number_format($this->totalCharge, 0, ',', '.') }}</strong>.
-                            </div>
-                        </div>
-                    @endif
+                        @endif
+                    </div>
+                    <div wire:loading wire:target="selectFinePaymentMethod" class="flex items-center justify-center gap-2 rounded-2xl border border-wheat-200 bg-wheat-50 p-5 text-xs font-semibold text-darkbrown-600">
+                        <i data-lucide="loader-circle" class="h-4 w-4 animate-spin"></i>
+                        Menyiapkan metode pembayaran...
+                    </div>
+
+                    @error('finePayment')
+                        <p class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700">{{ $message }}</p>
+                    @enderror
+                    @error('cashTendered')
+                        <p class="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700">{{ $message }}</p>
+                    @enderror
 
                     <div class="flex items-center justify-end gap-3 pt-2">
-                        <button wire:click="$set('showFineModal', false)"
+                        <button wire:click="closeFineModal"
+                                wire:loading.attr="disabled"
+                                wire:target="closeFineModal"
                                 class="py-2.5 px-5 rounded-xl font-bold text-darkbrown-700 bg-wheat-100 hover:bg-wheat-200 transition cursor-pointer">
-                            Batal
+                            Tutup
                         </button>
-                        <button wire:click="processFinePayment"
-                                class="py-2.5 px-6 rounded-xl font-black text-white bg-avocado-600 hover:bg-avocado-700 shadow-md transition cursor-pointer active:scale-95">
-                            Konfirmasi Pembayaran Denda & Selesai
-                        </button>
+                        @if($finePaymentMethod === 'cash' || $this->fineQrisPayment)
+                            <button wire:click="processFinePayment"
+                                    wire:loading.attr="disabled"
+                                    class="py-2.5 px-6 rounded-xl font-black text-white bg-avocado-600 hover:bg-avocado-700 shadow-md transition cursor-pointer active:scale-95 disabled:opacity-60">
+                                {{ $finePaymentMethod === 'cash'
+                                    ? 'Terima Tunai & Selesaikan'
+                                    : ($this->fineQrisPayment?->status === 'paid' ? 'Selesaikan Retur' : 'Cek Status & Selesaikan') }}
+                            </button>
+                        @endif
                     </div>
                 </div>
             </div>
