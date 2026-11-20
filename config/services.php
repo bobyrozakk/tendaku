@@ -35,13 +35,13 @@ return [
         ],
     ],
 
-    'google' => [
-        'client_id' => env('GOOGLE_CLIENT_ID'),
-        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env(
-            'GOOGLE_REDIRECT_URI',
-            rtrim((string) env('APP_URL', 'http://localhost'), '/').'/auth/google/callback'
-        ),
+    'supabase' => [
+        'url' => env('SUPABASE_URL'),
+        'anon_key' => env('SUPABASE_ANON_KEY'),
+        'redirect_urls' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('SUPABASE_REDIRECT_URLS', '')),
+        ))),
     ],
 
     'midtrans' => [
