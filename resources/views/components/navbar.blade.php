@@ -28,7 +28,7 @@
                 <h1 class="text-sm font-extrabold tracking-tight leading-none whitespace-nowrap" style="color: #FAF6ED;">TENDAKU</h1>
                 <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mt-1 whitespace-nowrap" style="color: #D5A007;">
                     <span class="w-1.5 h-1.5 rounded-full bg-avocado-400 animate-pulse" aria-hidden="true"></span>
-                    {{ auth()->check() && auth()->user()->isVendorOwner() ? 'Portal Owner' : 'Portal Kasir' }}
+                    Portal Owner
                 </span>
             </div>
         </div>
@@ -37,8 +37,6 @@
         <nav class="flex-1 pt-4 px-2.5 space-y-1 overflow-hidden">
             <p class="px-2 text-[10px] font-bold uppercase tracking-widest mb-3 transition-all duration-200 whitespace-nowrap"
                :class="open ? 'opacity-60' : 'opacity-0 h-0 mb-0 overflow-hidden'" style="color: rgba(245,233,200,0.5);">Menu Utama</p>
-
-            @if (auth()->check() && auth()->user()->isVendorOwner())
                 <!-- Dashboard Owner -->
                 <a href="{{ route('vendor.owner.dashboard') }}"
                    wire:navigate
@@ -150,63 +148,7 @@
                     <i data-lucide="truck" class="w-5 h-5 shrink-0"></i>
                     <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Pengaturan Pengiriman</span>
                 </a>
-            @else
-                <!-- Dashboard Kasir -->
-                <a href="{{ route('kasir.dashboard') }}"
-                   wire:navigate
-                   class="group relative flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-150 overflow-hidden"
-                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-                   style="{{ request()->routeIs('kasir.dashboard')
-                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                       : 'color: rgba(245,233,200,0.65);' }}"
-                   onmouseover="if (!{{ request()->routeIs('kasir.dashboard') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-                   onmouseout="if (!{{ request()->routeIs('kasir.dashboard') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <i data-lucide="house" class="w-5 h-5 shrink-0"></i>
-                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Dashboard Kasir</span>
-                </a>
-
-                <!-- Status Unit Alat (Kasir View) -->
-                <a href="{{ route('kasir.units') }}"
-                   wire:navigate
-                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
-                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-                   style="{{ request()->routeIs('kasir.units')
-                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                       : 'color: rgba(245,233,200,0.65);' }}"
-                   onmouseover="if (!{{ request()->routeIs('kasir.units') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-                   onmouseout="if (!{{ request()->routeIs('kasir.units') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <i data-lucide="boxes" class="w-5 h-5 shrink-0"></i>
-                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Status Unit Alat</span>
-                </a>
-
-                <!-- Pickup / Serah Terima -->
-                <a href="{{ route('kasir.pickup') }}"
-                   wire:navigate
-                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
-                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-                   style="{{ request()->routeIs('kasir.pickup')
-                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                       : 'color: rgba(245,233,200,0.65);' }}"
-                   onmouseover="if (!{{ request()->routeIs('kasir.pickup') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-                   onmouseout="if (!{{ request()->routeIs('kasir.pickup') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <i data-lucide="arrow-left-right" class="w-5 h-5 shrink-0"></i>
-                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Pickup / Serah Terima</span>
-                </a>
-
-                <!-- Inspeksi & Retur -->
-                <a href="{{ route('kasir.return') }}"
-                   wire:navigate
-                   class="group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-150 overflow-hidden"
-                   :class="open ? 'px-3.5 py-2.5' : 'px-0 py-2.5 justify-center'"
-                   style="{{ request()->routeIs('kasir.return')
-                       ? 'background: linear-gradient(135deg, #6c8b08 0%, #4e6506 100%); box-shadow: 0 4px 14px rgba(108,139,8,0.35); color: white;'
-                       : 'color: rgba(245,233,200,0.65);' }}"
-                   onmouseover="if (!{{ request()->routeIs('kasir.return') ? 'true' : 'false' }}) { this.style.background='rgba(255,255,255,0.08)'; this.style.color='#ffffff'; }"
-                   onmouseout="if (!{{ request()->routeIs('kasir.return') ? 'true' : 'false' }}) { this.style.background='transparent'; this.style.color='rgba(245,233,200,0.65)'; }">
-                    <i data-lucide="clipboard-check" class="w-5 h-5 shrink-0"></i>
-                    <span class="whitespace-nowrap transition-all duration-200" :class="open ? 'opacity-100 w-auto' : 'opacity-0 w-0 overflow-hidden'">Inspeksi & Retur</span>
-                </a>
-            @endif
+            
 
             <!-- Divider -->
             <div class="my-3 mx-1 border-t" style="border-color: rgba(255,255,255,0.07);"></div>
@@ -225,79 +167,11 @@
     </aside>
 
 @else
-    @php
-        $isHome = request()->is('/') || request()->routeIs('home');
-    @endphp
-
     <!-- Customer Top Navigation Bar Container -->
-    <div x-data="{
-        isHome: {{ $isHome ? 'true' : 'false' }},
-        isHovered: false,
-        mobileOpen: false,
-        isTouch: false,
-        headerHeight: 64,
-        lastScrollY: 0,
-        get isVisible() {
-            return this.isHome || this.isTouch || this.isHovered || this.mobileOpen;
-        },
-        updateHeight() {
-            if (this.$refs.navbarHeader) {
-                this.headerHeight = Math.max(this.$refs.navbarHeader.offsetHeight, 64);
-            }
-        },
-        init() {
-            if (!this.isHome) {
-                this.isTouch = !window.matchMedia('(hover: hover)').matches;
-                this.$nextTick(() => this.updateHeight());
-                window.addEventListener('resize', () => this.updateHeight(), { passive: true });
-                document.fonts?.ready?.then(() => this.updateHeight());
-                this.$watch('mobileOpen', () => this.$nextTick(() => this.updateHeight()));
-            }
-        },
-        handleMouseMove(e) {
-            if (this.isHome || this.mobileOpen) return;
-            // Deteksi jangkauan kursor: muncul saat kursor berada dalam jangkauan 70px dari atas layar
-            if (e.clientY <= 70) {
-                this.isHovered = true;
-            } else if (e.clientY > this.headerHeight && this.isHovered) {
-                this.isHovered = false;
-            }
-        },
-        handleScroll() {
-            if (this.isHome || this.mobileOpen) return;
-            const currentScrollY = window.scrollY;
-            if (currentScrollY > this.lastScrollY && currentScrollY > 60 && this.isHovered) {
-                this.isHovered = false;
-            }
-            this.lastScrollY = currentScrollY;
-        }
-    }"
-    @if (!$isHome)
-        @mousemove.window.passive="handleMouseMove($event)"
-        @scroll.window.passive="handleScroll()"
-        @mouseleave.window="if (!isHome && !mobileOpen) isHovered = false"
-    @endif
-    >
-        @if (!$isHome)
-            {{-- Sensor hotspot transparan di area atas layar (tinggi 64px) untuk memicu hover instan --}}
-            <div class="fixed top-0 inset-x-0 h-16 z-40 pointer-events-auto"
-                 x-show="!isVisible"
-                 @mouseenter="isHovered = true"
-                 aria-hidden="true"></div>
-        @endif
-
+    <div x-data="{ mobileOpen: false }">
         <!-- Customer Top Navigation Bar -->
         <header x-ref="navbarHeader"
-                @if (!$isHome)
-                    @mouseenter="isHovered = true"
-                    @mouseleave="isHovered = false"
-                    @focusin="isHovered = true"
-                    @focusout="isHovered = false"
-                    class="fixed top-0 inset-x-0 z-50 backdrop-blur-md border-b transition-all duration-300 ease-in-out"
-                    :class="isVisible ? 'translate-y-0 opacity-100 shadow-xl pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'"
-                @else
-                    class="sticky top-0 z-40 backdrop-blur-md border-b"
-                @endif
+                class="sticky top-0 z-40 backdrop-blur-md border-b"
                 style="background: rgba(22, 29, 21, 0.96); border-color: rgba(249, 227, 182, 0.15);">
         <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
             <!-- Brand Logo -->
@@ -516,12 +390,5 @@
             @endguest
         </div>
     </header>
-
-    @if (!$isHome)
-        {{-- Spacer dinamis: mendorong konten ke bawah (turun) secara sinkron saat topbar muncul, sehingga topbar tidak menutupi konten --}}
-        <div class="transition-all duration-300 ease-in-out overflow-hidden"
-             :style="isVisible ? 'height: ' + headerHeight + 'px;' : 'height: 0px;'"
-             aria-hidden="true"></div>
-    @endif
     </div>
 @endif
