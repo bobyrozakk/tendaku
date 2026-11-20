@@ -19,6 +19,8 @@ class CustomerDoneStepReceiptTest extends TestCase
 
     public function test_customer_can_view_return_receipt_on_done_step(): void
     {
+        config(['services.midtrans.server_key' => 'test-midtrans-server-key']);
+
         $vendor = Vendor::create([
             'name' => 'Tendaku Outdoor Malang',
             'slug' => 'tendaku-outdoor-malang',
@@ -98,14 +100,15 @@ class CustomerDoneStepReceiptTest extends TestCase
             ->get(route('booking.status', $rental->booking_code));
 
         $response->assertOk();
-        $response->assertSee('Struk Pengembalian');
-        $response->assertSee('Inspeksi');
+        $response->assertSee('Pengembalian Selesai');
+        $response->assertSee('Hasil Pengembalian');
+        $response->assertSee('1 Item Diperiksa');
         $response->assertSee('Tendaku Outdoor Malang');
         $response->assertSee('TDK-DONE-RCPT');
         $response->assertSee('Kasir Budi');
         $response->assertSee('Tenda Dome Arpenaz 4.1');
         $response->assertSee('BC-889900');
-        $response->assertSee('Jaminan KTP: Sudah Dikembalikan ke Penyewa');
-        $response->assertSee('Cetak Struk');
+        $response->assertSee('Sudah dikembalikan kepada penyewa.');
+        $response->assertSee('Lihat & Cetak Struk', false);
     }
 }
