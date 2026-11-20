@@ -19,6 +19,11 @@
         </div>
     @endif
 
+    <div class="receipt-row">
+        <span>Total Denda</span>
+        <span>Rp {{ number_format($totalFine ?? 0, 0, ',', '.') }}</span>
+    </div>
+
     <div class="receipt-divider"></div>
 
     <div class="receipt-row receipt-grand-total">

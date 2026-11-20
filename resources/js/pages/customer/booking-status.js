@@ -11,7 +11,7 @@ function statusPage(cfg) {
         justDone: null,
         copied: false,
         remaining: "",
-        vaBank: cfg.paymentMethod ?? cfg.va?.bank ?? "bca",
+        vaBank: cfg.paymentMethod ?? cfg.va?.bank ?? "",
         vaNumber: cfg.va?.number ?? "",
         vaBiller: cfg.va?.biller ?? "",
         vaLoading: false,

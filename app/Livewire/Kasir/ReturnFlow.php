@@ -2,18 +2,22 @@
 
 namespace App\Livewire\Kasir;
 
+use App\Enums\PaymentStatus;
 use App\Models\ItemUnit;
 use App\Models\NotificationLog;
 use App\Models\Payment;
 use App\Models\Rental;
 use App\Models\RentalDetail;
 use App\Models\User;
+use App\Services\Payment\MidtransService;
+use App\Services\Payment\PaymentService;
 use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Livewire\Component;
 
 class ReturnFlow extends Component
@@ -46,15 +50,7 @@ class ReturnFlow extends Component
 
     public $cashTendered = 0;
 
-    public $fineQrisActive = false;
-
-    public $finePaidSuccess = false;
-
-    /** Midtrans Snap token untuk pembayaran denda QRIS */
-    public $fineSnapToken = null;
-
-    /** Pesan error jika gagal memperoleh Snap token */
-    public $fineSnapError = null;
+    public $finePaymentId = null;
 
     // Struk Print Modal
     public $showReceiptModal = false;
@@ -107,9 +103,9 @@ class ReturnFlow extends Component
         $this->itemNotes = [];
         $this->returnedItems = [];
         $this->showFineModal = false;
-        $this->finePaidSuccess = false;
-        $this->fineSnapToken = null;
-        $this->fineSnapError = null;
+        $this->finePaymentMethod = 'cash';
+        $this->cashTendered = 0;
+        $this->finePaymentId = null;
 
         $order = $this->getActiveOrderProperty();
         if ($order) {
@@ -153,24 +149,155 @@ class ReturnFlow extends Component
         }
 
         $vendorId = Auth::user()?->vendor_id;
+        $today = Carbon::today();
 
         return Rental::withoutGlobalScope('vendor')
             ->where('vendor_id', $vendorId)
+            ->where(function ($query) use ($today) {
+                $query->where('status', 'picked_up')
+                    ->orWhere(function ($subQuery) use ($today) {
+                        $subQuery->where('status', 'confirmed')
+                            ->whereDate('return_date', '<', $today);
+                    });
+            })
             ->with(['details.masterItem', 'details.itemUnit', 'customer'])
             ->find($this->activeOrderId);
     }
 
+    public function getFineQrisPaymentProperty(): ?Payment
+    {
+        $order = $this->getActiveOrderProperty();
+
+        if (! $order) {
+            return null;
+        }
+
+        $query = $order->payments()
+            ->where('payment_type', 'fine')
+            ->where('payment_channel', 'qris')
+            ->whereIn('status', ['pending', 'paid']);
+
+        if ($this->finePaymentId) {
+            $query->whereKey($this->finePaymentId);
+        } else {
+            $query->latest('id');
+        }
+
+        return $query->first();
+    }
+
+    public function getFineQrisImageUrlProperty(): ?string
+    {
+        $payment = $this->fineQrisPayment;
+
+        if (! $payment || $payment->status !== 'pending' || ! $payment->qris_details) {
+            return null;
+        }
+
+        return URL::temporarySignedRoute(
+            'kasir.fine-qris-image',
+            now()->addHours(24),
+            ['payment' => $payment->getKey()],
+        );
+    }
+
+    private function hasPendingFineQrisPayment(?Rental $order = null): bool
+    {
+        $order ??= $this->getActiveOrderProperty();
+
+        return $order?->payments()
+            ->where('payment_type', 'fine')
+            ->where('payment_channel', 'qris')
+            ->where('status', 'pending')
+            ->exists() ?? false;
+    }
+
     public function updatedInspectionNotes($value, $key): void
     {
+        if ($this->hasPendingFineQrisPayment()) {
+            $detail = $this->getActiveOrderProperty()?->details->firstWhere('id', $key);
+            $this->inspectionNotes[$key] = $detail?->condition_after ?? 'good';
+            $this->damageFees[$key] = (float) ($detail?->damage_fee ?? 0);
+            $this->addError('finePayment', 'Tutup modal QRIS atau pilih Tunai agar tagihan dibatalkan sebelum mengubah hasil inspeksi.');
+
+            return;
+        }
+
         $this->resetErrorBag("damageFees.{$key}");
         if ($value === 'good') {
             $this->damageFees[$key] = 0;
         }
     }
 
+    public function updatedDamageFees($value, $key): void
+    {
+        if (! $this->hasPendingFineQrisPayment()) {
+            return;
+        }
+
+        $detail = $this->getActiveOrderProperty()?->details->firstWhere('id', $key);
+        $this->damageFees[$key] = (float) ($detail?->damage_fee ?? 0);
+        $this->addError('finePayment', 'Tutup modal QRIS atau pilih Tunai agar tagihan dibatalkan sebelum mengubah denda inspeksi.');
+    }
+
+    public function selectFinePaymentMethod(
+        string $method,
+        PaymentService $paymentService,
+        MidtransService $midtrans,
+    ): void {
+        if (! in_array($method, ['cash', 'qris'], true)) {
+            $this->addError('finePayment', 'Pilih metode pembayaran denda yang valid.');
+
+            return;
+        }
+
+        $payment = $this->fineQrisPayment;
+
+        if ($method === 'cash' && $payment?->status === 'paid') {
+            $this->addError('finePayment', 'Denda sudah lunas melalui QRIS; selesaikan retur tanpa menerima pembayaran tunai lagi.');
+
+            return;
+        }
+
+        if (
+            $method === 'cash'
+            && $payment?->status === 'pending'
+            && ! $this->cancelPendingFineQrisPayment($midtrans)
+        ) {
+            return;
+        }
+
+        $this->finePaymentMethod = $method;
+        $this->resetErrorBag('finePayment');
+        $this->resetErrorBag('cashTendered');
+
+        if ($method === 'qris') {
+            $this->createFineQrisPayment($paymentService, $midtrans);
+        }
+    }
+
+    public function closeFineModal(MidtransService $midtrans): void
+    {
+        if (
+            $this->fineQrisPayment?->status === 'pending'
+            && ! $this->cancelPendingFineQrisPayment($midtrans)
+        ) {
+            return;
+        }
+
+        $this->showFineModal = false;
+        $this->resetErrorBag('finePayment');
+    }
+
     public function setCondition($detailId, $condition)
     {
         if ($this->isExpiredUnpicked) {
+            return;
+        }
+
+        if ($this->hasPendingFineQrisPayment()) {
+            $this->addError('finePayment', 'Tutup modal QRIS atau pilih Tunai agar tagihan dibatalkan sebelum mengubah hasil inspeksi.');
+
             return;
         }
 
@@ -184,6 +311,12 @@ class ReturnFlow extends Component
 
     public function markItemReturned($detailId)
     {
+        if ($this->hasPendingFineQrisPayment()) {
+            $this->addError('finePayment', 'Tutup modal QRIS atau pilih Tunai agar tagihan dibatalkan sebelum mengubah hasil inspeksi.');
+
+            return;
+        }
+
         $condition = $this->inspectionNotes[$detailId] ?? 'good';
         $fee = (float) ($this->damageFees[$detailId] ?? 0);
 
@@ -235,30 +368,362 @@ class ReturnFlow extends Component
         }
     }
 
-    public function completeReturn()
+    private function validateReturnInspection(Rental $order): bool
+    {
+        $allReturned = $order->details->every(fn (RentalDetail $detail) => ! empty($this->returnedItems[$detail->id]));
+
+        if (! $allReturned) {
+            $this->addError('general', 'Semua barang harus diinspeksi dan dikonfirmasi sebelum menyelesaikan return.');
+
+            return false;
+        }
+
+        foreach ($order->details as $detail) {
+            $condition = $this->inspectionNotes[$detail->id] ?? 'good';
+            $fee = (float) ($this->damageFees[$detail->id] ?? 0);
+
+            if (in_array($condition, ['damaged', 'lost'], true) && $fee <= 0) {
+                $this->addError(
+                    "damageFees.{$detail->id}",
+                    'Denda wajib diisi minimal Rp 1 bila kondisi barang '.($condition === 'damaged' ? 'Rusak' : 'Hilang').'.'
+                );
+
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function createFineQrisPayment(PaymentService $paymentService, MidtransService $midtrans): void
+    {
+        $this->showFineModal = true;
+
+        if ($this->finePaymentMethod !== 'qris') {
+            $this->addError('finePayment', 'Pilih QRIS sebagai metode pembayaran terlebih dahulu.');
+
+            return;
+        }
+
+        $order = $this->getActiveOrderProperty();
+        if (! $order || ! $this->validateReturnInspection($order)) {
+            return;
+        }
+
+        $amount = (int) round($this->totalCharge);
+        if ($amount <= 0) {
+            $this->addError('finePayment', 'Tidak ada denda yang perlu dibayar.');
+
+            return;
+        }
+
+        $payment = DB::transaction(function () use ($order, $paymentService, $amount): ?Payment {
+            $lockedOrder = Rental::withoutGlobalScope('vendor')
+                ->where('vendor_id', Auth::user()?->vendor_id)
+                ->lockForUpdate()
+                ->findOrFail($order->id);
+
+            if (
+                $lockedOrder->status !== 'picked_up'
+                && ! ($lockedOrder->status === 'confirmed' && Carbon::today()->gt($lockedOrder->return_date))
+            ) {
+                return null;
+            }
+
+            $paidPayment = $lockedOrder->payments()
+                ->where('payment_type', 'fine')
+                ->where('status', 'paid')
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
+
+            if ($paidPayment) {
+                return $paidPayment->payment_channel === 'qris'
+                    && (int) $paidPayment->amount === $amount
+                    ? $paidPayment
+                    : null;
+            }
+
+            $pendingPayment = $lockedOrder->payments()
+                ->where('payment_type', 'fine')
+                ->where('status', 'pending')
+                ->latest('id')
+                ->lockForUpdate()
+                ->first();
+
+            if ($pendingPayment) {
+                if (
+                    $pendingPayment->payment_channel !== 'qris'
+                    || (int) $pendingPayment->amount !== $amount
+                ) {
+                    return null;
+                }
+
+                return $pendingPayment;
+            }
+
+            return $paymentService->createOnlineFinePayment($lockedOrder, $amount, 1, 'qris');
+        });
+
+        if (! $payment) {
+            $this->addError(
+                'finePayment',
+                'Tagihan denda lain masih aktif atau nominalnya berbeda. Batalkan tagihan sebelumnya sebelum membuat QRIS baru.'
+            );
+
+            return;
+        }
+
+        $this->finePaymentId = $payment->getKey();
+        $this->resetErrorBag('finePayment');
+
+        if ($payment->status === 'paid') {
+            return;
+        }
+
+        $payment = $this->chargeFineQrisPayment($payment, $order, $amount, $paymentService, $midtrans);
+        if (! $payment) {
+            $this->addError(
+                'finePayment',
+                'Midtrans gagal membuat QRIS. Coba lagi atau batalkan tagihan lama terlebih dahulu.'
+            );
+
+            return;
+        }
+
+        $this->finePaymentId = $payment->getKey();
+
+        if ($payment->status !== 'paid' && ! $payment->fresh()->qris_details) {
+            $this->addError('finePayment', 'QRIS belum tersedia dari Midtrans. Silakan coba lagi.');
+        }
+    }
+
+    private function chargeFineQrisPayment(
+        Payment $payment,
+        Rental $order,
+        int $amount,
+        PaymentService $paymentService,
+        MidtransService $midtrans,
+    ): ?Payment {
+        try {
+            $midtrans->chargeQris($payment);
+
+            return $payment->fresh();
+        } catch (\Exception $exception) {
+            Log::error('ReturnFlow: gagal membuat tagihan QRIS denda di Midtrans.', [
+                'payment_id' => $payment->getKey(),
+                'order_id' => $payment->order_id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            if ($exception->getCode() !== 406) {
+                return null;
+            }
+        }
+
+        $payment = $midtrans->syncStatus($payment);
+
+        if ($payment->status === 'paid' || $payment->qris_details) {
+            return $payment;
+        }
+
+        if ($payment->status === 'pending') {
+            if (! $midtrans->cancelTransaction($payment)) {
+                $payment = $midtrans->syncStatus($payment);
+
+                return $payment->status === 'paid' || $payment->qris_details
+                    ? $payment
+                    : null;
+            }
+
+            $cancelled = DB::transaction(function () use ($payment): bool {
+                $lockedPayment = Payment::query()
+                    ->lockForUpdate()
+                    ->findOrFail($payment->getKey());
+
+                if ($lockedPayment->status !== PaymentStatus::Pending->value) {
+                    return false;
+                }
+
+                if (! $lockedPayment->transitionTo(PaymentStatus::Cancelled)) {
+                    return false;
+                }
+
+                $lockedPayment->midtrans_status = 'cancel';
+                $lockedPayment->save();
+
+                return true;
+            });
+
+            if (! $cancelled) {
+                $payment = $payment->fresh();
+
+                return $payment->status === 'paid' || $payment->qris_details
+                    ? $payment
+                    : null;
+            }
+        } elseif (! in_array($payment->status, [
+            PaymentStatus::Cancelled->value,
+            PaymentStatus::Expired->value,
+            PaymentStatus::Failed->value,
+        ], true)) {
+            return null;
+        }
+
+        $nextAttempt = $paymentService->orderSequence($order->booking_code, $payment->order_id) + 1;
+        $replacement = $paymentService->createOnlineFinePayment($order, $amount, $nextAttempt, 'qris');
+
+        try {
+            $midtrans->chargeQris($replacement);
+
+            return $replacement->fresh();
+        } catch (\Exception $exception) {
+            Log::error('ReturnFlow: gagal membuat ulang QRIS denda dengan order ID baru.', [
+                'payment_id' => $replacement->getKey(),
+                'order_id' => $replacement->order_id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function cancelPendingFineQrisPayment(MidtransService $midtrans): bool
+    {
+        $payment = $this->fineQrisPayment;
+
+        if (! $payment || $payment->status !== 'pending') {
+            return true;
+        }
+
+        if (! $midtrans->cancelTransaction($payment)) {
+            $payment = $midtrans->syncStatus($payment);
+
+            if ($payment->status === 'paid') {
+                $this->addError('finePayment', 'Pembayaran sudah berhasil dan tidak dapat dibatalkan.');
+
+                return false;
+            }
+
+            if ($payment->status === 'pending') {
+                $this->addError('finePayment', 'Midtrans belum mengonfirmasi pembatalan QRIS. Tagihan tetap aktif.');
+
+                return false;
+            }
+        }
+
+        $cancelled = DB::transaction(function () use ($payment): bool {
+            $lockedPayment = Payment::query()
+                ->lockForUpdate()
+                ->findOrFail($payment->getKey());
+
+            if (in_array($lockedPayment->status, [
+                PaymentStatus::Cancelled->value,
+                PaymentStatus::Expired->value,
+                PaymentStatus::Failed->value,
+            ], true)) {
+                return true;
+            }
+
+            if ($lockedPayment->status !== PaymentStatus::Pending->value) {
+                return false;
+            }
+
+            if ($lockedPayment->transitionTo(PaymentStatus::Cancelled)) {
+                $lockedPayment->midtrans_status = 'cancel';
+                $lockedPayment->save();
+
+                return true;
+            }
+
+            return false;
+        });
+
+        if (! $cancelled) {
+            $this->addError('finePayment', 'Status QRIS berubah saat dibatalkan. Periksa status pembayaran sebelum melanjutkan.');
+
+            return false;
+        }
+
+        $this->finePaymentId = null;
+        $this->resetErrorBag('finePayment');
+
+        return true;
+    }
+
+    public function completeReturn(PaymentService $paymentService): void
     {
         $order = $this->getActiveOrderProperty();
         if (! $order) {
             return;
         }
 
-        $allReturned = $order->details->every(fn ($detail) => ! empty($this->returnedItems[$detail->id]));
-        if (! $allReturned) {
-            $this->addError('general', 'Semua barang harus diinspeksi dan dikonfirmasi sebelum menyelesaikan return.');
-
+        if (! $this->validateReturnInspection($order)) {
             return;
         }
 
         // Hitung total denda
         $totalLateFee = (float) $this->calculatedLateFee;
-        $totalDamageFee = (float) $this->totalDamageFee;
-        $totalFines = $totalLateFee + $totalDamageFee;
+        $totalDamageFee = (float) $order->details->sum(
+            fn (RentalDetail $detail) => (float) ($this->damageFees[$detail->id] ?? 0)
+        );
+        $totalFines = (int) round($totalLateFee + $totalDamageFee);
 
-        // Jika ada denda dan belum dilunasi, buka modal pelunasan denda
-        if ($totalFines > 0 && ! $this->finePaidSuccess) {
+        if ($totalFines > 0) {
             $this->showFineModal = true;
 
+            if (! in_array($this->finePaymentMethod, ['cash', 'qris'], true)) {
+                $this->addError('finePayment', 'Pilih metode pembayaran denda yang valid.');
+
+                return;
+            }
+
+            $paidFinePayment = $order->payments()
+                ->where('payment_type', 'fine')
+                ->where('status', 'paid')
+                ->latest('id')
+                ->first();
+
+            if ($paidFinePayment && (int) $paidFinePayment->amount !== $totalFines) {
+                $this->addError('finePayment', 'Nominal denda berbeda dari pembayaran yang sudah tercatat.');
+
+                return;
+            }
+
+            if ($this->finePaymentMethod === 'cash' && (float) $this->cashTendered < $totalFines) {
+                $this->addError('cashTendered', 'Nominal tunai yang diterima belum mencukupi.');
+
+                return;
+            }
+
+            $this->resetErrorBag('cashTendered');
+        }
+
+        $pendingQrisPaymentExists = $this->hasPendingFineQrisPayment($order);
+        if ($pendingQrisPaymentExists && ($totalFines === 0 || $this->finePaymentMethod === 'cash')) {
+            $this->showFineModal = true;
+            $this->addError('finePayment', 'Tutup modal QRIS untuk membatalkan tagihan lama sebelum melanjutkan.');
+
             return;
+        }
+
+        if ($totalFines > 0) {
+            if ($this->finePaymentMethod === 'qris') {
+                $qrisPaymentPaid = $order->payments()
+                    ->where('payment_type', 'fine')
+                    ->where('payment_channel', 'qris')
+                    ->where('status', 'paid')
+                    ->where('amount', $totalFines)
+                    ->exists();
+
+                if (! $qrisPaymentPaid) {
+                    $this->addError('finePayment', 'Pembayaran QRIS belum dikonfirmasi oleh Midtrans.');
+
+                    return;
+                }
+            }
+
+            $this->resetErrorBag('finePayment');
         }
 
         // Kumpulkan detail barang hilang sebelum transaksi (untuk notif setelahnya)
@@ -267,11 +732,55 @@ class ReturnFlow extends Component
         );
 
         // Eksekusi penyelesaian return di Database
-        DB::transaction(function () use ($order, $totalLateFee, $totalDamageFee, $totalFines) {
+        $completed = DB::transaction(function () use ($order, $paymentService, $totalLateFee, $totalDamageFee, $totalFines): bool {
+            $lockedOrder = Rental::withoutGlobalScope('vendor')
+                ->where('vendor_id', Auth::user()?->vendor_id)
+                ->lockForUpdate()
+                ->findOrFail($order->id);
+
+            if (
+                $lockedOrder->status !== 'picked_up'
+                && ! ($lockedOrder->status === 'confirmed' && Carbon::today()->gt($lockedOrder->return_date))
+            ) {
+                return false;
+            }
+
+            $pendingQrisPaymentExists = $lockedOrder->payments()
+                ->where('payment_type', 'fine')
+                ->where('payment_channel', 'qris')
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->exists();
+
+            if ($pendingQrisPaymentExists && ($totalFines === 0 || $this->finePaymentMethod === 'cash')) {
+                return false;
+            }
+
             $user = Auth::user();
 
+            if ($totalFines > 0) {
+                $paidFinePayment = $lockedOrder->payments()
+                    ->where('payment_type', 'fine')
+                    ->where('status', 'paid')
+                    ->lockForUpdate()
+                    ->latest('id')
+                    ->first();
+
+                if ($paidFinePayment && (int) $paidFinePayment->amount !== $totalFines) {
+                    return false;
+                }
+
+                if ($this->finePaymentMethod === 'qris') {
+                    if (! $paidFinePayment || $paidFinePayment->payment_channel !== 'qris') {
+                        return false;
+                    }
+                } elseif (! $paidFinePayment) {
+                    $paymentService->createCashFinePayment($lockedOrder, $totalFines, $user->id);
+                }
+            }
+
             // 1. Simpan denda & status return pada detail
-            foreach ($order->details as $detail) {
+            foreach ($lockedOrder->details as $detail) {
                 $cond = $this->inspectionNotes[$detail->id] ?? 'good';
                 $damage = (float) ($this->damageFees[$detail->id] ?? 0);
                 $lateDays = $this->lateDays;
@@ -306,22 +815,8 @@ class ReturnFlow extends Component
                 }
             }
 
-            // 2. Jika ada pembayaran denda, catat ke tabel payments
-            if ($totalFines > 0) {
-                Payment::withoutGlobalScope('vendor')->create([
-                    'rental_id' => $order->id,
-                    'vendor_id' => $order->vendor_id,
-                    'received_by' => $user->id,
-                    'payment_type' => 'fine',
-                    'payment_method' => $this->finePaymentMethod === 'cash' ? 'cash' : 'midtrans_snap',
-                    'amount' => $totalFines,
-                    'status' => 'paid',
-                    'paid_at' => Carbon::now(),
-                ]);
-            }
-
-            // 3. Update master Rental: KTP returned & status completed
-            $order->update([
+            // 2. Update master Rental: KTP returned & status completed
+            $lockedOrder->update([
                 'status' => 'completed',
                 'actual_return_date' => Carbon::today(),
                 'returned_at' => Carbon::now(),
@@ -333,7 +828,16 @@ class ReturnFlow extends Component
                 'total_damage_fee' => $totalDamageFee,
                 'final_total' => $order->grand_total + $totalFines,
             ]);
+
+            return true;
         });
+
+        if (! $completed) {
+            $this->showFineModal = true;
+            $this->addError('finePayment', 'Status pembayaran atau transaksi berubah. Periksa kembali sebelum menyelesaikan retur.');
+
+            return;
+        }
 
         // 4. Kirim notifikasi ke owner jika ada barang hilang
         if ($lostDetails->isNotEmpty()) {
@@ -355,13 +859,42 @@ class ReturnFlow extends Component
 
         $this->activeOrderId = null;
         $this->showFineModal = false;
+        $this->finePaymentId = null;
         $this->loadDefaultActive();
     }
 
-    public function processFinePayment()
+    public function processFinePayment(PaymentService $paymentService, MidtransService $midtrans): void
     {
-        $this->finePaidSuccess = true;
-        $this->completeReturn();
+        if ($this->finePaymentMethod === 'cash') {
+            $this->completeReturn($paymentService);
+
+            return;
+        }
+
+        if ($this->finePaymentMethod !== 'qris') {
+            $this->addError('finePayment', 'Pilih metode pembayaran denda yang valid.');
+
+            return;
+        }
+
+        $payment = $this->fineQrisPayment;
+        if (! $payment || (int) $payment->amount !== (int) round($this->totalCharge)) {
+            $this->addError('finePayment', 'Tagihan QRIS tidak ditemukan atau nominalnya sudah berubah.');
+
+            return;
+        }
+
+        if ($payment->status === 'pending') {
+            $payment = $midtrans->syncStatus($payment);
+        }
+
+        if ($payment->status !== 'paid') {
+            $this->addError('finePayment', 'Midtrans belum mengonfirmasi pembayaran QRIS.');
+
+            return;
+        }
+
+        $this->completeReturn($paymentService);
     }
 
     /**
@@ -461,7 +994,7 @@ class ReturnFlow extends Component
         }
 
         if (Carbon::today()->gt($order->return_date)) {
-            return (int) Carbon::today()->diffInDays(Carbon::parse($order->return_date));
+            return (int) Carbon::parse($order->return_date)->diffInDays(Carbon::today());
         }
 
         return 0;

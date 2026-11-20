@@ -61,11 +61,11 @@
             : false;
 
         $statusLabels = [
-            'pending'   => $isPaid ? 'Menunggu Validasi Kasir' : 'Menunggu Pembayaran',
-            'confirmed' => 'Dikonfirmasi (Siap Pickup)',
+            'pending'   => $isPaid ? 'Menunggu Validasi' : 'Menunggu Pembayaran',
+            'confirmed' => 'Siap Diambil',
             'picked_up' => 'Sedang Dipakai (Disewa)',
-            'returned'  => 'Telah Dikembalikan',
-            'completed' => 'Selesai',
+            'returned'  => 'Menunggu Penyelesaian',
+            'completed' => 'Transaksi Selesai',
             'cancelled' => 'Dibatalkan',
             'expired'   => 'Kedaluwarsa',
         ];
@@ -86,7 +86,7 @@
         $status = $rental->status;
 
         // Urutan titik timeline dan pemetaan status rental ke titik aktif.
-        $nodeOrder = ['created', 'payment', 'pickup', 'rental', 'return', 'done'];
+        $nodeOrder = ['created', 'payment', 'pickup', 'rental', 'done'];
 
         // Jika pembayaran sudah dibayar (paid) tetapi status rental masih pending (menunggu validasi barcode kasir),
         // tampilan timeline customer sudah maju ke tahap serah terima / pickup
@@ -96,7 +96,7 @@
             'pending'   => $isPaid ? 'pickup' : 'payment',
             'confirmed' => 'pickup',
             'picked_up' => 'rental',
-            'returned'  => 'return',
+            'returned'  => 'done',
             'completed' => 'done',
             'cancelled' => null,
             'expired'   => null,
@@ -126,13 +126,18 @@
             'cimb'    => 'CIMB Niaga',
             'qris'    => 'QRIS',
         ];
-        $vaBankKey = strtolower((string) ($vaInfo['bank'] ?? ''));
-        $vaBankKey = array_key_exists($vaBankKey, $vaBanks) ? $vaBankKey : 'bca';
+        $selectedBank = strtolower((string) ($onlinePayment?->payment_channel ?? ''));
+        $selectedBank = str_replace('_va', '', $selectedBank);
+        $vaBankKey = strtolower((string) ($vaInfo['bank'] ?? $selectedBank));
+        $vaBankKey = array_key_exists($vaBankKey, $vaBanks) ? $vaBankKey : '';
 
         $fineAmount = $rental->total_late_fee + $rental->total_damage_fee;
         $hasDenda   = ($rental->total_late_fee > 0 || $rental->total_damage_fee > 0);
         $totalFinal = $rental->final_total ?: ($rental->grand_total + $rental->total_late_fee + $rental->total_damage_fee);
         $canPayFine = $hasDenda && Auth::check() && Auth::id() === $rental->user_id;
+        $actualReturnDate = $rental->actual_return_date ?? $rental->returned_at;
+        $lateReturnDays = $rental->lateReturnDays();
+        $isLateReturn = $lateReturnDays > 0;
 
         $paymentType   = $onlinePayment?->payment_type ?? ((float) $rental->dp_amount > 0 ? 'dp' : 'full');
         $payAmount     = $onlinePayment?->amount ?? ($paymentType === 'dp' ? $rental->dp_amount : $totalFinal);
@@ -149,19 +154,29 @@
         $nodes = [
             'created' => ['title' => 'Booking dibuat',        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
             'payment' => ['title' => 'Pembayaran',            'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
-            'pickup'  => ['title' => 'Serah terima alat',     'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'],
-            'rental'  => ['title' => 'Sedang disewa',             'icon' => 'M19 20L10 4 1 20h18z'],
-            'return'  => ['title' => 'Pengembalian',          'icon' => 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6'],
-            'done'    => ['title' => 'Transaksi selesai',     'icon' => 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9'],
+            'pickup'  => ['title' => 'Serah Terima Alat',     'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'],
+            'rental'  => ['title' => 'Sedang Disewa',             'icon' => 'M19 20L10 4 1 20h18z'],
+            'done'    => ['title' => 'Transaksi Selesai',     'icon' => 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9'],
         ];
 
         $descs = [
             'created' => ['todo' => 'Pesanan tercatat', 'active' => 'Pesanan tercatat', 'done' => 'Pesanan tercatat dengan kode #' . $rental->booking_code],
             'payment' => ['todo' => 'Menunggu tagihan', 'active' => 'Menunggu pembayaran', 'done' => 'Pembayaran terverifikasi'],
-            'pickup'  => ['todo' => 'Disiapkan setelah pembayaran', 'active' => ($rental->status === 'pending' ? 'Alat sedang divalidasi kasir' : 'Alat siap diserahkan (Tervalidasi)'), 'done' => 'Alat telah diserahkan'],
-            'rental'  => ['todo' => 'Dimulai setelah serah terima', 'active' => 'Alat sedang dipakai', 'done' => 'Masa sewa selesai'],
-            'return'  => ['todo' => 'Setelah alat dikembalikan', 'active' => 'Alat diperiksa vendor', 'done' => 'Alat dikembalikan dan diperiksa'],
-            'done'    => ['todo' => 'Setelah semua kewajiban selesai', 'active' => 'Menyelesaikan transaksi', 'done' => 'Seluruh kewajiban sewa selesai'],
+            'pickup'  => [
+                'todo' => 'Disiapkan setelah pembayaran',
+                'active' => $rental->status === 'pending'
+                    ? ($isPaid ? 'Menunggu validasi kasir' : 'Menunggu pembayaran')
+                    : 'Siap diambil',
+                'done' => 'Alat telah diserahkan',
+            ],
+            'rental'  => ['todo' => 'Dimulai setelah serah terima', 'active' => 'Penyewaan sedang berlangsung', 'done' => 'Masa sewa selesai'],
+            'done'    => [
+                'todo' => 'Menunggu pengembalian alat',
+                'active' => $status === 'returned'
+                    ? 'Pengembalian diterima, menunggu penyelesaian'
+                    : 'Menunggu pengembalian alat',
+                'done' => 'Pengembalian dan pemeriksaan telah selesai',
+            ],
         ];
 
         $times = [
@@ -170,9 +185,16 @@
                 ? $fmtDateTime($paidPayment->paid_at)
                 : ($status === 'pending' && $rental->expires_at ? 'Batas ' . $fmtDateTime($rental->expires_at) : ''),
             'pickup'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : $fmtDate($rental->pickup_date),
-            'rental'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : '',
-            'return'  => $rental->returned_at ? $fmtDateTime($rental->returned_at) : 'Maks ' . $fmtDate($rental->return_date),
-            'done'    => $status === 'completed' ? $fmtDateTime($rental->updated_at) : '',
+            'rental'  => in_array($status, ['returned', 'completed'], true)
+                ? ($rental->returned_at
+                    ? 'Dikembalikan pada ' . $fmtDateTime($rental->returned_at)
+                    : ($rental->actual_return_date ? 'Dikembalikan pada ' . $fmtDate($rental->actual_return_date) : ''))
+                : ($rental->picked_up_at ? 'Aktif sejak ' . $fmtDateTime($rental->picked_up_at) : ''),
+            'done'    => $fmtDateTime(
+                $rental->completed_at
+                    ?? $rental->returned_at
+                    ?? ($status === 'completed' ? $rental->updated_at : null)
+            ),
         ];
 
         // Riwayat aktivitas, semua dari data nyata
@@ -228,11 +250,10 @@
             'syncUrl'       => route('booking.sync', $rental->booking_code),
             'csrf'          => csrf_token(),
             'vaUrl'         => route('booking.va', $rental->booking_code),
-            'qrisImageUrl'  => route('booking.qris-image', $rental->isGuest()
-                ? ['code' => $rental->booking_code, 'phone' => $rental->guest_phone]
-                : $rental->booking_code),
+            'qrisImageUrl'  => route('booking.qris-image', $rental->booking_code),
             'vaBanks'       => $vaBanks,
             'paymentMethod' => $isQrisPayment ? 'qris' : $vaBankKey,
+            'bookingCode'   => $rental->booking_code,
             'isQrisPayment' => $isQrisPayment,
             'qrisAvailable' => (bool) $qrisInfo,
             'qrisRawUrl'    => $qrisInfo['qr_code_url'] ?? null,

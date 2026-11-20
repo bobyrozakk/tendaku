@@ -35,4 +35,15 @@
         <span>Durasi Sewa</span>
         <span>{{ $days ?? $rental->rental_days }} hari</span>
     </div>
+
+    @if($isLateReturn ?? false)
+        <div class="receipt-row">
+            <span>Status Pengembalian</span>
+            <strong>Terlambat Dikembalikan ({{ $lateReturnDays }} hari)</strong>
+        </div>
+        <div class="receipt-row">
+            <span>Dikembalikan Aktual</span>
+            <span>{{ $actualReturnDate->format('d/m/Y') }}</span>
+        </div>
+    @endif
 </div>

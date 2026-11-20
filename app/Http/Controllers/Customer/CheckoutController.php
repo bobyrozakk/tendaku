@@ -17,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -177,7 +178,9 @@ class CheckoutController extends Controller
                 );
         }
 
-        if ($request->user() === null) {
+        $user = $request->user();
+
+        if ($user === null) {
             $request->validate([
                 'guest_name' => ['required', 'string', 'max:100'],
                 'guest_phone' => ['required', 'string', 'max:20'],
@@ -187,6 +190,23 @@ class CheckoutController extends Controller
                 'guest_phone.required' => 'Nomor telepon wajib diisi untuk pemesanan tanpa akun.',
                 'guest_id_number.required' => 'Nomor KTP wajib diisi untuk pemesanan tanpa akun.',
             ]);
+        } else {
+            $missingIdentityRules = [];
+
+            if (blank($user->phone)) {
+                $missingIdentityRules['phone'] = ['required'];
+            }
+
+            if (blank($user->nik)) {
+                $missingIdentityRules['nik'] = ['required'];
+            }
+
+            if ($missingIdentityRules !== []) {
+                $request->validate($missingIdentityRules, [
+                    'phone.required' => 'Nomor ponsel wajib diisi.',
+                    'nik.required' => 'NIK wajib diisi.',
+                ]);
+            }
         }
 
         try {
@@ -240,9 +260,13 @@ class CheckoutController extends Controller
             );
 
             $rental = $result['rental'];
+            $guestAccessToken = null;
 
             // Pertahankan akses status booking untuk guest.
             if ($request->user() === null) {
+                $guestAccessToken = Str::random(64);
+                $rental->guest_access_token_hash = hash('sha256', $guestAccessToken);
+                $rental->save();
                 $this->accessGuard->grantGuest($rental);
             }
 
@@ -257,7 +281,7 @@ class CheckoutController extends Controller
                 return response()->json([
                     'snap_token' => null,
                     'booking_code' => $rental->booking_code,
-                    'redirect_url' => $this->statusUrl($request, $rental),
+                    'redirect_url' => $this->statusUrl($rental, $guestAccessToken),
                     'payment_type' => $paymentOption,
                     'payment_amount' => $paymentOption === 'dp'
                         ? (int) $rental->dp_amount
@@ -274,7 +298,7 @@ class CheckoutController extends Controller
                 ? "Booking #{$rental->booking_code} ({$methodLabel}) berhasil dibuat. Tunjukkan kode booking saat pengambilan; pembayaran diselesaikan di outlet vendor."
                 : "Booking #{$rental->booking_code} ({$methodLabel}) berhasil dibuat. Selesaikan pembayaran sebelum batas waktu.";
 
-            return redirect()->route('booking.status', $rental->booking_code)
+            return redirect()->to($this->statusUrl($rental, $guestAccessToken))
                 ->with('success', $successMessage);
         } catch (ShippingPreviewException $e) {
             return $this->failure($request, $e->getMessage(), $e->httpStatus);
@@ -368,26 +392,17 @@ class CheckoutController extends Controller
     }
 
     /**
-     * URL halaman status booking.
-     * Guest membawa nomor telepon sebagai bukti akses sesuai
-     * mekanisme status yang sudah digunakan aplikasi.
+     * URL halaman status booking dengan token akses guest yang bisa dibagikan.
      */
-    private function statusUrl(Request $request, Rental $rental): string
+    private function statusUrl(Rental $rental, ?string $guestAccessToken): string
     {
-        $url = route(
-            'booking.status',
-            $rental->booking_code,
-            false
-        );
+        $parameters = ['code' => $rental->booking_code];
 
-        if (
-            $request->user() === null
-            && ! empty($rental->guest_phone)
-        ) {
-            $url .= '?phone='.urlencode($rental->guest_phone);
+        if ($guestAccessToken !== null) {
+            $parameters['token'] = $guestAccessToken;
         }
 
-        return $url;
+        return route('booking.status', $parameters, false);
     }
 
     /**

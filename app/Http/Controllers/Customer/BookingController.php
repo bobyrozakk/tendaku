@@ -66,7 +66,7 @@ class BookingController extends Controller
             )
             ->with([
                 'vendor:id,name,phone,city',
-                'details.masterItem',
+                'details.masterItem.primaryImage',
                 'payments:id,rental_id,status',
             ])
             ->latest('id')
@@ -108,9 +108,11 @@ class BookingController extends Controller
                     }
                 } elseif (empty($latestPayment->va_details)) {
                     $bank = $this->resolveBank($latestPayment->payment_channel);
-                    $midtrans->chargeBankTransfer($latestPayment, $bank);
-                    $latestPayment->refresh();
-                    $rental->refresh();
+                    if ($bank !== null) {
+                        $midtrans->chargeBankTransfer($latestPayment, $bank);
+                        $latestPayment->refresh();
+                        $rental->refresh();
+                    }
                 }
             } catch (\Throwable $e) {
                 report($e);
@@ -202,9 +204,13 @@ class BookingController extends Controller
 
         $selectedBank = $request->input('bank');
         if (! $selectedBank) {
-            $selectedBank = str_replace('_va', '', strtolower($payment->payment_channel ?? 'bca'));
+            $selectedBank = $this->resolveBank($payment->payment_channel);
         }
-        $selectedBank = array_key_exists($selectedBank, config('payment.va_banks', [])) ? $selectedBank : 'bca';
+        abort_unless(
+            is_string($selectedBank) && array_key_exists($selectedBank, config('payment.va_banks', [])),
+            422,
+            'Pilih bank terlebih dahulu.',
+        );
 
         $vaInfo = $payment->va_details;
         if (empty($vaInfo)) {
@@ -351,11 +357,15 @@ class BookingController extends Controller
         return redirect()->away($photoPath);
     }
 
-    private function resolveBank(?string $channel): string
+    private function resolveBank(?string $channel): ?string
     {
-        $bank = str_replace('_va', '', strtolower($channel ?? 'bca'));
+        if (! $channel) {
+            return null;
+        }
 
-        return array_key_exists($bank, config('payment.va_banks', [])) ? $bank : 'bca';
+        $bank = str_replace('_va', '', strtolower($channel));
+
+        return array_key_exists($bank, config('payment.va_banks', [])) ? $bank : null;
     }
 
     /**

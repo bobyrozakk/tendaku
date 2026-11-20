@@ -105,17 +105,17 @@ class CheckoutTest extends TestCase
             'payment_channel' => 'qris',
             'payment_option' => 'full',
             'guest_name' => 'Tamu Tanpa Akun',
-            'guest_phone' => '081299999999',
+            'guest_phone' => '0812999999991',
             'guest_id_number' => '1234567890123456',
         ]);
 
         $rental = Rental::withoutGlobalScopes()->sole();
 
-        $response->assertRedirect(route('booking.status', $rental->booking_code));
+        $response->assertRedirect();
 
         $this->assertNull($rental->user_id);
         $this->assertSame('Tamu Tanpa Akun', $rental->guest_name);
-        $this->assertSame('081299999999', $rental->guest_phone);
+        $this->assertSame('0812999999991', $rental->guest_phone);
         $this->assertSame('pending', $rental->status);
         $this->assertSame('2026-10-11', $rental->pickup_date->toDateString());
         $this->assertSame('2026-10-13', $rental->return_date->toDateString());
@@ -123,12 +123,31 @@ class CheckoutTest extends TestCase
         $this->assertSame(1, $rental->details()->count());
         $this->assertDatabaseCount('payments', 0);
 
+        $redirectUrl = $response->headers->get('Location');
+        $this->assertIsString($redirectUrl);
+        $query = [];
+        parse_str((string) parse_url($redirectUrl, PHP_URL_QUERY), $query);
+
+        $this->assertArrayHasKey('token', $query);
+        $this->assertIsString($query['token']);
+        $this->assertSame(64, strlen($query['token']));
+        $this->assertSame(hash('sha256', $query['token']), $rental->guest_access_token_hash);
+        $this->assertStringNotContainsString('phone=', $redirectUrl);
+
+        $this->flushSession();
+        $this->get($redirectUrl)
+            ->assertOk()
+            ->assertSee($rental->booking_code);
+
         $this->assertNull(session('booking_cart'), 'Keranjang harus dikosongkan setelah checkout berhasil.');
     }
 
     public function test_logged_in_checkout_defers_payment_until_bank_is_selected(): void
     {
-        $customer = User::factory()->create(['role' => 'customer']);
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'nik' => '1234567890123456',
+        ]);
 
         $this->actingAs($customer)
             ->withSession($this->cartSession())
@@ -147,7 +166,10 @@ class CheckoutTest extends TestCase
 
     public function test_selecting_a_bank_creates_the_first_pending_payment(): void
     {
-        $customer = User::factory()->create(['role' => 'customer']);
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'nik' => '1234567890123456',
+        ]);
         $this->mock(MidtransService::class, function (MockInterface $mock): void {
             $mock->shouldReceive('chargeBankTransfer')
                 ->once()
@@ -203,7 +225,7 @@ class CheckoutTest extends TestCase
             ->assertSee('id="f_nik"', false);
     }
 
-    public function test_guest_checkout_page_is_reachable_after_booking(): void
+    public function test_guest_checkout_page_is_reachable_with_legacy_phone_link(): void
     {
         $this->withSession($this->cartSession())->post(route('checkout.store'), [
             'pickup_method' => 'self_pickup',
@@ -255,12 +277,107 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, Rental::withoutGlobalScopes()->count());
     }
 
+    public function test_guest_checkout_rejects_phone_numbers_longer_than_13_digits(): void
+    {
+        $this->withSession($this->cartSession())
+            ->post(route('checkout.store'), [
+                'pickup_method' => 'self_pickup',
+                'payment_option' => 'full',
+                'guest_name' => 'Tamu Tanpa Akun',
+                'guest_phone' => '08123456789012',
+                'guest_id_number' => '1234567890123456',
+            ])
+            ->assertSessionHasErrors('guest_phone');
+
+        $this->assertSame(0, Rental::withoutGlobalScopes()->count());
+    }
+
+    public function test_guest_checkout_rejects_non_digit_phone_numbers(): void
+    {
+        $this->withSession($this->cartSession())
+            ->post(route('checkout.store'), [
+                'pickup_method' => 'self_pickup',
+                'payment_option' => 'full',
+                'guest_name' => 'Tamu Tanpa Akun',
+                'guest_phone' => '08123-45678',
+                'guest_id_number' => '1234567890123456',
+            ])
+            ->assertSessionHasErrors('guest_phone');
+
+        $this->assertSame(0, Rental::withoutGlobalScopes()->count());
+    }
+
+    public function test_logged_in_checkout_saves_missing_phone_and_nik_to_profile(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'phone' => null,
+            'nik' => null,
+        ]);
+
+        $this->actingAs($customer)
+            ->withSession($this->cartSession())
+            ->post(route('checkout.store'), [
+                'pickup_method' => 'self_pickup',
+                'phone' => '0812345678',
+                'nik' => '1234567890123456',
+            ])
+            ->assertRedirect();
+
+        $customer->refresh();
+        $rental = Rental::withoutGlobalScopes()->sole();
+
+        $this->assertSame('0812345678', $customer->phone);
+        $this->assertSame('1234567890123456', $customer->nik);
+        $this->assertSame($customer->id, $rental->user_id);
+    }
+
+    public function test_logged_in_checkout_requires_missing_profile_phone_and_nik(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'phone' => null,
+            'nik' => null,
+        ]);
+
+        $this->actingAs($customer)
+            ->withSession($this->cartSession())
+            ->post(route('checkout.store'), [
+                'pickup_method' => 'self_pickup',
+            ])
+            ->assertSessionHasErrors(['phone', 'nik']);
+
+        $this->assertSame(0, Rental::withoutGlobalScopes()->count());
+    }
+
+    public function test_logged_in_checkout_rejects_phone_numbers_longer_than_13_digits(): void
+    {
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'phone' => null,
+            'nik' => null,
+        ]);
+
+        $this->actingAs($customer)
+            ->withSession($this->cartSession())
+            ->post(route('checkout.store'), [
+                'pickup_method' => 'self_pickup',
+                'phone' => '08123456789012',
+                'nik' => '1234567890123456',
+            ])
+            ->assertSessionHasErrors('phone');
+
+        $this->assertSame(0, Rental::withoutGlobalScopes()->count());
+        $this->assertNull($customer->fresh()->phone);
+    }
+
     public function test_logged_in_checkout_links_rental_to_account_and_uses_profile_phone(): void
     {
         $customer = User::factory()->create([
             'name' => 'Budi Santoso',
             'email' => 'budi.santoso@example.com',
             'phone' => '081234567890',
+            'nik' => '1234567890123456',
             'role' => 'customer',
         ]);
 
@@ -367,7 +484,10 @@ class CheckoutTest extends TestCase
      */
     public function test_direct_checkout_does_not_modify_existing_cart(): void
     {
-        $customer = User::factory()->create(['role' => 'customer']);
+        $customer = User::factory()->create([
+            'role' => 'customer',
+            'nik' => '1234567890123456',
+        ]);
         $this->actingAs($customer);
 
         $cart = app(CartService::class);

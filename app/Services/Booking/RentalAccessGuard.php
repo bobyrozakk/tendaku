@@ -18,7 +18,7 @@ class RentalAccessGuard
     /**
      * Memastikan request berhak mengakses transaksi rental.
      * - Jika user login: harus pemilik rental (user_id cocok).
-     * - Jika guest: diverifikasi via session, signed URL, atau nomor telepon.
+     * - Jika guest: diverifikasi via session, atau token.
      */
     public function authorize(Request $request, Rental $rental): void
     {
@@ -48,7 +48,7 @@ class RentalAccessGuard
     }
 
     /**
-     * Jika lolos lewat signature atau nomor telepon, akses disimpan ke session
+     * Jika lolos lewat signature, token, atau nomor telepon lama, akses disimpan ke session
      * supaya request lanjutan (AJAX pay/sync, receipt, dll) tidak ditolak.
      */
     private function guestAllows(Request $request, Rental $rental): bool
@@ -57,13 +57,28 @@ class RentalAccessGuard
             return true;
         }
 
-        if (! $request->hasValidSignature() && ! $this->phoneMatches($request, $rental)) {
+        if (
+            ! $request->hasValidSignature()
+            && ! $this->tokenMatches($request, $rental)
+            && ! $this->phoneMatches($request, $rental)
+        ) {
             return false;
         }
 
         $this->grantGuest($rental);
 
         return true;
+    }
+
+    private function tokenMatches(Request $request, Rental $rental): bool
+    {
+        $provided = $request->query('token');
+        $storedHash = $rental->guest_access_token_hash;
+
+        return is_string($provided)
+            && $provided !== ''
+            && is_string($storedHash)
+            && hash_equals($storedHash, hash('sha256', $provided));
     }
 
     private function phoneMatches(Request $request, Rental $rental): bool

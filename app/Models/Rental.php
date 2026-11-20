@@ -23,6 +23,7 @@ class Rental extends Model
         'booking_code',
         'guest_name',
         'guest_phone',
+        'guest_access_token_hash',
         'guest_id_number',
         'pickup_date',
         'pickup_time',
@@ -62,6 +63,7 @@ class Rental extends Model
 
     protected $hidden = [
         'guest_id_number',
+        'guest_access_token_hash',
     ];
 
     protected function casts(): array
@@ -226,6 +228,24 @@ class Rental extends Model
     /**
      * Waktu jadwal pengambilan barang gabungan pickup_date dan pickup_time.
      */
+    public function lateReturnDays(): int
+    {
+        $actualReturnDate = $this->actual_return_date ?? $this->returned_at;
+
+        if (! $this->return_date || ! $actualReturnDate) {
+            return 0;
+        }
+
+        $contractReturnDate = $this->return_date->copy()->startOfDay();
+        $actualReturnDay = Carbon::parse($actualReturnDate)->startOfDay();
+
+        if (! $actualReturnDay->gt($contractReturnDate)) {
+            return 0;
+        }
+
+        return (int) $contractReturnDate->diffInDays($actualReturnDay);
+    }
+
     public function pickupDateTime(): Carbon
     {
         $dateStr = $this->pickup_date ? $this->pickup_date->format('Y-m-d') : now()->toDateString();

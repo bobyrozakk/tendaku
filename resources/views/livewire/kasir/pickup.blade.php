@@ -78,10 +78,10 @@
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-darkbrown-400">
                         <i data-lucide="search" class="w-4 h-4"></i>
                     </div>
-                    <input 
-                        type="text" 
-                        wire:model.live.debounce.250ms="searchPickup" 
-                        placeholder="Cari ID Booking / Nama..." 
+                    <input
+                        type="text"
+                        wire:model.live.debounce.250ms="searchPickup"
+                        placeholder="Cari ID Booking / Nama..."
                         class="w-full text-xs pl-10 pr-3.5 py-2.5 bg-white border border-wheat-300 rounded-xl text-darkbrown-900 placeholder-darkbrown-400 focus:outline-none focus:ring-2 focus:ring-avocado-500/30 focus:border-avocado-600 transition"
                     />
                 </div>
@@ -109,8 +109,8 @@
         {{-- Orders List (Clean Divide-y Rows, No Bulky Nested Cards) --}}
         <div class="divide-y divide-wheat-200/70">
             @forelse($filteredOrders as $order)
-                <div 
-                    wire:click="selectPickup('{{ $order['id'] }}')" 
+                <div
+                    wire:click="selectPickup('{{ $order['id'] }}')"
                     x-on:click="showPickupModal = true"
                     class="group p-4 sm:p-5 hover:bg-wheat-50/70 active:scale-[0.998] transition-all duration-150 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 {{ $order['is_overdue_pickup'] ? 'bg-rose-50/30' : 'bg-white' }}">
 
@@ -214,7 +214,7 @@
     {{-- MODAL SERAH TERIMA & VERIFIKASI (Streamlined, Ergonomic & Semi-Modern) --}}
     @if($this->selectedOrder)
         <template x-teleport="body">
-            <div 
+            <div
                 x-show="showPickupModal"
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0"
@@ -227,7 +227,7 @@
                 x-on:keydown.escape.window="showPickupModal = false"
                 style="display: none;"
             >
-                <div 
+                <div
                     x-show="showPickupModal"
                     x-transition:enter="transition ease-out duration-150"
                     x-transition:enter-start="opacity-0 scale-95"
@@ -264,9 +264,9 @@
                                 </span>
                             @endif
 
-                            <button 
+                            <button
                                 type="button"
-                                x-on:click="showPickupModal = false" 
+                                x-on:click="showPickupModal = false"
                                 class="p-1.5 rounded-lg text-darkbrown-400 hover:text-darkbrown-800 hover:bg-wheat-200/60 transition-colors cursor-pointer"
                                 title="Tutup (Esc)">
                                 <i data-lucide="x" class="w-4 h-4"></i>
@@ -289,8 +289,8 @@
                                         <p class="text-[11px] text-darkbrown-600 mt-0.5">Terima pelunasan tunai kasir sebelum menyerahkan barang.</p>
                                     </div>
                                 </div>
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     wire:click="acceptCashPayment"
                                     wire:confirm="Terima pelunasan tunai sebesar Rp {{ number_format($this->selectedOrder['remaining_amount'] ?? 0, 0, ',', '.') }} dari penyewa?"
                                     wire:loading.attr="disabled"
@@ -355,63 +355,270 @@
                             </div>
                         </div>
 
-                        {{-- Verifikasi Foto & KTP (Compact 2 Columns) --}}
-                        <div class="space-y-2">
-                            <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-700 block">
-                                Verifikasi Jaminan & Identitas
-                            </span>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                {{-- Foto Penyewa --}}
-                                <div class="p-3.5 rounded-xl border flex flex-col justify-between space-y-2 {{ $this->isPhotoVerified ? 'bg-emerald-50/50 border-emerald-300' : 'bg-wheat-50/50 border-wheat-200' }}">
-                                    <div class="flex items-center justify-between">
-                                        <span class="font-bold text-darkbrown-900">Foto Penyewa di Tempat</span>
-                                        @if($this->isPhotoVerified)
-                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
-                                                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
-                                                Terverifikasi
+                                                {{-- 2. Verifikasi Identitas & Foto Penyewa --}}
+                        <div class="space-y-3">
+                            <h3 class="font-bold text-sm text-darkbrown-900 flex items-center gap-2">
+                                <i data-lucide="id-card" class="w-4 h-4 text-avocado-600"></i>
+                                Verifikasi Foto Penyewa & KTP
+                            </h3>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                                {{-- Foto Penyewa di Tempat --}}
+                                <div class="p-4 rounded-2xl transition-all duration-200 border flex flex-col justify-between space-y-3 {{ $this->isPhotoVerified ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' : 'bg-wheat-50/70 border-wheat-200' }}">
+                                    <div>
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="font-bold text-xs text-darkbrown-900">
+                                                Foto Penyewa di Tempat
                                             </span>
-                                        @else
-                                            <span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">Wajib</span>
-                                        @endif
+
+                                            @if($this->isPhotoVerified)
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                    Terverifikasi
+                                                </span>
+                                            @else
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                    Wajib Diunggah
+                                                </span>
+                                            @endif
+                                        </div>
+
+                                        <p class="text-[11px] text-darkbrown-600">
+                                            Unggah foto JPG, PNG, atau WebP. Foto besar dikompres otomatis sebelum diunggah.
+                                        </p>
                                     </div>
 
-                                    @if($tenantPhoto)
-                                        <div class="p-1 rounded-lg bg-white border border-emerald-300 text-center">
-                                            <img src="{{ $tenantPhoto->temporaryUrl() }}" alt="Preview" class="h-20 mx-auto object-cover rounded" />
-                                        </div>
-                                    @endif
+                                    {{-- Photo Upload --}}
+                                    <div
+                                        class="space-y-2"
+                                        x-data="{
+                                            uploadError: '',
+                                            isPreparingPhoto: false,
 
-                                    <label class="w-full cursor-pointer flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition shadow-xs {{ $this->isPhotoVerified ? 'bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50' : 'bg-avocado-700 hover:bg-avocado-800 text-white' }}">
-                                        <i data-lucide="camera" class="w-4 h-4"></i>
-                                        <span>{{ $this->isPhotoVerified ? 'Ganti Foto' : 'Ambil / Upload Foto' }}</span>
-                                        <input type="file" wire:model="tenantPhoto" accept="image/*" class="hidden" />
-                                    </label>
-                                    @error('tenantPhoto')
-                                        <p class="text-[10px] text-rose-600 font-semibold">{{ $message }}</p>
-                                    @enderror
+                                            async prepareTenantPhoto(event) {
+                                                const file = event.target.files?.[0];
+                                                const maxBytes = 1850000;
+
+                                                if (!file) {
+                                                    return;
+                                                }
+
+                                                this.uploadError = '';
+
+                                                if (!file.type.startsWith('image/')) {
+                                                    this.uploadError = 'Pilih file foto dengan format gambar.';
+                                                    event.target.value = '';
+                                                    return;
+                                                }
+
+                                                if (file.size > 20 * 1024 * 1024) {
+                                                    this.uploadError = 'Ukuran foto asli maksimal 20 MB.';
+                                                    event.target.value = '';
+                                                    return;
+                                                }
+
+                                                let uploadFile = file;
+                                                let bitmap = null;
+
+                                                try {
+                                                    if (
+                                                        file.size > maxBytes ||
+                                                        !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+                                                    ) {
+                                                        this.isPreparingPhoto = true;
+                                                        bitmap = await createImageBitmap(file);
+
+                                                        const canvas = document.createElement('canvas');
+
+                                                        let scale = Math.min(
+                                                            1,
+                                                            1920 / Math.max(bitmap.width, bitmap.height)
+                                                        );
+
+                                                        let quality = 0.82;
+                                                        let compressedBlob = null;
+
+                                                        for (let attempt = 0; attempt < 7; attempt++) {
+                                                            canvas.width = Math.max(
+                                                                1,
+                                                                Math.round(bitmap.width * scale)
+                                                            );
+
+                                                            canvas.height = Math.max(
+                                                                1,
+                                                                Math.round(bitmap.height * scale)
+                                                            );
+
+                                                            const context = canvas.getContext('2d');
+
+                                                            if (!context) {
+                                                                throw new Error('Canvas tidak tersedia.');
+                                                            }
+
+                                                            context.drawImage(
+                                                                bitmap,
+                                                                0,
+                                                                0,
+                                                                canvas.width,
+                                                                canvas.height
+                                                            );
+
+                                                            compressedBlob = await new Promise((resolve) => {
+                                                                canvas.toBlob(
+                                                                    resolve,
+                                                                    'image/jpeg',
+                                                                    quality
+                                                                );
+                                                            });
+
+                                                            if (!compressedBlob) {
+                                                                throw new Error('Foto tidak dapat dikompres.');
+                                                            }
+
+                                                            if (compressedBlob.size <= maxBytes) {
+                                                                break;
+                                                            }
+
+                                                            if (quality > 0.52) {
+                                                                quality -= 0.1;
+                                                            } else {
+                                                                scale *= 0.75;
+                                                            }
+                                                        }
+
+                                                        if (
+                                                            !compressedBlob ||
+                                                            compressedBlob.size > maxBytes
+                                                        ) {
+                                                            this.uploadError =
+                                                                'Foto terlalu besar untuk diproses. Coba gunakan foto lain.';
+                                                            event.target.value = '';
+                                                            return;
+                                                        }
+
+                                                        uploadFile = new File(
+                                                            [compressedBlob],
+                                                            file.name.replace(/\.[^.]+$/, '') + '.jpg',
+                                                            {
+                                                                type: 'image/jpeg',
+                                                                lastModified: Date.now(),
+                                                            }
+                                                        );
+                                                    }
+
+                                                    this.isPreparingPhoto = false;
+
+                                                    this.$wire.upload(
+                                                        'tenantPhoto',
+                                                        uploadFile,
+                                                        () => {},
+                                                        () => {
+                                                            this.uploadError =
+                                                                'Upload foto gagal. Periksa koneksi lalu coba lagi.';
+                                                            event.target.value = '';
+                                                        },
+                                                    );
+
+                                                } catch {
+                                                    this.uploadError =
+                                                        'Format foto tidak bisa dibaca. Coba unggah JPG, PNG, atau WebP.';
+                                                    event.target.value = '';
+                                                } finally {
+                                                    this.isPreparingPhoto = false;
+                                                    bitmap?.close();
+                                                }
+                                            },
+                                        }"
+                                    >
+
+                                        @if($tenantPhoto)
+                                            <div class="p-2 rounded-xl bg-white border border-emerald-300 text-center space-y-1.5 shadow-sm">
+                                                <img
+                                                    src="{{ $tenantPhoto->temporaryUrl() }}"
+                                                    alt="Preview Foto Penyewa"
+                                                    class="h-24 mx-auto object-cover rounded-lg border border-wheat-200 shadow-inner"
+                                                />
+
+                                                <span class="text-[10px] font-bold text-emerald-800 flex items-center justify-center gap-1">
+                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                    Foto Penyewa Siap
+                                                </span>
+                                            </div>
+
+                                        @elseif($this->isPhotoVerified)
+                                            <div class="p-2 rounded-xl bg-white border border-emerald-300 flex items-center gap-2 shadow-sm">
+                                                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                                </div>
+
+                                                <span class="text-xs font-bold text-emerald-800">
+                                                    Foto penyewa telah tersimpan
+                                                </span>
+                                            </div>
+                                        @endif
+
+                                        <label class="w-full cursor-pointer flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition duration-200 shadow-sm {{ $this->isPhotoVerified ? 'bg-white text-emerald-800 border-2 border-emerald-300 hover:bg-emerald-50' : 'bg-avocado-600 hover:bg-avocado-700 text-white' }}">
+                                            <i data-lucide="camera" class="w-4 h-4"></i>
+
+                                            <span x-text="isPreparingPhoto ? 'Menyiapkan foto...' : '{{ $this->isPhotoVerified ? 'Ganti Foto Penyewa' : 'Upload / Ambil Foto' }}'"></span>
+
+                                            <input
+                                                type="file"
+                                                x-on:change="prepareTenantPhoto($event)"
+                                                accept="image/*"
+                                                class="hidden"
+                                                :disabled="isPreparingPhoto"
+                                            />
+                                        </label>
+
+                                        <p
+                                            x-cloak
+                                            x-show="uploadError"
+                                            x-text="uploadError"
+                                            class="text-[10px] text-red-600 font-semibold"
+                                        ></p>
+
+                                        @error('tenantPhoto')
+                                            <p class="text-[10px] text-red-600 font-semibold">
+                                                {{ $message }}
+                                            </p>
+                                        @enderror
+                                    </div>
                                 </div>
 
                                 {{-- Verifikasi KTP Fisik --}}
-                                <div class="p-3.5 rounded-xl border flex flex-col justify-between space-y-2 {{ $tenantKtpUploaded ? 'bg-emerald-50/50 border-emerald-300' : 'bg-wheat-50/50 border-wheat-200' }}">
-                                    <div class="flex items-center justify-between">
-                                        <span class="font-bold text-darkbrown-900">KTP Fisik Asli</span>
-                                        @if($tenantKtpUploaded)
-                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
-                                                <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
-                                                Ditahan
+                                <div class="p-4 rounded-2xl border flex flex-col justify-between space-y-3 {{ $tenantKtpUploaded ? 'bg-emerald-50/60 border-emerald-300 shadow-sm' : 'bg-wheat-50/70 border-wheat-200' }}">
+
+                                    <div>
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="font-bold text-xs text-darkbrown-900">
+                                                KTP Fisik Asli
                                             </span>
-                                        @else
-                                            <span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">Perlu Dicek</span>
-                                        @endif
+
+                                            @if($tenantKtpUploaded)
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm">
+                                                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                                                    Ditahan
+                                                </span>
+                                            @else
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                    Perlu Dicek
+                                                </span>
+                                            @endif
+                                        </div>
+
+                                        <p class="text-[11px] text-darkbrown-600">
+                                            Pastikan KTP asli ditahan sebagai jaminan sampai barang dikembalikan.
+                                        </p>
                                     </div>
 
-                                    <p class="text-[11px] text-darkbrown-600">Pastikan KTP asli ditahan sebagai jaminan sampai barang dikembalikan.</p>
-
-                                    <button 
-                                        wire:click="markTenantKtpUploaded" 
+                                    <button
+                                        wire:click="markTenantKtpUploaded"
                                         type="button"
                                         class="w-full py-2 px-3 rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 {{ $tenantKtpUploaded ? 'bg-white text-emerald-800 border border-emerald-300 cursor-default' : 'bg-avocado-700 hover:bg-avocado-800 text-white cursor-pointer active:scale-[0.98]' }}"
-                                        {{ $tenantKtpUploaded ? 'disabled' : '' }}>
+                                        {{ $tenantKtpUploaded ? 'disabled' : '' }}
+                                    >
                                         @if($tenantKtpUploaded)
                                             <i data-lucide="check-check" class="w-4 h-4 text-emerald-600"></i>
                                             <span>KTP Fisik Sudah Ditahan</span>
@@ -471,14 +678,14 @@
                         </div>
 
                         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            <button 
+                            <button
                                 type="button"
                                 x-on:click="showPickupModal = false"
                                 class="px-4 py-2 rounded-xl text-xs font-bold text-darkbrown-700 hover:bg-wheat-200/60 transition cursor-pointer">
                                 Tutup
                             </button>
 
-                            <button 
+                            <button
                                 type="button"
                                 wire:click="confirmPickup"
                                 class="px-5 py-2.5 rounded-xl font-bold text-xs transition duration-150 flex items-center gap-2 {{ $this->isPickupReady ? 'bg-avocado-700 hover:bg-avocado-800 text-white cursor-pointer shadow-sm active:scale-[0.98]' : 'bg-wheat-200 text-darkbrown-400 border border-wheat-300 cursor-not-allowed opacity-70' }}"

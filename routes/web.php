@@ -16,6 +16,7 @@ use App\Http\Controllers\Customer\PaymentRetryController;
 use App\Http\Controllers\Customer\RentalStatusLookupController;
 use App\Http\Controllers\Customer\ShippingPreviewController;
 use App\Http\Controllers\Customer\StoreController;
+use App\Http\Controllers\Kasir\FineQrisImageController;
 use App\Http\Controllers\ReverseGeocodingController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
@@ -207,6 +208,10 @@ Route::middleware(['auth', 'verified', 'role:vendor_admin', 'vendor.active'])
         Route::view('return', 'kasir.return.index')->name('return');
         Route::get('profile', ProfileKasir::class)->name('profile');
     });
+
+Route::get('/kasir/payments/{payment}/fine-qris-image', [FineQrisImageController::class, 'show'])
+    ->middleware(['signed', 'throttle:30,1'])
+    ->name('kasir.fine-qris-image');
 
 // Rute khusus Owner Vendor
 Route::middleware(['auth', 'verified', 'vendor.owner', 'vendor.active'])

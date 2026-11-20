@@ -125,7 +125,7 @@ class LostItemFlowTest extends TestCase
             ->set("damageFees.{$this->detail->id}", 250000)
             ->set("returnedItems.{$this->detail->id}", true)
             ->set('finePaymentMethod', 'cash')
-            ->set('finePaidSuccess', true)
+            ->set('cashTendered', 250000)
             ->call('completeReturn');
 
         // 1. Status unit berubah jadi lost
@@ -133,7 +133,26 @@ class LostItemFlowTest extends TestCase
         $this->assertEquals('lost', $this->unit->status);
         $this->assertEquals('lost', $this->unit->condition);
 
-        // 2. Notifikasi masuk ke database untuk vendor_owner
+        // 2. Denda tersimpan pada rental, detail barang, dan pembayaran
+        $this->assertDatabaseHas('rentals', [
+            'id' => $this->rental->id,
+            'total_damage_fee' => 250000,
+            'final_total' => 300000,
+        ]);
+        $this->assertDatabaseHas('rental_details', [
+            'id' => $this->detail->id,
+            'condition_after' => 'lost',
+            'damage_fee' => 250000,
+        ]);
+        $this->assertDatabaseHas('payments', [
+            'rental_id' => $this->rental->id,
+            'payment_type' => 'fine',
+            'payment_method' => 'cash',
+            'amount' => 250000,
+            'status' => 'paid',
+        ]);
+
+        // 3. Notifikasi masuk ke database untuk vendor_owner
         $this->assertDatabaseHas('notifications', [
             'vendor_id' => $this->vendor->id,
             'user_id' => $this->owner->id,
@@ -142,11 +161,53 @@ class LostItemFlowTest extends TestCase
             'status' => 'sent',
         ]);
 
-        // 3. Notification bell menampilkan notifikasi barang hilang untuk owner
+        // 4. Notification bell menampilkan notifikasi barang hilang untuk owner
         $this->actingAs($this->owner);
         Livewire::test(NotificationBell::class)
             ->assertSee('Barang Hilang')
             ->assertSee('TDK-LOST-TEST');
+    }
+
+    public function test_return_cannot_complete_with_zero_fine_for_a_lost_item(): void
+    {
+        $this->actingAs($this->cashier);
+
+        Livewire::test(ReturnFlow::class)
+            ->set('activeOrderId', $this->rental->id)
+            ->set("inspectionNotes.{$this->detail->id}", 'lost')
+            ->set("damageFees.{$this->detail->id}", 0)
+            ->set("returnedItems.{$this->detail->id}", true)
+            ->call('completeReturn')
+            ->assertHasErrors(["damageFees.{$this->detail->id}"]);
+
+        $this->assertDatabaseHas('rentals', [
+            'id' => $this->rental->id,
+            'status' => 'picked_up',
+            'total_damage_fee' => 0,
+        ]);
+        $this->assertDatabaseHas('rental_details', [
+            'id' => $this->detail->id,
+            'condition_after' => null,
+            'damage_fee' => 0,
+        ]);
+        $this->assertDatabaseMissing('payments', [
+            'rental_id' => $this->rental->id,
+            'payment_type' => 'fine',
+        ]);
+    }
+
+    public function test_cashier_sees_late_fee_for_overdue_picked_up_rental(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-20 12:00:00'));
+        $this->rental->update(['return_date' => Carbon::today()->subDays(3)]);
+        $this->item->update(['late_fee_per_day' => 25000]);
+        $this->detail->update(['late_fee_per_day_snapshot' => 25000]);
+        $this->actingAs($this->cashier);
+
+        Livewire::test(ReturnFlow::class)
+            ->set('activeOrderId', $this->rental->id)
+            ->assertSee('Keterlambatan 3 Hari')
+            ->assertSee('Rp 75.000');
     }
 
     public function test_owner_can_view_and_delete_lost_item_unit(): void

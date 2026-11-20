@@ -161,6 +161,97 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertDontSee('TDK-2026-B8921'); // Bukan data dummy
     }
 
+    public function test_paid_pending_booking_shows_one_waiting_validation_status(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-PICKUP01', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_method' => 'cash',
+            'channel' => 'cash',
+            'amount' => 150000,
+            'status' => 'paid',
+            'paid_at' => Carbon::now(),
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Menunggu Validasi')
+            ->assertSee('Pembayaran berhasil diverifikasi. Kasir sedang mencocokkan barcode dan kondisi fisik alat sebelum pesanan siap diambil.')
+            ->assertSee('Jadwal Penyewaan')
+            ->assertSee('Lokasi Pengambilan')
+            ->assertSee('Instruksi Pengambilan')
+            ->assertSee('Lihat Receipt Pesanan')
+            ->assertDontSee('Pending Validasi Kasir')
+            ->assertDontSee('Menunggu Pengecekan');
+    }
+
+    public function test_confirmed_booking_shows_ready_to_pick_up_status(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-PICKUP02', 'confirmed');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'payment_method' => 'cash',
+            'channel' => 'cash',
+            'amount' => 150000,
+            'status' => 'paid',
+            'paid_at' => Carbon::now(),
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Siap Diambil')
+            ->assertDontSee('Tervalidasi Kasir');
+    }
+
+    public function test_active_rental_shows_consistent_schedule_and_return_details(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RENTAL01', 'picked_up');
+        $rental->update([
+            'pickup_date' => '2026-11-20',
+            'pickup_time' => '16:15:00',
+            'return_date' => '2026-11-23',
+            'return_time' => '16:15:00',
+            'rental_days' => 3,
+            'picked_up_at' => Carbon::parse('2026-11-20 16:15:00'),
+            'ktp_collateral_status' => 'held',
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Sedang Disewa')
+            ->assertSee('Penyewaan sedang berlangsung')
+            ->assertSee('Aktif sejak 20 Nov 2026, 16:15')
+            ->assertSee('Wajib Dikembalikan')
+            ->assertSee('23 November 2026')
+            ->assertSee('3 hari')
+            ->assertSee('Belum terlambat')
+            ->assertSee('KTP ditahan di toko')
+            ->assertSee('Lokasi Pengembalian')
+            ->assertDontSee('28 November 2026');
+    }
+
+    public function test_overdue_active_rental_uses_a_soft_red_return_deadline_card(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-OVERDUE01', 'picked_up');
+        $rental->update([
+            'return_date' => '2026-10-09',
+            'picked_up_at' => Carbon::parse('2026-10-08 10:00:00'),
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Pengembalian Terlambat')
+            ->assertSee('Lewat jadwal 1 hari')
+            ->assertSee('bg-red-50', false)
+            ->assertSee('border-red-200', false);
+    }
+
     public function test_non_owner_is_forbidden_to_view_customer_booking_status(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-STATUS1', 'confirmed');
@@ -184,13 +275,14 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertStatus(404);
     }
 
-    public function test_guest_can_access_booking_status_with_matching_phone_or_signed_url(): void
+    public function test_guest_can_access_booking_status_with_token_legacy_phone_or_signed_url(): void
     {
         $guestRental = Rental::create([
             'vendor_id' => $this->vendor->id,
             'user_id' => null,
             'guest_name' => 'Anto Tamu',
             'guest_phone' => '081298765432',
+            'guest_access_token_hash' => hash('sha256', 'guest-status-token'),
             'guest_id_number' => '3507111122223333',
             'booking_code' => 'TDK-2026-GUEST1',
             'pickup_date' => '2026-10-10',
@@ -208,30 +300,44 @@ class BookingStatusAndHistoryTest extends TestCase
             'daily_rate_snapshot' => 50000,
         ]);
 
-        // 1. Tanpa nomor telepon -> 403 Forbidden
+        // Tanpa kredensial akses -> 403 Forbidden.
         $responseWithoutPhone = $this->get(route('booking.status', $guestRental->booking_code));
         $responseWithoutPhone->assertStatus(403);
 
-        // 2. Dengan nomor telepon yang salah -> 403 Forbidden
+        // Kredensial yang salah -> 403 Forbidden.
         $responseWrongPhone = $this->get(route('booking.status', [
             'code' => $guestRental->booking_code,
             'phone' => '089999999999',
         ]));
         $responseWrongPhone->assertStatus(403);
 
-        // 3. Dengan nomor telepon yang cocok -> 200 OK
+        $responseWrongToken = $this->get(route('booking.status', [
+            'code' => $guestRental->booking_code,
+            'token' => 'wrong-token',
+        ]));
+        $responseWrongToken->assertStatus(403);
+
+        $responseValidToken = $this->get(route('booking.status', [
+            'code' => $guestRental->booking_code,
+            'token' => 'guest-status-token',
+        ]));
+        $responseValidToken->assertOk();
+        $this->flushSession();
+
+        // Nomor telepon tetap diterima untuk kompatibilitas dengan link lama.
         $responseValidPhone = $this->get(route('booking.status', [
             'code' => $guestRental->booking_code,
             'phone' => '081298765432',
         ]));
-        $responseValidPhone->assertStatus(200);
+        $responseValidPhone->assertOk();
         $responseValidPhone->assertSee('#TDK-2026-GUEST1');
         $responseValidPhone->assertSee('Tenda Consina 4P');
+        $this->flushSession();
 
-        // 4. Dengan signed URL -> 200 OK
+        // Signed URL tetap diterima untuk kompatibilitas.
         $signedUrl = URL::signedRoute('booking.status', ['code' => $guestRental->booking_code]);
         $responseSigned = $this->get($signedUrl);
-        $responseSigned->assertStatus(200);
+        $responseSigned->assertOk();
     }
 
     public function test_booking_status_displays_timeline_countdown_and_fines_correctly(): void
@@ -269,11 +375,58 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('Rp 20.000');
         $response->assertSee('Rp 220.000');
         $response->assertSee('Bayar denda');
+        $response->assertSee('Menunggu Penyelesaian');
+        $response->assertSee('id="node-done"', false);
+        $response->assertDontSee('id="node-return"', false);
+    }
+
+    public function test_late_return_is_marked_without_replacing_completed_timeline_status(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-LATE01', 'completed');
+        $rental->update([
+            'return_date' => '2026-10-12',
+            'actual_return_date' => '2026-10-13',
+            'returned_at' => Carbon::parse('2026-10-13 15:10:00'),
+            'completed_at' => Carbon::parse('2026-10-13 15:10:00'),
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Transaksi Selesai');
+        $response->assertSee('Terlambat Dikembalikan');
+        $response->assertSee('Alat dikembalikan 1 hari setelah batas');
+        $response->assertSee('Dikembalikan pada 13 Oct 2026, 15:10');
+        $response->assertDontSee('Aktif sejak 13 Oct 2026, 15:10');
+        $response->assertSee('id="node-done"', false);
+        $response->assertDontSee('id="node-return"', false);
+
+        $receiptResponse = $this->actingAs($this->customer1)
+            ->get(route('booking.receipt', [
+                'code' => $rental->booking_code,
+                'format' => 'html',
+            ]));
+
+        $receiptResponse->assertOk()
+            ->assertSee('Terlambat Dikembalikan (1 hari)')
+            ->assertSee('Dikembalikan Aktual')
+            ->assertSee('13/10/2026');
+
+        $pdfResponse = $this->actingAs($this->customer1)
+            ->get(route('booking.receipt', $rental->booking_code));
+
+        $pdfResponse->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
     }
 
     public function test_customer_downloads_order_receipt_as_pdf(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT01', 'confirmed');
+        $rental->update([
+            'total_late_fee' => 50000,
+            'total_damage_fee' => 20000,
+            'final_total' => 220000,
+        ]);
 
         $response = $this->actingAs($this->customer1)
             ->get(route('booking.receipt', $rental->booking_code));
@@ -290,6 +443,11 @@ class BookingStatusAndHistoryTest extends TestCase
     public function test_order_receipt_html_view_still_available_with_format_html(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT02', 'confirmed');
+        $rental->update([
+            'total_late_fee' => 50000,
+            'total_damage_fee' => 20000,
+            'final_total' => 220000,
+        ]);
 
         $response = $this->actingAs($this->customer1)
             ->get(route('booking.receipt', ['code' => $rental->booking_code, 'format' => 'html']));
@@ -299,6 +457,19 @@ class BookingStatusAndHistoryTest extends TestCase
         $response->assertSee('TDK-2026-RCPT02');
         $response->assertSee('Budi Penyewa');
         $response->assertSee('Tendaku Vendor Store');
+        $response->assertSee('Total Denda');
+        $response->assertSee('Rp 70.000');
+    }
+
+    public function test_order_receipt_shows_zero_fine_when_no_fines_were_recorded(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RCPT03', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.receipt', ['code' => $rental->booking_code, 'format' => 'html']));
+
+        $response->assertSee('Total Denda');
+        $response->assertSee('Rp 0');
     }
 
     public function test_pay_returns_virtual_account_info_for_pending_rental(): void
@@ -308,6 +479,7 @@ class BookingStatusAndHistoryTest extends TestCase
             'vendor_id' => $this->vendor->id,
             'payment_type' => 'full',
             'channel' => 'midtrans',
+            'payment_channel' => 'bca_va',
             'order_id' => 'TDK-2026-SNAP01-FULL-1',
             'amount' => 150000,
             'status' => 'pending',
@@ -349,6 +521,28 @@ class BookingStatusAndHistoryTest extends TestCase
                     'va_number' => '1234567890',
                 ],
             ]);
+    }
+
+    public function test_pay_requires_a_bank_to_be_selected(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-SNAP02', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-SNAP02-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldNotReceive('chargeBankTransfer');
+        });
+
+        $this->actingAs($this->customer1)
+            ->postJson(route('booking.pay', $rental->booking_code))
+            ->assertUnprocessable()
+            ->assertJson(['message' => 'Pilih bank terlebih dahulu.']);
     }
 
     public function test_pay_returns_qris_details_and_persists_the_midtrans_response(): void
@@ -491,6 +685,7 @@ class BookingStatusAndHistoryTest extends TestCase
             'vendor_id' => $this->vendor->id,
             'payment_type' => 'full',
             'channel' => 'midtrans',
+            'payment_channel' => 'bca_va',
             'order_id' => 'TDK-2026-VA01-FULL-1',
             'amount' => 150000,
             'status' => 'pending',
@@ -522,6 +717,31 @@ class BookingStatusAndHistoryTest extends TestCase
             ->get(route('booking.status', $rental->booking_code))
             ->assertOk()
             ->assertSee('1234567890');
+    }
+
+    public function test_status_page_does_not_select_a_bank_or_generate_a_va_until_selected(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-VA02', 'pending');
+        $rental->payments()->create([
+            'vendor_id' => $this->vendor->id,
+            'payment_type' => 'full',
+            'channel' => 'midtrans',
+            'order_id' => 'TDK-2026-VA02-FULL-1',
+            'amount' => 150000,
+            'status' => 'pending',
+        ]);
+
+        $this->mock(MidtransService::class, function (MockInterface $mock): void {
+            $mock->shouldNotReceive('chargeBankTransfer');
+        });
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertOk()
+            ->assertSee('x-text="vaBanks[vaBank] || (vaBank ? vaBank.toUpperCase() : \'-\')">-</span>', false)
+            ->assertSee('x-text="bookingCode">TDK-2026-VA02</div>', false)
+            ->assertDontSee('TDK-2026-VA02-FULL-1</div>', false);
     }
 
     public function test_sync_payment_status_endpoint_returns_payment_status(): void
@@ -709,13 +929,14 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertSee('x-bind:src', false);
     }
 
-    public function test_guest_can_load_qris_image_with_booking_phone(): void
+    public function test_guest_can_load_qris_image_with_booking_token(): void
     {
         $rental = Rental::create([
             'vendor_id' => $this->vendor->id,
             'user_id' => null,
             'guest_name' => 'Anto Tamu',
             'guest_phone' => '081298765432',
+            'guest_access_token_hash' => hash('sha256', 'guest-qris-token'),
             'guest_id_number' => '3507111122223333',
             'booking_code' => 'TDK-2026-GQRIS1',
             'pickup_date' => '2026-10-10',
@@ -753,15 +974,12 @@ class BookingStatusAndHistoryTest extends TestCase
 
         $this->get(route('booking.status', [
             'code' => $rental->booking_code,
-            'phone' => $rental->guest_phone,
+            'token' => 'guest-qris-token',
         ]))
             ->assertOk()
-            ->assertSee('phone=081298765432');
+            ->assertDontSee('phone=081298765432');
 
-        $this->get(route('booking.qris-image', [
-            'code' => $rental->booking_code,
-            'phone' => $rental->guest_phone,
-        ]))
+        $this->get(route('booking.qris-image', $rental->booking_code))
             ->assertOk()
             ->assertHeader('content-type', 'image/png')
             ->assertContent('png-image-data');

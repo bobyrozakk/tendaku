@@ -14,8 +14,8 @@
             <div class="text-2xl font-extrabold text-darkbrown-900 font-heading tracking-tight">{{ $rupiah($payAmount) }}</div>
         </div>
         <div x-show="orderId" x-cloak class="text-right">
-            <div class="text-xs text-darkbrown-500">ID pesanan</div>
-            <div class="font-mono text-sm font-semibold text-darkbrown-800" x-text="orderId">{{ $onlinePayment?->order_id }}</div>
+            <div class="text-xs text-darkbrown-500">Kode booking</div>
+            <div class="font-mono text-sm font-semibold text-darkbrown-800" x-text="bookingCode">{{ $rental->booking_code }}</div>
         </div>
     </div>
 
@@ -37,7 +37,7 @@
                     <button type="button" x-ref="vaBtn" class="va-bank-btn text-darkbrown-900"
                             @click="toggleBank()" :disabled="vaLoading || expired"
                             aria-haspopup="listbox" :aria-expanded="vaOpen.toString()" aria-label="Pilih metode pembayaran">
-                        <span x-text="vaBanks[vaBank] || vaBank.toUpperCase()">{{ $vaBanks[$vaBankKey] }}</span>
+                        <span x-text="vaBanks[vaBank] || (vaBank ? vaBank.toUpperCase() : '-')">{{ $vaBanks[$vaBankKey] ?? '-' }}</span>
                         <svg class="va-chev" :class="{ 'va-rot': vaOpen }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6" /></svg>
                     </button>
 
