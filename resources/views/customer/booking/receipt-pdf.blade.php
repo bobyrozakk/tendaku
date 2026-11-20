@@ -38,6 +38,10 @@
         <tr><td>Mulai Sewa</td><td class="r">{{ $pickup->format('d/m/Y') }}</td></tr>
         <tr><td>Akhir Sewa</td><td class="r">{{ $return->format('d/m/Y') }}</td></tr>
         <tr><td>Durasi Sewa</td><td class="r">{{ $days }} hari</td></tr>
+        @if ($isLateReturn)
+            <tr><td>Status Pengembalian</td><td class="r"><strong>Terlambat Dikembalikan ({{ $lateReturnDays }} hari)</strong></td></tr>
+            <tr><td>Dikembalikan Aktual</td><td class="r">{{ $actualReturnDate->format('d/m/Y') }}</td></tr>
+        @endif
     </table>
 
     <div class="section-title">RINCIAN BARANG</div>

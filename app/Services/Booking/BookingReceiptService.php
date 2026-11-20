@@ -76,6 +76,8 @@ class BookingReceiptService
         $deliveryFee = (float) $rental->delivery_fee;
         $discount = (float) $rental->discount_amount;
         $totalFine = (float) $rental->total_late_fee + (float) $rental->total_damage_fee;
+        $actualReturnDate = $rental->actual_return_date ?? $rental->returned_at;
+        $lateReturnDays = $rental->lateReturnDays();
 
         $adminFee = $rental->adminFee();
 
@@ -123,6 +125,9 @@ class BookingReceiptService
             'pickup' => Carbon::parse($rental->pickup_date),
             'return' => Carbon::parse($rental->return_date),
             'days' => $days,
+            'actualReturnDate' => $actualReturnDate ? Carbon::parse($actualReturnDate) : null,
+            'lateReturnDays' => $lateReturnDays,
+            'isLateReturn' => $lateReturnDays > 0,
 
             'paidPayment' => $paidPayment,
             'latestPayment' => $latestPayment,

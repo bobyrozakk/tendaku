@@ -207,6 +207,51 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertDontSee('Tervalidasi Kasir');
     }
 
+    public function test_active_rental_shows_consistent_schedule_and_return_details(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-RENTAL01', 'picked_up');
+        $rental->update([
+            'pickup_date' => '2026-11-20',
+            'pickup_time' => '16:15:00',
+            'return_date' => '2026-11-23',
+            'return_time' => '16:15:00',
+            'rental_days' => 3,
+            'picked_up_at' => Carbon::parse('2026-11-20 16:15:00'),
+            'ktp_collateral_status' => 'held',
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Sedang Disewa')
+            ->assertSee('Penyewaan sedang berlangsung')
+            ->assertSee('Aktif sejak 20 Nov 2026, 16:15')
+            ->assertSee('Wajib Dikembalikan')
+            ->assertSee('23 November 2026')
+            ->assertSee('3 hari')
+            ->assertSee('Belum terlambat')
+            ->assertSee('KTP ditahan di toko')
+            ->assertSee('Lokasi Pengembalian')
+            ->assertDontSee('28 November 2026');
+    }
+
+    public function test_overdue_active_rental_uses_a_soft_red_return_deadline_card(): void
+    {
+        $rental = $this->createRental($this->customer1->id, 'TDK-2026-OVERDUE01', 'picked_up');
+        $rental->update([
+            'return_date' => '2026-10-09',
+            'picked_up_at' => Carbon::parse('2026-10-08 10:00:00'),
+        ]);
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('booking.status', $rental->booking_code));
+
+        $response->assertSee('Pengembalian Terlambat')
+            ->assertSee('Lewat jadwal 1 hari')
+            ->assertSee('bg-red-50', false)
+            ->assertSee('border-red-200', false);
+    }
+
     public function test_non_owner_is_forbidden_to_view_customer_booking_status(): void
     {
         $rental = $this->createRental($this->customer1->id, 'TDK-2026-STATUS1', 'confirmed');
@@ -350,8 +395,26 @@ class BookingStatusAndHistoryTest extends TestCase
 
         $response->assertSee('Transaksi Selesai');
         $response->assertSee('Terlambat Dikembalikan');
+        $response->assertSee('Alat dikembalikan 1 hari setelah batas');
         $response->assertSee('id="node-done"', false);
         $response->assertDontSee('id="node-return"', false);
+
+        $receiptResponse = $this->actingAs($this->customer1)
+            ->get(route('booking.receipt', [
+                'code' => $rental->booking_code,
+                'format' => 'html',
+            ]));
+
+        $receiptResponse->assertOk()
+            ->assertSee('Terlambat Dikembalikan (1 hari)')
+            ->assertSee('Dikembalikan Aktual')
+            ->assertSee('13/10/2026');
+
+        $pdfResponse = $this->actingAs($this->customer1)
+            ->get(route('booking.receipt', $rental->booking_code));
+
+        $pdfResponse->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
     }
 
     public function test_customer_downloads_order_receipt_as_pdf(): void

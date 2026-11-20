@@ -53,9 +53,14 @@
                                         @unless($key === 'pickup')
                                             <p class="mt-0.5 text-sm text-darkbrown-600" x-text="descs['{{ $key }}'][state('{{ $key }}')]"></p>
                                         @endunless
+                                        @if($key === 'rental' && $times[$key])
+                                            <p class="mt-1 text-xs font-semibold text-darkbrown-500">{{ $times[$key] }}</p>
+                                        @endif
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0 text-right">
-                                        <span x-show="times['{{ $key }}']" class="text-xs font-semibold text-darkbrown-500" x-text="times['{{ $key }}']">{{ $times[$key] }}</span>
+                                        @unless($key === 'rental')
+                                            <span x-show="times['{{ $key }}']" class="text-xs font-semibold text-darkbrown-500" x-text="times['{{ $key }}']">{{ $times[$key] }}</span>
+                                        @endunless
                                         @if($key === 'rental')
                                             <span x-show="state('rental') !== 'todo'" x-cloak
                                                   class="px-2.5 py-0.5 rounded-full text-xs font-bold border bg-avocado-100 text-avocado-800 border-avocado-300"

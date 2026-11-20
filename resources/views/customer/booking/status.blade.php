@@ -134,8 +134,8 @@
         $totalFinal = $rental->final_total ?: ($rental->grand_total + $rental->total_late_fee + $rental->total_damage_fee);
         $canPayFine = $hasDenda && Auth::check() && Auth::id() === $rental->user_id;
         $actualReturnDate = $rental->actual_return_date ?? $rental->returned_at;
-        $isLateReturn = $actualReturnDate !== null
-            && $actualReturnDate->toDateString() > $rental->return_date->toDateString();
+        $lateReturnDays = $rental->lateReturnDays();
+        $isLateReturn = $lateReturnDays > 0;
 
         $paymentType   = $onlinePayment?->payment_type ?? ((float) $rental->dp_amount > 0 ? 'dp' : 'full');
         $payAmount     = $onlinePayment?->amount ?? ($paymentType === 'dp' ? $rental->dp_amount : $totalFinal);
@@ -153,7 +153,7 @@
             'created' => ['title' => 'Booking dibuat',        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
             'payment' => ['title' => 'Pembayaran',            'icon' => 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z'],
             'pickup'  => ['title' => 'Serah Terima Alat',     'icon' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'],
-            'rental'  => ['title' => 'Sedang disewa',             'icon' => 'M19 20L10 4 1 20h18z'],
+            'rental'  => ['title' => 'Sedang Disewa',             'icon' => 'M19 20L10 4 1 20h18z'],
             'done'    => ['title' => 'Transaksi Selesai',     'icon' => 'M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9'],
         ];
 
@@ -167,7 +167,7 @@
                     : 'Siap diambil',
                 'done' => 'Alat telah diserahkan',
             ],
-            'rental'  => ['todo' => 'Dimulai setelah serah terima', 'active' => 'Alat sedang dipakai', 'done' => 'Masa sewa selesai'],
+            'rental'  => ['todo' => 'Dimulai setelah serah terima', 'active' => 'Penyewaan sedang berlangsung', 'done' => 'Masa sewa selesai'],
             'done'    => [
                 'todo' => 'Menunggu pengembalian alat',
                 'active' => $status === 'returned'
@@ -183,7 +183,7 @@
                 ? $fmtDateTime($paidPayment->paid_at)
                 : ($status === 'pending' && $rental->expires_at ? 'Batas ' . $fmtDateTime($rental->expires_at) : ''),
             'pickup'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : $fmtDate($rental->pickup_date),
-            'rental'  => $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : '',
+            'rental'  => $rental->picked_up_at ? 'Aktif sejak ' . $fmtDateTime($rental->picked_up_at) : '',
             'done'    => $fmtDateTime(
                 $rental->completed_at
                     ?? $rental->returned_at

@@ -197,6 +197,20 @@ class LostItemFlowTest extends TestCase
         ]);
     }
 
+    public function test_cashier_sees_late_fee_for_overdue_picked_up_rental(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-20 12:00:00'));
+        $this->rental->update(['return_date' => Carbon::today()->subDays(3)]);
+        $this->item->update(['late_fee_per_day' => 25000]);
+        $this->detail->update(['late_fee_per_day_snapshot' => 25000]);
+        $this->actingAs($this->cashier);
+
+        Livewire::test(ReturnFlow::class)
+            ->set('activeOrderId', $this->rental->id)
+            ->assertSee('Keterlambatan 3 Hari')
+            ->assertSee('Rp 75.000');
+    }
+
     public function test_owner_can_view_and_delete_lost_item_unit(): void
     {
         // Set unit status jadi lost dan rental sudah selesai (is_returned = true)

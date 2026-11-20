@@ -477,7 +477,7 @@ class ReturnFlow extends Component
         }
 
         if (Carbon::today()->gt($order->return_date)) {
-            return (int) Carbon::today()->diffInDays(Carbon::parse($order->return_date));
+            return (int) Carbon::parse($order->return_date)->diffInDays(Carbon::today());
         }
 
         return 0;

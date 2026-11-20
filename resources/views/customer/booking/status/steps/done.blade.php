@@ -57,6 +57,20 @@
         @endif
     </header>
 
+    @if($isLateReturn)
+        <section class="mt-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-red-900">
+            <i data-lucide="triangle-alert" class="mt-0.5 h-5 w-5 shrink-0 text-red-700"></i>
+            <div class="min-w-0">
+                <h3 class="text-sm font-bold">Terlambat Dikembalikan</h3>
+                <p class="mt-0.5 text-sm leading-relaxed">
+                    Alat dikembalikan {{ $lateReturnDays }} hari setelah batas
+                    ({{ \Carbon\Carbon::parse($rental->return_date)->translatedFormat('d M Y') }}
+                    hingga {{ \Carbon\Carbon::parse($actualReturnDate)->translatedFormat('d M Y') }}).
+                </p>
+            </div>
+        </section>
+    @endif
+
     <section class="flex flex-col gap-2 border-b border-dashed border-wheat-300 py-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <p class="text-sm font-medium text-darkbrown-600">Total Pembayaran</p>

@@ -66,7 +66,7 @@ class BookingController extends Controller
             )
             ->with([
                 'vendor:id,name,phone,city',
-                'details.masterItem',
+                'details.masterItem.primaryImage',
                 'payments:id,rental_id,status',
             ])
             ->latest('id')

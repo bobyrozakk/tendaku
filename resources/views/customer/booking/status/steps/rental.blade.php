@@ -1,115 +1,171 @@
-{{-- Step "Sedang disewa". Semua data dari kolom nyata rentals / rental_details. --}}
+{{-- Step "Sedang disewa". Semua data berasal dari rental dan detailnya. --}}
 @php
-    $returnDay = \Carbon\Carbon::parse($rental->return_date)->startOfDay();
-    $daysLeft  = (int) now()->startOfDay()->diffInDays($returnDay, false);   // negatif = lewat jatuh tempo
+    $returnDate = \Carbon\Carbon::parse($rental->return_date);
+    $returnDay = $returnDate->copy()->startOfDay();
+    $daysLeft = (int) now()->startOfDay()->diffInDays($returnDay, false);
     $isRenting = $rental->status === 'picked_up';
     $isOverdue = $isRenting && $daysLeft < 0;
-    $lateDays  = $isOverdue ? abs($daysLeft) : 0;
-
-    // Rumus sama dengan RentalService::processReturn
+    $lateDays = $isOverdue ? abs($daysLeft) : 0;
     $lateFeePerDay = (float) $rental->details->sum('late_fee_per_day_snapshot');
-    $estLateFee    = $lateFeePerDay * $lateDays;
-
-    $ktpText = match ($rental->ktp_collateral_status) {
-        'held'     => 'KTP ditahan di toko',
-        'returned' => 'KTP sudah dikembalikan',
-        default    => 'Belum dikonfirmasi',
-    };
-
-    // 1 baris rental_details = 1 unit fisik, jadi dikelompokkan per jenis alat
+    $estimatedLateFee = $lateFeePerDay * $lateDays;
+    $rentalStart = $rental->picked_up_at
+        ? $fmtDateTime($rental->picked_up_at)
+        : $fmtDate($rental->pickup_date);
+    $returnTime = $rental->return_time
+        ? \Carbon\Carbon::parse($rental->return_time)->format('H:i')
+        : null;
     $rentedGroups = $rental->details->groupBy('master_item_id');
+    $ktpText = match ($rental->ktp_collateral_status) {
+        'held' => 'KTP ditahan di toko',
+        'returned' => 'KTP sudah dikembalikan',
+        default => 'Belum dikonfirmasi',
+    };
+    $ktpDescription = match ($rental->ktp_collateral_status) {
+        'held' => 'Jaminan akan dikembalikan setelah proses pengembalian dan pemeriksaan alat selesai.',
+        'returned' => 'Pengembalian jaminan telah dikonfirmasi.',
+        default => 'Hubungi vendor untuk memastikan status jaminan.',
+    };
+    $deadlineTone = $isOverdue
+        ? 'border-red-200 bg-red-50 text-red-900'
+        : ($daysLeft <= 1 ? 'border-amber-300 bg-amber-50 text-darkbrown-900' : 'border-sunglow-300 bg-sunglow-50 text-darkbrown-900');
 @endphp
 
-{{-- Peringatan jatuh tempo --}}
-@if($isOverdue)
-    <div class="rounded-xl bg-red-50 border border-red-200 p-3.5 text-sm text-red-800">
-        <strong>Terlambat {{ $lateDays }} hari.</strong>
-        @if($lateFeePerDay > 0)
-            Estimasi denda saat ini <strong>{{ $rupiah($estLateFee) }}</strong>
-            ({{ $rupiah($lateFeePerDay) }}/hari), terus bertambah sampai alat dikembalikan.
-        @endif
-    </div>
-@elseif($isRenting && $daysLeft <= 1)
-    <div class="rounded-xl bg-sunglow-50 border border-sunglow-300 p-3.5 text-sm text-darkbrown-800">
-        <strong>{{ $daysLeft === 0 ? 'Hari ini batas pengembalian.' : 'Besok batas pengembalian.' }}</strong>
-        @if($lateFeePerDay > 0) Keterlambatan dikenai {{ $rupiah($lateFeePerDay) }}/hari. @endif
-    </div>
-@endif
-
-{{-- Ringkasan: 2 x 2 --}}
-<dl class="grid grid-cols-2 gap-x-6 gap-y-5 text-sm">
-    <div>
-        <i data-lucide="calendar-check" class="h-4 w-4 text-darkbrown-700 mb-2"></i>
-        <dt class="text-xs text-darkbrown-500">Mulai sewa</dt>
-        <dd class="mt-1 font-semibold text-darkbrown-900">
-            {{ $rental->picked_up_at ? $fmtDateTime($rental->picked_up_at) : 'Belum tercatat' }}
-        </dd>
-    </div>
-    <div>
-        <i data-lucide="calendar-clock" class="h-4 w-4 text-darkbrown-700 mb-2"></i>
-        <dt class="text-xs text-darkbrown-500">Wajib kembali</dt>
-        <dd class="mt-1 font-semibold {{ $isOverdue ? 'text-red-700' : 'text-darkbrown-900' }}">{{ $fmtDate($rental->return_date) }}</dd>
-    </div>
-    <div>
-        <i data-lucide="clock" class="h-4 w-4 text-darkbrown-700 mb-2"></i>
-        <dt class="text-xs text-darkbrown-500">Durasi sewa</dt>
-        <dd class="mt-1 font-semibold text-darkbrown-900">{{ $rental->rental_days }} hari</dd>
-    </div>
-    <div>
-        <i data-lucide="shield-check" class="h-4 w-4 text-darkbrown-700 mb-2"></i>
-        <dt class="text-xs text-darkbrown-500">Jaminan</dt>
-        <dd class="mt-1 font-semibold text-darkbrown-900">{{ $ktpText }}</dd>
-    </div>
-</dl>
-
-{{-- Alat yang sedang disewa --}}
-<div class="pt-4 border-t border-wheat-200">
-    <h4 class="text-sm font-bold text-darkbrown-900 mb-3">Alat yang sedang disewa ({{ $rental->details->count() }})</h4>
-    <ul class="space-y-3">
-        @foreach($rentedGroups as $rows)
-            @php
-                $item = $rows->first()->masterItem;
-                $img  = $item?->primaryImage?->image_url ?: $item?->image_url;
-                $codes = $rows->map(fn ($r) => $r->itemUnit?->unit_code)->filter()->implode(', ');
-            @endphp
-            <li class="flex items-center gap-4">
-                <div class="w-24 h-24 shrink-0 rounded-2xl border border-wheat-200 bg-white overflow-hidden flex items-center justify-center">
-                    @if($img)
-                        <img src="{{ $img }}" alt="{{ $item?->name }}" class="w-full h-full object-cover" loading="lazy">
-                    @else
-                        <i data-lucide="tent" class="h-8 w-8 text-darkbrown-400"></i>
-                    @endif
-                </div>
-                <div class="min-w-0">
-                    <div class="font-bold text-darkbrown-900">{{ $item?->name ?? 'Peralatan camping' }}</div>
-                    <div class="text-sm text-darkbrown-500 mt-1">
-                        {{ $rows->count() }} unit
-                        @if($codes) · <span class="font-mono text-xs">{{ $codes }}</span> @endif
-                    </div>
-                    <div class="text-sm text-darkbrown-500 mt-1">Pastikan alat dikembalikan dalam kondisi baik.</div>
-                </div>
-            </li>
-        @endforeach
-    </ul>
-</div>
-
-{{-- Informasi pengembalian --}}
-<div class="rounded-2xl bg-wheat-100 p-4 text-sm text-darkbrown-700">
-    <div class="flex items-center gap-2 font-bold text-darkbrown-900 mb-1.5">
-        <i data-lucide="info" class="h-4 w-4"></i>
-        <span>Informasi pengembalian</span>
-    </div>
-    <p class="leading-relaxed">
-        Kembalikan alat paling lambat sesuai tanggal dan jam yang disepakati. Hubungi vendor jika perlu mengubah jadwal.
-        @if($rental->vendor?->name)
-            <span class="block mt-1 text-darkbrown-600">Lokasi: <strong>{{ $rental->vendor->name }}</strong>@if($rental->vendor->address), {{ $rental->vendor->address }}@endif</span>
-        @endif
+<div class="space-y-4">
+    <p class="text-sm leading-relaxed text-darkbrown-600">
+        Alat telah diserahkan dan saat ini berada dalam masa penyewaan.
     </p>
-</div>
 
-@if($canPayFine)
-    <button type="button" @click="payNow()" :disabled="paying"
-            class="w-full py-2.5 px-4 rounded-xl font-bold text-sm bg-red-600 hover:bg-red-700 text-white shadow transition disabled:opacity-70">
-        Bayar denda ({{ $rupiah($fineAmount) }})
-    </button>
-@endif
+    <section class="rounded-2xl border p-4 sm:p-5 {{ $deadlineTone }}">
+        <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+                <p class="text-xs font-bold uppercase tracking-wide opacity-75">
+                    {{ $isOverdue ? 'Pengembalian Terlambat' : 'Wajib Dikembalikan' }}
+                </p>
+                <p class="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                    {{ $returnDate->translatedFormat('d F Y') }}
+                </p>
+                <p class="mt-1 text-sm font-semibold">
+                    @if($isOverdue)
+                        Lewat jadwal {{ $lateDays }} hari
+                    @elseif($daysLeft === 0)
+                        Belum terlambat · batas pengembalian hari ini
+                    @elseif($daysLeft === 1)
+                        Belum terlambat · sisa 1 hari
+                    @else
+                        Belum terlambat · sisa {{ $daysLeft }} hari
+                    @endif
+                    @if($returnTime)
+                        · sebelum pukul {{ $returnTime }}
+                    @endif
+                </p>
+            </div>
+            <i data-lucide="{{ $isOverdue ? 'triangle-alert' : 'calendar-clock' }}"
+               class="mt-1 h-6 w-6 shrink-0"></i>
+        </div>
+        @if($isOverdue && $lateFeePerDay > 0)
+            <p class="mt-3 border-t border-current/20 pt-3 text-sm">
+                Estimasi denda saat ini <strong>{{ $rupiah($estimatedLateFee) }}</strong>
+                <span class="opacity-80">({{ $rupiah($lateFeePerDay) }}/hari)</span>
+            </p>
+        @endif
+    </section>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <section class="rounded-2xl border border-wheat-200 bg-white p-4">
+            <h4 class="mb-3 flex items-center gap-2 text-sm font-bold text-darkbrown-900">
+                <i data-lucide="calendar-days" class="h-4 w-4 text-darkbrown-500"></i>
+                Jadwal Penyewaan
+            </h4>
+            <dl class="space-y-3 text-sm">
+                <div class="flex justify-between gap-3">
+                    <dt class="text-darkbrown-500">Mulai sewa</dt>
+                    <dd class="text-right font-semibold text-darkbrown-900">{{ $rentalStart }}</dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                    <dt class="text-darkbrown-500">Tanggal kembali</dt>
+                    <dd class="text-right font-semibold text-darkbrown-900">
+                        {{ $fmtDate($rental->return_date) }}
+                        @if($returnTime)
+                            <span class="block text-xs font-normal text-darkbrown-500">Pukul {{ $returnTime }}</span>
+                        @endif
+                    </dd>
+                </div>
+                <div class="flex justify-between gap-3">
+                    <dt class="text-darkbrown-500">Durasi sewa</dt>
+                    <dd class="text-right font-semibold text-darkbrown-900">{{ $rental->rental_days }} hari</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section class="rounded-2xl border border-wheat-200 bg-white p-4">
+            <h4 class="mb-3 flex items-center gap-2 text-sm font-bold text-darkbrown-900">
+                <i data-lucide="id-card" class="h-4 w-4 text-darkbrown-500"></i>
+                Informasi Jaminan
+            </h4>
+            <p class="text-sm font-bold text-darkbrown-900">{{ $ktpText }}</p>
+            <p class="mt-1 text-sm leading-relaxed text-darkbrown-600">{{ $ktpDescription }}</p>
+        </section>
+    </div>
+
+    <section class="rounded-2xl border border-wheat-200 bg-white p-4">
+        <h4 class="mb-3 text-sm font-bold text-darkbrown-900">
+            Alat yang Disewa ({{ $rental->details->count() }} Unit)
+        </h4>
+        <ul class="space-y-3">
+            @foreach($rentedGroups as $rows)
+                @php
+                    $item = $rows->first()->masterItem;
+                    $imageUrl = $item?->primaryImage?->image_url ?: $item?->image_url;
+                    $unitCodes = $rows->map(fn ($row) => $row->itemUnit?->unit_code)->filter()->implode(', ');
+                @endphp
+                <li class="flex items-center gap-3">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-wheat-200 bg-wheat-50">
+                        @if($imageUrl)
+                            <img src="{{ $imageUrl }}" alt="{{ $item?->name ?? 'Foto alat' }}" class="h-full w-full object-cover" loading="lazy">
+                        @else
+                            <i data-lucide="tent" class="h-5 w-5 text-darkbrown-400"></i>
+                        @endif
+                    </div>
+                    <div class="min-w-0">
+                        <p class="truncate text-sm font-bold text-darkbrown-900">{{ $item?->name ?? 'Peralatan Camping' }}</p>
+                        <p class="mt-0.5 text-xs text-darkbrown-500">
+                            {{ $rows->count() }} unit
+                            @if($unitCodes)
+                                · <span class="font-mono">{{ $unitCodes }}</span>
+                            @endif
+                        </p>
+                        <p class="mt-1 text-xs leading-relaxed text-darkbrown-500">
+                            Pastikan alat dikembalikan dalam kondisi baik dan sesuai kelengkapan awal.
+                        </p>
+                    </div>
+                </li>
+            @endforeach
+        </ul>
+    </section>
+
+    <section class="rounded-2xl border border-wheat-200 bg-wheat-50 p-4">
+        <h4 class="mb-2 flex items-center gap-2 text-sm font-bold text-darkbrown-900">
+            <i data-lucide="info" class="h-4 w-4 text-darkbrown-500"></i>
+            Informasi Pengembalian
+        </h4>
+        <p class="text-sm leading-relaxed text-darkbrown-700">
+            Kembalikan seluruh alat sesuai jadwal yang telah ditentukan.
+        </p>
+        @if($rental->vendor)
+            <div class="mt-3 border-t border-wheat-200 pt-3">
+                <p class="text-xs font-bold text-darkbrown-500">Lokasi Pengembalian</p>
+                <p class="mt-1 text-sm font-semibold text-darkbrown-900">{{ $rental->vendor->name }}</p>
+                @if($rental->vendor->address)
+                    <p class="mt-0.5 text-sm text-darkbrown-600">{{ $rental->vendor->address }}</p>
+                @endif
+            </div>
+        @endif
+    </section>
+
+    @if($canPayFine)
+        <button type="button" @click="payNow()" :disabled="paying"
+                class="w-full rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white shadow transition hover:bg-red-700 disabled:opacity-70">
+            Bayar denda ({{ $rupiah($fineAmount) }})
+        </button>
+    @endif
+</div>

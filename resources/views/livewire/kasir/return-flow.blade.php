@@ -222,7 +222,7 @@
                                     <div class="w-6 h-6 rounded-lg bg-avocado-100 text-avocado-800 flex items-center justify-center">
                                         <i data-lucide="scan-barcode" class="w-3.5 h-3.5"></i>
                                     </div>
-                                    <span>Pencocokan & Kondisi Unit Fisik (Database)</span>
+                                    <span>Pencocokan & Kondisi Unit Fisik</span>
                                 </h4>
                                 <span class="text-[11px] font-semibold text-darkbrown-500">
                                     {{ count(array_filter($returnedItems)) }} / {{ $this->activeOrder->details->count() }} Diperiksa
