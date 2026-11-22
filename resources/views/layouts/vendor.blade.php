@@ -16,7 +16,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="min-h-full font-sans antialiased text-darkbrown-800" style="background-color: #f2ede3;" x-data="{ showLogoutModal: false }">
+<body class="min-h-full font-sans antialiased text-darkbrown-800" style="background-color: #f2ede3;" x-data="{ showLogoutModal: false }" @open-logout-modal.window="showLogoutModal = true">
     <div class="min-h-screen flex">
         <!-- Vendor / Kasir Sidebar -->
         @if (auth()->check() && (auth()->user()->isVendorAdmin() || !auth()->user()->isVendorOwner()))
@@ -64,11 +64,12 @@
 
                     <!-- User Pill (Clickable Profile) -->
                     @php
+                        $isVendorOwner = auth()->user()?->isVendorOwner() ?? false;
                         $profileRoute = auth()->user()?->isVendorAdmin()
                             ? route('kasir.profile')
                             : route('profile');
                         $userInitials = strtoupper(substr(auth()->user()->name ?? 'TK', 0, 2));
-                        $userRoleLabel = auth()->user()?->isVendorOwner()
+                        $userRoleLabel = $isVendorOwner
                             ? 'Owner'
                             : (auth()->user()?->isVendorAdmin() ? 'Kasir' : 'Staf');
                     @endphp
@@ -77,7 +78,7 @@
                         <a href="{{ $profileRoute }}"
                            wire:navigate
                            class="flex items-center gap-2.5 p-1 pr-2 sm:pr-3 rounded-xl hover:bg-wheat-100/70 border border-transparent hover:border-wheat-200/80 active:scale-[0.98] transition-all duration-150 group cursor-pointer"
-                           title="Lihat Profil Kasir">
+                           title="{{ $isVendorOwner ? 'Lihat Profil' : 'Lihat Profil Kasir' }}">
                             <div class="w-8 h-8 rounded-lg font-black flex items-center justify-center text-xs text-white bg-avocado-700 border border-avocado-600/40 shadow-2xs group-hover:bg-avocado-800 transition-colors">
                                 {{ $userInitials }}
                             </div>
@@ -86,23 +87,29 @@
                                     <p class="text-xs font-extrabold text-darkbrown-900 group-hover:text-avocado-800 transition-colors leading-none">
                                         {{ auth()->user()->name ?? 'Kasir Toko' }}
                                     </p>
-                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-wheat-200 text-darkbrown-800 border border-wheat-300/80 uppercase">
-                                        {{ $userRoleLabel }}
-                                    </span>
+                                    @unless ($isVendorOwner)
+                                        <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-wheat-200 text-darkbrown-800 border border-wheat-300/80 uppercase">
+                                            {{ $userRoleLabel }}
+                                        </span>
+                                    @endunless
                                 </div>
-                                <p class="text-[10px] text-darkbrown-500 group-hover:text-darkbrown-700 transition-colors mt-0.5 font-medium truncate max-w-[140px]">
-                                    {{ auth()->user()?->vendor?->name ?? 'Tendaku Rental' }}
-                                </p>
+                                @unless ($isVendorOwner)
+                                    <p class="text-[10px] text-darkbrown-500 group-hover:text-darkbrown-700 transition-colors mt-0.5 font-medium truncate max-w-[140px]">
+                                        {{ auth()->user()?->vendor?->name ?? 'Tendaku Rental' }}
+                                    </p>
+                                @endunless
                             </div>
                         </a>
 
-                        <!-- Trigger Modal Logout Button -->
-                        <button type="button"
-                                @click="showLogoutModal = true"
-                                class="w-8 h-8 rounded-lg flex items-center justify-center text-darkbrown-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 active:scale-95 transition-all duration-150 cursor-pointer"
-                                title="Keluar / Logout">
-                            <i data-lucide="log-out" class="w-4 h-4"></i>
-                        </button>
+                        @unless ($isVendorOwner)
+                            <!-- Trigger Modal Logout Button (Kasir / Non-Owner) -->
+                            <button type="button"
+                                    @click="showLogoutModal = true"
+                                    class="w-8 h-8 rounded-lg flex items-center justify-center text-darkbrown-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 active:scale-95 transition-all duration-150 cursor-pointer"
+                                    title="Keluar / Logout">
+                                <i data-lucide="log-out" class="w-4 h-4"></i>
+                            </button>
+                        @endunless
                     </div>
                 </div>
             </header>
