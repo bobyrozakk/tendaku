@@ -31,6 +31,9 @@ Homestead.yaml
 Thumbs.db
 supabase/.temp
 /Milestone 2/
-/tests/selenium/
+/tests/selenium/.venv/
+/tests/selenium/.pytest_cache/
+/tests/selenium/artifacts/
+/tests/selenium/**/__pycache__/
 __pycache__/
 *.pyc
