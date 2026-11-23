@@ -10,15 +10,12 @@ return [
     | Kanal yang dipakai untuk pengingat pengembalian barang. Nilai yang
     | didukung:
     |
-    |   "whatsapp" : kirim via Fonnte WhatsApp API (butuh FONNTE_TOKEN)
     |   "in_app"   : hanya dicatat di tabel `notifications` (ditampilkan di aplikasi)
     |   "email"    : dikirim via mailer Laravel (butuh MAIL_MAILER yang benar)
     |
-    | Kode WhatsApp TIDAK dihapus saat kanal diganti — cukup ubah nilai ini.
-    |
     */
 
-    'channel' => env('NOTIFICATION_CHANNEL', 'whatsapp'),
+    'channel' => env('NOTIFICATION_CHANNEL', 'email'),
 
     /*
     |--------------------------------------------------------------------------

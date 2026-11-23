@@ -3,8 +3,6 @@
 namespace App\Providers;
 
 use App\Services\Finance\CommissionCalculator;
-use App\Services\FonnteWhatsAppService;
-use App\Services\WhatsAppService;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Carbon;
@@ -19,7 +17,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(WhatsAppService::class, FonnteWhatsAppService::class);
         $this->app->singleton(CommissionCalculator::class, fn (): CommissionCalculator => CommissionCalculator::fromConfig());
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\RentalReturnReminderMail;
 use App\Models\NotificationLog;
 use App\Models\Rental;
 use Carbon\Carbon;
@@ -27,8 +28,6 @@ class ReturnReminderService
     /**
      * Kanal yang didukung (harus sesuai enum `channel` pada tabel `notifications`).
      */
-    public const CHANNEL_WHATSAPP = 'whatsapp';
-
     public const CHANNEL_IN_APP = 'in_app';
 
     public const CHANNEL_EMAIL = 'email';
@@ -41,9 +40,7 @@ class ReturnReminderService
         'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
     ];
 
-    public function __construct(
-        protected WhatsAppService $whatsApp
-    ) {}
+    public function __construct() {}
 
     /**
      * Daftar pengingat yang perlu dikirim.
@@ -140,7 +137,7 @@ class ReturnReminderService
         $recipient = $this->resolveRecipient($rental);
 
         if ($recipient === null) {
-            Log::warning('Pengingat: nomor telepon penerima tidak tersedia.', [
+            Log::warning('Pengingat: penerima tidak tersedia (email/telepon).', [
                 'rental_id' => $rentalId,
                 'type' => $type,
             ]);
@@ -242,15 +239,15 @@ class ReturnReminderService
     }
 
     /**
-     * Kanal notifikasi aktif (whatsapp | in_app | email).
+     * Kanal notifikasi aktif (in_app | email).
      */
     public function channel(): string
     {
-        $channel = (string) config('notifications.channel', self::CHANNEL_WHATSAPP);
+        $channel = (string) config('notifications.channel', self::CHANNEL_EMAIL);
 
-        return in_array($channel, [self::CHANNEL_WHATSAPP, self::CHANNEL_IN_APP, self::CHANNEL_EMAIL], true)
+        return in_array($channel, [self::CHANNEL_IN_APP, self::CHANNEL_EMAIL], true)
             ? $channel
-            : self::CHANNEL_WHATSAPP;
+            : self::CHANNEL_EMAIL;
     }
 
     /**
@@ -350,10 +347,17 @@ class ReturnReminderService
     }
 
     /**
-     * Nomor telepon penerima (diformat Fonnte) atau null bila tidak tersedia.
+     * Nomor telepon atau email penerima, atau null bila tidak tersedia.
      */
     protected function resolveRecipient(Rental $rental): ?string
     {
+        // Preferensi: email pelanggan untuk kanal email, nomor telepon sebagai fallback
+        $email = $rental->customer?->email;
+
+        if (is_string($email) && trim($email) !== '') {
+            return $email;
+        }
+
         $phone = $rental->customer?->phone ?? $rental->guest_phone;
 
         if (! is_string($phone) || trim($phone) === '') {
@@ -384,10 +388,12 @@ class ReturnReminderService
     protected function reserveNotification(
         Rental $rental,
         string $type,
-        string $phone,
+        string $recipient,
         string $message,
         bool $force
     ): ?NotificationLog {
+        $phone = $rental->customer?->phone ?? $rental->guest_phone;
+
         return DB::transaction(function () use ($rental, $type, $phone, $message, $force) {
             $existing = NotificationLog::withoutGlobalScope('vendor')
                 ->where('vendor_id', $rental->vendor_id)
@@ -428,10 +434,9 @@ class ReturnReminderService
     /**
      * Kirim pesan lewat kanal aktif.
      */
-    protected function dispatch(Rental $rental, string $phone, string $message): bool
+    protected function dispatch(Rental $rental, string $recipient, string $message): bool
     {
         return match ($this->channel()) {
-            self::CHANNEL_WHATSAPP => $this->whatsApp->send($phone, $message),
             self::CHANNEL_EMAIL => $this->sendEmail($rental, $message),
             default => true,
         };
@@ -442,7 +447,7 @@ class ReturnReminderService
      */
     protected function sendEmail(Rental $rental, string $message): bool
     {
-        $email = $rental->customer?->email;
+        $email = $rental->customer?->email ?? $rental->customerEmail();
 
         if (! is_string($email) || trim($email) === '') {
             Log::warning('Pengingat: email pelanggan tidak tersedia, pengiriman email dilewati.', [
@@ -453,9 +458,7 @@ class ReturnReminderService
         }
 
         try {
-            Mail::raw($message, function ($mail) use ($email) {
-                $mail->to($email)->subject('Pengingat Pengembalian Barang - TENDAKU');
-            });
+            Mail::to($email)->send(new RentalReturnReminderMail($rental));
         } catch (Throwable $exception) {
             Log::error('Pengingat: pengiriman email gagal.', [
                 'rental_id' => $rental->id,

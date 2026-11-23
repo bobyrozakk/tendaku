@@ -10,7 +10,7 @@ assignees: ''
 Tuliskan deskripsi singkat mengenai masalah atau bug yang ditemukan.
 
 ### 🧩 Modul & Pemilik
-- **Modul:** [Multi-Tenant / Auth / Katalog / Booking / Kasir Pickup / Kasir Return / Super Admin / WhatsApp / Weather]
+- **Modul:** [Multi-Tenant / Auth / Katalog / Booking / Kasir Pickup / Kasir Return / Super Admin / Email Notification / Weather]
 - **Pemilik Modul:** @[boby / byan / bunga / arsya / andini]
 - **Tingkat Keparahan:** [Blocker / Major / Minor / Trivial]
 

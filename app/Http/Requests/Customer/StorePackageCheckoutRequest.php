@@ -54,7 +54,7 @@ class StorePackageCheckoutRequest extends FormRequest
             'pickup_date.after_or_equal' => 'Tanggal mulai sewa tidak boleh di masa lalu.',
             'return_date.after_or_equal' => 'Tanggal pengembalian harus sama atau setelah tanggal mulai sewa.',
             'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
-            'guest_phone.required' => 'Nomor WhatsApp wajib diisi agar pengingat pengembalian dapat dikirim.',
+            'guest_phone.required' => 'Nomor telepon wajib diisi untuk pemesanan tanpa akun.',
             'guest_id_number.required' => 'NIK wajib diisi untuk pemesanan tanpa akun.',
             'customer_address_id.exists' => 'Alamat pengantaran yang dipilih tidak valid.',
         ];

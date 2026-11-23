@@ -10,7 +10,7 @@ Proyek ini dikerjakan oleh **5 orang anggota tim** selama **1 bulan (4 minggu)**
 | Role | Penanggung Jawab | Fokus Utama |
 | :--- | :--- | :--- |
 | **ROLE 1** | **Anda (Team Lead / PM)** | **Database & Backend Core:** Skema DB, Eloquent Models, Trait `BelongsToVendor` (Multi-tenancy), Logic ketersediaan unit, kalkulasi sewa, denda keterlambatan/kerusakan. |
-| **ROLE 2** | **Anggota 2** | **Backend API & Integrasi:** Gateway Pembayaran Midtrans (SNAP & Webhook), API Prediksi Cuaca (OpenWeather/Open-Meteo), & Integrasi WhatsApp Notifikasi (WaBlas/Fonnte). |
+| **ROLE 2** | **Anggota 2** | **Backend API & Integrasi:** Gateway Pembayaran Midtrans (SNAP & Webhook), API Prediksi Cuaca (OpenWeather/Open-Meteo), & Integrasi Notifikasi Pengingat Sewa via Email SMTP (Gmail SMTP) & In-App. |
 | **ROLE 3A**| **Anggota 3** | **Frontend Customer (Katalog & Cuaca):** Halaman Landing Page, Katalog Produk, Detail Peralatan, & Komponen UI Kalender Prediksi Cuaca. |
 | **ROLE 3B**| **Anggota 4** | **Frontend Customer (Booking & Receipt):** Form Checkout (Pembayaran Lunas), Pop-up Midtrans SNAP UI, Halaman Status Booking, & **Digital Collateral Receipt (Tanda Terima KTP)**. |
 | **ROLE 4** | **Anggota 5** | **Frontend Vendor Dashboard & QA:** POS Admin Vendor, Manajemen Unit Barang (Barcode/Serial), **UI Pickup (Kamera / Upload Foto Penyewa + KTP)**, UI Return & Inspeksi Barang, serta QA Testing. |
@@ -60,7 +60,7 @@ Proyek ini dikerjakan oleh **5 orang anggota tim** selama **1 bulan (4 minggu)**
 
 ## 💳 ROLE 2 — Backend API & Integrasi
 
-**Fokus:** Gateway Pembayaran Midtrans (Snap & Webhook), API Prediksi Cuaca, Integrasi WhatsApp Notification.
+**Fokus:** Gateway Pembayaran Midtrans (Snap & Webhook), API Prediksi Cuaca, Integrasi Notifikasi Email SMTP & In-App.
 
 ### Minggu 1 (5–9 Okt) — Riset & API Cuaca Foundation
 - **Sen 5:** Setup akun Sandbox Midtrans & riset API OpenWeather / Open-Meteo. (*Deliverable:* Kredensial sandbox aktif).
@@ -76,19 +76,19 @@ Proyek ini dikerjakan oleh **5 orang anggota tim** selama **1 bulan (4 minggu)**
 - **Kam 15:** Validasi Signature Key Webhook Midtrans. (*Deliverable:* Webhook secure dari request palsu).
 - **Jum 16:** Handler status Webhook: `settlement` -> update `payments.status = 'settled'` & `rentals.status = 'paid'`. (*Deliverable:* Status otomatis ter-update).
 
-### Minggu 3 (19–23 Okt) — Pelunasan Denda & WhatsApp Notification
+### Minggu 3 (19–23 Okt) — Pelunasan Denda & Email SMTP Notification
 - **Sen 19:** Endpoint pembayaran denda keterlambatan/kerusakan via Midtrans. (*Deliverable:* Payment token denda).
-- **Sel 20:** Integrasi provider WhatsApp Gateway (WaBlas / Fonnte). (*Deliverable:* Helper pengiriman WA).
-- **Rab 21:** WhatsApp Trigger 1: Notifikasi konfirmasi booking & instruksi pembayaran. (*Deliverable:* WA otomatis terkirim).
-- **Kam 22:** WhatsApp Trigger 2: Pengingat H-1 pengembalian barang & Bukti Digital Jaminan KTP. (*Deliverable:* WA pengingat aktif).
-- **Jum 23:** Testing end-to-end pembayaran Midtrans + Notifikasi WA bersama Role 1 & Role 3B. (*Deliverable:* Integrasi lancar).
+- **Sel 20:** Integrasi provider Email Gateway (SMTP Gmail). (*Deliverable:* Helper/Mailer pengiriman Email).
+- **Rab 21:** Email Trigger 1: Notifikasi konfirmasi booking & instruksi pembayaran. (*Deliverable:* Email otomatis terkirim).
+- **Kam 22:** Email Trigger 2: Pengingat H-1 & hari-H pengembalian barang & Bukti Digital Jaminan KTP. (*Deliverable:* Email pengingat aktif).
+- **Jum 23:** Testing end-to-end pembayaran Midtrans + Notifikasi Email bersama Role 1 & Role 3B. (*Deliverable:* Integrasi lancar).
 
 ### Minggu 4 (26–30 Okt) — Handling Edge Case & Kredensial Production
 - **Sen 26:** Handling edge case: Webhook retry, duplikat payload, & timeout API. (*Deliverable:* Webhook idempotent).
 - **Sel 27:** Fallback error `WeatherService` (Handling jika API cuaca limit/down). (*Deliverable:* Fallback ui tidak crash).
 - **Rab 28:** Dokumentasi API internal untuk Role 3 & Role 4. (*Deliverable:* Swagger/Postman Collection).
 - **Kam 29:** Regression testing alur pembayaran & notifikasi. (*Deliverable:* Zero payment bugs).
-- **Jum 30:** Penyiapan Kredensial Production (Midtrans Live Key & WA Token). (*Deliverable:* Environment production terisi).
+- **Jum 30:** Penyiapan Kredensial Production (Midtrans Live Key & SMTP Config). (*Deliverable:* Environment production terisi).
 
 ---
 
@@ -217,7 +217,7 @@ Proyek ini dikerjakan oleh **5 orang anggota tim** selama **1 bulan (4 minggu)**
 
 1. **Buat 5 Epic Utama di Jira:**
    - `EPIC 1: DB - Database, Multi-Tenancy & Core Logic` (Role 1)
-   - `EPIC 2: API - Integrasi Midtrans, Weather & WhatsApp` (Role 2)
+   - `EPIC 2: API - Integrasi Midtrans, Weather & Email Notification` (Role 2)
    - `EPIC 3A: FE - Customer Landing, Catalog & Weather UI` (Role 3A)
    - `EPIC 3B: FE - Customer Checkout, Payment & Digital Receipt` (Role 3B)
    - `EPIC 4: FE - Vendor POS, Pickup Foto KTP, Return & QA` (Role 4)
