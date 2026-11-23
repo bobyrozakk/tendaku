@@ -55,14 +55,6 @@
                             Riwayat Sewa
                         </a>
                     @endauth
-                    <!-- Design System pill -->
-                    <a href="{{ url('/design-system') }}"
-                       class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150"
-                       style="background: rgba(251, 206, 107, 0.12); color: #fbce6b; border: 1px solid rgba(251, 206, 107, 0.3);"
-                       onmouseover="this.style.background='rgba(251,206,107,0.22)'" onmouseout="this.style.background='rgba(251,206,107,0.12)'">
-                        <span class="w-1.5 h-1.5 rounded-full" style="background: #fbce6b;"></span>
-                        Design System
-                    </a>
                 </div>
             </div>
 
@@ -210,10 +202,6 @@
                     Akun Saya
                 </a>
             @endauth
-            <a href="{{ url('/design-system') }}"
-               class="block px-3.5 py-2 rounded-xl text-xs font-bold text-sunglow-300 bg-sunglow-400/10 border border-sunglow-300/30">
-                • Design System
-            </a>
             @guest
                 <div class="pt-2 border-t border-white/10 flex items-center gap-2">
                     <a href="{{ route('login') }}" class="flex-1 text-center py-2 rounded-xl text-xs font-semibold text-wheat-200 border border-wheat-400/30 hover:bg-white/10">
