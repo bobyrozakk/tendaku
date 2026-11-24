@@ -30,19 +30,13 @@
             </span>
 
             <span wire:loading wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
-                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
+                <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
                 <span>Menyiapkan checkout...</span>
             </span>
         </span>
 
         <span x-show="redirecting" x-cloak style="display: none" class="flex items-center gap-2">
-            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-            </svg>
+            <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
             <span>Menyiapkan checkout...</span>
         </span>
     </button>
@@ -68,10 +62,7 @@
                 <i data-lucide="shopping-cart" class="w-4 h-4 text-avocado-700"></i>
             </span>
             <span wire:loading wire:target="addToCart" class="flex items-center gap-1.5">
-                <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
+                <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
                 <span>Menyimpan...</span>
             </span>
         </button>

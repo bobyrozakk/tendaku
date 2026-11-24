@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validasi POST /paket-camping/{id}/checkout.
+ * Validasi POST /paket-camping/{id}/booking.
  */
 class StorePackageCheckoutRequest extends FormRequest
 {

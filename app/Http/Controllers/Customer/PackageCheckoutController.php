@@ -109,7 +109,7 @@ class PackageCheckoutController extends Controller
                     return response()->json(['success' => false, 'status' => 'shipping_changed', 'message' => $message, 'shipping' => $preview], 409);
                 }
 
-                return redirect()->route('customer.packages.checkout', $id)->withInput()->with('shipping_conflict', $message);
+                return redirect()->route('customer.packages.booking', $id)->withInput()->with('shipping_conflict', $message);
             }
             $userUpdates = [];
             foreach (['phone', 'nik'] as $field) {
@@ -143,7 +143,7 @@ class PackageCheckoutController extends Controller
                 return response()->json(['success' => false, 'status' => $exception->errorCode, 'message' => $exception->getMessage(), 'delivery_fee' => null], $exception->httpStatus);
             }
 
-            return redirect()->route('customer.packages.checkout', $id)->withInput()->with('warning', $exception->getMessage());
+            return redirect()->route('customer.packages.booking', $id)->withInput()->with('warning', $exception->getMessage());
         } catch (InsufficientStockException $exception) {
             if ($request->expectsJson()) {
                 return response()->json(['success' => false, 'status' => 'insufficient_stock', 'message' => $exception->getMessage(), 'delivery_fee' => null], 422);

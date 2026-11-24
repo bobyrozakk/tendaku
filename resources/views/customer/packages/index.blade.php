@@ -112,7 +112,7 @@
                             <!-- Info -->
                             <div class="p-5 space-y-3">
                                 @if($package->vendor)
-                                    <a href="{{ route('customer.stores.show', $package->vendor->slug ?? $package->vendor_id) }}" 
+                                    <a href="{{ route('customer.stores.show', $package->vendor->slug ?? $package->vendor_id) }}"
                                        class="inline-flex items-center gap-1.5 text-xs font-semibold text-goldenrod-800 hover:text-avocado-700 transition max-w-full"
                                        title="Kunjungi Toko {{ $package->vendor->name }}">
                                         <i data-lucide="store" class="w-3.5 h-3.5 text-goldenrod-600 shrink-0"></i>
@@ -167,14 +167,10 @@
                                 @endif
                             </div>
 
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid gap-2">
                                 <a href="{{ route('customer.packages.show', $package) }}"
-                                   class="py-2.5 px-3 rounded-xl text-xs font-bold text-center text-darkbrown-800 bg-wheat-100 hover:bg-wheat-200 transition">
-                                    Lihat Detail
-                                </a>
-                                <a href="{{ route('customer.packages.show', ['id' => $package->id]) }}"
                                    class="btn-tendaku-primary py-2.5 px-3 rounded-xl text-xs font-bold text-center shadow-md hover:shadow-lg transition-all">
-                                    Sewa Paket
+                                    Lihat Detail
                                 </a>
                             </div>
                         </div>

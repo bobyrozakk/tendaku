@@ -118,13 +118,13 @@ Route::get('/toko/{vendor}', [StoreController::class, 'show'])->name('customer.s
 Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/paket-camping', [CustomerCampingPackageController::class, 'index'])
         ->name('customer.packages.index');
-    Route::get('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'index'])
+    Route::get('/paket-camping/{id}/booking', [PackageCheckoutController::class, 'index'])
         ->whereNumber('id')
-        ->name('customer.packages.checkout');
-    Route::post('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'store'])
+        ->name('customer.packages.booking');
+    Route::post('/paket-camping/{id}/booking', [PackageCheckoutController::class, 'store'])
         ->whereNumber('id')
         ->block(120, 5)
-        ->name('customer.packages.checkout.store');
+        ->name('customer.packages.booking.store');
     Route::get('/paket-camping/{id}', [CustomerCampingPackageController::class, 'show'])
         ->whereNumber('id')
         ->name('customer.packages.show');

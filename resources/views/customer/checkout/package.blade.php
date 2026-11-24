@@ -65,7 +65,7 @@
     @endphp
 
     <div x-data="packageCheckout({{ \Illuminate\Support\Js::from($packageCheckoutConfig) }})">
-        <form method="POST" action="{{ route('customer.packages.checkout.store', $package) }}"
+        <form method="POST" action="{{ route('customer.packages.booking.store', $package) }}"
               class="grid grid-cols-1 lg:grid-cols-12 gap-8 py-2" @submit.prevent="submitBooking($event.currentTarget)" :inert="isSubmitting">
             @csrf
             <input type="hidden" name="package_id" value="{{ $package->id }}" />

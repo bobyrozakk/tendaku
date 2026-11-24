@@ -457,7 +457,7 @@
                                                     <p class="text-[11px] text-darkbrown-400 line-through">Rp {{ number_format($normalPrice, 0, ',', '.') }}</p>
                                                 @endif
                                             </div>
-                                            <a href="{{ route('customer.packages.checkout', $package->id) }}"
+                                            <a href="{{ route('customer.packages.booking', $package->id) }}"
                                                title="Sewa {{ $package->name }}"
                                                aria-label="Sewa paket {{ $package->name }}"
                                                class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-darkbrown-800 text-wheat-200 transition hover:bg-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 active:scale-95">

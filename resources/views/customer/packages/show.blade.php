@@ -10,7 +10,7 @@
         $vendorName = $vendor?->name ?? 'Tendaku Vendor';
         $storeUrl = $vendor ? route('customer.stores.show', $vendor->slug ?? $package->vendor_id) : null;
         $formattedPrice = number_format($price, 0, ',', '.');
-        $checkoutUrl = route('customer.packages.checkout', ['id' => $package->id]);
+        $checkoutUrl = route('customer.packages.booking', ['id' => $package->id]);
 
         $imageOf = fn ($item) => $item?->images?->pluck('image_url')->filter()->first() ?: ($item?->image_url ?: null);
 
