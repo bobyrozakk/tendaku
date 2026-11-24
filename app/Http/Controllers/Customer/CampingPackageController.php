@@ -53,7 +53,7 @@ class CampingPackageController extends Controller
     {
         /** @var CampingPackage $package */
         $package = CampingPackage::publicCatalog()
-            ->with(['vendor', 'packageItems.masterItem.category', 'packageItems.masterItem.units', 'masterItems'])
+            ->with(['vendor', 'packageItems.masterItem.category', 'packageItems.masterItem.units', 'packageItems.masterItem.images', 'masterItems'])
             ->findOrFail($id);
 
         return view('customer.packages.show', compact('package'));

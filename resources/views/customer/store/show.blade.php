@@ -451,7 +451,7 @@
                                             <div class="min-w-0">
                                                 <p class="text-base font-extrabold text-darkbrown-900">
                                                     Rp {{ number_format((float) $package->price, 0, ',', '.') }}
-                                                    <span class="text-[11px] font-semibold text-darkbrown-500">/paket</span>
+                                                    <span class="text-[11px] font-semibold text-darkbrown-500">/hari</span>
                                                 </p>
                                                 @if($normalPrice > (float) $package->price)
                                                     <p class="text-[11px] text-darkbrown-400 line-through">Rp {{ number_format($normalPrice, 0, ',', '.') }}</p>

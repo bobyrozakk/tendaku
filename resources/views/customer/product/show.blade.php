@@ -1,13 +1,4 @@
 <x-layouts.customer>
-    <x-slot name="header">
-        <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs font-semibold text-darkbrown-600">
-            <a href="{{ route('customer.catalog.index', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="hover:text-avocado-700 transition flex items-center gap-1.5 shrink-0">
-                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-                <span>Kembali ke Katalog</span>
-            </a>
-        </nav>
-    </x-slot>
-
     @php
         $vendorName = $item->vendor?->name ?? 'Tendaku Vendor';
     @endphp
@@ -15,7 +6,14 @@
     <!-- Container Utama Detail Produk -->
     <div x-data="{ showGuestStoreModal: false }"
          @open-guest-store-modal.window="showGuestStoreModal = true"
-         class="py-2">
+         class="flex flex-col gap-6">
+
+        <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs font-semibold text-darkbrown-500">
+            <a href="{{ route('customer.catalog.index', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="inline-flex shrink-0 items-center gap-1.5 transition hover:text-avocado-700">
+                <i data-lucide="arrow-left" class="h-3.5 w-3.5"></i>
+                <span>Kembali ke Katalog</span>
+            </a>
+        </nav>
 
         <livewire:customer.product-booking :product="$item" :start-date="$startDate" :end-date="$endDate" />
 
