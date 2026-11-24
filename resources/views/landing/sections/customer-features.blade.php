@@ -54,8 +54,6 @@
                      'desc'=>'Pilih ambil sendiri di outlet vendor (gratis) atau diantar langsung ke lokasi Anda.'],
                     ['icon'=>'activity',       'color'=>'sunglow',   'title'=>'Pantau Status Booking',
                      'desc'=>'Cek status pemesanan secara real-time — mulai dari konfirmasi, siap pickup, hingga selesai.'],
-                    ['icon'=>'message-circle', 'color'=>'avocado',   'title'=>'Notifikasi WhatsApp',
-                     'desc'=>'Notifikasi jadwal pickup, pengingat pengembalian, dan konfirmasi booking langsung via WA.'],
                     ['icon'=>'clock',          'color'=>'goldenrod',  'title'=>'Riwayat Penyewaan Lengkap',
                      'desc'=>'Semua history sewa tersimpan rapi — mudah dilihat kembali untuk booking selanjutnya.'],
                     ['icon'=>'cloud-sun',      'color'=>'avocado',   'title'=>'Cek Cuaca Sebelum Sewa',

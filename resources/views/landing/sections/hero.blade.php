@@ -58,7 +58,7 @@
         <div class="flex flex-wrap items-center justify-center gap-3 pt-1 text-xs text-wheat-200" data-sr data-sr-delay="320">
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/15">
                 <i data-lucide="shield-check" class="w-3.5 h-3.5 text-sunglow-300"></i>
-                Deposit Rp 0 (KTP)
+                Deposit Rp 0
             </span>
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/15">
                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-sunglow-300"></i>

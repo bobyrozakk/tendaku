@@ -11,10 +11,6 @@
                     {{-- Gradient Scrim & Floating Badge --}}
                     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none"></div>
                     <div class="absolute bottom-6 left-6 right-6 text-white space-y-2 pointer-events-none">
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-avocado-600/90 backdrop-blur-md text-xs font-bold text-white shadow-sm">
-                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
-                            Deposit Rp 0 • Jaminan KTP Asli
-                        </span>
                         <h4 class="font-display text-xl text-white font-bold leading-tight">Camping Aman & Bebas Cemas</h4>
                         <p class="text-xs text-wheat-200 leading-relaxed">KTP fisik Anda disimpan aman oleh mitra vendor dan langsung dikembalikan saat serah terima pengembalian alat.</p>
                     </div>
