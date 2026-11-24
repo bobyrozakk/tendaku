@@ -240,7 +240,7 @@ class CatalogIndex extends Component
             ->get(['id', 'name']);
 
         $itemsQuery = MasterItem::publicCatalog()
-            ->with(['category', 'vendor']);
+            ->with(['category:id,name', 'vendor:id,name,slug', 'units:id,master_item_id,condition,purchase_date']);
 
         $trimmedSearch = trim($this->search);
         if ($trimmedSearch !== '') {
@@ -276,19 +276,21 @@ class CatalogIndex extends Component
         $dateRange = $availability->dateRange($this->startDate, $this->endDate);
         $dateStockMap = [];
         if ($this->onlyAvailable) {
-            $candidateItems = (clone $itemsQuery)->setEagerLoads([])->get(['id']);
-            foreach ($candidateItems as $item) {
-                $dateStockMap[$item->id] = $availability->stock($item->id, $dateRange);
-            }
+            $candidateIds = (clone $itemsQuery)->setEagerLoads([])->pluck('id')->all();
+            $dateStockMap = $availability->batchStock($candidateIds, $dateRange);
             $availableIds = array_keys(array_filter($dateStockMap, fn (?int $stock): bool => $stock !== null && $stock > 0));
             $itemsQuery->whereIn('id', $availableIds);
         }
 
         $items = $itemsQuery->paginate(12);
+        $missingIds = [];
         foreach ($items as $item) {
             if (! array_key_exists($item->id, $dateStockMap)) {
-                $dateStockMap[$item->id] = $availability->stock($item->id, $dateRange);
+                $missingIds[] = $item->id;
             }
+        }
+        if (! empty($missingIds)) {
+            $dateStockMap += $availability->batchStock($missingIds, $dateRange);
         }
 
         return view('livewire.customer.catalog-index', [

@@ -32,9 +32,6 @@
 
         <div class="pointer-events-none absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
             <x-stock-status :stock="$unitCount" size="sm" class="shadow-sm" />
-            <span class="inline-flex items-center rounded-full border border-sunglow-200/70 bg-sunglow-300/95 px-2.5 py-1 text-[11px] font-bold text-darkbrown-900 shadow-sm">
-                Tanpa Deposit
-            </span>
         </div>
     </div>
 
@@ -65,16 +62,20 @@
             {{ $item->description ?? 'Peralatan outdoor kualitas standar pendakian gunung, steril & siap pakai.' }}
         </p>
 
+        @php
+            $dominantCondition = $item->dominant_condition;
+            $itemAge = $item->item_age;
+        @endphp
         <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-darkbrown-500">
-            @if ($item->dominant_condition)
+            @if ($dominantCondition)
                 <span class="inline-flex items-center gap-1">
                     <i data-lucide="shield-check" class="h-3 w-3 text-avocado-600" aria-hidden="true"></i>
-                    {{ $item->dominant_condition }}
+                    {{ $dominantCondition }}
                 </span>
             @endif
-            @if ($item->item_age)
+            @if ($itemAge)
                 <span class="text-wheat-400" aria-hidden="true">•</span>
-                <span>{{ $item->item_age }}</span>
+                <span>{{ $itemAge }}</span>
             @endif
         </div>
     </div>

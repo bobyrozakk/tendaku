@@ -135,7 +135,7 @@ class CatalogStockConsistencyTest extends TestCase
         $this->actingAs($customer);
 
         Livewire::test(CatalogIndex::class)->call('addToCart', $item->id)
-            ->assertDispatched('notify', fn ($event, $parameters): bool => $parameters[0]['type'] === 'error');
+            ->assertDispatched('notify', fn ($event, $parameters): bool => ($parameters['type'] ?? $parameters[0]['type'] ?? null) === 'error');
         $this->assertNull(session(CartService::SESSION_KEY));
         Livewire::test(CatalogIndex::class)->set('startDate', '2026-11-22')->set('endDate', '2026-11-24')
             ->call('addToCart', $item->id)->assertHasNoErrors();

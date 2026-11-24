@@ -29,14 +29,11 @@ class CatalogController extends Controller
             $request->string('end_date')->toString(),
         );
         $popularItems = MasterItem::publicCatalog()
-            ->with(['category', 'vendor'])
+            ->with(['category:id,name', 'vendor:id,name,slug', 'units:id,master_item_id,condition,purchase_date'])
             ->latest('id')
             ->limit(3)
             ->get();
-        $dateStockMap = [];
-        foreach ($popularItems as $item) {
-            $dateStockMap[$item->id] = $this->availability->stock($item->id, $dateRange);
-        }
+        $dateStockMap = $this->availability->batchStock($popularItems->pluck('id')->all(), $dateRange);
 
         return view('welcome', compact('popularItems', 'dateRange', 'dateStockMap'));
     }

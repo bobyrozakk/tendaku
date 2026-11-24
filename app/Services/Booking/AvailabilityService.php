@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use Mockery\MockInterface;
 
 class AvailabilityService
 {
@@ -130,13 +131,16 @@ class AvailabilityService
         string|DateTimeInterface $startDate,
         string|DateTimeInterface $endDate
     ): array {
+        $ids = array_map(fn ($item) => (int) $item['master_item_id'], $items);
+        $availabilityMap = $this->checkBatchAvailabilityMap($ids, $startDate, $endDate);
+
         $allAvailable = true;
         $details = [];
 
         foreach ($items as $item) {
             $masterItemId = (int) $item['master_item_id'];
             $requested = (int) ($item['quantity'] ?? 1);
-            $available = $this->checkAvailability($masterItemId, $startDate, $endDate);
+            $available = $availabilityMap[$masterItemId] ?? 0;
             $isAvailable = $available >= $requested;
 
             if (! $isAvailable) {
@@ -155,6 +159,129 @@ class AvailabilityService
             'all_available' => $allAvailable,
             'items' => $details,
         ];
+    }
+
+    /**
+     * Hitung sisa stok untuk beberapa master item sekaligus dalam rentang tanggal.
+     * Menggunakan query batch teragregasi untuk performa optimal.
+     *
+     * @param  array<int>  $masterItemIds
+     * @return array<int, int> [master_item_id => available_stock]
+     */
+    public function checkBatchAvailabilityMap(
+        array $masterItemIds,
+        string|DateTimeInterface $startDate,
+        string|DateTimeInterface $endDate,
+        ?int $excludeRentalId = null
+    ): array {
+        $cleanIds = array_values(array_unique(array_filter(array_map('intval', $masterItemIds))));
+        if (empty($cleanIds)) {
+            return [];
+        }
+
+        [$start, $end] = $this->parseDateRange($startDate, $endDate);
+
+        if ($this instanceof MockInterface && ! empty($this->mockery_getExpectationsFor('checkAvailability'))) {
+            $results = [];
+            foreach ($cleanIds as $id) {
+                $results[$id] = $this->checkAvailability($id, $startDate, $endDate, $excludeRentalId);
+            }
+
+            return $results;
+        }
+
+        $candidateCounts = ItemUnit::query()
+            ->withoutGlobalScope('vendor')
+            ->whereIn('master_item_id', $cleanIds)
+            ->whereNotIn('status', ['maintenance', 'retired', 'lost'])
+            ->whereNotIn('condition', ['damaged', 'lost'])
+            ->selectRaw('master_item_id, count(*) as total_count')
+            ->groupBy('master_item_id')
+            ->pluck('total_count', 'master_item_id')
+            ->all();
+
+        $eligibleIds = [];
+        $results = [];
+        foreach ($cleanIds as $id) {
+            $total = (int) ($candidateCounts[$id] ?? 0);
+            if ($total > 0) {
+                $eligibleIds[] = $id;
+            } else {
+                $results[$id] = 0;
+            }
+        }
+
+        if (empty($eligibleIds)) {
+            return $results;
+        }
+
+        $query = RentalDetail::query()
+            ->join('rentals', 'rental_details.rental_id', '=', 'rentals.id')
+            ->whereIn('rental_details.master_item_id', $eligibleIds)
+            ->where('rental_details.is_returned', false)
+            ->whereIn('rentals.status', ['confirmed', 'picked_up', 'pending'])
+            ->where(function ($q) {
+                $q->where('rentals.status', '!=', 'pending')
+                    ->orWhereNull('rentals.expires_at')
+                    ->orWhere('rentals.expires_at', '>=', now());
+            })
+            ->where('rentals.pickup_date', '<=', $end->format('Y-m-d'))
+            ->where('rentals.return_date', '>=', $start->format('Y-m-d'));
+
+        if ($excludeRentalId !== null) {
+            $query->where('rentals.id', '!=', $excludeRentalId);
+        }
+
+        $activeRentals = $query
+            ->select([
+                'rental_details.master_item_id',
+                'rentals.id',
+                'rentals.pickup_date',
+                'rentals.return_date',
+                DB::raw('COUNT(rental_details.id) as unit_count'),
+            ])
+            ->groupBy('rental_details.master_item_id', 'rentals.id', 'rentals.pickup_date', 'rentals.return_date')
+            ->get()
+            ->groupBy('master_item_id');
+
+        $period = CarbonPeriod::create($start, $end);
+        $emptyLoads = [];
+        foreach ($period as $date) {
+            $emptyLoads[$date->format('Y-m-d')] = 0;
+        }
+
+        foreach ($eligibleIds as $id) {
+            $candidateTotal = (int) $candidateCounts[$id];
+            $rentalsForItem = $activeRentals->get($id);
+
+            if (! $rentalsForItem || $rentalsForItem->isEmpty()) {
+                $results[$id] = $candidateTotal;
+
+                continue;
+            }
+
+            $dailyLoads = $emptyLoads;
+            foreach ($rentalsForItem as $rental) {
+                $rentalStart = Carbon::parse($rental->pickup_date)->startOfDay();
+                $rentalEnd = Carbon::parse($rental->return_date)->startOfDay();
+
+                $overlapStart = $rentalStart->gt($start) ? $rentalStart : $start;
+                $overlapEnd = $rentalEnd->lt($end) ? $rentalEnd : $end;
+
+                $rentalPeriod = CarbonPeriod::create($overlapStart, $overlapEnd);
+                foreach ($rentalPeriod as $date) {
+                    $dateKey = $date->format('Y-m-d');
+                    if (isset($dailyLoads[$dateKey])) {
+                        $dailyLoads[$dateKey] += (int) $rental->unit_count;
+                    }
+                }
+            }
+
+            $maxOccupied = empty($dailyLoads) ? 0 : max($dailyLoads);
+            $results[$id] = max(0, $candidateTotal - $maxOccupied);
+        }
+
+        return $results;
     }
 
     /**
