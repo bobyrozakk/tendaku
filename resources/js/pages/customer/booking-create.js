@@ -366,10 +366,19 @@ document.addEventListener("alpine:init", () => {
                 iso >= this.pickupDate &&
                 iso <= this.returnDate;
 
+            // Tidak bisa dipilih karena sudah lewat / penuh (beda dari sekadar
+            // "sebelum tanggal ambil"), dipakai untuk warna abu-abu di kalender.
+            const isFull =
+                isBooked ||
+                (this.calOpen === "return" &&
+                    this.pickupDate &&
+                    this.hasBookedDateInRange(this.pickupDate, iso));
+
             return {
                 day: Number(iso.slice(8, 10)),
                 iso: iso,
                 outside: outside,
+                unavailable: isPast || isFull,
                 disabled: isPast || isBlocked,
                 selected: isSelected,
                 inRange: inRange,
@@ -432,6 +441,17 @@ document.addEventListener("alpine:init", () => {
                 }
             }
             this.availabilityKey = this.availabilitySignature();
+            // Jadwal bawaan sudah penuh: tampilkan peringatan sejak awal
+            if (
+                this.pickupDate &&
+                this.returnDate &&
+                this.hasBookedDateInRange(this.pickupDate, this.returnDate)
+            ) {
+                this.errors = {
+                    ...this.errors,
+                    dates: "Sebagian tanggal pada periode ini sudah penuh dipesan. Pilih jadwal lain.",
+                };
+            }
             this.startCountdown();
             if (this.selectedAddressId) {
                 this.selectAddress(this.selectedAddressId);

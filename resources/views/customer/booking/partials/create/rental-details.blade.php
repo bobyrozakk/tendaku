@@ -70,10 +70,11 @@
                                                 <template x-if="!cell.empty">
                                                     <button type="button" :disabled="cell.disabled" @click="selectCalDate(cell.iso)"
                                                             :class="[
-                                                                cell.selected ? 'bg-avocado-700 text-white font-bold shadow-xs' :
+                                                                cell.unavailable ? 'bg-gray-200 text-gray-400 cursor-not-allowed' :
+                                                                (cell.selected ? 'bg-avocado-700 text-white font-bold shadow-xs' :
                                                                 (cell.inRange ? 'bg-avocado-100 text-avocado-900 font-semibold' :
-                                                                (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium'))
-                                                                , (cell.outside && !cell.selected && !cell.disabled) ? 'opacity-50' : ''
+                                                                (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium')))
+                                                                , (cell.outside && (!cell.selected || cell.unavailable)) ? 'opacity-50' : ''
                                                             ]"
                                                             class="w-7 h-7 rounded-lg inline-flex items-center justify-center transition text-xs"
                                                             x-text="cell.day">
@@ -180,10 +181,11 @@
                                                 <template x-if="!cell.empty">
                                                     <button type="button" :disabled="cell.disabled" @click="selectCalDate(cell.iso)"
                                                             :class="[
-                                                                cell.selected ? 'bg-goldenrod-600 text-white font-bold shadow-xs' :
+                                                                cell.unavailable ? 'bg-gray-200 text-gray-400 cursor-not-allowed' :
+                                                                (cell.selected ? 'bg-goldenrod-600 text-white font-bold shadow-xs' :
                                                                 (cell.inRange ? 'bg-sunglow-100 text-darkbrown-900 font-semibold' :
-                                                                (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium'))
-                                                                , (cell.outside && !cell.selected && !cell.disabled) ? 'opacity-50' : ''
+                                                                (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium')))
+                                                                , (cell.outside && (!cell.selected || cell.unavailable)) ? 'opacity-50' : ''
                                                             ]"
                                                             class="w-7 h-7 rounded-lg inline-flex items-center justify-center transition text-xs"
                                                             x-text="cell.day">
@@ -225,13 +227,13 @@
                                         <div class="inline-flex items-center rounded-2xl border-2 border-wheat-200 bg-white shadow-sm overflow-hidden p-0.5">
                                             <button type="button" @click="changeQty(i, -1)" :disabled="item.qty <= 1" aria-label="Kurangi unit"
                                                     class="w-8 h-8 rounded-xl flex items-center justify-center text-base font-black text-darkbrown-800 hover:bg-wheat-100 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition">
-                                                −
+                                                <i data-lucide="minus" class="h-4 w-4"></i>
                                             </button>
                                             <input type="number" min="1" :max="item.max_qty" x-model.number="item.qty" @change="clampQty(i)" aria-label="Jumlah unit"
                                                    class="w-10 border-0 p-0 text-center text-sm font-black text-darkbrown-900 focus:ring-0">
                                             <button type="button" @click="changeQty(i, 1)" :disabled="item.qty >= item.max_qty" aria-label="Tambah unit"
                                                     class="w-8 h-8 rounded-xl flex items-center justify-center text-base font-black text-darkbrown-800 hover:bg-wheat-100 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed transition">
-                                                +
+                                                <i data-lucide="plus" class="h-4 w-4"></i>
                                             </button>
                                         </div>
 
