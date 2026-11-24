@@ -34,7 +34,7 @@ return [
             'title' => 'Informasi & Bantuan',
             'links' => [
                 ['label' => 'Sewa Tenda',                  'url' => '/katalog?search=tenda'],
-                ['label' => 'Perlengkapan Camping',        'url' => '/katalog'],
+                ['label' => 'Paket Camping',        'url' => '/paket-camping'],
                 ['label' => 'Jaminan KTP & Pengembalian',  'modal' => 'collateral'],
                 ['label' => 'Kebijakan Pembatalan',        'modal' => 'cancellation'],
                 ['label' => 'FAQ',                         'modal' => 'faq'],
