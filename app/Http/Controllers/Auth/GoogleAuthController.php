@@ -166,6 +166,13 @@ class GoogleAuthController extends Controller
             return redirect()->route('login')->with('status', 'Akun ini sudah terhubung ke akun Supabase lain.');
         }
 
+        $avatarUrl = trim((string) (
+            data_get($googleIdentity, 'identity_data.avatar_url')
+            ?: data_get($googleIdentity, 'identity_data.picture')
+            ?: data_get($supabaseUser, 'user_metadata.avatar_url')
+            ?: data_get($supabaseUser, 'user_metadata.picture')
+        )) ?: null;
+
         if ($user === null) {
             $name = trim((string) data_get($googleIdentity, 'identity_data.full_name'))
                 ?: trim((string) data_get($googleIdentity, 'identity_data.name'))
@@ -177,6 +184,7 @@ class GoogleAuthController extends Controller
                 'password' => Str::random(64),
                 'google_id' => $googleId,
                 'supabase_user_id' => $supabaseUserId,
+                'avatar_url' => $avatarUrl,
                 'role' => 'customer',
             ]);
 
@@ -185,6 +193,7 @@ class GoogleAuthController extends Controller
             $user->forceFill([
                 'google_id' => $googleId,
                 'supabase_user_id' => $supabaseUserId,
+                'avatar_url' => $avatarUrl ?: $user->avatar_url,
                 'email_verified_at' => $user->email_verified_at ?? now(),
             ])->save();
         }

@@ -121,9 +121,24 @@
                             Dashboard Admin
                         </a>
                     @else
+                        @php
+                            $navbarUser = auth()->user();
+                        @endphp
                         <a href="{{ route('profile') }}"
-                           class="tendaku-nav-btn-secondary hidden sm:inline-flex">
-                            Akun Saya
+                           class="inline-flex items-center justify-center rounded-full p-0.5 transition-all duration-200 hover:ring-2 hover:ring-sunglow-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300"
+                           title="{{ $navbarUser->name }} (Akun Saya)"
+                           aria-label="Akun Saya">
+                            @if ($navbarUser->avatar_url)
+                                <img src="{{ $navbarUser->avatar_url }}"
+                                     alt="{{ $navbarUser->name }}"
+                                     referrerpolicy="no-referrer"
+                                     class="w-9 h-9 rounded-full object-cover border border-white/20 shadow-sm"
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'w-9 h-9 rounded-full bg-gradient-to-br from-sunglow-300 to-goldenrod-500 text-darkbrown-900 font-bold text-xs flex items-center justify-center border border-white/20 shadow-sm\'>{{ addslashes($navbarUser->initials) }}</span>';">
+                            @else
+                                <span class="w-9 h-9 rounded-full bg-gradient-to-br from-sunglow-300 to-goldenrod-500 text-darkbrown-900 font-bold text-xs flex items-center justify-center border border-white/20 shadow-sm tracking-wider">
+                                    {{ $navbarUser->initials }}
+                                </span>
+                            @endif
                         </a>
                     @endif
 
@@ -190,8 +205,22 @@
                     Riwayat Sewa
                 </a>
                 <a href="{{ route('profile') }}"
-                   class="tendaku-nav-link tendaku-nav-link-block">
-                    Akun Saya
+                   class="tendaku-nav-link tendaku-nav-link-block flex items-center gap-2.5">
+                    @if (auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}"
+                             alt="{{ auth()->user()->name }}"
+                             referrerpolicy="no-referrer"
+                             class="w-6 h-6 rounded-full object-cover border border-white/20 shadow-sm"
+                             onerror="this.onerror=null; this.parentElement.querySelector('.mobile-initials-fallback')?.classList.remove('hidden'); this.remove();">
+                        <span class="mobile-initials-fallback hidden w-6 h-6 rounded-full bg-gradient-to-br from-sunglow-300 to-goldenrod-500 text-darkbrown-900 font-bold text-[10px] flex items-center justify-center border border-white/20 shadow-sm">
+                            {{ auth()->user()->initials }}
+                        </span>
+                    @else
+                        <span class="w-6 h-6 rounded-full bg-gradient-to-br from-sunglow-300 to-goldenrod-500 text-darkbrown-900 font-bold text-[10px] flex items-center justify-center border border-white/20 shadow-sm">
+                            {{ auth()->user()->initials }}
+                        </span>
+                    @endif
+                    <span>Akun Saya</span>
                 </a>
             @endauth
             @guest
