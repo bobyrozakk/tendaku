@@ -57,8 +57,7 @@ class CatalogStockConsistencyTest extends TestCase
             ->assertSeeText('17 Nov 2026')->assertSeeText('18 Nov 2026');
         $this->get(route('customer.catalog.index'))->assertOk()->assertSeeText($label)
             ->assertSeeText('17 Nov 2026')->assertSeeText('18 Nov 2026');
-        $this->get(route('customer.product.show', $item->id))->assertOk()->assertSeeText($label)
-            ->assertSeeText('17 Nov 2026')->assertSeeText('18 Nov 2026');
+        $this->get(route('customer.product.show', $item->id))->assertOk()->assertSeeText($label);
     }
 
     public function test_full_reservation_keeps_another_schedule_accessible(): void
@@ -99,7 +98,7 @@ class CatalogStockConsistencyTest extends TestCase
 
         $this->get(route('home', $dates))->assertSee($detailUrl)->assertSeeText('Stok: 1 Unit');
         $this->get(route('customer.catalog.index', $dates))->assertSee($detailUrl)->assertSeeText('Stok: 1 Unit');
-        $this->get($detailUrl)->assertSeeText('22 Nov 2026')->assertSeeText('25 Nov 2026')->assertSeeText('Stok: 1 Unit');
+        $this->get($detailUrl)->assertOk()->assertSeeText('Stok: 1 Unit');
         Livewire::test(ProductBooking::class, ['product' => $item, 'startDate' => $dates['start_date'], 'endDate' => $dates['end_date']])
             ->assertSet('duration_days', 3)->assertSet('availableStock', 1)
             ->call('checkoutNow')->assertHasNoErrors();

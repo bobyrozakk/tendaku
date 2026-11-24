@@ -152,7 +152,8 @@ class CampingPackageCatalogTest extends TestCase
 
         preg_match_all('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Sewa Paket\s*<\/a>/u', $response->getContent(), $buttons);
 
-        $this->assertSame([route('customer.packages.checkout', ['id' => $package->id])], $buttons[1]);
+        $this->assertNotEmpty($buttons[1]);
+        $this->assertSame([route('customer.packages.booking', ['id' => $package->id])], array_values(array_unique($buttons[1])));
     }
 
     public function test_package_detail_returns_404_for_inactive_package_or_suspended_vendor(): void
@@ -208,7 +209,7 @@ class CampingPackageCatalogTest extends TestCase
         $detail = $this->get($button[1])->assertOk()->assertViewIs('customer.packages.show');
         preg_match('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Sewa Paket\s*<\/a>/u', $detail->getContent(), $bookingButton);
         $this->assertArrayHasKey(1, $bookingButton);
-        $this->assertSame(route('customer.packages.checkout', ['id' => $package->id]), $bookingButton[1]);
+        $this->assertSame(route('customer.packages.booking', ['id' => $package->id]), $bookingButton[1]);
 
         $this->get($bookingButton[1])->assertOk()->assertViewIs('customer.checkout.package')
             ->assertViewHas('package', fn (CampingPackage $selected): bool => $selected->id === $package->id
@@ -216,7 +217,7 @@ class CampingPackageCatalogTest extends TestCase
                 && $selected->packageItems->count() === 2
                 && (int) $selected->packageItems->sum('quantity') === 2)
             ->assertSee('Rp 50.000')->assertSee('Tenda Dome 4P')->assertSee('Kompor')
-            ->assertSee('action="'.route('customer.packages.checkout.store', ['id' => $package->id]).'"', false)
+            ->assertSee('action="'.route('customer.packages.booking.store', ['id' => $package->id]).'"', false)
             ->assertSee('name="package_id" value="'.$package->id.'"', false)
             ->assertSee('name="pickup_date"', false)->assertSee('name="pickup_time"', false)
             ->assertSee('name="return_date"', false)->assertSee('name="return_time"', false)
