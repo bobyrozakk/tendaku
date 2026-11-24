@@ -382,6 +382,121 @@ class AvailabilityService
     }
 
     /**
+     * Sisa unit per hari untuk kalender ketersediaan (tanggal yang punya booking ikut tertandai,
+     * bukan hanya yang stoknya habis). Memakai aturan booking aktif yang sama dengan checkAvailability().
+     *
+     * @return array{total: int, days: array<string, int>} total unit layak sewa dan map 'Y-m-d' => sisa unit
+     */
+    public function dailyAvailability(
+        int $masterItemId,
+        string|DateTimeInterface|null $from = null,
+        string|DateTimeInterface|null $to = null
+    ): array {
+        $today = Carbon::today();
+        $start = $from !== null ? Carbon::parse($from)->startOfDay() : $today->copy();
+        $end = $to !== null ? Carbon::parse($to)->startOfDay() : $start->copy()->addDays(60);
+
+        if ($start->lt($today)) {
+            $start = $today->copy();
+        }
+
+        if ($end->lt($start)) {
+            return ['total' => 0, 'days' => []];
+        }
+
+        $total = $this->getCandidateUnitsQuery($masterItemId)->count();
+
+        $days = [];
+        foreach (CarbonPeriod::create($start, $end) as $date) {
+            $days[$date->format('Y-m-d')] = $total;
+        }
+
+        if ($total === 0) {
+            return ['total' => 0, 'days' => $days];
+        }
+
+        $activeRentals = RentalDetail::query()
+            ->join('rentals', 'rental_details.rental_id', '=', 'rentals.id')
+            ->where('rental_details.master_item_id', $masterItemId)
+            ->where('rental_details.is_returned', false)
+            ->whereIn('rentals.status', ['confirmed', 'picked_up', 'pending'])
+            ->where(function ($q) {
+                $q->where('rentals.status', '!=', 'pending')
+                    ->orWhereNull('rentals.expires_at')
+                    ->orWhere('rentals.expires_at', '>=', now());
+            })
+            ->where('rentals.pickup_date', '<=', $end->format('Y-m-d'))
+            ->where('rentals.return_date', '>=', $start->format('Y-m-d'))
+            ->select([
+                'rentals.pickup_date',
+                'rentals.return_date',
+                DB::raw('COUNT(rental_details.id) as unit_count'),
+            ])
+            ->groupBy('rentals.id', 'rentals.pickup_date', 'rentals.return_date')
+            ->get();
+
+        foreach ($activeRentals as $rental) {
+            $rentalStart = Carbon::parse($rental->pickup_date)->startOfDay();
+            $rentalEnd = Carbon::parse($rental->return_date)->startOfDay();
+
+            $overlapStart = $rentalStart->gt($start) ? $rentalStart : $start;
+            $overlapEnd = $rentalEnd->lt($end) ? $rentalEnd : $end;
+
+            foreach (CarbonPeriod::create($overlapStart, $overlapEnd) as $date) {
+                $key = $date->format('Y-m-d');
+                if (isset($days[$key])) {
+                    $days[$key] = max(0, $days[$key] - (int) $rental->unit_count);
+                }
+            }
+        }
+
+        return ['total' => $total, 'days' => $days];
+    }
+
+    /**
+     * Sisa paket per hari untuk kalender ketersediaan paket sewa.
+     * Satu paket butuh seluruh itemnya sekaligus, jadi sisa paket per hari =
+     * nilai minimum dari floor(sisa unit item / jumlah item di paket) di semua item.
+     *
+     * @param  iterable<int, array{master_item_id: int, quantity: int}>  $packageItems
+     * @return array{total: int, days: array<string, int>} total paket yang bisa disewa dan map 'Y-m-d' => sisa paket
+     */
+    public function dailyPackageAvailability(
+        iterable $packageItems,
+        string|DateTimeInterface|null $from = null,
+        string|DateTimeInterface|null $to = null
+    ): array {
+        $total = null;
+        $days = [];
+
+        foreach ($packageItems as $packageItem) {
+            $needed = max(1, (int) $packageItem['quantity']);
+            $calendar = $this->dailyAvailability((int) $packageItem['master_item_id'], $from, $to);
+
+            $itemTotal = intdiv((int) $calendar['total'], $needed);
+            $total = $total === null ? $itemTotal : min($total, $itemTotal);
+
+            foreach ($calendar['days'] as $date => $remaining) {
+                $sets = intdiv((int) $remaining, $needed);
+                $days[$date] = isset($days[$date]) ? min($days[$date], $sets) : $sets;
+            }
+        }
+
+        if ($total === null) {
+            return ['total' => 0, 'days' => []];
+        }
+
+        ksort($days);
+
+        // Sisa harian tidak boleh melebihi total paket yang bisa disewa
+        foreach ($days as $date => $sets) {
+            $days[$date] = min($sets, $total);
+        }
+
+        return ['total' => $total, 'days' => $days];
+    }
+
+    /**
      * Ambil query dasar untuk kandidat unit yang layak sewa:
      * item_units milik master item dengan status != 'retired',
      * dan status bukan 'maintenance'.

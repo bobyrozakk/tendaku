@@ -21,8 +21,8 @@
         <span x-show="!redirecting" class="contents">
             <span wire:loading.remove wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
                 @if($canSubmit)
-                    <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
                     <span>Checkout Sekarang</span>
+                    <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
                 @else
                     <i data-lucide="alert-circle" class="w-4 h-4"></i>
                     <span>Pilih Jadwal Lain</span>

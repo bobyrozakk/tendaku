@@ -116,6 +116,11 @@
                             @endif
                         </div>
 
+                        <div class="space-y-3 border-t border-wheat-100 pt-4">
+                            <h2 class="text-xs font-bold uppercase tracking-wider text-darkbrown-800">Ketersediaan</h2>
+                            @include('livewire.customer.partials.availability-calendar', ['calendar' => $availabilityCalendar, 'dateRange' => null, 'embedded' => true, 'unitLabel' => 'paket'])
+                        </div>
+
                         <p class="text-xs leading-relaxed text-darkbrown-600">
                             Pilih jadwal sewa dan metode pengambilan di halaman booking paket.
                         </p>

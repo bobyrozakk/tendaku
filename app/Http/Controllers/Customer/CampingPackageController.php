@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Customer;
 use App\Http\Controllers\Controller;
 use App\Models\CampingPackage;
 use App\Models\Vendor;
+use App\Services\Booking\AvailabilityService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -56,6 +58,20 @@ class CampingPackageController extends Controller
             ->with(['vendor', 'packageItems.masterItem.category', 'packageItems.masterItem.units', 'packageItems.masterItem.images', 'masterItems'])
             ->findOrFail($id);
 
-        return view('customer.packages.show', compact('package'));
+        try {
+            $availabilityCalendar = app(AvailabilityService::class)->dailyPackageAvailability(
+                $package->packageItems->map(fn ($packageItem) => [
+                    'master_item_id' => $packageItem->master_item_id,
+                    'quantity' => $packageItem->quantity,
+                ]),
+                Carbon::today(),
+                Carbon::today()->addDays(60)
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+            $availabilityCalendar = ['total' => 0, 'days' => []];
+        }
+
+        return view('customer.packages.show', compact('package', 'availabilityCalendar'));
     }
 }
