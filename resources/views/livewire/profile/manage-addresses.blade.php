@@ -138,7 +138,7 @@ new class extends Component
             'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
             'is_default' => ['boolean'],
         ], [
-            'label.required' => 'Label alamat (cth: Rumah, Kantor, Kos) wajib diisi.',
+            'label.required' => 'Label alamat (misalnya Rumah, Kantor, atau Kos) wajib diisi.',
             'recipient_name.required' => 'Nama penerima wajib diisi.',
             'phone_number.required' => 'Nomor WhatsApp / telepon wajib diisi.',
             'phone_number.regex' => 'Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka.',
@@ -146,12 +146,12 @@ new class extends Component
             'province.required' => 'Provinsi wajib diisi.',
             'city.required' => 'Kota atau kabupaten wajib diisi.',
             'district.required' => 'Kecamatan wajib diisi.',
-            'latitude.required_with' => 'Titik koordinat latitude wajib diisi jika longitude disertakan.',
-            'latitude.numeric' => 'Koordinat latitude harus berupa angka yang valid.',
-            'latitude.between' => 'Koordinat latitude harus berada antara -90 dan 90.',
-            'longitude.required_with' => 'Titik koordinat longitude wajib diisi jika latitude disertakan.',
-            'longitude.numeric' => 'Koordinat longitude harus berupa angka yang valid.',
-            'longitude.between' => 'Koordinat longitude harus berada antara -180 dan 180.',
+            'latitude.required_with' => 'Koordinat lintang (latitude) wajib diisi jika koordinat bujur diisi.',
+            'latitude.numeric' => 'Koordinat lintang harus berupa angka yang valid.',
+            'latitude.between' => 'Koordinat lintang harus berada antara -90 dan 90.',
+            'longitude.required_with' => 'Koordinat bujur (longitude) wajib diisi jika koordinat lintang diisi.',
+            'longitude.numeric' => 'Koordinat bujur harus berupa angka yang valid.',
+            'longitude.between' => 'Koordinat bujur harus berada antara -180 dan 180.',
         ]);
 
         $validated['latitude'] = $validated['latitude'] !== null
@@ -164,7 +164,7 @@ new class extends Component
         $isDefault = $validated['is_default'] ?? false;
         unset($validated['is_default']);
 
-        // Jika alamat pertama, otomatis set default
+        // Jika alamat pertama, otomatis jadikan alamat utama
         if (! $user->addresses()->exists()) {
             $isDefault = true;
         }
@@ -224,7 +224,7 @@ new class extends Component
     }
 }; ?>
 
-<section>
+<section id="alamat">
     <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-wheat-200 pb-4">
         <div>
             <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
@@ -232,7 +232,7 @@ new class extends Component
                 <span>{{ __('Daftar Alamat Pengantaran') }}</span>
             </h2>
             <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
-                {{ __('Kelola banyak alamat domisili atau titik serah terima pengantaran kurir vendor.') }}
+                {{ __('Kelola alamat domisili atau titik serah terima untuk pengantaran dari vendor.') }}
             </p>
         </div>
 
@@ -252,17 +252,17 @@ new class extends Component
     @if (session('status') === 'address-created')
         <div class="mt-4 p-4 rounded-xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm font-semibold text-avocado-900 flex items-center gap-2">
             <i data-lucide="check-circle" class="w-4 h-4 text-avocado-600 shrink-0"></i>
-            <span>Alamat baru berhasil ditambahkan!</span>
+            <span>Alamat baru berhasil ditambahkan.</span>
         </div>
     @elseif (session('status') === 'address-updated')
         <div class="mt-4 p-4 rounded-xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm font-semibold text-avocado-900 flex items-center gap-2">
             <i data-lucide="check-circle" class="w-4 h-4 text-avocado-600 shrink-0"></i>
-            <span>Alamat berhasil diperbarui!</span>
+            <span>Alamat berhasil diperbarui.</span>
         </div>
     @elseif (session('status') === 'address-deleted')
         <div class="mt-4 p-4 rounded-xl bg-wheat-100 border border-wheat-300 text-xs sm:text-sm font-semibold text-darkbrown-800 flex items-center gap-2">
             <i data-lucide="trash-2" class="w-4 h-4 text-darkbrown-600 shrink-0"></i>
-            <span>Alamat telah dihapus.</span>
+            <span>Alamat berhasil dihapus.</span>
         </div>
     @elseif (session('status') === 'address-default-set')
         <div class="mt-4 p-4 rounded-xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm font-semibold text-avocado-900 flex items-center gap-2">
@@ -441,7 +441,7 @@ new class extends Component
                 <!-- Catatan / Patokan Lokasi -->
                 <div class="sm:col-span-2">
                     <label for="addr_notes" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Catatan Tambahan / Patokan Lokasi <span class="text-darkbrown-400 font-normal">(Opsional)</span>
+                        Catatan / Patokan Lokasi <span class="text-darkbrown-400 font-normal">(Opsional)</span>
                     </label>
                     <input
                         wire:model="notes"
@@ -458,7 +458,7 @@ new class extends Component
                     @if ($editingId && ($latitude === null || $longitude === null || $latitude === '' || $longitude === ''))
                         <div class="mb-2.5 px-3 py-2 rounded-lg border border-wheat-300 bg-white text-xs text-darkbrown-700 flex items-center gap-2">
                             <span class="w-2 h-2 rounded-full bg-goldenrod-500 shrink-0" aria-hidden="true"></span>
-                            <span>Pin lokasi belum diatur untuk alamat ini. Klik pada peta di bawah untuk menambahkan titik koordinat pengantaran.</span>
+                            <span>Pin lokasi belum diatur untuk alamat ini. Klik peta di bawah untuk menambahkan titik lokasi pengantaran.</span>
                         </div>
                     @endif
 
@@ -468,8 +468,8 @@ new class extends Component
                         :longitude="$longitude"
                         wire-latitude-model="latitude"
                         wire-longitude-model="longitude"
-                        label="Titik Koordinat Lokasi Pengantaran (Peta)"
-                        help-text="Pilih titik pada peta untuk mengisi alamat otomatis. Semua kolom alamat tetap dapat Anda edit."
+                        label="Titik Lokasi Pengantaran (Peta)"
+                        help-text="Pilih titik pada peta untuk mengisi alamat secara otomatis. Semua kolom alamat tetap dapat Anda ubah."
                     />
                 </div>
 
@@ -482,7 +482,7 @@ new class extends Component
                         class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500"
                     />
                     <label for="addr_is_default" class="text-xs font-semibold text-darkbrown-800 cursor-pointer">
-                        Jadikan sebagai alamat utama (default saat checkout)
+                        Jadikan alamat utama (dipilih otomatis saat pemesanan)
                     </label>
                 </div>
             </div>
@@ -573,7 +573,7 @@ new class extends Component
                             type="button"
                             wire:click="startEditing({{ $addr->id }})"
                             class="p-1.5 rounded-lg text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 transition"
-                            title="Edit Alamat"
+                            title="Ubah Alamat"
                         >
                             <i data-lucide="edit-3" class="w-4 h-4"></i>
                         </button>
@@ -597,7 +597,7 @@ new class extends Component
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-darkbrown-900">Belum ada alamat tersimpan</h3>
-                    <p class="text-xs text-darkbrown-500 mt-0.5">Tambahkan alamat agar Anda dapat memilih opsi pengantaran (delivery) saat booking alat camping.</p>
+                    <p class="text-xs text-darkbrown-500 mt-0.5">Tambahkan alamat agar Anda dapat memilih pengantaran saat memesan perlengkapan camping.</p>
                 </div>
                 @if (! $isCreating)
                     <button

@@ -9,12 +9,17 @@ new class extends Component
     public string $password = '';
 
     /**
-     * Delete the currently authenticated user.
+     * Hapus akun pengguna yang sedang login.
      */
     public function deleteUser(Logout $logout): void
     {
         $this->validate([
             'password' => ['required', 'string', 'current_password'],
+        ], [
+            'password.required' => 'Kata sandi wajib diisi untuk menghapus akun.',
+            'password.current_password' => 'Kata sandi tidak sesuai.',
+        ], [
+            'password' => 'kata sandi',
         ]);
 
         tap(Auth::user(), $logout(...))->delete();
@@ -25,33 +30,34 @@ new class extends Component
 
 <section class="space-y-6">
     <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Delete Account') }}
+        <h2 class="text-lg font-extrabold text-red-700 font-heading flex items-center gap-2">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+            <span>{{ __('Hapus Akun') }}</span>
         </h2>
 
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.') }}
+        <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
+            {{ __('Setelah akun dihapus, seluruh data Anda akan dihapus secara permanen. Simpan data yang Anda perlukan sebelum menghapus akun.') }}
         </p>
     </header>
 
     <x-danger-button
         x-data=""
         x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
-    >{{ __('Delete Account') }}</x-danger-button>
+    >{{ __('Hapus Akun') }}</x-danger-button>
 
     <x-modal name="confirm-user-deletion" :show="$errors->isNotEmpty()" focusable>
         <form wire:submit="deleteUser" class="p-6">
 
-            <h2 class="text-lg font-medium text-gray-900">
-                {{ __('Are you sure you want to delete your account?') }}
+            <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading">
+                {{ __('Yakin ingin menghapus akun Anda?') }}
             </h2>
 
-            <p class="mt-1 text-sm text-gray-600">
-                {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+            <p class="mt-1 text-sm text-darkbrown-600">
+                {{ __('Setelah akun dihapus, seluruh data Anda akan dihapus secara permanen. Masukkan kata sandi Anda untuk mengonfirmasi penghapusan akun.') }}
             </p>
 
             <div class="mt-6">
-                <x-input-label for="password" value="{{ __('Password') }}" class="sr-only" />
+                <x-input-label for="password" value="{{ __('Kata Sandi') }}" class="sr-only" />
 
                 <x-password-input
                     wire:model="password"
@@ -59,7 +65,7 @@ new class extends Component
                     name="password"
                     wrapper-class="mt-1 w-3/4"
                     class="block w-full"
-                    placeholder="{{ __('Password') }}"
+                    placeholder="{{ __('Kata Sandi') }}"
                 />
 
                 <x-input-error :messages="$errors->get('password')" class="mt-2" />
@@ -67,11 +73,11 @@ new class extends Component
 
             <div class="mt-6 flex justify-end">
                 <x-secondary-button x-on:click="$dispatch('close')">
-                    {{ __('Cancel') }}
+                    {{ __('Batal') }}
                 </x-secondary-button>
 
                 <x-danger-button class="ms-3">
-                    {{ __('Delete Account') }}
+                    {{ __('Hapus Akun') }}
                 </x-danger-button>
             </div>
         </form>
