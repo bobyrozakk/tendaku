@@ -219,7 +219,11 @@ document.addEventListener("alpine:init", () => {
             const mm = String(month + 1).padStart(2, "0");
             const from = `${year}-${mm}-01`;
             const lastDay = new Date(year, month + 1, 0).getDate();
-            const to = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
+            // +6 hari agar tanggal "sisa" bulan berikutnya di grid kalender ikut dicek
+            const to = this.addDaysIso(
+                `${year}-${mm}-${String(lastDay).padStart(2, "0")}`,
+                6,
+            );
 
             try {
                 const query = new URLSearchParams({ from, to });
@@ -277,6 +281,40 @@ document.addEventListener("alpine:init", () => {
             }
             this.fetchAvailability(this.calYear, this.calMonth);
         },
+        buildCalendarCell(iso, outside = false) {
+            const isPast = iso < this.minDate;
+            const isBooked = this.isDateBooked(iso);
+
+            let isBlocked = false;
+            if (this.calOpen === "pickup") {
+                isBlocked = isBooked;
+            } else if (this.calOpen === "return") {
+                const isBeforePickup =
+                    this.pickupDate && iso < this.minReturnDate;
+                const rangeBlocked =
+                    this.pickupDate &&
+                    this.hasBookedDateInRange(this.pickupDate, iso);
+                isBlocked = isBeforePickup || isBooked || rangeBlocked;
+            }
+
+            const isSelected =
+                (this.calOpen === "pickup" && this.pickupDate === iso) ||
+                (this.calOpen === "return" && this.returnDate === iso);
+            const inRange =
+                this.pickupDate &&
+                this.returnDate &&
+                iso >= this.pickupDate &&
+                iso <= this.returnDate;
+
+            return {
+                day: Number(iso.slice(8, 10)),
+                iso: iso,
+                outside: outside,
+                disabled: isPast || isBlocked,
+                selected: isSelected,
+                inRange: inRange,
+            };
+        },
         get calendarDays() {
             const days = [];
             const firstDay = new Date(this.calYear, this.calMonth, 1).getDay();
@@ -288,41 +326,23 @@ document.addEventListener("alpine:init", () => {
 
             for (let i = 0; i < firstDay; i++) days.push({ empty: true });
 
+            const mm = String(this.calMonth + 1).padStart(2, "0");
             for (let d = 1; d <= totalDays; d++) {
-                const mm = String(this.calMonth + 1).padStart(2, "0");
                 const dd = String(d).padStart(2, "0");
-                const iso = `${this.calYear}-${mm}-${dd}`;
-                const isPast = iso < this.minDate;
-                const isBooked = this.isDateBooked(iso);
+                days.push(
+                    this.buildCalendarCell(`${this.calYear}-${mm}-${dd}`),
+                );
+            }
 
-                let isBlocked = false;
-                if (this.calOpen === "pickup") {
-                    isBlocked = isBooked;
-                } else if (this.calOpen === "return") {
-                    const isBeforePickup =
-                        this.pickupDate && iso < this.minReturnDate;
-                    const rangeBlocked =
-                        this.pickupDate &&
-                        this.hasBookedDateInRange(this.pickupDate, iso);
-                    isBlocked = isBeforePickup || isBooked || rangeBlocked;
-                }
-
-                const isSelected =
-                    (this.calOpen === "pickup" && this.pickupDate === iso) ||
-                    (this.calOpen === "return" && this.returnDate === iso);
-                const inRange =
-                    this.pickupDate &&
-                    this.returnDate &&
-                    iso >= this.pickupDate &&
-                    iso <= this.returnDate;
-
-                days.push({
-                    day: d,
-                    iso: iso,
-                    disabled: isPast || isBlocked,
-                    selected: isSelected,
-                    inRange: inRange,
-                });
+            // Lanjutkan dengan tanggal bulan berikutnya sampai baris terakhir penuh
+            const trailing = (7 - (days.length % 7)) % 7;
+            let nextIso = this.addDaysIso(
+                `${this.calYear}-${mm}-${String(totalDays).padStart(2, "0")}`,
+                1,
+            );
+            for (let i = 0; i < trailing; i++) {
+                days.push(this.buildCalendarCell(nextIso, true));
+                nextIso = this.addDaysIso(nextIso, 1);
             }
             return days;
         },
@@ -745,11 +765,9 @@ document.addEventListener("alpine:init", () => {
             const e = {};
             if (this.needsName && this.name.trim().length < 3)
                 e.name = "Isi nama lengkap sesuai KTP.";
-            if (
-                this.needsPhone &&
-                !/^[0-9]{10,13}$/.test(this.phone)
-            ) {
-                e.phone = "Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.";
+            if (this.needsPhone && !/^[0-9]{10,13}$/.test(this.phone)) {
+                e.phone =
+                    "Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.";
             }
             if (this.needsNik && !/^\d{16}$/.test(this.nik))
                 e.nik = "NIK harus 16 digit angka.";

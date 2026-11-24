@@ -1,4 +1,4 @@
-                <!-- RINCIAN SEWA -->
+<!-- RINCIAN SEWA -->
                 <section id="section-rental" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm divide-y divide-wheat-200">
 
                     <!-- Vendor -->
@@ -73,6 +73,7 @@
                                                                 cell.selected ? 'bg-avocado-700 text-white font-bold shadow-xs' :
                                                                 (cell.inRange ? 'bg-avocado-100 text-avocado-900 font-semibold' :
                                                                 (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium'))
+                                                                , (cell.outside && !cell.selected && !cell.disabled) ? 'opacity-50' : ''
                                                             ]"
                                                             class="w-7 h-7 rounded-lg inline-flex items-center justify-center transition text-xs"
                                                             x-text="cell.day">
@@ -182,6 +183,7 @@
                                                                 cell.selected ? 'bg-goldenrod-600 text-white font-bold shadow-xs' :
                                                                 (cell.inRange ? 'bg-sunglow-100 text-darkbrown-900 font-semibold' :
                                                                 (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium'))
+                                                                , (cell.outside && !cell.selected && !cell.disabled) ? 'opacity-50' : ''
                                                             ]"
                                                             class="w-7 h-7 rounded-lg inline-flex items-center justify-center transition text-xs"
                                                             x-text="cell.day">
