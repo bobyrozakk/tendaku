@@ -38,6 +38,7 @@ document.addEventListener("alpine:init", () => {
         createdCode: "",
         bookedDates: Array.isArray(cfg.bookedDates) ? [...cfg.bookedDates] : [],
         availabilityUrl: cfg.availabilityUrl || "",
+        availabilityKey: "", // tanda item+qty yang dipakai saat bookedDates dihitung
         calOpen: null, // 'pickup' | 'return' | null
         calYear: new Date().getFullYear(),
         calMonth: new Date().getMonth(),
@@ -214,16 +215,17 @@ document.addEventListener("alpine:init", () => {
             }
             return "";
         },
-        async fetchAvailability(year, month) {
-            if (!this.availabilityUrl) return;
-            const mm = String(month + 1).padStart(2, "0");
-            const from = `${year}-${mm}-01`;
-            const lastDay = new Date(year, month + 1, 0).getDate();
-            // +6 hari agar tanggal "sisa" bulan berikutnya di grid kalender ikut dicek
-            const to = this.addDaysIso(
-                `${year}-${mm}-${String(lastDay).padStart(2, "0")}`,
-                6,
-            );
+        availabilitySignature() {
+            return (this.items || [])
+                .map((it) => `${it.id}:${it.qty}`)
+                .join("|");
+        },
+        // Ambil tanggal penuh dari server untuk rentang [from, to].
+        // Mengembalikan array tanggal, atau null jika gagal / respons sudah usang
+        // (qty berubah selama request berjalan).
+        async requestBookedDates(from, to) {
+            if (!this.availabilityUrl) return null;
+            const signature = this.availabilitySignature();
 
             try {
                 const query = new URLSearchParams({ from, to });
@@ -237,16 +239,74 @@ document.addEventListener("alpine:init", () => {
                         headers: { Accept: "application/json" },
                     },
                 );
-                if (!res.ok) return;
+                if (!res.ok) return null;
                 const data = await res.json();
-                if (Array.isArray(data.dates)) {
-                    const merged = new Set([
-                        ...this.bookedDates,
-                        ...data.dates,
-                    ]);
-                    this.bookedDates = Array.from(merged);
+                if (!Array.isArray(data.dates)) return null;
+                if (signature !== this.availabilitySignature()) return null;
+                return data.dates;
+            } catch (_) {
+                return null;
+            }
+        },
+        // Ganti tanggal penuh di dalam [from, to] dengan data terbaru dari server.
+        applyBookedDates(from, to, dates) {
+            const outside = (this.bookedDates || []).filter(
+                (d) => d < from || d > to,
+            );
+            this.bookedDates = Array.from(new Set([...outside, ...dates]));
+        },
+        async fetchAvailability(year, month) {
+            if (!this.availabilityUrl) return;
+
+            // Data lama dihitung untuk qty lain: buang supaya tidak ada tanggal
+            // "nyangkut" penuh (atau terlihat kosong) setelah qty diubah.
+            const signature = this.availabilitySignature();
+            if (this.availabilityKey && this.availabilityKey !== signature) {
+                this.bookedDates = [];
+            }
+            this.availabilityKey = signature;
+
+            const mm = String(month + 1).padStart(2, "0");
+            const from = `${year}-${mm}-01`;
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            // +6 hari agar tanggal "sisa" bulan berikutnya di grid kalender ikut dicek
+            const to = this.addDaysIso(
+                `${year}-${mm}-${String(lastDay).padStart(2, "0")}`,
+                6,
+            );
+
+            const dates = await this.requestBookedDates(from, to);
+            if (dates) this.applyBookedDates(from, to, dates);
+
+            // Periode yang sedang dipilih bisa berada di luar bulan yang tampil
+            if (this.pickupDate && this.returnDate) {
+                const rangeDates = await this.requestBookedDates(
+                    this.pickupDate,
+                    this.returnDate,
+                );
+                if (rangeDates) {
+                    this.applyBookedDates(
+                        this.pickupDate,
+                        this.returnDate,
+                        rangeDates,
+                    );
                 }
-            } catch (_) {}
+            }
+        },
+        // Cek ulang periode terpilih ke server tepat sebelum submit.
+        // false = ada tanggal yang sudah penuh; true = aman atau tidak bisa dicek
+        // (server tetap pemutus akhir saat booking dibuat).
+        async verifySelectedRange() {
+            if (!this.availabilityUrl || !this.pickupDate || !this.returnDate) {
+                return true;
+            }
+            const dates = await this.requestBookedDates(
+                this.pickupDate,
+                this.returnDate,
+            );
+            if (!dates) return true;
+            this.applyBookedDates(this.pickupDate, this.returnDate, dates);
+            return !this.hasBookedDateInRange(this.pickupDate, this.returnDate);
         },
 
         openCalendar(type) {
@@ -371,6 +431,7 @@ document.addEventListener("alpine:init", () => {
                     this.returnDate = candidate;
                 }
             }
+            this.availabilityKey = this.availabilitySignature();
             this.startCountdown();
             if (this.selectedAddressId) {
                 this.selectAddress(this.selectedAddressId);
@@ -844,6 +905,15 @@ document.addEventListener("alpine:init", () => {
             this.isProcessing = true;
 
             try {
+                if (!(await this.verifySelectedRange())) {
+                    this.errors = {
+                        dates: "Sebagian tanggal pada periode ini baru saja penuh dipesan. Pilih tanggal lain.",
+                    };
+                    this.scrollToError();
+                    this.isProcessing = false;
+                    return;
+                }
+
                 const fd = new FormData();
                 fd.append("_token", this.csrf);
                 fd.append("pickup_method", this.pickupMethod);

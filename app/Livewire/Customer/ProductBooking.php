@@ -414,6 +414,7 @@ class ProductBooking extends Component
     {
         app(CartService::class)->setDirect($this->selectionData());
 
+        $this->dispatch('checkout-redirecting');
         $this->redirectRoute('checkout.index', ['direct' => 1]);
 
         return null;

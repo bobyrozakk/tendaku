@@ -1,31 +1,44 @@
-{{--
-    Tombol aksi sewa (dipakai di hero dan panel ringkasan).
-    Variabel: $isGuest, $canSubmit, $idSuffix ('' untuk panel ringkasan, '-hero' untuk hero).
---}}
 @php
     $checkoutAction = $canSubmit ? 'checkoutNow' : 'chooseSchedule';
 @endphp
 
-<div class="space-y-2">
+<div
+    class="space-y-2"
+    x-data="{ redirecting: false }"
+    x-on:checkout-redirecting.window="redirecting = true"
+    x-on:pageshow.window="if ($event.persisted) redirecting = false"
+>
     <button
         type="button"
         wire:click="{{ $checkoutAction }}"
         id="{{ $isGuest ? 'btn-checkout' : 'btn-sewa-sekarang' }}{{ $idSuffix }}"
         wire:loading.attr="disabled"
         wire:loading.class="opacity-75 cursor-wait"
+        x-bind:disabled="redirecting"
+        x-bind:class="{ 'opacity-75 cursor-wait': redirecting }"
         class="btn-tendaku-primary w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer transition-all duration-200"
     >
-        <span wire:loading.remove wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
-            @if($canSubmit)
-                <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                <span>Checkout Sekarang</span>
-            @else
-                <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                <span>Pilih Jadwal Lain</span>
-            @endif
+        <span x-show="!redirecting" class="contents">
+            <span wire:loading.remove wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
+                @if($canSubmit)
+                    <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
+                    <span>Checkout Sekarang</span>
+                @else
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                    <span>Pilih Jadwal Lain</span>
+                @endif
+            </span>
+
+            <span wire:loading wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
+                <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                <span>Menyiapkan checkout...</span>
+            </span>
         </span>
 
-        <span wire:loading wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
+        <span x-show="redirecting" x-cloak style="display: none" class="flex items-center gap-2">
             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
