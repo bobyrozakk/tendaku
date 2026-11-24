@@ -89,10 +89,12 @@ class MasterItem extends Model
     {
         return Attribute::make(
             get: function () {
-                $oldestPurchase = $this->units()
-                    ->whereNotNull('purchase_date')
-                    ->orderBy('purchase_date', 'asc')
-                    ->value('purchase_date');
+                $oldestPurchase = $this->relationLoaded('units')
+                    ? $this->units->whereNotNull('purchase_date')->sortBy('purchase_date')->first()?->purchase_date
+                    : $this->units()
+                        ->whereNotNull('purchase_date')
+                        ->orderBy('purchase_date', 'asc')
+                        ->value('purchase_date');
 
                 if (! $oldestPurchase) {
                     return 'Baru tersedia';
@@ -126,11 +128,19 @@ class MasterItem extends Model
     {
         return Attribute::make(
             get: function () {
-                $condition = $this->units()
-                    ->selectRaw('condition, count(*) as count')
-                    ->groupBy('condition')
-                    ->orderByDesc('count')
-                    ->value('condition');
+                if ($this->relationLoaded('units')) {
+                    $condition = $this->units
+                        ->groupBy('condition')
+                        ->sortByDesc(fn ($group) => $group->count())
+                        ->keys()
+                        ->first();
+                } else {
+                    $condition = $this->units()
+                        ->selectRaw('condition, count(*) as count')
+                        ->groupBy('condition')
+                        ->orderByDesc('count')
+                        ->value('condition');
+                }
 
                 return match ($condition) {
                     'excellent' => 'Sangat Baik (Prima)',

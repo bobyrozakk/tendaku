@@ -38,10 +38,10 @@ class RedirectIfUnverified
                 return $next($request);
             }
 
-            // Jika user mencoba ke halaman publik (Home, Katalog, Toko, Design System),
+            // Jika user mencoba ke halaman publik (Home, Katalog, Toko),
             // keluarkan dari sesi akun agar dapat mengakses halaman secara bebas sebagai GUEST.
-            if ($request->routeIs('home', 'customer.catalog.index', 'customer.product.show', 'customer.stores.show', 'design-system')
-                || $request->is('/', 'toko*', 'design-system*')
+            if ($request->routeIs('home', 'customer.catalog.index', 'customer.product.show', 'customer.stores.show')
+                || $request->is('/', 'toko*')
                 || ($request->is('katalog*') && ! $request->is('katalog/booking*'))
             ) {
                 Auth::logout();

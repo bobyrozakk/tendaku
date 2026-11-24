@@ -74,7 +74,14 @@ class CheckoutAvailabilityController extends Controller
                 foreach ($dates as $date) {
                     $allDates[$date] = true;
                 }
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
+                // Jangan diam-diam menganggap item ini "tersedia": laporkan dan
+                // beri tahu klien bahwa data ketersediaan belum bisa dipercaya.
+                report($e);
+
+                return response()->json([
+                    'message' => 'Ketersediaan belum dapat diperiksa. Silakan coba lagi.',
+                ], 503);
             }
         }
 

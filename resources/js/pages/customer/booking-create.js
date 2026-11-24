@@ -38,6 +38,7 @@ document.addEventListener("alpine:init", () => {
         createdCode: "",
         bookedDates: Array.isArray(cfg.bookedDates) ? [...cfg.bookedDates] : [],
         availabilityUrl: cfg.availabilityUrl || "",
+        availabilityKey: "", // tanda item+qty yang dipakai saat bookedDates dihitung
         calOpen: null, // 'pickup' | 'return' | null
         calYear: new Date().getFullYear(),
         calMonth: new Date().getMonth(),
@@ -214,12 +215,17 @@ document.addEventListener("alpine:init", () => {
             }
             return "";
         },
-        async fetchAvailability(year, month) {
-            if (!this.availabilityUrl) return;
-            const mm = String(month + 1).padStart(2, "0");
-            const from = `${year}-${mm}-01`;
-            const lastDay = new Date(year, month + 1, 0).getDate();
-            const to = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
+        availabilitySignature() {
+            return (this.items || [])
+                .map((it) => `${it.id}:${it.qty}`)
+                .join("|");
+        },
+        // Ambil tanggal penuh dari server untuk rentang [from, to].
+        // Mengembalikan array tanggal, atau null jika gagal / respons sudah usang
+        // (qty berubah selama request berjalan).
+        async requestBookedDates(from, to) {
+            if (!this.availabilityUrl) return null;
+            const signature = this.availabilitySignature();
 
             try {
                 const query = new URLSearchParams({ from, to });
@@ -233,16 +239,74 @@ document.addEventListener("alpine:init", () => {
                         headers: { Accept: "application/json" },
                     },
                 );
-                if (!res.ok) return;
+                if (!res.ok) return null;
                 const data = await res.json();
-                if (Array.isArray(data.dates)) {
-                    const merged = new Set([
-                        ...this.bookedDates,
-                        ...data.dates,
-                    ]);
-                    this.bookedDates = Array.from(merged);
+                if (!Array.isArray(data.dates)) return null;
+                if (signature !== this.availabilitySignature()) return null;
+                return data.dates;
+            } catch (_) {
+                return null;
+            }
+        },
+        // Ganti tanggal penuh di dalam [from, to] dengan data terbaru dari server.
+        applyBookedDates(from, to, dates) {
+            const outside = (this.bookedDates || []).filter(
+                (d) => d < from || d > to,
+            );
+            this.bookedDates = Array.from(new Set([...outside, ...dates]));
+        },
+        async fetchAvailability(year, month) {
+            if (!this.availabilityUrl) return;
+
+            // Data lama dihitung untuk qty lain: buang supaya tidak ada tanggal
+            // "nyangkut" penuh (atau terlihat kosong) setelah qty diubah.
+            const signature = this.availabilitySignature();
+            if (this.availabilityKey && this.availabilityKey !== signature) {
+                this.bookedDates = [];
+            }
+            this.availabilityKey = signature;
+
+            const mm = String(month + 1).padStart(2, "0");
+            const from = `${year}-${mm}-01`;
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            // +6 hari agar tanggal "sisa" bulan berikutnya di grid kalender ikut dicek
+            const to = this.addDaysIso(
+                `${year}-${mm}-${String(lastDay).padStart(2, "0")}`,
+                6,
+            );
+
+            const dates = await this.requestBookedDates(from, to);
+            if (dates) this.applyBookedDates(from, to, dates);
+
+            // Periode yang sedang dipilih bisa berada di luar bulan yang tampil
+            if (this.pickupDate && this.returnDate) {
+                const rangeDates = await this.requestBookedDates(
+                    this.pickupDate,
+                    this.returnDate,
+                );
+                if (rangeDates) {
+                    this.applyBookedDates(
+                        this.pickupDate,
+                        this.returnDate,
+                        rangeDates,
+                    );
                 }
-            } catch (_) {}
+            }
+        },
+        // Cek ulang periode terpilih ke server tepat sebelum submit.
+        // false = ada tanggal yang sudah penuh; true = aman atau tidak bisa dicek
+        // (server tetap pemutus akhir saat booking dibuat).
+        async verifySelectedRange() {
+            if (!this.availabilityUrl || !this.pickupDate || !this.returnDate) {
+                return true;
+            }
+            const dates = await this.requestBookedDates(
+                this.pickupDate,
+                this.returnDate,
+            );
+            if (!dates) return true;
+            this.applyBookedDates(this.pickupDate, this.returnDate, dates);
+            return !this.hasBookedDateInRange(this.pickupDate, this.returnDate);
         },
 
         openCalendar(type) {
@@ -277,6 +341,49 @@ document.addEventListener("alpine:init", () => {
             }
             this.fetchAvailability(this.calYear, this.calMonth);
         },
+        buildCalendarCell(iso, outside = false) {
+            const isPast = iso < this.minDate;
+            const isBooked = this.isDateBooked(iso);
+
+            let isBlocked = false;
+            if (this.calOpen === "pickup") {
+                isBlocked = isBooked;
+            } else if (this.calOpen === "return") {
+                const isBeforePickup =
+                    this.pickupDate && iso < this.minReturnDate;
+                const rangeBlocked =
+                    this.pickupDate &&
+                    this.hasBookedDateInRange(this.pickupDate, iso);
+                isBlocked = isBeforePickup || isBooked || rangeBlocked;
+            }
+
+            const isSelected =
+                (this.calOpen === "pickup" && this.pickupDate === iso) ||
+                (this.calOpen === "return" && this.returnDate === iso);
+            const inRange =
+                this.pickupDate &&
+                this.returnDate &&
+                iso >= this.pickupDate &&
+                iso <= this.returnDate;
+
+            // Tidak bisa dipilih karena sudah lewat / penuh (beda dari sekadar
+            // "sebelum tanggal ambil"), dipakai untuk warna abu-abu di kalender.
+            const isFull =
+                isBooked ||
+                (this.calOpen === "return" &&
+                    this.pickupDate &&
+                    this.hasBookedDateInRange(this.pickupDate, iso));
+
+            return {
+                day: Number(iso.slice(8, 10)),
+                iso: iso,
+                outside: outside,
+                unavailable: isPast || isFull,
+                disabled: isPast || isBlocked,
+                selected: isSelected,
+                inRange: inRange,
+            };
+        },
         get calendarDays() {
             const days = [];
             const firstDay = new Date(this.calYear, this.calMonth, 1).getDay();
@@ -288,41 +395,23 @@ document.addEventListener("alpine:init", () => {
 
             for (let i = 0; i < firstDay; i++) days.push({ empty: true });
 
+            const mm = String(this.calMonth + 1).padStart(2, "0");
             for (let d = 1; d <= totalDays; d++) {
-                const mm = String(this.calMonth + 1).padStart(2, "0");
                 const dd = String(d).padStart(2, "0");
-                const iso = `${this.calYear}-${mm}-${dd}`;
-                const isPast = iso < this.minDate;
-                const isBooked = this.isDateBooked(iso);
+                days.push(
+                    this.buildCalendarCell(`${this.calYear}-${mm}-${dd}`),
+                );
+            }
 
-                let isBlocked = false;
-                if (this.calOpen === "pickup") {
-                    isBlocked = isBooked;
-                } else if (this.calOpen === "return") {
-                    const isBeforePickup =
-                        this.pickupDate && iso < this.minReturnDate;
-                    const rangeBlocked =
-                        this.pickupDate &&
-                        this.hasBookedDateInRange(this.pickupDate, iso);
-                    isBlocked = isBeforePickup || isBooked || rangeBlocked;
-                }
-
-                const isSelected =
-                    (this.calOpen === "pickup" && this.pickupDate === iso) ||
-                    (this.calOpen === "return" && this.returnDate === iso);
-                const inRange =
-                    this.pickupDate &&
-                    this.returnDate &&
-                    iso >= this.pickupDate &&
-                    iso <= this.returnDate;
-
-                days.push({
-                    day: d,
-                    iso: iso,
-                    disabled: isPast || isBlocked,
-                    selected: isSelected,
-                    inRange: inRange,
-                });
+            // Lanjutkan dengan tanggal bulan berikutnya sampai baris terakhir penuh
+            const trailing = (7 - (days.length % 7)) % 7;
+            let nextIso = this.addDaysIso(
+                `${this.calYear}-${mm}-${String(totalDays).padStart(2, "0")}`,
+                1,
+            );
+            for (let i = 0; i < trailing; i++) {
+                days.push(this.buildCalendarCell(nextIso, true));
+                nextIso = this.addDaysIso(nextIso, 1);
             }
             return days;
         },
@@ -350,6 +439,18 @@ document.addEventListener("alpine:init", () => {
                 if (candidate) {
                     this.returnDate = candidate;
                 }
+            }
+            this.availabilityKey = this.availabilitySignature();
+            // Jadwal bawaan sudah penuh: tampilkan peringatan sejak awal
+            if (
+                this.pickupDate &&
+                this.returnDate &&
+                this.hasBookedDateInRange(this.pickupDate, this.returnDate)
+            ) {
+                this.errors = {
+                    ...this.errors,
+                    dates: "Sebagian tanggal pada periode ini sudah penuh dipesan. Pilih jadwal lain.",
+                };
             }
             this.startCountdown();
             if (this.selectedAddressId) {
@@ -745,11 +846,9 @@ document.addEventListener("alpine:init", () => {
             const e = {};
             if (this.needsName && this.name.trim().length < 3)
                 e.name = "Isi nama lengkap sesuai KTP.";
-            if (
-                this.needsPhone &&
-                !/^[0-9]{10,13}$/.test(this.phone)
-            ) {
-                e.phone = "Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.";
+            if (this.needsPhone && !/^[0-9]{10,13}$/.test(this.phone)) {
+                e.phone =
+                    "Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.";
             }
             if (this.needsNik && !/^\d{16}$/.test(this.nik))
                 e.nik = "NIK harus 16 digit angka.";
@@ -826,6 +925,15 @@ document.addEventListener("alpine:init", () => {
             this.isProcessing = true;
 
             try {
+                if (!(await this.verifySelectedRange())) {
+                    this.errors = {
+                        dates: "Sebagian tanggal pada periode ini baru saja penuh dipesan. Pilih tanggal lain.",
+                    };
+                    this.scrollToError();
+                    this.isProcessing = false;
+                    return;
+                }
+
                 const fd = new FormData();
                 fd.append("_token", this.csrf);
                 fd.append("pickup_method", this.pickupMethod);

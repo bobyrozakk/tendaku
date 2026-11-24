@@ -130,7 +130,7 @@
                     <img
                         src="{{ asset('images/Logo.svg') }}"
                         alt="Tendaku"
-                        class="h-10 sm:h-11 w-auto brightness-0 invert drop-shadow-lg"
+                        class="h-10 sm:h-11 w-auto drop-shadow-lg"
                     >
                 </a>
             </div>
@@ -150,7 +150,7 @@
                     <img
                         src="{{ asset('images/Logo.svg') }}"
                         alt="Tendaku"
-                        class="h-10 sm:h-11 w-auto brightness-0 invert drop-shadow-lg"
+                        class="h-10 sm:h-11 w-auto drop-shadow-lg"
                     >
                 </a>
 

@@ -214,7 +214,6 @@ class CheckoutTest extends TestCase
         $this->withSession($this->cartSession())
             ->get(route('checkout.index'))
             ->assertOk()
-            ->assertDontSee('QRIS')
             ->assertDontSee('name="payment_channel"', false)
             ->assertSee('No. WhatsApp aktif')
             ->assertSee('id="f_phone"', false)

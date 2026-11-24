@@ -367,4 +367,129 @@ class StoreProfileTest extends TestCase
             ->assertSee('saat ini belum memiliki peralatan camping aktif untuk disewakan')
             ->assertSee('Jelajahi Katalog Toko Lain');
     }
+
+    /**
+     * Filter rentang harga di sidebar hanya menampilkan alat pada rentang tersebut.
+     */
+    public function test_price_filter_limits_items_to_selected_range(): void
+    {
+        $this->makeItem($this->vendor1, 'Matras Lipat Murah', 20000, units: 1);
+
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', ['vendor' => $this->vendor1->slug, 'price' => 'lt_25']))
+            ->assertOk()
+            ->assertSee('Matras Lipat Murah')
+            ->assertDontSee($this->itemVendor1->name);
+
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', ['vendor' => $this->vendor1->slug, 'price' => '50_100']))
+            ->assertOk()
+            ->assertSee($this->itemVendor1->name)
+            ->assertDontSee('Matras Lipat Murah');
+    }
+
+    /**
+     * Filter stok menyembunyikan alat tanpa unit tersedia; tanpa filter alat tersebut tampil sebagai stok habis.
+     */
+    public function test_in_stock_filter_hides_items_without_available_units(): void
+    {
+        $this->makeItem($this->vendor1, 'Kompor Portable Kosong', 35000, units: 0);
+
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', $this->vendor1->slug))
+            ->assertOk()
+            ->assertSee('Kompor Portable Kosong')
+            ->assertSee('Stok habis');
+
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', ['vendor' => $this->vendor1->slug, 'stock' => 1]))
+            ->assertOk()
+            ->assertSee($this->itemVendor1->name)
+            ->assertDontSee('Kompor Portable Kosong');
+    }
+
+    /**
+     * Urutan harga terendah menampilkan alat termurah lebih dulu.
+     */
+    public function test_sort_by_lowest_price_orders_items_ascending(): void
+    {
+        $this->makeItem($this->vendor1, 'Lampu Tenda Hemat', 10000, units: 1);
+
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', ['vendor' => $this->vendor1->slug, 'sort' => 'price_asc']))
+            ->assertOk()
+            ->assertSeeInOrder(['Lampu Tenda Hemat', $this->itemVendor1->name]);
+
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', ['vendor' => $this->vendor1->slug, 'sort' => 'price_desc']))
+            ->assertOk()
+            ->assertSeeInOrder([$this->itemVendor1->name, 'Lampu Tenda Hemat']);
+    }
+
+    /**
+     * Parameter filter yang tidak valid diabaikan, bukan menyebabkan error.
+     */
+    public function test_invalid_filter_parameters_are_ignored(): void
+    {
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', [
+                'vendor' => $this->vendor1->slug,
+                'price' => 'bukan-rentang',
+                'sort' => 'acak',
+                'tab' => 'lainnya',
+            ]))
+            ->assertOk()
+            ->assertSee($this->itemVendor1->name);
+    }
+
+    /**
+     * Tab paket memakai rentang harga paket dan mengabaikan filter kategori/stok.
+     */
+    public function test_packages_tab_supports_package_price_filter(): void
+    {
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', [
+                'vendor' => $this->vendor1->slug,
+                'tab' => 'packages',
+                'price' => '150_300',
+                'stock' => 1,
+            ]))
+            ->assertOk()
+            ->assertSee($this->packageVendor1->name);
+
+        $this->actingAs($this->customer)
+            ->get(route('customer.stores.show', [
+                'vendor' => $this->vendor1->slug,
+                'tab' => 'packages',
+                'price' => 'lt_150',
+            ]))
+            ->assertOk()
+            ->assertDontSee($this->packageVendor1->name)
+            ->assertSee('Tidak Ada Paket Camping Ditemukan');
+    }
+
+    private function makeItem(Vendor $vendor, string $name, int $dailyRate, int $units): MasterItem
+    {
+        $item = MasterItem::create([
+            'vendor_id' => $vendor->id,
+            'category_id' => ItemCategory::where('vendor_id', $vendor->id)->value('id'),
+            'name' => $name,
+            'slug' => str($name)->slug()->toString(),
+            'description' => 'Alat uji filter profil toko.',
+            'daily_rate' => $dailyRate,
+            'is_active' => true,
+        ]);
+
+        for ($i = 1; $i <= $units; $i++) {
+            ItemUnit::create([
+                'vendor_id' => $vendor->id,
+                'master_item_id' => $item->id,
+                'unit_code' => strtoupper(substr($item->slug, 0, 3)).'-'.$item->id.'-'.$i,
+                'condition' => 'good',
+                'status' => 'available',
+            ]);
+        }
+
+        return $item;
+    }
 }

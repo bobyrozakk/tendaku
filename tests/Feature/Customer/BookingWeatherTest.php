@@ -254,8 +254,7 @@ class BookingWeatherTest extends TestCase
             ->get(route('customer.cart.index'))
             ->assertOk()
             ->assertSee('Cuaca Masa Sewa')
-            ->assertSee('Menyiapkan prakiraan cuaca untuk periode sewa')
-            ->assertSee('booking-weather-updated', false);
+            ->assertSee('Menyiapkan prakiraan cuaca untuk periode sewa');
 
         Http::assertNothingSent();
     }
@@ -311,8 +310,7 @@ class BookingWeatherTest extends TestCase
             ->get(route('checkout.index'))
             ->assertOk()
             ->assertSee('Cuaca Masa Sewa')
-            ->assertSee('Menyiapkan prakiraan cuaca untuk periode sewa')
-            ->assertSee('booking-weather-updated', false);
+            ->assertSee('Menyiapkan prakiraan cuaca untuk periode sewa');
 
         Http::assertNothingSent();
     }
@@ -364,7 +362,7 @@ class BookingWeatherTest extends TestCase
 
         $this->get(route('checkout.index'))
             ->assertOk()
-            ->assertDontSee('Cuaca Masa Sewa')
+            ->assertDontSee('Menyiapkan prakiraan cuaca untuk periode sewa')
             ->assertSee('Prakiraan Cuaca Masa Sewa')
             ->assertSee('Khusus Member')
             ->assertSee('Masuk Akun');

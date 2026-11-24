@@ -16,6 +16,7 @@
 
     <!-- Scripts & Styles -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @stack('styles')
     @livewireStyles
 </head>
 <body class="min-h-full flex flex-col font-sans antialiased bg-[#FDFBF7] text-darkbrown-800 selection:bg-sunglow-300 selection:text-darkbrown-900">

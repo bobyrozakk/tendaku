@@ -15,7 +15,7 @@ function page(fetch) {
     vm.runInNewContext(source, {
         document: { addEventListener: (_, callback) => callback() },
         Alpine: { data: (_, callback) => { factory = callback; } },
-        AbortController, FormData, fetch,
+        AbortController, FormData, URLSearchParams, fetch,
         setTimeout: (callback) => { timers.set(++nextTimer, callback); return nextTimer; },
         clearTimeout: (id) => timers.delete(id), clearInterval() {},
         CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
@@ -166,3 +166,33 @@ test('a changed product set requires reload instead of accepting unseen products
     assert.equal(component.canSubmitBooking, false);
 });
 
+
+test('changing quantity drops stale booked dates and refetches with the new quantity', async () => {
+    const queries = [];
+    const { component } = page(async (url) => {
+        queries.push(new URL(url, 'http://x').searchParams);
+        return response({ dates: [] });
+    });
+    component.availabilityUrl = '/availability';
+    component.bookedDates = ['2090-01-05'];
+    component.init();
+    component.items[0].qty = 3;
+    await component.fetchAvailability(2090, 0);
+
+    assert.equal(queries[0].get('items[0][qty]'), '3');
+    assert.equal(component.bookedDates.length, 0);
+});
+
+test('submit-time check blocks a range that just became full', async () => {
+    const { component } = page(async () => response({ dates: ['2090-01-02'] }));
+    component.availabilityUrl = '/availability';
+    component.init();
+    assert.equal(await component.verifySelectedRange(), false);
+});
+
+test('submit-time check defers to the server when availability cannot be loaded', async () => {
+    const { component } = page(async () => response({}, 503));
+    component.availabilityUrl = '/availability';
+    component.init();
+    assert.equal(await component.verifySelectedRange(), true);
+});

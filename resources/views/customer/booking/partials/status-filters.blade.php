@@ -3,10 +3,17 @@
     <nav class="flex min-w-max items-center gap-2"
          aria-label="Filter status transaksi">
 
-        @foreach (['all' => 'Semua Transaksi'] + collect(config('booking.statuses'))->map(fn ($s) => $s['filter'])->all() as $key => $label)
+        @php
+            $filterItems = ['all' => 'Semua Transaksi'] + collect(config('booking.statuses'))
+                ->except(['returned'])
+                ->map(fn ($s) => $s['filter'])
+                ->all();
+        @endphp
+
+        @foreach ($filterItems as $key => $label)
             @php
                 $filterStatus = $key === 'all' ? '' : $key;
-                $isActive = ($status ?? '') === $filterStatus;
+                $isActive = ($status ?? '') === $filterStatus || (($status ?? '') === 'returned' && $filterStatus === 'completed');
             @endphp
 
             <a

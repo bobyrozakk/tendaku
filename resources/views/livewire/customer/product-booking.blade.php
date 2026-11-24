@@ -1,318 +1,403 @@
-<div class="card-tendaku rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg sticky top-6 overflow-hidden">
+@php
+    $item = $this->product;
+    $vendor = $item->vendor;
+    $vendorName = $vendor?->name ?? 'Tendaku Vendor';
+    $categoryName = $item->category?->name ?? 'Alat Outdoor';
+    $dominantCondition = $item->dominant_condition;
+    $itemAge = $item->item_age;
 
-    {{-- HEADER: Harga & Tagline "Tanpa Deposit" --}}
-    <div class="bg-gradient-to-br from-darkbrown-900 to-darkbrown-800 px-6 pt-6 pb-5">
-        <span class="inline-block text-[10px] font-bold uppercase tracking-widest text-wheat-400 mb-1">
-            Tarif Sewa Peralatan
-        </span>
-        <div class="flex items-baseline gap-2">
-            <span class="text-3xl md:text-4xl font-extrabold text-white font-heading">
-                Rp {{ number_format($this->product->daily_rate, 0, ',', '.') }}
-            </span>
-            <span class="text-sm font-semibold text-wheat-400">/ hari</span>
-        </div>
-        <div class="flex items-center gap-1.5 mt-2">
-            <span class="w-2 h-2 rounded-full bg-avocado-400 animate-pulse flex-shrink-0"></span>
-            <span class="text-[11px] text-avocado-300 font-semibold">
-                Jaminan KTP Asli — Tanpa Deposit Uang
-            </span>
-        </div>
-    </div>
+    $isGuest = auth()->guest();
+    $canSubmit = $this->availableStock >= $this->quantity && $this->availableStock > 0;
 
-    <div class="p-6 space-y-5">        {{-- VENDOR BADGE & UMUR BARANG --}}
-        <div class="p-3.5 rounded-xl bg-wheat-50 border border-wheat-200 space-y-2">
-            <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    @if($this->product->vendor)
+    $itemImages = $item->images->pluck('image_url')->filter()->values();
+
+    if ($itemImages->isEmpty() && $item->image_url) {
+        $itemImages = collect([$item->image_url]);
+    }
+
+    $mainImage = $itemImages->first();
+    $galleryImages = $itemImages->all();
+
+    $storeUrl = $vendor ? route('customer.stores.show', $vendor->slug ?? $item->vendor_id) : null;
+
+    $visitStoreClass = 'inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-wheat-300/80 bg-wheat-100 px-3.5 py-2 text-xs font-bold text-darkbrown-800 transition hover:border-avocado-500 hover:bg-wheat-200 hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2';
+
+    $sectionHeadingClass = 'text-lg font-extrabold tracking-tight text-darkbrown-900';
+
+    $stepperClass = 'flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-wheat-300 bg-wheat-100 font-extrabold text-darkbrown-800 transition hover:bg-wheat-200 disabled:cursor-not-allowed disabled:opacity-40';
+@endphp
+
+{{--
+    Layout (desktop): foto + detail di kiri, panel beli (sticky) di kanan.
+    Urutan DOM = urutan mobile: foto, panel beli, detail.
+--}}
+<div class="grid grid-cols-1 items-start gap-x-6 gap-y-6 lg:grid-cols-12">
+
+    {{-- Foto produk --}}
+    <div
+        @if($mainImage) x-data="{ activeImage: @js($mainImage) }" @endif
+        class="lg:col-span-7 lg:col-start-1 lg:row-start-1"
+    >
+        <div class="rounded-[2rem] border border-wheat-200/90 bg-white p-2.5 shadow-tendaku-sm">
+            <div class="relative aspect-[4/3] overflow-hidden rounded-3xl bg-gradient-to-br from-wheat-100 to-sunglow-100">
+
+                <span
+                    class="absolute inset-0 flex items-center justify-center text-darkbrown-300"
+                    aria-hidden="true"
+                >
+                    <i data-lucide="tent" class="h-14 w-14"></i>
+                </span>
+
+                @if($mainImage)
+                    <img
+                        src="{{ $mainImage }}"
+                        :src="activeImage"
+                        alt="{{ $item->name }}"
+                        decoding="async"
+                        onerror="this.style.display='none'"
+                        class="relative h-full w-full object-cover transition-all duration-300"
+                        id="mainProductImage"
+                    />
+                @endif
+
+                @if($vendor)
+                    @php
+                        $visitStorePillClass = 'inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-xs font-bold text-darkbrown-900 shadow-md backdrop-blur transition hover:bg-white hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-darkbrown-900';
+                    @endphp
+
+                    {{-- Gradasi gelap di atas foto supaya teks header terbaca --}}
+                    <div
+                        class="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-darkbrown-900/80 via-darkbrown-900/30 to-transparent"
+                        aria-hidden="true"
+                    ></div>
+
+                    {{-- Header toko: identitas + lokasi di kiri, tombol pill di kanan --}}
+                    <div class="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3.5 sm:p-4">
+                        <div class="flex min-w-0 items-center gap-3 text-white">
+                            @if(! empty($vendor->logo_url))
+                                <img
+                                    src="{{ $vendor->logo_url }}"
+                                    alt="{{ $vendorName }}"
+                                    class="h-11 w-11 shrink-0 rounded-2xl border-2 border-white/80 bg-white object-cover"
+                                />
+                            @else
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-white/80 bg-gradient-to-br from-avocado-600 to-avocado-800 text-sm font-extrabold">
+                                    {{ strtoupper(substr($vendorName, 0, 2)) }}
+                                </div>
+                            @endif
+
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <p class="truncate text-sm font-extrabold leading-tight drop-shadow">
+                                        {{ $vendorName }}
+                                    </p>
+
+                                    <span class="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold backdrop-blur">
+                                        Official
+                                    </span>
+                                </div>
+
+                                <p class="mt-0.5 flex items-center gap-1 text-xs text-white/90">
+                                    <i data-lucide="map-pin" class="h-3 w-3 shrink-0"></i>
+                                    <span class="truncate">{{ $vendor->city ?: 'Kota Penyedia' }}</span>
+                                </p>
+                            </div>
+                        </div>
+
                         @auth
-                            <a href="{{ route('customer.stores.show', $this->product->vendor->slug ?? $this->product->vendor_id) }}" 
-                               class="w-9 h-9 rounded-lg bg-darkbrown-800 text-sunglow-300 flex items-center justify-center flex-shrink-0 hover:bg-darkbrown-900 transition"
-                               title="Kunjungi Profil Toko {{ $this->product->vendor->name }}">
-                                <i data-lucide="store" class="w-4 h-4"></i>
+                            <a href="{{ $storeUrl }}" class="{{ $visitStorePillClass }}">
+                                <i data-lucide="store" class="h-3.5 w-3.5"></i>
+                                <span>Kunjungi Toko</span>
                             </a>
                         @else
-                            <button type="button" 
-                                    @click="$dispatch('open-guest-store-modal')" 
-                                    class="w-9 h-9 rounded-lg bg-darkbrown-800 text-sunglow-300 flex items-center justify-center flex-shrink-0 hover:bg-darkbrown-900 transition cursor-pointer"
-                                    title="Kunjungi Profil Toko {{ $this->product->vendor->name }}">
-                                <i data-lucide="store" class="w-4 h-4"></i>
+                            <button
+                                type="button"
+                                @click="$dispatch('open-guest-store-modal')"
+                                class="{{ $visitStorePillClass }}"
+                            >
+                                <i data-lucide="store" class="h-3.5 w-3.5"></i>
+                                <span>Kunjungi Toko</span>
                             </button>
                         @endauth
-                        <div class="min-w-0">
-                            <h4 class="text-xs font-bold text-darkbrown-900 truncate">
-                                @auth
-                                    <a href="{{ route('customer.stores.show', $this->product->vendor->slug ?? $this->product->vendor_id) }}" 
-                                       class="hover:text-avocado-700 transition underline-offset-2 hover:underline">
-                                        {{ $this->product->vendor->name }}
-                                    </a>
-                                @else
-                                    <button type="button" 
-                                            @click="$dispatch('open-guest-store-modal')" 
-                                            class="hover:text-avocado-700 transition underline-offset-2 hover:underline cursor-pointer font-bold text-left truncate block max-w-full">
-                                        {{ $this->product->vendor->name }}
-                                    </button>
-                                @endauth
-                            </h4>
-                            <p class="text-[10px] text-darkbrown-500 font-medium truncate">
-                                {{ $this->product->vendor->city ?? 'Penyedia Resmi' }}
-                            </p>
-                        </div>
-                    @else
-                        <div class="w-9 h-9 rounded-lg bg-darkbrown-800 text-sunglow-300 flex items-center justify-center flex-shrink-0">
-                            <i data-lucide="store" class="w-4 h-4"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <h4 class="text-xs font-bold text-darkbrown-900 truncate">
-                                {{ $this->product->vendor?->name ?? 'Tendaku Store' }}
-                            </h4>
-                            <p class="text-[10px] text-darkbrown-500 font-medium truncate">
-                                {{ $this->product->vendor?->city ?? 'Penyedia Resmi' }}
-                            </p>
-                        </div>
-                    @endif
-                </div>
-                @if($this->product->vendor)
-                    @auth
-                        <a href="{{ route('customer.stores.show', $this->product->vendor->slug ?? $this->product->vendor_id) }}" 
-                           class="badge-avocado text-[10px] flex-shrink-0 inline-flex items-center gap-1 hover:bg-avocado-200 transition"
-                           title="Kunjungi Profil Toko">
-                            <i data-lucide="store" class="w-3 h-3"></i>
-                            <span>Kunjungi Toko</span>
-                        </a>
-                    @else
-                        <button type="button" 
-                                @click="$dispatch('open-guest-store-modal')" 
-                                class="badge-avocado text-[10px] flex-shrink-0 inline-flex items-center gap-1 hover:bg-avocado-200 transition cursor-pointer"
-                                title="Kunjungi Profil Toko">
-                            <i data-lucide="store" class="w-3 h-3"></i>
-                            <span>Kunjungi Toko</span>
-                        </button>
-                    @endauth
-                @else
-                    <span class="badge-avocado text-[10px] flex-shrink-0 inline-flex items-center gap-1">
-                        <i data-lucide="badge-check" class="w-3 h-3"></i>
-                        <span>Vendor Aktif</span>
-                    </span>
+                    </div>
                 @endif
-            </div>
-
-            <div class="pt-2 border-t border-wheat-200 flex items-center justify-between text-[11px] text-darkbrown-600 font-medium">
-                <span class="inline-flex items-center gap-1">
-                    <i data-lucide="clock" class="w-3 h-3 text-darkbrown-500"></i>
-                    {{ $this->product->item_age }}
-                </span>
-                <span class="font-semibold text-avocado-800 inline-flex items-center gap-1">
-                    <i data-lucide="shield" class="w-3 h-3 text-avocado-600"></i>
-                    {{ $this->product->dominant_condition }}
-                </span>
             </div>
         </div>
 
-        {{-- AKSI SEWA & KUANTITAS (FORM SEWA PINDAH KE HALAMAN BOOKING) --}}
-        @php
-            $isGuest = auth()->guest();
-            $canSubmit = $this->availableStock >= $this->quantity && $this->availableStock > 0;
-        @endphp
-        <div id="booking-action-panel" class="space-y-4">
-
-            <x-stock-period :date-range="$dateRange" />
-
-            {{-- Jumlah Unit (Quantity) --}}
-            <div class="space-y-2">
-                <div class="flex items-center justify-between">
-                    <label for="quantity" class="text-xs font-bold text-darkbrown-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <i data-lucide="package" class="w-4 h-4 text-avocado-600"></i>
-                        <span>Jumlah Unit</span>
-                    </label>
-                    <x-stock-status :stock="$this->availableStock" />
-                </div>
-
-                @if($this->availableStock > 0)
-                    <div class="flex items-center gap-2">
-                        <button
-                            type="button"
-                            wire:click="$set('quantity', {{ max(1, $quantity - 1) }})"
-                            @disabled($quantity <= 1)
-                            class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                            title="Kurangi unit"
-                        >
-                            -
-                        </button>
-                        <input
-                            type="number"
-                            id="quantity"
-                            wire:model.live="quantity"
-                            min="1"
-                            max="{{ max(1, $this->availableStock) }}"
-                            class="input-tendaku flex-1 text-center font-bold text-sm py-2 px-3 rounded-xl border-wheat-300"
-                            required
-                        />
-                        <button
-                            type="button"
-                            wire:click="$set('quantity', {{ $quantity + 1 }})"
-                            @disabled($quantity >= $this->availableStock)
-                            class="w-10 h-10 rounded-xl border border-wheat-300 bg-wheat-100 hover:bg-wheat-200 text-darkbrown-800 font-extrabold flex items-center justify-center transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                            title="Tambah unit"
-                        >
-                            +
-                        </button>
-                    </div>
-                @else
-                    <div class="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-500 shrink-0"></i>
-                        <span>{{ $this->availableStock === null ? 'Ketersediaan belum dapat diperiksa. Periksa jadwal atau coba lagi.' : 'Tidak tersedia pada periode ini. Silakan pilih jadwal lain.' }}</span>
-                    </div>
-                @endif
-
-                @error('quantity')
-                    <p class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
-                        {{ $message }}
-                    </p>
-                @enderror
-            </div>
-
-            {{-- Keterangan Alur Booking --}}
-            <div class="p-3.5 rounded-xl bg-wheat-50 border border-wheat-200 text-darkbrown-700 flex items-start gap-2.5">
-                <i data-lucide="calendar" class="w-4 h-4 text-avocado-600 shrink-0 mt-0.5"></i>
-                <div class="text-xs leading-relaxed">
-                    <span class="font-bold text-darkbrown-900">Jadwal & Pengambilan</span>
-                    <p class="text-[11px] text-darkbrown-600 mt-0.5">
-                        Tanggal mulai sewa, durasi, dan metode serah terima dipilih di halaman <strong>Booking</strong>. Stok di atas mengikuti periode acuan dan belum merupakan reservasi.
-                    </p>
-                </div>
-            </div>
-
-            {{-- TOMBOL UTAMA: Sewa Sekarang / Checkout / Masuk Keranjang --}}
-            @if($isGuest)
-                <div class="space-y-2 pt-1">
+        @if(count($galleryImages) > 1)
+            <div class="flex flex-wrap gap-2 px-1 pb-1 pt-3">
+                @foreach($galleryImages as $index => $imgUrl)
                     <button
                         type="button"
-                        wire:click="{{ $canSubmit ? 'checkoutNow' : 'chooseSchedule' }}"
-                        id="btn-checkout"
-                        wire:loading.attr="disabled"
-                        wire:loading.class="opacity-75 cursor-wait"
-                        @class([
-                            'w-full py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md transition-all duration-200',
-                            'flex items-center justify-center gap-2',
-                            'btn-tendaku-primary hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer',
-                        ])
+                        @click="activeImage = @js($imgUrl)"
+                        :class="activeImage === @js($imgUrl) ? 'ring-2 ring-avocado-500 ring-offset-2 border-transparent' : 'opacity-70 hover:opacity-100 border-wheat-200'"
+                        aria-label="Tampilkan foto {{ $index + 1 }}"
+                        class="relative h-16 w-16 overflow-hidden rounded-2xl border bg-wheat-50 transition-all"
                     >
-                        <span wire:loading.remove wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
-                            @if(!$canSubmit)
-                                <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                                <span>Pilih Jadwal Lain</span>
-                            @else
-                                <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                                <span>Checkout Sekarang</span>
-                            @endif
-                        </span>
-
-                        <span wire:loading wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
-                            <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                            </svg>
-                            <span>Menyiapkan checkout...</span>
-                        </span>
+                        <img
+                            src="{{ $imgUrl }}"
+                            alt="Thumbnail {{ $index + 1 }}"
+                            loading="lazy"
+                            class="h-full w-full object-cover"
+                        />
                     </button>
-
-                    <p class="text-[11px] leading-relaxed text-darkbrown-500 text-center">
-                        Langsung checkout tanpa akun. Isi jadwal sewa dan data diri di halaman Booking.
-                    </p>
-                </div>
-            @else
-                <div class="space-y-2 pt-1">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <button
-                            type="button"
-                            wire:click="addToCart"
-                            id="btn-masuk-keranjang"
-                            wire:loading.attr="disabled"
-                            wire:loading.class="opacity-75 cursor-wait"
-                            @class([
-                                'w-full py-3 px-3 rounded-xl font-bold text-xs shadow-sm transition-all duration-150',
-                                'flex items-center justify-center gap-1.5',
-                                'btn-tendaku-secondary hover:border-avocado-500 hover:text-avocado-700 cursor-pointer' => $canSubmit,
-                                'bg-wheat-200 text-darkbrown-400 cursor-not-allowed opacity-60' => !$canSubmit,
-                            ])
-                            @disabled(!$canSubmit)
-                        >
-                            <span wire:loading.remove wire:target="addToCart" class="flex items-center gap-1.5">
-                                <i data-lucide="shopping-cart" class="w-4 h-4 text-avocado-700"></i>
-                                <span>Masukkan ke Keranjang</span>
-                            </span>
-                            <span wire:loading wire:target="addToCart" class="flex items-center gap-1.5">
-                                <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                </svg>
-                                <span>Menyimpan...</span>
-                            </span>
-                        </button>
-
-                        <button
-                            type="button"
-                            wire:click="{{ $canSubmit ? 'checkoutNow' : 'chooseSchedule' }}"
-                            id="btn-sewa-sekarang"
-                            wire:loading.attr="disabled"
-                            wire:loading.class="opacity-75 cursor-wait"
-                            @class([
-                                'w-full py-3 px-3 rounded-xl font-extrabold text-xs shadow-md transition-all duration-150',
-                                'flex items-center justify-center gap-1.5',
-                                'btn-tendaku-primary hover:shadow-lg cursor-pointer',
-                            ])
-                        >
-                            <span wire:loading.remove wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-1.5">
-                                <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                                <span>{{ $canSubmit ? 'Sewa Sekarang' : 'Pilih Jadwal Lain' }}</span>
-                            </span>
-                            <span wire:loading wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-1.5">
-                                <svg class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                </svg>
-                                <span>Menyiapkan...</span>
-                            </span>
-                        </button>
-                    </div>
-                </div>
-            @endif
-        </div>
-
-        {{-- Tombol Lanjut ke Checkout (khusus anggota, muncul jika produk ini sudah ada di keranjang) --}}
-        @if($inCart && ! $isGuest)
-            <div class="mt-3 p-3.5 rounded-xl bg-avocado-50 border border-avocado-200 flex flex-col gap-2">
-                <p class="text-xs font-semibold text-avocado-900 flex items-center gap-1.5">
-                    <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
-                    Produk ini sudah ada di keranjangmu!
-                </p>
-                <button
-                    type="button"
-                    wire:click="proceedToBooking"
-                    wire:loading.attr="disabled"
-                    class="btn-tendaku-primary w-full py-2.5 px-4 rounded-xl text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition-all"
-                >
-                    <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                    <span>Lanjut ke Checkout</span>
-                </button>
+                @endforeach
             </div>
         @endif
+    </div>
 
-        {{-- TRUST BADGES --}}
-        <div class="pt-4 border-t border-wheat-200 space-y-2.5">
-            <div class="flex items-start gap-2.5 text-[11px] text-darkbrown-600">
-                <i data-lucide="credit-card" class="w-4 h-4 text-avocado-600 shrink-0 mt-0.5"></i>
-                <span>Cukup bawa <strong class="text-darkbrown-800">KTP Asli</strong> saat pickup barang di toko vendor.</span>
-            </div>
-            <div class="flex items-start gap-2.5 text-[11px] text-darkbrown-600">
-                <i data-lucide="shield-check" class="w-4 h-4 text-avocado-600 shrink-0 mt-0.5"></i>
-                <span>Transaksi aman tanpa biaya tersembunyi. Pembayaran lunas di awal.</span>
-            </div>
-            <div class="flex items-start gap-2.5 text-[11px] text-darkbrown-600">
-                <i data-lucide="sparkles" class="w-4 h-4 text-avocado-600 shrink-0 mt-0.5"></i>
-                <span>Unit steril, higienis & selalu diperiksa sebelum serah terima.</span>
+    {{-- Panel beli: nama, harga sewa, ketersediaan, jumlah, CTA --}}
+    <aside
+        id="booking-action-panel"
+        class="space-y-5 rounded-[2rem] border border-wheat-200/90 bg-gradient-to-br from-wheat-100 via-[#FDFBF7] to-sunglow-100 p-6 shadow-tendaku-sm sm:p-7 lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-24"
+        aria-labelledby="ketersediaan-peralatan"
+    >
+        <div class="space-y-4">
+            <h1 class="break-words text-3xl font-extrabold leading-[1.08] tracking-tighter text-darkbrown-900 sm:text-4xl">
+                {{ $item->name }}
+            </h1>
+
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-widest text-darkbrown-500">
+                    Tarif Sewa Peralatan
+                </p>
+
+                <p class="mt-1 flex flex-wrap items-baseline gap-x-2">
+                    <span class="text-3xl font-extrabold tracking-tight text-darkbrown-900 sm:text-4xl">
+                        Rp {{ number_format($item->daily_rate, 0, ',', '.') }}
+                    </span>
+                    <span class="text-sm font-semibold text-darkbrown-500">/ hari</span>
+                </p>
             </div>
         </div>
 
+        <div class="space-y-5 rounded-3xl border border-wheat-200 bg-white p-5 shadow-tendaku-sm">
+            <div class="space-y-3">
+                <h2 id="ketersediaan-peralatan" class="{{ $sectionHeadingClass }}">
+                    Ketersediaan
+                </h2>
+
+                @include('livewire.customer.partials.availability-calendar', [
+                    'calendar' => $this->availabilityCalendar,
+                    'dateRange' => $dateRange,
+                    'embedded' => true,
+                ])
+
+                <div class="space-y-2">
+                    <label
+                        for="quantity"
+                        class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-darkbrown-800"
+                    >
+                        <i data-lucide="package" class="h-4 w-4 text-avocado-600"></i>
+                        <span>Jumlah Unit</span>
+                    </label>
+
+                    @if($this->availableStock > 0)
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                wire:click="$set('quantity', {{ max(1, $quantity - 1) }})"
+                                @disabled($quantity <= 1)
+                                class="{{ $stepperClass }}"
+                                title="Kurangi unit"
+                            >
+                                <i data-lucide="minus" class="h-4 w-4"></i>
+                            </button>
+
+                            <input
+                                type="number"
+                                id="quantity"
+                                wire:model.live="quantity"
+                                min="1"
+                                max="{{ max(1, $this->availableStock) }}"
+                                class="input-tendaku min-w-0 flex-1 rounded-full border-wheat-300 px-2 py-2 text-center text-sm font-bold"
+                                required
+                            />
+
+                            <button
+                                type="button"
+                                wire:click="$set('quantity', {{ $quantity + 1 }})"
+                                @disabled($quantity >= $this->availableStock)
+                                class="{{ $stepperClass }}"
+                                title="Tambah unit"
+                            >
+                                <i data-lucide="plus" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    @else
+                        <div class="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+                            <i data-lucide="alert-triangle" class="h-4 w-4 shrink-0 text-red-500"></i>
+                            <span>
+                                {{ $this->availableStock === null
+                                    ? 'Ketersediaan belum dapat diperiksa. Periksa jadwal atau coba lagi.'
+                                    : 'Tidak tersedia pada periode ini. Silakan pilih jadwal lain.' }}
+                            </span>
+                        </div>
+                    @endif
+
+                    <x-stock-status :stock="$this->availableStock" />
+
+                    @error('quantity')
+                        <p class="flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                            {{ $message }}
+                        </p>
+                    @enderror
+                </div>
+
+                <p class="text-xs leading-relaxed text-darkbrown-500">
+                    Stok mengikuti periode acuan dan belum merupakan reservasi.
+                </p>
+            </div>
+
+            <div class="space-y-3 border-t border-wheat-100 pt-5">
+                {{-- Khusus anggota: muncul jika produk ini sudah ada di keranjang --}}
+                @if($inCart && ! $isGuest)
+                    <div class="flex flex-col gap-2 rounded-2xl border border-avocado-200 bg-avocado-50 p-3.5">
+                        <p class="flex items-center gap-1.5 text-xs font-semibold text-avocado-900">
+                            <i data-lucide="shopping-cart" class="h-3.5 w-3.5"></i>
+                            Produk ini sudah ada di keranjangmu!
+                        </p>
+
+                        <button
+                            type="button"
+                            wire:click="proceedToBooking"
+                            wire:loading.attr="disabled"
+                            class="btn-tendaku-primary inline-flex w-full items-center justify-center gap-1.5 rounded-2xl px-4 py-2.5 text-center text-xs font-bold shadow-md transition-all hover:shadow-lg"
+                        >
+                            <i data-lucide="arrow-right-circle" class="h-4 w-4"></i>
+                            <span>Lanjut ke Checkout</span>
+                        </button>
+                    </div>
+                @endif
+
+                @include('livewire.customer.partials.product-booking-actions', [
+                    'idSuffix' => '',
+                ])
+
+                @if($isGuest)
+                    <p class="text-center text-[11px] leading-relaxed text-darkbrown-500">
+                        Langsung checkout tanpa akun. Isi jadwal sewa dan data diri di halaman Booking.
+                    </p>
+                @endif
+            </div>
+        </div>
+    </aside>
+
+    {{-- Detail: deskripsi, informasi, vendor, syarat & ketentuan --}}
+    <div class="space-y-6 lg:col-span-7 lg:col-start-1 lg:row-start-2">
+
+        <section
+            class="rounded-3xl border border-wheat-200/90 bg-white p-6 shadow-tendaku-sm"
+            aria-labelledby="deskripsi-peralatan"
+        >
+            <h2 id="deskripsi-peralatan" class="{{ $sectionHeadingClass }}">
+                Deskripsi Peralatan
+            </h2>
+
+            <p class="mt-3 text-sm leading-relaxed text-darkbrown-700">
+                {{ $item->description ?: 'Peralatan outdoor kualitas standar pendakian gunung, steril & siap pakai.' }}
+            </p>
+
+            <h2 id="informasi-peralatan" class="{{ $sectionHeadingClass }}">
+                Informasi Peralatan
+            </h2>
+
+            <dl class="mt-3 divide-y divide-wheat-100 text-sm">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 first:pt-0">
+                    <dt class="text-darkbrown-600">Kategori Alat</dt>
+                    <dd class="font-semibold text-darkbrown-900">{{ $categoryName }}</dd>
+                </div>
+
+                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+                    <dt class="text-darkbrown-600">Kondisi Unit Fisik</dt>
+                    <dd class="font-semibold text-avocado-800">{{ $dominantCondition }}</dd>
+                </div>
+
+                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+                    <dt class="text-darkbrown-600">Umur / Masa Pakai</dt>
+                    <dd class="font-semibold text-darkbrown-900">{{ $itemAge }}</dd>
+                </div>
+
+                <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 last:pb-0">
+                    <dt class="text-darkbrown-600">Denda Keterlambatan</dt>
+                    <dd class="font-semibold text-red-700">
+                        Rp {{ number_format($item->late_fee_per_day, 0, ',', '.') }} / hari
+                    </dd>
+                </div>
+            </dl>
+        </section>
+
+        {{-- Syarat dan Ketentuan --}}
+        <section
+            class="rounded-3xl border border-wheat-200/90 bg-white p-6 shadow-tendaku-sm"
+            x-data="{ open: false }"
+        >
+            <h2 class="{{ $sectionHeadingClass }}">
+                <button
+                    type="button"
+                    @click="open = !open"
+                    :aria-expanded="open"
+                    aria-controls="syarat-ketentuan"
+                    class="flex w-full cursor-pointer items-center justify-between gap-3 text-left"
+                >
+                    <span>Syarat dan Ketentuan</span>
+
+                    <span
+                        class="shrink-0 transition-transform duration-200"
+                        :class="{ 'rotate-180': open }"
+                    >
+                        <i data-lucide="chevron-down" class="h-5 w-5 text-darkbrown-500"></i>
+                    </span>
+                </button>
+            </h2>
+
+            <ul
+                id="syarat-ketentuan"
+                x-show="open"
+                x-cloak
+                class="mt-4 space-y-3 text-sm leading-relaxed text-darkbrown-600"
+            >
+                <li class="flex items-start gap-2.5">
+                    <i data-lucide="credit-card" class="mt-0.5 h-4 w-4 shrink-0 text-avocado-600"></i>
+                    <p>
+                        <span class="font-bold text-darkbrown-900">Jaminan KTP Asli.</span>
+                        Bawa <strong class="text-darkbrown-800">KTP Asli</strong> saat pickup barang di toko vendor.
+                    </p>
+                </li>
+
+                <li class="flex items-start gap-2.5">
+                    <i data-lucide="wallet" class="mt-0.5 h-4 w-4 shrink-0 text-avocado-600"></i>
+                    <p>
+                        <span class="font-bold text-darkbrown-900">Pembayaran.</span>
+                        Pembayaran dapat lunas di awal atau dp.
+                    </p>
+                </li>
+
+                <li class="flex items-start gap-2.5">
+                    <i data-lucide="shield-check" class="mt-0.5 h-4 w-4 shrink-0 text-avocado-600"></i>
+                    <p>
+                        <span class="font-bold text-darkbrown-900">Biaya.</span>
+                        Transaksi aman, tidak ada biaya tersembunyi.
+                    </p>
+                </li>
+
+                <li class="flex items-start gap-2.5">
+                    <i data-lucide="sparkles" class="mt-0.5 h-4 w-4 shrink-0 text-avocado-600"></i>
+                    <p>
+                        <span class="font-bold text-darkbrown-900">Kondisi Unit.</span>
+                        Unit steril dan diperiksa sebelum serah terima.
+                    </p>
+                </li>
+
+                <li class="flex items-start gap-2.5">
+                    <i data-lucide="calendar" class="mt-0.5 h-4 w-4 shrink-0 text-avocado-600"></i>
+                    <p>
+                        <span class="font-bold text-darkbrown-900">Jadwal &amp; Pengambilan.</span>
+                        Tanggal mulai sewa, durasi, dan metode serah terima dipilih di halaman
+                        <strong class="text-darkbrown-800">Booking</strong>.
+                    </p>
+                </li>
+            </ul>
+        </section>
     </div>
 </div>

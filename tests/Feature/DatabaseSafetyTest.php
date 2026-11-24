@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
 class DatabaseSafetyTest extends TestCase
 {

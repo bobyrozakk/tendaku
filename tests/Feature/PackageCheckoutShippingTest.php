@@ -89,7 +89,7 @@ class PackageCheckoutShippingTest extends TestCase
         $input = $this->confirmed($this->input($c));
         $this->assertSame(30680, $input['expected_delivery_fee']);
         Cache::flush();
-        $this->postJson(route('customer.packages.checkout.store', $c['package']->id), $input + ['delivery_fee' => 0, 'vendor_id' => 999, 'weight_kg' => 0, 'rate_per_km' => 0, 'distance_km' => 0, 'items' => [['id' => $c['tent']->id, 'qty' => 999]]])->assertOk()->assertJsonPath('payment_amount', 630680)->assertJsonStructure(['redirect_url', 'booking_code']);
+        $this->postJson(route('customer.packages.booking.store', $c['package']->id), $input + ['delivery_fee' => 0, 'vendor_id' => 999, 'weight_kg' => 0, 'rate_per_km' => 0, 'distance_km' => 0, 'items' => [['id' => $c['tent']->id, 'qty' => 999]]])->assertOk()->assertJsonPath('payment_amount', 630680)->assertJsonStructure(['redirect_url', 'booking_code']);
         $rental = Rental::sole();
         $this->assertSame('30680.00', $rental->delivery_fee);
         $this->assertSame('600000.00', $rental->subtotal);
@@ -111,7 +111,7 @@ class PackageCheckoutShippingTest extends TestCase
         $preview = $this->postJson(route('checkout.shipping.preview'), $input)->assertOk()->assertJsonPath('total_weight_kg', 11)->assertJsonPath('distance_km', null)->assertJsonPath('delivery_fee', 0)->json();
         $longer = array_replace($input, ['return_date' => now()->addDays(6)->toDateString()]);
         $this->postJson(route('checkout.shipping.preview'), $longer)->assertOk()->assertJsonPath('total_weight_kg', 11)->assertJsonPath('subtotal', 1500000);
-        $this->postJson(route('customer.packages.checkout.store', $c['package']->id), $input + ['expected_delivery_fee' => 0, 'expected_shipping_context' => $preview['shipping_context']])->assertOk()->assertJsonPath('payment_amount', 600000);
+        $this->postJson(route('customer.packages.booking.store', $c['package']->id), $input + ['expected_delivery_fee' => 0, 'expected_shipping_context' => $preview['shipping_context']])->assertOk()->assertJsonPath('payment_amount', 600000);
         $this->assertSame('0.00', Rental::sole()->delivery_fee);
         Http::assertNothingSent();
     }
@@ -137,10 +137,10 @@ class PackageCheckoutShippingTest extends TestCase
             'weight' => $c['tent']->update(['weight_kg' => 3.3]),
             'schedule' => $input['return_date'] = now()->addDays(4)->toDateString(),
         };
-        $latest = $this->postJson(route('customer.packages.checkout.store', $c['package']->id), $input)->assertStatus(409)->assertJsonPath('status', 'shipping_changed')->json('shipping');
+        $latest = $this->postJson(route('customer.packages.booking.store', $c['package']->id), $input)->assertStatus(409)->assertJsonPath('status', 'shipping_changed')->json('shipping');
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
-        $this->postJson(route('customer.packages.checkout.store', $c['package']->id), array_replace($input, ['expected_delivery_fee' => $latest['delivery_fee'], 'expected_shipping_context' => $latest['shipping_context']]))->assertOk();
+        $this->postJson(route('customer.packages.booking.store', $c['package']->id), array_replace($input, ['expected_delivery_fee' => $latest['delivery_fee'], 'expected_shipping_context' => $latest['shipping_context']]))->assertOk();
         $this->assertDatabaseCount('rentals', 1);
         $this->assertDatabaseCount('payments', 1);
     }
@@ -156,7 +156,7 @@ class PackageCheckoutShippingTest extends TestCase
         $other = CustomerAddress::factory()->for($c['customer'])->withCoordinates(-7.8, 112.7)->create();
         $this->postJson(route('checkout.shipping.preview'), array_replace($input, ['customer_address_id' => $other->id]))->assertOk()->assertJsonPath('distance_km', 20)->assertJsonPath('delivery_fee', 46000);
         $foreign = CustomerAddress::factory()->withCoordinates()->create();
-        $this->postJson(route('customer.packages.checkout.store', $c['package']->id), array_replace($input, ['customer_address_id' => $foreign->id]))->assertUnprocessable()->assertJsonPath('status', 'address_unavailable');
+        $this->postJson(route('customer.packages.booking.store', $c['package']->id), array_replace($input, ['customer_address_id' => $foreign->id]))->assertUnprocessable()->assertJsonPath('status', 'address_unavailable');
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
         Http::assertSentCount(2);
@@ -165,7 +165,7 @@ class PackageCheckoutShippingTest extends TestCase
     public function test_route_package_identity_cannot_be_replaced_by_hidden_input(): void
     {
         $c = $this->context();
-        $this->actingAs($c['customer'])->postJson(route('customer.packages.checkout.store', $c['package']->id), array_replace($this->input($c), ['package_id' => $c['package']->id + 999]))->assertUnprocessable()->assertJsonValidationErrors('package_id');
+        $this->actingAs($c['customer'])->postJson(route('customer.packages.booking.store', $c['package']->id), array_replace($this->input($c), ['package_id' => $c['package']->id + 999]))->assertUnprocessable()->assertJsonValidationErrors('package_id');
         $this->assertDatabaseCount('rentals', 0);
     }
 
@@ -174,7 +174,7 @@ class PackageCheckoutShippingTest extends TestCase
         $c = $this->context();
         Http::fake();
         $input = array_replace($this->input($c), ['pickup_date' => now()->addDay()->format('Y-m-d').' 09:00:00']);
-        $this->actingAs($c['customer'])->postJson(route('customer.packages.checkout.store', $c['package']->id), $input)->assertUnprocessable()->assertJsonValidationErrors('pickup_date');
+        $this->actingAs($c['customer'])->postJson(route('customer.packages.booking.store', $c['package']->id), $input)->assertUnprocessable()->assertJsonValidationErrors('pickup_date');
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
         Http::assertNothingSent();
@@ -191,7 +191,7 @@ class PackageCheckoutShippingTest extends TestCase
         $c = $this->context();
         $c[$model]->update([$field => $value]);
         Http::fake();
-        $this->actingAs($c['customer'])->postJson(route('customer.packages.checkout.store', $c['package']->id), $this->input($c))->assertStatus($status);
+        $this->actingAs($c['customer'])->postJson(route('customer.packages.booking.store', $c['package']->id), $this->input($c))->assertStatus($status);
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
         Http::assertNothingSent();
@@ -205,7 +205,7 @@ class PackageCheckoutShippingTest extends TestCase
         $input = $this->confirmed($this->input($c));
         Cache::flush();
         Http::fake(['api.openrouteservice.org/*' => Http::failedConnection('timeout')]);
-        $this->postJson(route('customer.packages.checkout.store', $c['package']->id), $input)->assertStatus(503)->assertJsonPath('delivery_fee', null);
+        $this->postJson(route('customer.packages.booking.store', $c['package']->id), $input)->assertStatus(503)->assertJsonPath('delivery_fee', null);
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
         Http::assertSentCount(1);
@@ -217,7 +217,7 @@ class PackageCheckoutShippingTest extends TestCase
         $this->actingAs($c['customer']);
         $this->fakeRoute();
         $input = $this->confirmed($this->input($c)) + ['checkout_attempt_id' => (string) Str::uuid()];
-        $url = route('customer.packages.checkout.store', $c['package']->id);
+        $url = route('customer.packages.booking.store', $c['package']->id);
         $first = $this->postJson($url, $input)->assertOk()->json();
         $this->postJson($url, $input)->assertOk()->assertJsonPath('booking_code', $first['booking_code']);
         $this->assertDatabaseCount('rentals', 1);
@@ -231,7 +231,7 @@ class PackageCheckoutShippingTest extends TestCase
         $this->actingAs($c['customer']);
         Http::fake();
         $input = $this->confirmed($this->input($c, 'self_pickup'));
-        $url = route('customer.packages.checkout.store', $c['package']->id);
+        $url = route('customer.packages.booking.store', $c['package']->id);
         $first = $this->postJson($url, $input + ['checkout_attempt_id' => (string) Str::uuid()])->assertOk()->json('booking_code');
         Rental::sole()->update(['status' => 'cancelled']);
         $second = $this->postJson($url, $input + ['checkout_attempt_id' => (string) Str::uuid()])->assertOk()->json('booking_code');
@@ -249,7 +249,7 @@ class PackageCheckoutShippingTest extends TestCase
         $this->actingAs($c['customer']);
         $this->fakeRoute();
         $input = $this->confirmed($this->input($c)) + ['checkout_attempt_id' => (string) Str::uuid()];
-        $url = route('customer.packages.checkout.store', $c['package']->id);
+        $url = route('customer.packages.booking.store', $c['package']->id);
         $first = $this->postJson($url, $input)->assertOk()->json();
         $c['vendor']->shippingSetting()->update(['rate_per_km' => 3000]);
         $retry = $this->confirmed($this->input($c)) + ['checkout_attempt_id' => $input['checkout_attempt_id']];
@@ -269,7 +269,7 @@ class PackageCheckoutShippingTest extends TestCase
         $this->fakeRoute();
         $input = $this->confirmed($this->input($c));
         $c['package']->update(['price' => 400000]);
-        $this->post(route('customer.packages.checkout.store', $c['package']->id), $input)->assertRedirect(route('customer.packages.checkout', $c['package']->id))->assertSessionHas('shipping_conflict')->assertSessionHasInput('pickup_method', 'delivery');
+        $this->post(route('customer.packages.booking.store', $c['package']->id), $input)->assertRedirect(route('customer.packages.booking', $c['package']->id))->assertSessionHas('shipping_conflict')->assertSessionHasInput('pickup_method', 'delivery');
         $this->assertDatabaseCount('rentals', 0);
         Http::assertSentCount(1);
     }
@@ -277,7 +277,7 @@ class PackageCheckoutShippingTest extends TestCase
     public function test_page_uses_shared_address_modal_outside_booking_form_and_external_js(): void
     {
         $c = $this->context();
-        $html = $this->actingAs($c['customer'])->get(route('customer.packages.checkout', $c['package']->id))->assertOk()->assertSee('packageCheckout(')->assertSee('shippingNeedsApproval')->assertDontSee('Rp 25.000')->getContent();
+        $html = $this->actingAs($c['customer'])->get(route('customer.packages.booking', $c['package']->id))->assertOk()->assertSee('packageCheckout(')->assertSee('shippingNeedsApproval')->assertDontSee('Rp 25.000')->getContent();
         $this->assertSame(1, substr_count($html, 'name="package_id"'));
         $modal = strpos($html, 'aria-labelledby="modal-title"');
         $formEnd = strrpos(substr($html, 0, $modal), '</form>');
@@ -309,7 +309,7 @@ class PackageCheckoutShippingTest extends TestCase
         $this->fakeRoute();
         $this->actingAs($a['customer'])->postJson(route('checkout.shipping.preview'), $this->input($a) + ['vendor_id' => $b['vendor']->id])->assertOk()->assertJsonPath('distance_fee', 24680);
         $a['package']->packageItems()->where('master_item_id', $a['tent']->id)->update(['master_item_id' => $b['tent']->id]);
-        $this->postJson(route('customer.packages.checkout.store', $a['package']->id), $this->input($a))->assertUnprocessable()->assertJsonPath('status', 'invalid_package_component');
+        $this->postJson(route('customer.packages.booking.store', $a['package']->id), $this->input($a))->assertUnprocessable()->assertJsonPath('status', 'invalid_package_component');
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
         Http::assertSentCount(1);
@@ -326,7 +326,7 @@ class PackageCheckoutShippingTest extends TestCase
             }
         });
         Http::fake();
-        $url = route('customer.packages.checkout.store', $c['package']->id);
+        $url = route('customer.packages.booking.store', $c['package']->id);
         $input = $this->input($c, 'self_pickup');
         $this->actingAs($c['customer'])->withSession(['_token' => 'package-shipping-token'])->postJson($url, $input)->assertStatus(419);
         $this->withHeader('X-CSRF-TOKEN', 'package-shipping-token')->postJson($url, $input)->assertStatus(409);
@@ -343,7 +343,7 @@ class PackageCheckoutShippingTest extends TestCase
 
             return Http::response(['routes' => [['summary' => ['distance' => 12340]]]]);
         }]);
-        $this->actingAs($c['customer'])->postJson(route('customer.packages.checkout.store', $c['package']->id), $this->input($c))->assertStatus(409);
+        $this->actingAs($c['customer'])->postJson(route('customer.packages.booking.store', $c['package']->id), $this->input($c))->assertStatus(409);
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
         Http::assertSentCount(1);

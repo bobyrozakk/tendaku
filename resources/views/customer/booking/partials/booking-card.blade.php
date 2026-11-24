@@ -1,6 +1,8 @@
 
 @php
-    $statusLabel = $rental->displayStatusLabel();
+    $isLate = $rental->isLate();
+    $displayStatus = in_array($rental->status, ['returned', 'completed'], true) ? 'completed' : $rental->status;
+    $statusLabel = in_array($rental->status, ['returned', 'completed'], true) ? 'Selesai' : $rental->displayStatusLabel();
 
     $itemCount = $rental->details->count();
     $firstItem = $rental->details->first()?->masterItem;
@@ -8,13 +10,10 @@
     $total = $rental->final_total ?? $rental->grand_total;
 @endphp
 
-<article class="card-tendaku space-y-4 rounded-2xl
-                border border-wheat-200 bg-white p-5
-                shadow-tendaku-sm transition
-                hover:border-wheat-400 sm:p-6">
+<article class="space-y-4 rounded-2xl p-5 transition duration-200 sm:p-6 {{ $isLate ? 'border-2 border-red-300 bg-red-50 hover:border-red-400 hover:shadow-tendaku shadow-tendaku-sm' : 'card-tendaku border border-wheat-200 bg-white hover:border-wheat-400 shadow-tendaku-sm' }}">
 
     <div class="flex flex-col justify-between gap-3
-                border-b border-wheat-100 pb-3
+                border-b {{ $isLate ? 'border-red-200' : 'border-wheat-100' }} pb-3
                 sm:flex-row sm:items-center">
         <div class="flex flex-wrap items-center gap-3">
             <span class="font-mono text-sm font-extrabold
@@ -23,9 +22,16 @@
             </span>
 
             <x-rental-status-badge
-                :status="$rental->status"
+                :status="$displayStatus"
                 :label="$statusLabel"
             />
+
+            @if ($isLate)
+                <span class="inline-flex items-center gap-1 rounded-full border border-red-300 bg-red-100 px-2.5 py-0.5 text-[11px] font-bold text-red-800">
+                    <i data-lucide="triangle-alert" class="h-3 w-3" aria-hidden="true"></i>
+                    Terlambat
+                </span>
+            @endif
         </div>
 
         <time datetime="{{ $rental->created_at->toIso8601String() }}"
@@ -42,7 +48,7 @@
             <div class="flex items-start gap-2 text-sm
                         font-bold text-darkbrown-900">
                 <i data-lucide="store"
-                   class="mt-0.5 h-4 w-4 shrink-0 text-sunglow-700"
+                   class="mt-0.5 h-4 w-4 shrink-0 {{ $isLate ? 'text-red-700' : 'text-sunglow-700' }}"
                    aria-hidden="true"></i>
 
                 <div>
@@ -60,7 +66,7 @@
             <div class="space-y-2 text-sm text-darkbrown-700">
                 <p class="flex items-start gap-2">
                     <i data-lucide="calendar"
-                       class="mt-0.5 h-4 w-4 shrink-0 text-avocado-600"
+                       class="mt-0.5 h-4 w-4 shrink-0 {{ $isLate ? 'text-red-600' : 'text-avocado-600' }}"
                        aria-hidden="true"></i>
 
                     <span>
@@ -70,8 +76,8 @@
                         –
                         {{ $rental->return_date?->translatedFormat('d M Y') }}
 
-                        <span class="text-darkbrown-500">
-                            ({{ $rental->rental_days }} hari)
+                        <span class="{{ $isLate ? 'font-semibold text-red-700' : 'text-darkbrown-500' }}">
+                            ({{ $rental->rental_days }} hari{{ $isLate ? ' · Terlambat' : '' }})
                         </span>
                     </span>
                 </p>
@@ -96,7 +102,7 @@
             </div>
         </div>
 
-        <div class="flex flex-col gap-3 border-t border-wheat-100
+        <div class="flex flex-col gap-3 border-t {{ $isLate ? 'border-red-200' : 'border-wheat-100' }}
                     pt-4 md:col-span-4 md:items-end
                     md:border-t-0 md:pt-0">
 
