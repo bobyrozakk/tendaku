@@ -1,5 +1,5 @@
-<div class="rounded-3xl border border-dashed border-wheat-300 bg-gradient-to-b from-white to-wheat-50/60 px-5 py-12 text-center sm:px-8">
-    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-wheat-100 text-darkbrown-600 shadow-inner">
+<div class="rounded-2xl border border-dashed border-wheat-300 px-5 py-10 text-center sm:px-8">
+    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-wheat-100 text-darkbrown-600">
         <i data-lucide="search-x" class="h-8 w-8" aria-hidden="true"></i>
     </div>
     <h3 class="mt-4 font-heading text-lg font-bold text-darkbrown-900">Belum ada alat yang cocok</h3>

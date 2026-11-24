@@ -1,16 +1,16 @@
 <x-layouts.customer>
     <x-slot name="header">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div class="min-w-0 max-w-2xl">
                 <h1 class="font-heading text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
                     Katalog Outdoor
                 </h1>
 
-                <p class="mt-1 text-base font-semibold text-avocado-800 sm:text-lg">
+                <p class="mt-0.5 text-sm font-semibold text-avocado-800 sm:text-base">
                     Perlengkapan camping, siap untuk petualanganmu.
                 </p>
 
-                <p class="mt-3 max-w-xl text-sm leading-relaxed text-darkbrown-600">
+                <p class="mt-2 max-w-xl text-sm leading-relaxed text-darkbrown-600">
                     Temukan tenda, sleeping bag, kompor, dan alat outdoor terawat. Semua unit dicek sebelum diserahkan, dengan jaminan KTP tanpa deposit uang.
                 </p>
             </div>

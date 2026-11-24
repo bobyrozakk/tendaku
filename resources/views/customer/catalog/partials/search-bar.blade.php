@@ -8,7 +8,7 @@
         wire:model.live.debounce.300ms="search"
         placeholder="Cari tenda, kompor, carrier..."
         autocomplete="off"
-        class="input-tendaku h-12 w-full pl-11 pr-16 text-sm font-medium [&::-webkit-search-cancel-button]:appearance-none"
+        class="input-tendaku h-11 w-full pl-11 pr-16 text-sm font-medium [&::-webkit-search-cancel-button]:appearance-none"
     />
     <div class="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
         <span

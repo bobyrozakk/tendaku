@@ -9,7 +9,7 @@
 
 <article
     wire:key="catalog-item-{{ $item->id }}"
-    class="group flex h-full flex-col overflow-hidden rounded-2xl border border-wheat-200/90 bg-white shadow-tendaku-sm transition duration-300 hover:-translate-y-1 hover:border-avocado-300 hover:shadow-tendaku-lg focus-within:ring-2 focus-within:ring-avocado-500/30 motion-reduce:transform-none motion-reduce:transition-none"
+    class="group flex h-full flex-col overflow-hidden rounded-2xl border border-wheat-200/90 bg-white transition duration-300 hover:-translate-y-1 hover:border-avocado-300 hover:shadow-tendaku-lg focus-within:ring-2 focus-within:ring-avocado-500/30 motion-reduce:transform-none motion-reduce:transition-none"
 >
     <div class="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-wheat-100 via-white to-sunglow-100">
         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-darkbrown-500" aria-hidden="true">
@@ -38,7 +38,7 @@
         </div>
     </div>
 
-    <div class="flex flex-1 flex-col gap-2.5 p-4 sm:p-5">
+    <div class="flex flex-1 flex-col gap-2.5 p-4">
         @if ($item->vendor)
             <a
                 href="{{ route('customer.stores.show', $item->vendor->slug ?? $item->vendor_id) }}"
@@ -79,7 +79,7 @@
         </div>
     </div>
 
-    <div class="border-t border-wheat-100 p-4 pt-3 sm:p-5 sm:pt-3">
+    <div class="border-t border-wheat-100 p-4 pt-3">
         <div class="flex items-end justify-between gap-3 pb-3">
             <div class="min-w-0">
                 <span class="block text-[11px] font-semibold uppercase tracking-wider text-darkbrown-500">Harga sewa</span>
