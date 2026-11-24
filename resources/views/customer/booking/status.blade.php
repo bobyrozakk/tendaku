@@ -74,7 +74,6 @@
             'pending'   => 'Menunggu Pembayaran / Validasi',
             'confirmed' => 'Dikonfirmasi (Siap Pickup)',
             'picked_up' => 'Sedang Dipakai (Disewa)',
-            'returned'  => 'Telah Dikembalikan',
             'completed' => 'Selesai',
             'cancelled' => 'Dibatalkan',
             'expired'   => 'Kedaluwarsa',

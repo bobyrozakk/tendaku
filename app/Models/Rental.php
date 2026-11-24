@@ -263,6 +263,37 @@ class Rental extends Model
     }
 
     /**
+     * Apakah rental mengalami keterlambatan pengembalian:
+     * 1. Masih disewa ('picked_up') dan sudah melewati batas waktu pengembalian.
+     * 2. Sudah selesai / dikembalikan ('completed' / 'returned') dan pengembaliannya tercatat terlambat.
+     */
+    public function isLate(): bool
+    {
+        // Kasus 1: Masih disewa, belum dikembalikan, dan telah melewati batas waktu pengembalian
+        if ($this->status === 'picked_up') {
+            return $this->returnDateTime()->isPast();
+        }
+
+        // Kasus 2: Selesai / sudah dikembalikan, dan terbukti pengembaliannya terlambat
+        if (in_array($this->status, ['completed', 'returned'], true)) {
+            if ($this->lateReturnDays() > 0 || (float) $this->total_late_fee > 0) {
+                return true;
+            }
+
+            if ($this->relationLoaded('details')) {
+                return $this->details->contains(
+                    fn ($d) => (int) ($d->late_days ?? 0) > 0 || (float) ($d->late_fee ?? 0) > 0
+                );
+            }
+
+            return false;
+        }
+
+        // Status lainnya (pending, confirmed, cancelled, expired) tidak dianggap terlambat
+        return false;
+    }
+
+    /**
      * Alamat email penerima pengingat rental.
      */
     public function customerEmail(): ?string

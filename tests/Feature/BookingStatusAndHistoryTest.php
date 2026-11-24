@@ -985,6 +985,98 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertContent('png-image-data');
     }
 
+    public function test_booking_history_excludes_returned_filter_and_merges_it_with_completed(): void
+    {
+        $rCompleted = $this->createRental($this->customer1->id, 'TDK-2026-COMPLETED', 'completed');
+        $rReturned = $this->createRental($this->customer1->id, 'TDK-2026-RETURNED', 'returned');
+        $rConfirmed = $this->createRental($this->customer1->id, 'TDK-2026-CONFIRMED', 'confirmed');
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('customer.booking.index'));
+
+        $response->assertStatus(200);
+        // The filter tab "Dikembalikan" should not exist as a filter button
+        $response->assertDontSee('status=returned');
+
+        // Filter status 'completed' should include BOTH completed and returned rentals
+        $responseFilter = $this->actingAs($this->customer1)
+            ->get(route('customer.booking.index', ['status' => 'completed']));
+
+        $responseFilter->assertStatus(200);
+        $responseFilter->assertSee('TDK-2026-COMPLETED');
+        $responseFilter->assertSee('TDK-2026-RETURNED');
+        $responseFilter->assertDontSee('TDK-2026-CONFIRMED');
+
+        // Accessing status=returned redirects to status=completed
+        $responseReturned = $this->actingAs($this->customer1)
+            ->get(route('customer.booking.index', ['status' => 'returned']));
+        $responseReturned->assertRedirect(route('customer.booking.index', ['status' => 'completed']));
+    }
+
+    public function test_booking_history_shows_red_card_when_rental_is_late(): void
+    {
+        // 1. Sedang disewa, belum jatuh tempo pengembalian (tidak terlambat)
+        $rRentingOnTime = $this->createRental($this->customer1->id, 'TDK-2026-RENTING-OK', 'picked_up');
+        $rRentingOnTime->update([
+            'pickup_date' => '2026-10-09',
+            'return_date' => '2026-10-11', // Test now is 2026-10-10, so not late
+        ]);
+
+        // 2. Sedang disewa, belum dikembalikan, dan sudah melewati batas pengembalian (terlambat)
+        $rRentingLate = $this->createRental($this->customer1->id, 'TDK-2026-RENTING-LATE', 'picked_up');
+        $rRentingLate->update([
+            'pickup_date' => '2026-10-07',
+            'return_date' => '2026-10-09', // Test now is 2026-10-10, so past return date
+        ]);
+
+        // 3. Selesai dan dikembalikan tepat waktu (tidak terlambat)
+        $rCompletedOnTime = $this->createRental($this->customer1->id, 'TDK-2026-DONE-OK', 'completed');
+        $rCompletedOnTime->update([
+            'pickup_date' => '2026-10-05',
+            'return_date' => '2026-10-08',
+            'actual_return_date' => '2026-10-08',
+            'returned_at' => Carbon::parse('2026-10-08 09:00:00'),
+            'total_late_fee' => 0,
+        ]);
+
+        // 4. Selesai tetapi pengembaliannya terlambat (status: selesai, terlambat)
+        $rCompletedLate = $this->createRental($this->customer1->id, 'TDK-2026-DONE-LATE', 'completed');
+        $rCompletedLate->update([
+            'pickup_date' => '2026-10-05',
+            'return_date' => '2026-10-07',
+            'actual_return_date' => '2026-10-09',
+            'returned_at' => Carbon::parse('2026-10-09 09:00:00'),
+            'total_late_fee' => 50000,
+        ]);
+
+        // 5. Status confirmed (walau tanggal pickup lampau) TIDAK dianggap terlambat
+        $rConfirmed = $this->createRental($this->customer1->id, 'TDK-2026-CONF-PAST', 'confirmed');
+        $rConfirmed->update([
+            'pickup_date' => '2026-10-08',
+            'return_date' => '2026-10-12',
+        ]);
+
+        $this->assertFalse($rRentingOnTime->isLate());
+        $this->assertTrue($rRentingLate->isLate());
+        $this->assertFalse($rCompletedOnTime->isLate());
+        $this->assertTrue($rCompletedLate->isLate());
+        $this->assertFalse($rConfirmed->isLate());
+
+        $response = $this->actingAs($this->customer1)
+            ->get(route('customer.booking.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('TDK-2026-RENTING-OK');
+        $response->assertSee('TDK-2026-RENTING-LATE');
+        $response->assertSee('TDK-2026-DONE-OK');
+        $response->assertSee('TDK-2026-DONE-LATE');
+        $response->assertSee('TDK-2026-CONF-PAST');
+
+        $response->assertSee('bg-red-50');
+        $response->assertSee('border-red-300');
+        $response->assertSee('Terlambat');
+    }
+
     private function createRental(int $userId, string $bookingCode, string $status): Rental
     {
         $rental = Rental::create([
