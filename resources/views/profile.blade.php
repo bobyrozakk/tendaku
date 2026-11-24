@@ -68,21 +68,6 @@
                             </span>
                         </div>
                     </div>
-
-                    <div class="flex flex-wrap items-center gap-2 self-start sm:self-center">
-                        <a href="{{ route('customer.booking.index') }}"
-                           class="btn-tendaku-secondary inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all">
-                            <i data-lucide="history" class="w-4 h-4"></i>
-                            <span>Riwayat Sewa</span>
-                        </a>
-                        <button type="button"
-                                x-data
-                                x-on:click="$dispatch('edit-biodata')"
-                                class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all">
-                            <i data-lucide="edit-3" class="w-4 h-4"></i>
-                            <span>Edit Biodata</span>
-                        </button>
-                    </div>
                 </div>
             </div>
 

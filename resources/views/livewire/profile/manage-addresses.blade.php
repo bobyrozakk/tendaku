@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Models\CustomerAddress;
@@ -58,6 +59,7 @@ new class extends Component
             return;
         }
 
+        // Data penerima diambil otomatis dari biodata profil.
         $this->recipient_name = $user->name ?? '';
         $this->phone_number = $user->phone ?? '';
         $this->is_default = ! $user->addresses()->exists();
@@ -96,7 +98,7 @@ new class extends Component
             return;
         }
 
-        // Alamat yang dipilih otomatis menjadi alamat utama
+        // Alamat yang dipilih otomatis menjadi alamat utama.
         if (! $address->is_default) {
             $address->setAsDefault();
             session()->flash('status', 'address-default-set');
@@ -186,6 +188,7 @@ new class extends Component
         $validated['latitude'] = $validated['latitude'] !== null
             ? round((float) $validated['latitude'], 7)
             : null;
+
         $validated['longitude'] = $validated['longitude'] !== null
             ? round((float) $validated['longitude'], 7)
             : null;
@@ -193,7 +196,7 @@ new class extends Component
         $isDefault = $validated['is_default'] ?? false;
         unset($validated['is_default']);
 
-        // Jika alamat pertama, otomatis jadikan alamat utama
+        // Jika alamat pertama, otomatis jadikan alamat utama.
         if (! $user->addresses()->exists()) {
             $isDefault = true;
         }
@@ -207,9 +210,11 @@ new class extends Component
         if ($this->editingId) {
             $address = $user->addresses()->findOrFail($this->editingId);
             $address->update($validated);
+
             if ($isDefault) {
                 $address->setAsDefault();
             }
+
             $this->selectedAddressId = $address->id;
             session()->flash('status', 'address-updated');
         } else {
@@ -221,6 +226,7 @@ new class extends Component
             if ($isDefault) {
                 $address->setAsDefault();
             }
+
             $this->selectedAddressId = $address->id;
             session()->flash('status', 'address-created');
         }
@@ -250,6 +256,7 @@ new class extends Component
 
         if ($wasDefault) {
             $next = CustomerAddress::where('user_id', $userId)->latest('id')->first();
+
             if ($next) {
                 $next->setAsDefault();
                 $this->selectedAddressId = $next->id;
@@ -262,7 +269,10 @@ new class extends Component
     public function with(): array
     {
         $user = Auth::user();
-        $addresses = $user ? $user->addresses()->orderByDesc('is_default')->latest('id')->get() : collect();
+
+        $addresses = $user
+            ? $user->addresses()->orderByDesc('is_default')->latest('id')->get()
+            : collect();
 
         $defaultAddress = $addresses->firstWhere('is_default', true) ?? $addresses->first();
 
@@ -275,7 +285,10 @@ new class extends Component
         }
 
         $selectedAddress = $addresses->firstWhere('id', $this->selectedAddressId) ?? $defaultAddress;
-        $otherAddresses = $addresses->filter(fn ($addr) => $selectedAddress && $addr->id !== $selectedAddress->id)->values();
+
+        $otherAddresses = $addresses
+            ->filter(fn ($addr) => $selectedAddress && $addr->id !== $selectedAddress->id)
+            ->values();
 
         return [
             'addresses' => $addresses,
@@ -295,12 +308,13 @@ new class extends Component
                 <i data-lucide="map-pin" class="w-5 h-5 text-avocado-600"></i>
                 <span>{{ __('Data Alamat Pengantaran') }}</span>
             </h2>
+
             <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
                 {{ __('Kelola alamat domisili atau titik serah terima untuk pengantaran dari vendor.') }}
             </p>
         </div>
 
-        @if(! $isCreating && ! $editingId)
+        @if (! $isCreating && ! $editingId)
             <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
                 @if ($canAddMore)
                     <button
@@ -312,7 +326,9 @@ new class extends Component
                         <span>{{ __('Tambah Alamat') }}</span>
                     </button>
                 @else
-                    <span class="text-xs font-semibold text-darkbrown-500">Batas {{ $maxAddresses }} alamat tercapai</span>
+                    <span class="text-xs font-semibold text-darkbrown-500">
+                        Batas {{ $maxAddresses }} alamat tercapai
+                    </span>
                 @endif
             </div>
         @endif
@@ -324,7 +340,7 @@ new class extends Component
         </div>
     @enderror
 
-    {{-- Alert Notifikasi Status --}}
+    {{-- Notifikasi Status --}}
     @if (session('status') === 'address-created')
         <div class="mt-4 p-4 rounded-xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm font-semibold text-avocado-900 flex items-center gap-2">
             <i data-lucide="check-circle" class="w-4 h-4 text-avocado-600 shrink-0"></i>
@@ -362,208 +378,210 @@ new class extends Component
                 <h3 class="text-sm font-extrabold text-darkbrown-900 font-heading">
                     {{ $editingId ? __('Ubah Alamat') : __('Tambah Alamat Baru') }}
                 </h3>
+
                 <span class="text-xs text-darkbrown-500 font-medium">* Wajib diisi</span>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Label Alamat -->
-                <div>
-                    <label for="addr_label" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Label Alamat <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="label"
-                        id="addr_label"
-                        type="text"
-                        placeholder="Contoh: Rumah, Kos, Kantor, Titik Kumpul"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                        required
-                    />
-                    <x-input-error class="mt-1" :messages="$errors->get('label')" />
-                </div>
+            {{-- Label Alamat --}}
+            <div>
+                <label for="addr_label" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
+                    Label Alamat <span class="text-red-500">*</span>
+                </label>
 
-                <!-- Nama Penerima -->
-                <div>
-                    <label for="addr_recipient" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Nama Penerima <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="recipient_name"
-                        id="addr_recipient"
-                        type="text"
-                        placeholder="Nama lengkap penerima"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                        required
-                    />
-                    <x-input-error class="mt-1" :messages="$errors->get('recipient_name')" />
-                </div>
+                <input
+                    wire:model="label"
+                    id="addr_label"
+                    type="text"
+                    placeholder="Contoh: Rumah, Kos, Kantor, Titik Kumpul"
+                    class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                    required
+                />
 
-                <!-- Nomor Telepon -->
-                <div>
-                    <label for="addr_phone" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Nomor WhatsApp / Telepon <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="phone_number"
-                        id="addr_phone"
-                        type="tel"
-                        placeholder="08xxxxxxxxxx"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                        required
-                    />
-                    <x-input-error class="mt-1" :messages="$errors->get('phone_number')" />
-                </div>
+                <x-input-error class="mt-1" :messages="$errors->get('label')" />
+            </div>
 
-                <!-- Kota / Kabupaten -->
-                <div>
-                    <label for="addr_city" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Kota / Kabupaten <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="city"
-                        data-address-field="city"
-                        id="addr_city"
-                        type="text"
-                        placeholder="Contoh: Kota Malang"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                        required
-                    />
-                    <x-input-error class="mt-1" :messages="$errors->get('city')" />
-                </div>
+            {{-- Detail Wilayah --}}
+            <div class="space-y-3">
+                <h4 class="text-xs font-extrabold text-darkbrown-800">
+                    Detail Wilayah
+                </h4>
 
-                <!-- Provinsi -->
-                <div>
-                    <label for="addr_province" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Provinsi <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="province"
-                        data-address-field="province"
-                        id="addr_province"
-                        type="text"
-                        placeholder="Contoh: Jawa Timur"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                        required
-                    />
-                    <x-input-error class="mt-1" :messages="$errors->get('province')" />
-                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {{-- Provinsi --}}
+                    <div>
+                        <label for="addr_province" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
+                            Provinsi <span class="text-red-500">*</span>
+                        </label>
 
-                <!-- Kecamatan -->
-                <div>
-                    <label for="addr_district" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Kecamatan <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="district"
-                        data-address-field="district"
-                        id="addr_district"
-                        type="text"
-                        placeholder="Contoh: Lowokwaru"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                        required
-                    />
-                    <x-input-error class="mt-1" :messages="$errors->get('district')" />
-                </div>
+                        <input
+                            wire:model="province"
+                            data-address-field="province"
+                            id="addr_province"
+                            type="text"
+                            placeholder="Contoh: Jawa Timur"
+                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                            required
+                        />
 
-                <!-- Kelurahan / Desa -->
-                <div>
-                    <label for="addr_village" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Kelurahan / Desa <span class="text-darkbrown-400 font-normal">(Opsional)</span>
-                    </label>
-                    <input
-                        wire:model="village"
-                        data-address-field="village"
-                        id="addr_village"
-                        type="text"
-                        placeholder="Contoh: Ketawanggede"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                    />
-                    <x-input-error class="mt-1" :messages="$errors->get('village')" />
-                </div>
+                        <x-input-error class="mt-1" :messages="$errors->get('province')" />
+                    </div>
 
-                <!-- Kode Pos -->
-                <div>
-                    <label for="addr_postal" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Kode Pos <span class="text-darkbrown-400 font-normal">(Opsional)</span>
-                    </label>
-                    <input
-                        wire:model="postal_code"
-                        data-address-field="postal_code"
-                        id="addr_postal"
-                        type="text"
-                        placeholder="65145"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
-                    />
-                    <x-input-error class="mt-1" :messages="$errors->get('postal_code')" />
-                </div>
+                    {{-- Kota / Kabupaten --}}
+                    <div>
+                        <label for="addr_city" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
+                            Kota / Kabupaten <span class="text-red-500">*</span>
+                        </label>
 
-                <!-- Alamat Lengkap (Jalan, RT/RW, No Rumah) -->
-                <div class="sm:col-span-2">
+                        <input
+                            wire:model="city"
+                            data-address-field="city"
+                            id="addr_city"
+                            type="text"
+                            placeholder="Contoh: Kota Malang"
+                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                            required
+                        />
+
+                        <x-input-error class="mt-1" :messages="$errors->get('city')" />
+                    </div>
+
+                    {{-- Kecamatan --}}
+                    <div>
+                        <label for="addr_district" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
+                            Kecamatan <span class="text-red-500">*</span>
+                        </label>
+
+                        <input
+                            wire:model="district"
+                            data-address-field="district"
+                            id="addr_district"
+                            type="text"
+                            placeholder="Contoh: Lowokwaru"
+                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                            required
+                        />
+
+                        <x-input-error class="mt-1" :messages="$errors->get('district')" />
+                    </div>
+
+                    {{-- Kelurahan / Desa --}}
+                    <div>
+                        <label for="addr_village" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
+                            Kelurahan / Desa <span class="text-darkbrown-400 font-normal">(Opsional)</span>
+                        </label>
+
+                        <input
+                            wire:model="village"
+                            data-address-field="village"
+                            id="addr_village"
+                            type="text"
+                            placeholder="Contoh: Ketawanggede"
+                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                        />
+
+                        <x-input-error class="mt-1" :messages="$errors->get('village')" />
+                    </div>
+
+                    {{-- Kode Pos --}}
+                    <div>
+                        <label for="addr_postal" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
+                            Kode Pos <span class="text-darkbrown-400 font-normal">(Opsional)</span>
+                        </label>
+
+                        <input
+                            wire:model="postal_code"
+                            data-address-field="postal_code"
+                            id="addr_postal"
+                            type="text"
+                            placeholder="65145"
+                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                        />
+
+                        <x-input-error class="mt-1" :messages="$errors->get('postal_code')" />
+                    </div>
+                </div>
+            </div>
+
+            {{-- Detail Alamat --}}
+            <div class="space-y-3">
+                <h4 class="text-xs font-extrabold text-darkbrown-800">
+                    Detail Alamat
+                </h4>
+
+                {{-- Alamat Lengkap --}}
+                <div>
                     <label for="addr_full" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
                         Alamat Lengkap (Nama Jalan, No. Rumah, RT/RW) <span class="text-red-500">*</span>
                     </label>
+
                     <textarea
                         wire:model="full_address"
                         data-address-field="full_address"
                         id="addr_full"
-                        rows="2"
-                        placeholder="Tuliskan nama jalan lengkap, nomor rumah, nomor blok, RT/RW..."
+                        rows="3"
+                        placeholder="Tuliskan nama jalan, nomor rumah, blok, RT/RW, dan detail alamat lainnya..."
                         class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
                         required
                     ></textarea>
+
                     <x-input-error class="mt-1" :messages="$errors->get('full_address')" />
                 </div>
 
-                <!-- Catatan / Patokan Lokasi -->
-                <div class="sm:col-span-2">
+                {{-- Catatan Lokasi --}}
+                <div>
                     <label for="addr_notes" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1 tracking-wider">
-                        Catatan / Patokan Lokasi <span class="text-darkbrown-400 font-normal">(Opsional)</span>
+                        Catatan Lokasi <span class="text-darkbrown-400 font-normal">(Opsional)</span>
                     </label>
+
                     <input
                         wire:model="notes"
                         id="addr_notes"
                         type="text"
-                        placeholder="Contoh: Pagar hitam depan warung madura, dekat pos satpam"
+                        placeholder="Contoh: Pagar hitam, dekat pos satpam, atau samping minimarket"
                         class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
                     />
+
                     <x-input-error class="mt-1" :messages="$errors->get('notes')" />
-                </div>
-
-                <!-- Pemilih Titik Koordinat Peta -->
-                <div class="sm:col-span-2 pt-1" wire:key="customer-address-picker-{{ $editingId ?? 'create' }}">
-                    @if ($editingId && ($latitude === null || $longitude === null || $latitude === '' || $longitude === ''))
-                        <div class="mb-2.5 px-3 py-2 rounded-lg border border-wheat-300 bg-white text-xs text-darkbrown-700 flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-goldenrod-500 shrink-0" aria-hidden="true"></span>
-                            <span>Pin lokasi belum diatur untuk alamat ini. Klik peta di bawah untuk menambahkan titik lokasi pengantaran.</span>
-                        </div>
-                    @endif
-
-                    <x-location-picker
-                        id="customer-address-picker-{{ $editingId ?? 'create' }}"
-                        :latitude="$latitude"
-                        :longitude="$longitude"
-                        wire-latitude-model="latitude"
-                        wire-longitude-model="longitude"
-                        label="Titik Lokasi Pengantaran (Peta)"
-                        help-text="Pilih titik pada peta untuk mengisi alamat secara otomatis. Semua kolom alamat tetap dapat Anda ubah."
-                    />
-                </div>
-
-                <!-- Jadikan Alamat Utama Checkbox -->
-                <div class="sm:col-span-2 flex items-center gap-2 pt-1">
-                    <input
-                        wire:model="is_default"
-                        id="addr_is_default"
-                        type="checkbox"
-                        class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500"
-                    />
-                    <label for="addr_is_default" class="text-xs font-semibold text-darkbrown-800 cursor-pointer">
-                        Jadikan alamat utama (dipilih otomatis saat pemesanan)
-                    </label>
                 </div>
             </div>
 
-            <!-- Tombol Aksi Form -->
+            {{-- Pemilih Titik Koordinat Peta --}}
+            <div class="pt-1" wire:key="customer-address-picker-{{ $editingId ?? 'create' }}">
+                @if ($editingId && ($latitude === null || $longitude === null || $latitude === '' || $longitude === ''))
+                    <div class="mb-2.5 px-3 py-2 rounded-lg border border-wheat-300 bg-white text-xs text-darkbrown-700 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-goldenrod-500 shrink-0" aria-hidden="true"></span>
+                        <span>
+                            Pin lokasi belum diatur untuk alamat ini. Klik peta di bawah untuk menambahkan titik lokasi pengantaran.
+                        </span>
+                    </div>
+                @endif
+
+                <x-location-picker
+                    id="customer-address-picker-{{ $editingId ?? 'create' }}"
+                    :latitude="$latitude"
+                    :longitude="$longitude"
+                    wire-latitude-model="latitude"
+                    wire-longitude-model="longitude"
+                    label="Titik Lokasi Pengantaran"
+                    help-text="Pilih titik pada peta untuk mengisi alamat secara otomatis. Semua kolom alamat tetap dapat Anda ubah."
+                />
+            </div>
+
+            {{-- Jadikan Alamat Utama --}}
+            <div class="flex items-center gap-2 pt-1">
+                <input
+                    wire:model="is_default"
+                    id="addr_is_default"
+                    type="checkbox"
+                    class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500"
+                />
+
+                <label for="addr_is_default" class="text-xs font-semibold text-darkbrown-800 cursor-pointer">
+                    Jadikan alamat utama (dipilih otomatis saat pemesanan)
+                </label>
+            </div>
+
+            {{-- Tombol Aksi Form --}}
             <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
                 <button
                     type="submit"
@@ -586,10 +604,11 @@ new class extends Component
     @endif
 
     {{-- ============================================================
-         2. DAFTAR ALAMAT TERSIMPAN (ALAMAT UTAMA/TERPILIH & DROPDOWN ALAMAT LAINNYA)
+         2. DAFTAR ALAMAT TERSIMPAN
          ============================================================ --}}
     <div class="mt-6 space-y-4">
         @if ($addresses->isNotEmpty())
+
             {{-- Kartu Alamat Terpilih --}}
             @if ($selectedAddress)
                 <div
@@ -617,12 +636,12 @@ new class extends Component
 
                             @if ($selectedAddress->notes)
                                 <p class="text-xs text-darkbrown-600 italic">
-                                    Patokan: {{ $selectedAddress->notes }}
+                                    Catatan: {{ $selectedAddress->notes }}
                                 </p>
                             @endif
                         </div>
 
-                        <!-- Tombol Aksi per Alamat -->
+                        {{-- Tombol Aksi per Alamat --}}
                         <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-wheat-100">
                             <button
                                 type="button"
@@ -644,10 +663,9 @@ new class extends Component
                             </button>
                         </div>
                     </div>
-
                 </div>
 
-                {{-- Alamat lainnya: di luar outline card, membuka ke bawah --}}
+                {{-- Alamat Lainnya --}}
                 @if ($otherAddresses->isNotEmpty())
                     <div class="px-1" x-data="{ open: false }">
                         <button
@@ -659,6 +677,7 @@ new class extends Component
                             class="flex w-full items-center justify-between gap-3 text-left cursor-pointer text-xs sm:text-sm font-semibold text-darkbrown-800"
                         >
                             <span>Alamat lainnya ({{ $otherAddresses->count() }})</span>
+
                             <span class="shrink-0 transition-transform duration-200" :class="{ 'rotate-180': open }">
                                 <i data-lucide="chevron-down" class="w-4 h-4 text-darkbrown-500"></i>
                             </span>
@@ -672,11 +691,16 @@ new class extends Component
                                         wire:click="selectAddress({{ $other->id }})"
                                         class="w-full text-left py-2.5 flex items-start gap-2.5 hover:bg-wheat-50 transition rounded-lg px-1"
                                     >
-                                        <i data-lucide="star" class="w-4 h-4 shrink-0 mt-0.5 {{ $other->is_default ? 'text-goldenrod-500 fill-current' : 'text-darkbrown-400' }}"></i>
+                                        <i
+                                            data-lucide="star"
+                                            class="w-4 h-4 shrink-0 mt-0.5 {{ $other->is_default ? 'text-goldenrod-500 fill-current' : 'text-darkbrown-400' }}"
+                                        ></i>
+
                                         <span class="min-w-0">
                                             <span class="block text-xs font-bold text-darkbrown-900">
-                                                {{ $other->label }} &middot; {{ $other->recipient_name }}
+                                                {{ $other->label }}
                                             </span>
+
                                             <span class="block text-[11px] sm:text-xs text-darkbrown-600 leading-snug">
                                                 {{ $other->formatted_address }}
                                             </span>
@@ -688,15 +712,24 @@ new class extends Component
                     </div>
                 @endif
             @endif
+
         @else
+            {{-- Tampilan Ketika Belum Ada Alamat --}}
             <div class="text-center py-8 px-4 rounded-xl bg-wheat-50 border border-wheat-200 space-y-3">
                 <div class="w-12 h-12 mx-auto rounded-xl bg-wheat-100 text-darkbrown-400 flex items-center justify-center">
                     <i data-lucide="map-pin-off" class="w-6 h-6"></i>
                 </div>
+
                 <div>
-                    <h3 class="text-sm font-bold text-darkbrown-900">Belum ada alamat tersimpan</h3>
-                    <p class="text-xs text-darkbrown-500 mt-0.5">Tambahkan alamat agar Anda dapat memilih pengantaran saat memesan perlengkapan camping.</p>
+                    <h3 class="text-sm font-bold text-darkbrown-900">
+                        Belum ada alamat tersimpan
+                    </h3>
+
+                    <p class="text-xs text-darkbrown-500 mt-0.5">
+                        Tambahkan alamat agar Anda dapat memilih lokasi pengantaran saat memesan perlengkapan camping.
+                    </p>
                 </div>
+
                 @if (! $isCreating)
                     <button
                         type="button"
