@@ -132,7 +132,7 @@ new class extends Component
                 <span>{{ __('Sewa Saya') }}</span>
             </h2>
             <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
-                {{ __('Pantau status sewa Anda. Halaman ini diperbarui otomatis.') }}
+                {{ __('Pantau status sewa Anda.') }}
             </p>
         </div>
 

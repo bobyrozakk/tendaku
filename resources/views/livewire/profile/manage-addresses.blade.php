@@ -10,6 +10,8 @@ new class extends Component
 
     public ?int $editingId = null;
 
+    public ?int $selectedAddressId = null;
+
     // Form fields
     public string $label = 'Rumah';
 
@@ -60,6 +62,7 @@ new class extends Component
         $address = Auth::user()->addresses()->findOrFail($id);
 
         $this->editingId = $address->id;
+        $this->selectedAddressId = $address->id;
         $this->label = $address->label;
         $this->recipient_name = $address->recipient_name;
         $this->phone_number = $address->phone_number;
@@ -74,6 +77,13 @@ new class extends Component
         $this->longitude = $address->longitude;
         $this->is_default = (bool) $address->is_default;
         $this->isCreating = false;
+    }
+
+    public function selectAddress(int $id): void
+    {
+        if (Auth::user()->addresses()->where('id', $id)->exists()) {
+            $this->selectedAddressId = $id;
+        }
     }
 
     public function cancelForm(): void
@@ -175,6 +185,7 @@ new class extends Component
             if ($isDefault) {
                 $address->setAsDefault();
             }
+            $this->selectedAddressId = $address->id;
             session()->flash('status', 'address-updated');
         } else {
             $address = new CustomerAddress($validated);
@@ -185,6 +196,7 @@ new class extends Component
             if ($isDefault) {
                 $address->setAsDefault();
             }
+            $this->selectedAddressId = $address->id;
             session()->flash('status', 'address-created');
         }
 
@@ -195,6 +207,7 @@ new class extends Component
     {
         $address = Auth::user()->addresses()->findOrFail($id);
         $address->setAsDefault();
+        $this->selectedAddressId = $id;
         session()->flash('status', 'address-default-set');
     }
 
@@ -206,10 +219,15 @@ new class extends Component
 
         $address->delete();
 
+        if ($this->selectedAddressId === $id) {
+            $this->selectedAddressId = null;
+        }
+
         if ($wasDefault) {
             $next = CustomerAddress::where('user_id', $userId)->latest('id')->first();
             if ($next) {
                 $next->setAsDefault();
+                $this->selectedAddressId = $next->id;
             }
         }
 
@@ -218,8 +236,27 @@ new class extends Component
 
     public function with(): array
     {
+        $user = Auth::user();
+        $addresses = $user ? $user->addresses()->orderByDesc('is_default')->latest('id')->get() : collect();
+
+        $defaultAddress = $addresses->firstWhere('is_default', true) ?? $addresses->first();
+
+        if ($this->selectedAddressId && ! $addresses->contains('id', $this->selectedAddressId)) {
+            $this->selectedAddressId = null;
+        }
+
+        if (! $this->selectedAddressId && $defaultAddress) {
+            $this->selectedAddressId = $defaultAddress->id;
+        }
+
+        $selectedAddress = $addresses->firstWhere('id', $this->selectedAddressId) ?? $defaultAddress;
+        $otherAddresses = $addresses->filter(fn ($addr) => $selectedAddress && $addr->id !== $selectedAddress->id)->values();
+
         return [
-            'addresses' => Auth::user()->addresses()->orderByDesc('is_default')->latest('id')->get(),
+            'addresses' => $addresses,
+            'defaultAddress' => $defaultAddress,
+            'selectedAddress' => $selectedAddress,
+            'otherAddresses' => $otherAddresses,
         ];
     }
 }; ?>
@@ -229,7 +266,7 @@ new class extends Component
         <div>
             <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
                 <i data-lucide="map-pin" class="w-5 h-5 text-avocado-600"></i>
-                <span>{{ __('Daftar Alamat Pengantaran') }}</span>
+                <span>{{ __('Data Alamat Pengantaran') }}</span>
             </h2>
             <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
                 {{ __('Kelola alamat domisili atau titik serah terima untuk pengantaran dari vendor.') }}
@@ -237,14 +274,92 @@ new class extends Component
         </div>
 
         @if(! $isCreating && ! $editingId)
-            <button
-                type="button"
-                wire:click="startCreating"
-                class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all self-start sm:self-auto"
-            >
-                <i data-lucide="plus" class="w-4 h-4"></i>
-                <span>{{ __('Tambah Alamat Baru') }}</span>
-            </button>
+            <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                @if ($otherAddresses->isNotEmpty())
+                    {{-- Dropdown Alamat-Alamat Lainnya --}}
+                    <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+                        <button
+                            type="button"
+                            @click="open = ! open"
+                            class="btn-tendaku-secondary inline-flex items-center gap-1.5 py-2 px-3.5 rounded-xl text-xs font-bold border border-wheat-300 bg-white text-darkbrown-800 hover:bg-wheat-100 transition shadow-sm"
+                            id="btn-dropdown-alamat-lainnya"
+                            title="Pilih alamat lainnya"
+                        >
+                            <i data-lucide="map-pins" class="w-4 h-4 text-avocado-700"></i>
+                            <span>Alamat Lainnya ({{ $otherAddresses->count() }})</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-darkbrown-500 transition-transform duration-200" :class="{ 'rotate-180': open }"></i>
+                        </button>
+
+                        <div
+                            x-show="open"
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 scale-100"
+                            x-transition:leave-end="opacity-0 scale-95"
+                            class="absolute right-0 z-30 mt-2 w-80 sm:w-96 rounded-2xl bg-white border border-wheat-200 shadow-xl p-2.5 space-y-2"
+                        >
+                            <div class="px-2 py-1.5 border-b border-wheat-100 flex items-center justify-between">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">Daftar Alamat Lainnya</span>
+                                <span class="text-[11px] font-semibold text-avocado-700 bg-avocado-50 px-2 py-0.5 rounded-full">{{ $otherAddresses->count() }} Alamat</span>
+                            </div>
+
+                            <div class="max-h-64 overflow-y-auto space-y-1.5 py-1 pr-1">
+                                @foreach ($otherAddresses as $other)
+                                    <div
+                                        wire:key="dropdown-addr-{{ $other->id }}"
+                                        class="p-2.5 rounded-xl border border-wheat-200 hover:border-avocado-400 hover:bg-avocado-50/40 transition group cursor-pointer"
+                                        wire:click="selectAddress({{ $other->id }})"
+                                        @click="open = false"
+                                    >
+                                        <div class="flex items-center justify-between gap-2">
+                                            <div class="flex items-center gap-1.5 min-w-0">
+                                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-wheat-100 text-darkbrown-800 border border-wheat-200 shrink-0">
+                                                    {{ $other->label }}
+                                                </span>
+                                                <span class="text-xs font-bold text-darkbrown-900 truncate">
+                                                    {{ $other->recipient_name }}
+                                                </span>
+                                            </div>
+                                            <span class="text-[10px] text-darkbrown-500 font-mono shrink-0">
+                                                {{ $other->phone_number }}
+                                            </span>
+                                        </div>
+                                        <p class="mt-1 text-[11px] text-darkbrown-700 line-clamp-2 leading-tight">
+                                            {{ $other->formatted_address }}
+                                        </p>
+                                        <div class="mt-2 flex items-center justify-between pt-1 border-t border-wheat-100 text-[10px]">
+                                            <span class="text-avocado-700 font-bold group-hover:underline inline-flex items-center gap-1">
+                                                <span>Pilih Alamat Ini</span>
+                                                <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                            </span>
+                                            <button
+                                                type="button"
+                                                wire:click.stop="setAsDefault({{ $other->id }})"
+                                                @click="open = false"
+                                                class="font-semibold text-darkbrown-600 hover:text-avocado-800 hover:underline"
+                                            >
+                                                Jadikan Utama
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                <button
+                    type="button"
+                    wire:click="startCreating"
+                    class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all self-start sm:self-auto"
+                >
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>{{ __('Tambah Alamat') }}</span>
+                </button>
+            </div>
         @endif
     </header>
 
@@ -510,87 +625,132 @@ new class extends Component
     @endif
 
     {{-- ============================================================
-         2. DAFTAR ALAMAT TERSIMPAN
+         2. DAFTAR ALAMAT TERSIMPAN (ALAMAT UTAMA/TERPILIH & DROPDOWN ALAMAT LAINNYA)
          ============================================================ --}}
     <div class="mt-6 space-y-4">
-        @forelse ($addresses as $addr)
-            <div
-                wire:key="addr-{{ $addr->id }}"
-                class="p-4 sm:p-5 rounded-xl border transition-all {{ $addr->is_default ? 'bg-white border-avocado-400 ring-1 ring-avocado-400/30' : 'bg-white border-wheat-200 hover:border-wheat-300' }}"
-            >
-                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div class="space-y-1.5 min-w-0 flex-1">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-wheat-100 text-darkbrown-800 border border-wheat-300">
-                                {{ $addr->label }}
-                            </span>
-
-                            @if ($addr->is_default)
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-300 inline-flex items-center gap-1">
-                                    <i data-lucide="check" class="w-3 h-3 text-avocado-700"></i>
-                                    Alamat Utama
-                                </span>
-                            @endif
-
-                            @if ($addr->hasCoordinates())
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-avocado-50 text-avocado-800 border border-avocado-200 inline-flex items-center gap-1">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-avocado-600" aria-hidden="true"></span>
-                                    <span>Titik Lokasi Tersimpan ({{ number_format((float) $addr->latitude, 5, '.', '') }}, {{ number_format((float) $addr->longitude, 5, '.', '') }})</span>
-                                </span>
-                            @else
-                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-wheat-100/80 text-darkbrown-600 border border-wheat-300 inline-flex items-center gap-1">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-goldenrod-500" aria-hidden="true"></span>
-                                    <span>Pin lokasi belum diatur</span>
-                                </span>
-                            @endif
-
-                            <span class="text-xs font-bold text-darkbrown-900">
-                                {{ $addr->recipient_name }}
-                            </span>
-                            <span class="text-xs text-darkbrown-500 font-medium">
-                                &middot; {{ $addr->phone_number }}
-                            </span>
-                        </div>
-
-                        <p class="text-xs sm:text-sm text-darkbrown-800 leading-relaxed">
-                            {{ $addr->formatted_address }}
-                        </p>
+        @if ($addresses->isNotEmpty())
+            {{-- Dropdown Pilihan Alamat Pengantaran Lainnya --}}
+            @if ($otherAddresses->isNotEmpty())
+                <div class="p-3.5 rounded-xl bg-wheat-50 border border-wheat-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="layers" class="w-4 h-4 text-avocado-700 shrink-0"></i>
+                        <label for="other_address_select" class="text-xs font-bold text-darkbrown-800">
+                            Pilih Alamat Pengantaran / Alamat Lainnya:
+                        </label>
                     </div>
-
-                    <!-- Tombol Aksi per Alamat -->
-                    <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-wheat-100">
-                        @if (! $addr->is_default)
-                            <button
-                                type="button"
-                                wire:click="setAsDefault({{ $addr->id }})"
-                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold text-avocado-800 bg-avocado-50 border border-avocado-200 hover:bg-avocado-100 transition"
-                            >
-                                Jadikan Utama
-                            </button>
-                        @endif
-
-                        <button
-                            type="button"
-                            wire:click="startEditing({{ $addr->id }})"
-                            class="p-1.5 rounded-lg text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 transition"
-                            title="Ubah Alamat"
+                    <div class="w-full sm:w-auto sm:min-w-[320px] max-w-md">
+                        <select
+                            id="other_address_select"
+                            wire:model.live="selectedAddressId"
+                            class="input-tendaku w-full py-1.5 pl-3 pr-8 rounded-xl text-xs font-semibold border-wheat-300 text-darkbrown-800 bg-white focus:ring-2 focus:ring-avocado-500 shadow-sm cursor-pointer"
                         >
-                            <i data-lucide="edit-3" class="w-4 h-4"></i>
-                        </button>
-
-                        <button
-                            type="button"
-                            wire:confirm="Yakin ingin menghapus alamat ini?"
-                            wire:click="deleteAddress({{ $addr->id }})"
-                            class="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition"
-                            title="Hapus Alamat"
-                        >
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
+                            @if ($defaultAddress)
+                                <option value="{{ $defaultAddress->id }}" @selected($selectedAddress && $selectedAddress->id === $defaultAddress->id)>
+                                    ★ {{ $defaultAddress->label }} (Alamat Utama) - {{ $defaultAddress->recipient_name }}
+                                </option>
+                            @endif
+                            @foreach ($otherAddresses as $other)
+                                <option value="{{ $other->id }}" @selected($selectedAddress && $selectedAddress->id === $other->id)>
+                                    {{ $other->label }} - {{ $other->recipient_name }} ({{ Str::limit($other->formatted_address, 35) }})
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
-            </div>
-        @empty
+            @endif
+
+            {{-- Kartu Alamat Terpilih --}}
+            @if ($selectedAddress)
+                <div
+                    wire:key="addr-{{ $selectedAddress->id }}"
+                    class="p-4 sm:p-5 rounded-xl border transition-all {{ $selectedAddress->is_default ? 'bg-white border-avocado-400 ring-1 ring-avocado-400/30' : 'bg-white border-wheat-200 hover:border-wheat-300' }}"
+                >
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div class="space-y-1.5 min-w-0 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-wheat-100 text-darkbrown-800 border border-wheat-300">
+                                    {{ $selectedAddress->label }}
+                                </span>
+
+                                @if ($selectedAddress->is_default)
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-avocado-100 text-avocado-800 border border-avocado-300 inline-flex items-center gap-1">
+                                        <i data-lucide="check" class="w-3 h-3 text-avocado-700"></i>
+                                        Alamat Utama
+                                    </span>
+                                @else
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-wheat-100 text-darkbrown-700 border border-wheat-200">
+                                        Alamat Tambahan
+                                    </span>
+                                @endif
+
+                                @if ($selectedAddress->hasCoordinates())
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-avocado-50 text-avocado-800 border border-avocado-200 inline-flex items-center gap-1">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-avocado-600" aria-hidden="true"></span>
+                                        <span>Titik Lokasi Tersimpan ({{ number_format((float) $selectedAddress->latitude, 5) }}, {{ number_format((float) $selectedAddress->longitude, 5) }})</span>
+                                    </span>
+                                @else
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-wheat-100/80 text-darkbrown-600 border border-wheat-300 inline-flex items-center gap-1">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-goldenrod-500" aria-hidden="true"></span>
+                                        <span>Pin lokasi belum diatur</span>
+                                    </span>
+                                @endif
+
+                                <span class="text-xs font-bold text-darkbrown-900">
+                                    {{ $selectedAddress->recipient_name }}
+                                </span>
+                                <span class="text-xs text-darkbrown-500 font-medium">
+                                    &middot; {{ $selectedAddress->phone_number }}
+                                </span>
+                            </div>
+
+                            <p class="text-xs sm:text-sm text-darkbrown-800 leading-relaxed">
+                                {{ $selectedAddress->formatted_address }}
+                            </p>
+
+                            @if ($selectedAddress->notes)
+                                <p class="text-xs text-darkbrown-600 italic">
+                                    Patokan: {{ $selectedAddress->notes }}
+                                </p>
+                            @endif
+                        </div>
+
+                        <!-- Tombol Aksi per Alamat -->
+                        <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-wheat-100">
+                            @if (! $selectedAddress->is_default)
+                                <button
+                                    type="button"
+                                    wire:click="setAsDefault({{ $selectedAddress->id }})"
+                                    class="inline-flex items-center gap-1 px-2.5 py-2 rounded-lg text-[11px] font-bold text-avocado-800 bg-avocado-50 hover:bg-avocado-100 transition"
+                                    title="Jadikan Alamat Utama"
+                                >
+                                    <i data-lucide="star" class="w-3.5 h-3.5"></i>
+                                    <span>Jadikan Utama</span>
+                                </button>
+                            @endif
+
+                            <button
+                                type="button"
+                                wire:click="startEditing({{ $selectedAddress->id }})"
+                                class="p-1.5 rounded-lg text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 transition"
+                                title="Ubah Alamat"
+                            >
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+
+                            <button
+                                type="button"
+                                wire:confirm="Yakin ingin menghapus alamat ini?"
+                                wire:click="deleteAddress({{ $selectedAddress->id }})"
+                                class="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition"
+                                title="Hapus Alamat"
+                            >
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        @else
             <div class="text-center py-8 px-4 rounded-xl bg-wheat-50 border border-wheat-200 space-y-3">
                 <div class="w-12 h-12 mx-auto rounded-xl bg-wheat-100 text-darkbrown-400 flex items-center justify-center">
                     <i data-lucide="map-pin-off" class="w-6 h-6"></i>
@@ -610,6 +770,6 @@ new class extends Component
                     </button>
                 @endif
             </div>
-        @endforelse
+        @endif
     </div>
 </section>

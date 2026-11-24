@@ -96,12 +96,17 @@
                         <livewire:profile.my-rentals />
                     </div>
 
-                    <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
-                        <livewire:profile.update-profile-information-form />
-                    </div>
+                    {{-- ============================================================
+                         Biodata Profil
+                         ============================================================ --}}
+                    <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200 divide-y divide-wheat-200 space-y-8">
+                        <div>
+                            <livewire:profile.update-profile-information-form />
+                        </div>
 
-                    <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
-                        <livewire:profile.manage-addresses />
+                        <div class="pt-8">
+                            <livewire:profile.manage-addresses />
+                        </div>
                     </div>
                 </div>
 

@@ -83,7 +83,6 @@ new class extends Component
             'phone.required' => 'Nomor WhatsApp / telepon wajib diisi.',
             'phone.regex' => 'Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka.',
             'nik.digits' => 'NIK harus terdiri dari 16 digit angka.',
-            'address.max' => 'Alamat domisili maksimal 500 karakter.',
         ]);
 
         $validated['address'] = filled($validated['address'] ?? null) ? trim($validated['address']) : null;
@@ -126,7 +125,8 @@ new class extends Component
     <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-wheat-200 pb-4">
         <div>
             <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading">
-                {{ __('Biodata Profil') }}
+                <i data-lucide="user-round" class="w-5 h-5 text-avocado-600"></i>
+                <span>{{ __('Biodata Profil') }}</span>
             </h2>
             <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
                 {{ __('Data identitas Anda untuk keperluan sewa perlengkapan camping.') }}
@@ -134,8 +134,8 @@ new class extends Component
         </div>
 
         @if(! $isEditing)
-            <button 
-                type="button" 
+            <button
+                type="button"
                 wire:click="startEditing"
                 class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all self-start sm:self-auto"
             >
@@ -158,7 +158,7 @@ new class extends Component
     @if(! $isEditing)
         @php
             $currentUser = Auth::user();
-            $maskedNik = $currentUser->nik 
+            $maskedNik = $currentUser->nik
                 ? (strlen($currentUser->nik) === 16 ? substr($currentUser->nik, 0, 4) . ' **** **** ' . substr($currentUser->nik, -4) : $currentUser->nik)
                 : null;
         @endphp
@@ -211,17 +211,6 @@ new class extends Component
                     </p>
                     <span class="text-[10px] text-darkbrown-500">Untuk jaminan KTP fisik saat pengambilan perlengkapan camping.</span>
                 </div>
-
-                <!-- Alamat Domisili -->
-                <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1 md:col-span-2">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-darkbrown-500"></i>
-                        Alamat Domisili
-                    </span>
-                    <p class="text-sm font-semibold text-darkbrown-800 leading-relaxed">
-                        {{ $currentUser->address ?: 'Alamat belum dilengkapi.' }}
-                    </p>
-                </div>
             </div>
         </div>
 
@@ -241,13 +230,13 @@ new class extends Component
                     <label for="name" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         Nama Lengkap <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        wire:model="name" 
-                        id="name" 
-                        type="text" 
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500" 
-                        required 
-                        autocomplete="name" 
+                    <input
+                        wire:model="name"
+                        id="name"
+                        type="text"
+                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                        required
+                        autocomplete="name"
                     />
                     <x-input-error class="mt-1.5" :messages="$errors->get('name')" />
                 </div>
@@ -257,13 +246,13 @@ new class extends Component
                     <label for="email" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         Alamat Email <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        wire:model="email" 
-                        id="email" 
-                        type="email" 
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500" 
-                        required 
-                        autocomplete="username" 
+                    <input
+                        wire:model="email"
+                        id="email"
+                        type="email"
+                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                        required
+                        autocomplete="username"
                     />
                     <x-input-error class="mt-1.5" :messages="$errors->get('email')" />
 
@@ -287,13 +276,13 @@ new class extends Component
                     <label for="phone" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         Nomor WhatsApp / Telepon <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        wire:model="phone" 
-                        id="phone" 
-                        type="text" 
+                    <input
+                        wire:model="phone"
+                        id="phone"
+                        type="text"
                         placeholder="Contoh: 081234567890"
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500" 
-                        required 
+                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                        required
                     />
                     <x-input-error class="mt-1.5" :messages="$errors->get('phone')" />
                 </div>
@@ -303,13 +292,13 @@ new class extends Component
                     <label for="nik" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         NIK (Nomor Induk Kependudukan - 16 Digit)
                     </label>
-                    <input 
-                        wire:model="nik" 
-                        id="nik" 
-                        type="text" 
+                    <input
+                        wire:model="nik"
+                        id="nik"
+                        type="text"
                         maxlength="16"
                         placeholder="Contoh: 350704xxxxxxxxxx"
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500" 
+                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
                     />
                     <x-input-error class="mt-1.5" :messages="$errors->get('nik')" />
                 </div>
@@ -319,9 +308,9 @@ new class extends Component
                     <label for="address" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
                         Alamat Domisili
                     </label>
-                    <textarea 
-                        wire:model="address" 
-                        id="address" 
+                    <textarea
+                        wire:model="address"
+                        id="address"
                         rows="3"
                         placeholder="Tuliskan nama jalan, RT/RW, kelurahan, kecamatan, dan kota..."
                         class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
@@ -332,16 +321,16 @@ new class extends Component
 
             <!-- Tombol Aksi Form -->
             <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
-                <button 
-                    type="submit" 
+                <button
+                    type="submit"
                     class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
                 >
                     <i data-lucide="check" class="w-4 h-4"></i>
                     <span>{{ __('Simpan Perubahan') }}</span>
                 </button>
 
-                <button 
-                    type="button" 
+                <button
+                    type="button"
                     wire:click="cancelEditing"
                     class="btn-tendaku-secondary inline-flex items-center gap-2 py-2.5 px-5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
                 >
