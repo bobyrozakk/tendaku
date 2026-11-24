@@ -13,7 +13,6 @@ new class extends Component
     public string $phone = '';
     public string $nik = '';
     public ?string $address = null;
-    public bool $isEditing = false;
 
     /**
      * Mount the component.
@@ -26,20 +25,11 @@ new class extends Component
         $this->phone = $user->phone ?? '';
         $this->nik = (string) ($user->nik ?? '');
         $this->address = $user->address;
-        $this->isEditing = false;
     }
 
     /**
-     * Aktifkan mode edit biodata.
-     */
-    public function startEditing(): void
-    {
-        $this->resetErrorBag();
-        $this->isEditing = true;
-    }
-
-    /**
-     * Batalkan mode edit dan pulihkan nilai asal dari database.
+     * Pulihkan isian form ke nilai di database. Mode edit sendiri diatur di
+     * sisi browser (Alpine), jadi membuka/menutup form tidak butuh request.
      */
     public function cancelEditing(): void
     {
@@ -50,7 +40,6 @@ new class extends Component
         $this->nik = (string) ($user->nik ?? '');
         $this->address = $user->address;
         $this->resetErrorBag();
-        $this->isEditing = false;
     }
 
     /**
@@ -96,8 +85,7 @@ new class extends Component
 
         $user->save();
 
-        $this->isEditing = false;
-
+        // Event ini juga menutup form edit di browser (lihat x-on:profile-updated).
         $this->dispatch('profile-updated', name: $user->name);
         session()->flash('status', 'profile-updated');
     }
@@ -121,7 +109,12 @@ new class extends Component
     }
 }; ?>
 
-<section id="biodata" x-on:edit-biodata.window="$wire.startEditing(); $el.scrollIntoView({ behavior: 'smooth', block: 'start' })">
+<section
+    id="biodata"
+    x-data="{ editing: false }"
+    x-on:edit-biodata.window="editing = true; $el.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+    x-on:profile-updated="editing = false"
+>
     <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-wheat-200 pb-4">
         <div>
             <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
@@ -133,16 +126,15 @@ new class extends Component
             </p>
         </div>
 
-        @if(! $isEditing)
-            <button
-                type="button"
-                wire:click="startEditing"
-                class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all self-start sm:self-auto"
-            >
-                <i data-lucide="edit-3" class="w-4 h-4"></i>
-                <span>{{ __('Edit Biodata') }}</span>
-            </button>
-        @endif
+        <button
+            type="button"
+            x-show="! editing"
+            x-on:click="editing = true; $nextTick(() => $refs.nameInput?.focus())"
+            class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all self-start sm:self-auto"
+        >
+            <i data-lucide="edit-3" class="w-4 h-4"></i>
+            <span>{{ __('Edit Biodata') }}</span>
+        </button>
     </header>
 
     @if (session('status') === 'profile-updated')
@@ -155,189 +147,188 @@ new class extends Component
     {{-- ============================================================
          1. TAMPILAN RINGKASAN BIODATA (DEFAULT)
          ============================================================ --}}
-    @if(! $isEditing)
-        @php
-            $currentUser = Auth::user();
-            $maskedNik = $currentUser->nik
-                ? (strlen($currentUser->nik) === 16 ? substr($currentUser->nik, 0, 4) . ' **** **** ' . substr($currentUser->nik, -4) : $currentUser->nik)
-                : null;
-        @endphp
+    @php
+        $currentUser = Auth::user();
+        $maskedNik = $currentUser->nik
+            ? (strlen($currentUser->nik) === 16 ? substr($currentUser->nik, 0, 4) . ' **** **** ' . substr($currentUser->nik, -4) : $currentUser->nik)
+            : null;
+    @endphp
 
-        <div class="mt-6 space-y-6">
-            <!-- Grid Rincian Biodata -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Nama Lengkap -->
-                <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
-                        <i data-lucide="user" class="w-3.5 h-3.5 text-darkbrown-500"></i>
-                        Nama Lengkap
-                    </span>
-                    <p class="text-sm font-bold text-darkbrown-900">
-                        {{ $currentUser->name ?: '-' }}
-                    </p>
-                </div>
+    <div x-show="! editing" class="mt-6 space-y-6">
+        <!-- Grid Rincian Biodata -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Nama Lengkap -->
+            <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
+                <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="user" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                    Nama Lengkap
+                </span>
+                <p class="text-sm font-bold text-darkbrown-900">
+                    {{ $currentUser->name ?: '-' }}
+                </p>
+            </div>
 
-                <!-- Email -->
-                <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
-                        <i data-lucide="mail" class="w-3.5 h-3.5 text-darkbrown-500"></i>
-                        Alamat Email
-                    </span>
-                    <p class="text-sm font-bold text-darkbrown-900">
-                        {{ $currentUser->email ?: '-' }}
-                    </p>
-                </div>
+            <!-- Email -->
+            <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
+                <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="mail" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                    Alamat Email
+                </span>
+                <p class="text-sm font-bold text-darkbrown-900">
+                    {{ $currentUser->email ?: '-' }}
+                </p>
+            </div>
 
-                <!-- Nomor Telepon / WA -->
-                <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
-                        <i data-lucide="phone" class="w-3.5 h-3.5 text-darkbrown-500"></i>
-                        Nomor WhatsApp / Telepon
-                    </span>
-                    <p class="text-sm font-bold text-darkbrown-900">
-                        {{ $currentUser->phone ?: '-' }}
-                    </p>
-                    <span class="text-[10px] text-darkbrown-500">Nomor aktif untuk konfirmasi sewa dan notifikasi.</span>
-                </div>
+            <!-- Nomor Telepon / WA -->
+            <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
+                <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="phone" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                    Nomor WhatsApp / Telepon
+                </span>
+                <p class="text-sm font-bold text-darkbrown-900">
+                    {{ $currentUser->phone ?: '-' }}
+                </p>
+                <span class="text-[10px] text-darkbrown-500">Nomor aktif untuk konfirmasi sewa dan notifikasi.</span>
+            </div>
 
-                <!-- NIK / No. KTP -->
-                <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
-                    <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
-                        <i data-lucide="credit-card" class="w-3.5 h-3.5 text-darkbrown-500"></i>
-                        NIK (Nomor Induk Kependudukan)
-                    </span>
-                    <p class="text-sm font-bold text-darkbrown-900 font-mono">
-                        {{ $maskedNik ?: 'Belum diisi' }}
-                    </p>
-                    <span class="text-[10px] text-darkbrown-500">Untuk jaminan KTP saat pengambilan perlengkapan camping.</span>
-                </div>
+            <!-- NIK / No. KTP -->
+            <div class="p-4 rounded-xl bg-white border border-wheat-200 space-y-1">
+                <span class="text-[11px] font-bold uppercase text-darkbrown-500 tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="credit-card" class="w-3.5 h-3.5 text-darkbrown-500"></i>
+                    NIK (Nomor Induk Kependudukan)
+                </span>
+                <p class="text-sm font-bold text-darkbrown-900 font-mono">
+                    {{ $maskedNik ?: 'Belum diisi' }}
+                </p>
+                <span class="text-[10px] text-darkbrown-500">Untuk jaminan KTP saat pengambilan perlengkapan camping.</span>
+            </div>
+        </div>
+    </div>
+
+{{-- ============================================================
+     2. TAMPILAN FORM EDIT BIODATA (MUNCUL SETELAH KLIK EDIT)
+     ============================================================ --}}
+    <form x-show="editing" x-cloak wire:submit="updateProfileInformation" class="mt-6 space-y-5">
+        <div class="p-4 rounded-xl bg-sunglow-50 border border-sunglow-200 text-xs font-medium text-darkbrown-800 flex items-center gap-2">
+            <i data-lucide="edit-2" class="w-4 h-4 text-goldenrod-700 shrink-0"></i>
+            <span>Ubah biodata di bawah ini, lalu tekan <strong>Simpan Perubahan</strong>.</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Nama Lengkap -->
+            <div>
+                <label for="name" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
+                    Nama Lengkap <span class="text-red-500">*</span>
+                </label>
+                <input
+                    wire:model="name"
+                    x-ref="nameInput"
+                    id="name"
+                    type="text"
+                    class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                    required
+                    autocomplete="name"
+                />
+                <x-input-error class="mt-1.5" :messages="$errors->get('name')" />
+            </div>
+
+            <!-- Email -->
+            <div>
+                <label for="email" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
+                    Alamat Email <span class="text-red-500">*</span>
+                </label>
+                <input
+                    wire:model="email"
+                    id="email"
+                    type="email"
+                    class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                    required
+                    autocomplete="username"
+                />
+                <x-input-error class="mt-1.5" :messages="$errors->get('email')" />
+
+                @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! auth()->user()->hasVerifiedEmail())
+                    <div class="mt-2 text-xs text-darkbrown-600">
+                        {{ __('Email Anda belum terverifikasi.') }}
+                        <button wire:click.prevent="sendVerification" class="underline text-avocado-700 hover:text-avocado-800 font-bold ml-1">
+                            {{ __('Kirim ulang tautan verifikasi') }}
+                        </button>
+                        @if (session('status') === 'verification-link-sent')
+                            <p class="mt-1 text-xs font-bold text-green-700">
+                                {{ __('Tautan verifikasi baru telah dikirim ke email Anda.') }}
+                            </p>
+                        @endif
+                    </div>
+                @endif
+            </div>
+
+            <!-- Nomor Telepon / WA -->
+            <div>
+                <label for="phone" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
+                    Nomor WhatsApp / Telepon <span class="text-red-500">*</span>
+                </label>
+                <input
+                    wire:model="phone"
+                    id="phone"
+                    type="text"
+                    placeholder="Contoh: 081234567890"
+                    class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                    required
+                />
+                <x-input-error class="mt-1.5" :messages="$errors->get('phone')" />
+            </div>
+
+            <!-- NIK (16 Digit) -->
+            <div>
+                <label for="nik" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
+                    NIK (Nomor Induk Kependudukan - 16 Digit)
+                </label>
+                <input
+                    wire:model="nik"
+                    id="nik"
+                    type="text"
+                    maxlength="16"
+                    placeholder="Contoh: 350704xxxxxxxxxx"
+                    class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                />
+                <x-input-error class="mt-1.5" :messages="$errors->get('nik')" />
+            </div>
+
+            <!-- Alamat Lengkap -->
+            <div class="sm:col-span-2">
+                <label for="address" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
+                    Alamat Domisili
+                </label>
+                <textarea
+                    wire:model="address"
+                    id="address"
+                    rows="3"
+                    placeholder="Tuliskan nama jalan, RT/RW, kelurahan, kecamatan, dan kota..."
+                    class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
+                ></textarea>
+                <x-input-error class="mt-1.5" :messages="$errors->get('address')" />
             </div>
         </div>
 
-    {{-- ============================================================
-         2. TAMPILAN FORM EDIT BIODATA (MUNCUL SETELAH KLIK EDIT)
-         ============================================================ --}}
-    @else
-        <form wire:submit="updateProfileInformation" class="mt-6 space-y-5">
-            <div class="p-4 rounded-xl bg-sunglow-50 border border-sunglow-200 text-xs font-medium text-darkbrown-800 flex items-center gap-2">
-                <i data-lucide="edit-2" class="w-4 h-4 text-goldenrod-700 shrink-0"></i>
-                <span>Ubah biodata di bawah ini, lalu tekan <strong>Simpan Perubahan</strong>.</span>
-            </div>
+        <!-- Tombol Aksi Form -->
+        <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
+            <button
+                type="submit"
+                class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
+            >
+                <i data-lucide="check" class="w-4 h-4"></i>
+                <span>{{ __('Simpan Perubahan') }}</span>
+            </button>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- Nama Lengkap -->
-                <div>
-                    <label for="name" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
-                        Nama Lengkap <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="name"
-                        id="name"
-                        type="text"
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
-                        required
-                        autocomplete="name"
-                    />
-                    <x-input-error class="mt-1.5" :messages="$errors->get('name')" />
-                </div>
-
-                <!-- Email -->
-                <div>
-                    <label for="email" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
-                        Alamat Email <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="email"
-                        id="email"
-                        type="email"
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
-                        required
-                        autocomplete="username"
-                    />
-                    <x-input-error class="mt-1.5" :messages="$errors->get('email')" />
-
-                    @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! auth()->user()->hasVerifiedEmail())
-                        <div class="mt-2 text-xs text-darkbrown-600">
-                            {{ __('Email Anda belum terverifikasi.') }}
-                            <button wire:click.prevent="sendVerification" class="underline text-avocado-700 hover:text-avocado-800 font-bold ml-1">
-                                {{ __('Kirim ulang tautan verifikasi') }}
-                            </button>
-                            @if (session('status') === 'verification-link-sent')
-                                <p class="mt-1 text-xs font-bold text-green-700">
-                                    {{ __('Tautan verifikasi baru telah dikirim ke email Anda.') }}
-                                </p>
-                            @endif
-                        </div>
-                    @endif
-                </div>
-
-                <!-- Nomor Telepon / WA -->
-                <div>
-                    <label for="phone" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
-                        Nomor WhatsApp / Telepon <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        wire:model="phone"
-                        id="phone"
-                        type="text"
-                        placeholder="Contoh: 081234567890"
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
-                        required
-                    />
-                    <x-input-error class="mt-1.5" :messages="$errors->get('phone')" />
-                </div>
-
-                <!-- NIK (16 Digit) -->
-                <div>
-                    <label for="nik" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
-                        NIK (Nomor Induk Kependudukan - 16 Digit)
-                    </label>
-                    <input
-                        wire:model="nik"
-                        id="nik"
-                        type="text"
-                        maxlength="16"
-                        placeholder="Contoh: 350704xxxxxxxxxx"
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
-                    />
-                    <x-input-error class="mt-1.5" :messages="$errors->get('nik')" />
-                </div>
-
-                <!-- Alamat Lengkap -->
-                <div class="sm:col-span-2">
-                    <label for="address" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
-                        Alamat Domisili
-                    </label>
-                    <textarea
-                        wire:model="address"
-                        id="address"
-                        rows="3"
-                        placeholder="Tuliskan nama jalan, RT/RW, kelurahan, kecamatan, dan kota..."
-                        class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
-                    ></textarea>
-                    <x-input-error class="mt-1.5" :messages="$errors->get('address')" />
-                </div>
-            </div>
-
-            <!-- Tombol Aksi Form -->
-            <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
-                <button
-                    type="submit"
-                    class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
-                >
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    <span>{{ __('Simpan Perubahan') }}</span>
-                </button>
-
-                <button
-                    type="button"
-                    wire:click="cancelEditing"
-                    class="btn-tendaku-secondary inline-flex items-center gap-2 py-2.5 px-5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
-                >
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                    <span>{{ __('Batal') }}</span>
-                </button>
-            </div>
-        </form>
-    @endif
+            <button
+                type="button"
+                x-on:click="editing = false"
+                wire:click="cancelEditing"
+                class="btn-tendaku-secondary inline-flex items-center gap-2 py-2.5 px-5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
+            >
+                <i data-lucide="x" class="w-4 h-4"></i>
+                <span>{{ __('Batal') }}</span>
+            </button>
+        </div>
+    </form>
 </section>

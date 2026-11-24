@@ -9,6 +9,13 @@ new class extends Component
 {
     public const MAX_ADDRESSES = 4;
 
+    /** Properti isian form: dipakai untuk reset ke nilai awal. */
+    private const FORM_FIELDS = [
+        'label', 'recipient_name', 'phone_number', 'full_address', 'province',
+        'city', 'district', 'village', 'postal_code', 'notes',
+        'latitude', 'longitude', 'is_default',
+    ];
+
     public bool $isCreating = false;
 
     public ?int $editingId = null;
@@ -42,19 +49,16 @@ new class extends Component
 
     public bool $is_default = false;
 
-    public function mount(): void
-    {
-        $this->resetForm();
-    }
-
     public function startCreating(): void
     {
         $this->resetErrorBag();
         $this->resetForm();
-        $user = Auth::user();
 
-        if ($user->addresses()->count() >= self::MAX_ADDRESSES) {
-            $this->addError('limit', 'Maksimal '.self::MAX_ADDRESSES.' alamat per akun. Hapus salah satu alamat untuk menambah yang baru.');
+        $user = Auth::user();
+        $addressCount = $user->addresses()->count();
+
+        if ($addressCount >= self::MAX_ADDRESSES) {
+            $this->addError('limit', $this->limitMessage());
 
             return;
         }
@@ -62,9 +66,8 @@ new class extends Component
         // Data penerima diambil otomatis dari biodata profil.
         $this->recipient_name = $user->name ?? '';
         $this->phone_number = $user->phone ?? '';
-        $this->is_default = ! $user->addresses()->exists();
+        $this->is_default = $addressCount === 0;
         $this->isCreating = true;
-        $this->editingId = null;
     }
 
     public function startEditing(int $id): void
@@ -72,22 +75,25 @@ new class extends Component
         $this->resetErrorBag();
         $address = Auth::user()->addresses()->findOrFail($id);
 
+        $this->isCreating = false;
         $this->editingId = $address->id;
         $this->selectedAddressId = $address->id;
-        $this->label = $address->label;
-        $this->recipient_name = $address->recipient_name;
-        $this->phone_number = $address->phone_number;
-        $this->full_address = $address->full_address;
-        $this->province = $address->province;
-        $this->city = $address->city;
-        $this->district = $address->district;
-        $this->village = $address->village ?? '';
-        $this->postal_code = $address->postal_code ?? '';
-        $this->notes = $address->notes ?? '';
-        $this->latitude = $address->latitude;
-        $this->longitude = $address->longitude;
-        $this->is_default = (bool) $address->is_default;
-        $this->isCreating = false;
+
+        $this->fill([
+            'label' => $address->label,
+            'recipient_name' => $address->recipient_name,
+            'phone_number' => $address->phone_number,
+            'full_address' => $address->full_address,
+            'province' => $address->province,
+            'city' => $address->city,
+            'district' => $address->district,
+            'village' => $address->village ?? '',
+            'postal_code' => $address->postal_code ?? '',
+            'notes' => $address->notes ?? '',
+            'latitude' => $address->latitude,
+            'longitude' => $address->longitude,
+            'is_default' => (bool) $address->is_default,
+        ]);
     }
 
     public function selectAddress(int $id): void
@@ -115,36 +121,7 @@ new class extends Component
 
     public function resetForm(): void
     {
-        $this->isCreating = false;
-        $this->editingId = null;
-        $this->label = 'Rumah';
-        $this->recipient_name = '';
-        $this->phone_number = '';
-        $this->full_address = '';
-        $this->province = '';
-        $this->city = '';
-        $this->district = '';
-        $this->village = '';
-        $this->postal_code = '';
-        $this->notes = '';
-        $this->latitude = null;
-        $this->longitude = null;
-        $this->is_default = false;
-    }
-
-    private function normalizeCoordinateInput(mixed $value): mixed
-    {
-        if ($value === null || is_bool($value)) {
-            return null;
-        }
-
-        if (is_string($value)) {
-            $trimmed = trim($value);
-
-            return $trimmed === '' ? null : $trimmed;
-        }
-
-        return $value;
+        $this->reset(['isCreating', 'editingId', ...self::FORM_FIELDS]);
     }
 
     public function save(): void
@@ -154,36 +131,7 @@ new class extends Component
         $this->latitude = $this->normalizeCoordinateInput($this->latitude);
         $this->longitude = $this->normalizeCoordinateInput($this->longitude);
 
-        $validated = $this->validate([
-            'label' => ['required', 'string', 'max:50'],
-            'recipient_name' => ['required', 'string', 'max:150'],
-            'phone_number' => ['required', 'regex:/^08[0-9]{8,11}$/'],
-            'full_address' => ['required', 'string', 'max:500'],
-            'province' => ['required', 'string', 'max:100'],
-            'city' => ['required', 'string', 'max:100'],
-            'district' => ['required', 'string', 'max:100'],
-            'village' => ['nullable', 'string', 'max:100'],
-            'postal_code' => ['nullable', 'string', 'max:10'],
-            'notes' => ['nullable', 'string', 'max:500'],
-            'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
-            'is_default' => ['boolean'],
-        ], [
-            'label.required' => 'Label alamat (misalnya Rumah, Kantor, atau Kos) wajib diisi.',
-            'recipient_name.required' => 'Nama penerima wajib diisi.',
-            'phone_number.required' => 'Nomor WhatsApp / telepon wajib diisi.',
-            'phone_number.regex' => 'Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka.',
-            'full_address.required' => 'Alamat lengkap wajib diisi.',
-            'province.required' => 'Provinsi wajib diisi.',
-            'city.required' => 'Kota atau kabupaten wajib diisi.',
-            'district.required' => 'Kecamatan wajib diisi.',
-            'latitude.required_with' => 'Koordinat lintang (latitude) wajib diisi jika koordinat bujur diisi.',
-            'latitude.numeric' => 'Koordinat lintang harus berupa angka yang valid.',
-            'latitude.between' => 'Koordinat lintang harus berada antara -90 dan 90.',
-            'longitude.required_with' => 'Koordinat bujur (longitude) wajib diisi jika koordinat lintang diisi.',
-            'longitude.numeric' => 'Koordinat bujur harus berupa angka yang valid.',
-            'longitude.between' => 'Koordinat bujur harus berada antara -180 dan 180.',
-        ]);
+        $validated = $this->validate();
 
         $validated['latitude'] = $validated['latitude'] !== null
             ? round((float) $validated['latitude'], 7)
@@ -193,16 +141,19 @@ new class extends Component
             ? round((float) $validated['longitude'], 7)
             : null;
 
-        $isDefault = $validated['is_default'] ?? false;
+        $isDefault = (bool) ($validated['is_default'] ?? false);
         unset($validated['is_default']);
 
+        // Satu query hitung dipakai untuk semua pengecekan di bawah.
+        $addressCount = $user->addresses()->count();
+
         // Jika alamat pertama, otomatis jadikan alamat utama.
-        if (! $user->addresses()->exists()) {
+        if ($addressCount === 0) {
             $isDefault = true;
         }
 
-        if (! $this->editingId && $user->addresses()->count() >= self::MAX_ADDRESSES) {
-            $this->addError('limit', 'Maksimal '.self::MAX_ADDRESSES.' alamat per akun. Hapus salah satu alamat untuk menambah yang baru.');
+        if (! $this->editingId && $addressCount >= self::MAX_ADDRESSES) {
+            $this->addError('limit', $this->limitMessage());
 
             return;
         }
@@ -211,26 +162,27 @@ new class extends Component
             $address = $user->addresses()->findOrFail($this->editingId);
             $address->update($validated);
 
-            if ($isDefault) {
+            // Lewati transaksi setAsDefault bila alamat ini memang sudah utama.
+            if ($isDefault && ! $address->is_default) {
                 $address->setAsDefault();
             }
 
-            $this->selectedAddressId = $address->id;
             session()->flash('status', 'address-updated');
         } else {
             $address = new CustomerAddress($validated);
             $address->user_id = $user->id;
-            $address->is_default = false;
+            // Alamat pertama tidak punya "alamat lain" untuk diturunkan statusnya.
+            $address->is_default = $isDefault && $addressCount === 0;
             $address->save();
 
-            if ($isDefault) {
+            if ($isDefault && ! $address->is_default) {
                 $address->setAsDefault();
             }
 
-            $this->selectedAddressId = $address->id;
             session()->flash('status', 'address-created');
         }
 
+        $this->selectedAddressId = $address->id;
         $this->resetForm();
     }
 
@@ -299,6 +251,65 @@ new class extends Component
             'maxAddresses' => self::MAX_ADDRESSES,
         ];
     }
+
+    protected function rules(): array
+    {
+        return [
+            'label' => ['required', 'string', 'max:50'],
+            'recipient_name' => ['required', 'string', 'max:150'],
+            'phone_number' => ['required', 'regex:/^08[0-9]{8,11}$/'],
+            'full_address' => ['required', 'string', 'max:500'],
+            'province' => ['required', 'string', 'max:100'],
+            'city' => ['required', 'string', 'max:100'],
+            'district' => ['required', 'string', 'max:100'],
+            'village' => ['nullable', 'string', 'max:100'],
+            'postal_code' => ['nullable', 'string', 'max:10'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
+            'is_default' => ['boolean'],
+        ];
+    }
+
+    protected function messages(): array
+    {
+        return [
+            'label.required' => 'Label alamat (misalnya Rumah, Kantor, atau Kos) wajib diisi.',
+            'recipient_name.required' => 'Nama penerima wajib diisi.',
+            'phone_number.required' => 'Nomor WhatsApp / telepon wajib diisi.',
+            'phone_number.regex' => 'Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka.',
+            'full_address.required' => 'Alamat lengkap wajib diisi.',
+            'province.required' => 'Provinsi wajib diisi.',
+            'city.required' => 'Kota atau kabupaten wajib diisi.',
+            'district.required' => 'Kecamatan wajib diisi.',
+            'latitude.required_with' => 'Koordinat lintang (latitude) wajib diisi jika koordinat bujur diisi.',
+            'latitude.numeric' => 'Koordinat lintang harus berupa angka yang valid.',
+            'latitude.between' => 'Koordinat lintang harus berada antara -90 dan 90.',
+            'longitude.required_with' => 'Koordinat bujur (longitude) wajib diisi jika koordinat lintang diisi.',
+            'longitude.numeric' => 'Koordinat bujur harus berupa angka yang valid.',
+            'longitude.between' => 'Koordinat bujur harus berada antara -180 dan 180.',
+        ];
+    }
+
+    private function limitMessage(): string
+    {
+        return 'Maksimal '.self::MAX_ADDRESSES.' alamat per akun. Hapus salah satu alamat untuk menambah yang baru.';
+    }
+
+    private function normalizeCoordinateInput(mixed $value): mixed
+    {
+        if ($value === null || is_bool($value)) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            return $trimmed === '' ? null : $trimmed;
+        }
+
+        return $value;
+    }
 }; ?>
 
 <section id="alamat">
@@ -320,6 +331,10 @@ new class extends Component
                     <button
                         type="button"
                         wire:click="startCreating"
+                        data-preload-leaflet
+                        wire:loading.attr="disabled"
+                        wire:loading.class="opacity-60 cursor-wait"
+                        wire:target="startCreating"
                         class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all self-start sm:self-auto"
                     >
                         <i data-lucide="plus" class="w-4 h-4"></i>
@@ -340,28 +355,7 @@ new class extends Component
         </div>
     @enderror
 
-    {{-- Notifikasi Status --}}
-    @if (session('status') === 'address-created')
-        <div class="mt-4 p-4 rounded-xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm font-semibold text-avocado-900 flex items-center gap-2">
-            <i data-lucide="check-circle" class="w-4 h-4 text-avocado-600 shrink-0"></i>
-            <span>Alamat baru berhasil ditambahkan.</span>
-        </div>
-    @elseif (session('status') === 'address-updated')
-        <div class="mt-4 p-4 rounded-xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm font-semibold text-avocado-900 flex items-center gap-2">
-            <i data-lucide="check-circle" class="w-4 h-4 text-avocado-600 shrink-0"></i>
-            <span>Alamat berhasil diperbarui.</span>
-        </div>
-    @elseif (session('status') === 'address-deleted')
-        <div class="mt-4 p-4 rounded-xl bg-wheat-100 border border-wheat-300 text-xs sm:text-sm font-semibold text-darkbrown-800 flex items-center gap-2">
-            <i data-lucide="trash-2" class="w-4 h-4 text-darkbrown-600 shrink-0"></i>
-            <span>Alamat berhasil dihapus.</span>
-        </div>
-    @elseif (session('status') === 'address-default-set')
-        <div class="mt-4 p-4 rounded-xl bg-avocado-50 border border-avocado-200 text-xs sm:text-sm font-semibold text-avocado-900 flex items-center gap-2">
-            <i data-lucide="check-circle" class="w-4 h-4 text-avocado-600 shrink-0"></i>
-            <span>Alamat utama berhasil diubah.</span>
-        </div>
-    @endif
+    @include('livewire.profile.partials.address-flash')
 
     {{-- ============================================================
          1. FORM TAMBAH / EDIT ALAMAT
@@ -603,144 +597,5 @@ new class extends Component
         </x-address-autofill>
     @endif
 
-    {{-- ============================================================
-         2. DAFTAR ALAMAT TERSIMPAN
-         ============================================================ --}}
-    <div class="mt-6 space-y-4">
-        @if ($addresses->isNotEmpty())
-
-            {{-- Kartu Alamat Terpilih --}}
-            @if ($selectedAddress)
-                <div
-                    wire:key="addr-{{ $selectedAddress->id }}"
-                    class="p-4 sm:p-5 rounded-xl border transition-all {{ $selectedAddress->is_default ? 'bg-white border-avocado-400 ring-1 ring-avocado-400/30' : 'bg-white border-wheat-200 hover:border-wheat-300' }}"
-                >
-                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                        <div class="space-y-1.5 min-w-0 flex-1">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-wheat-100 text-darkbrown-800 border border-wheat-300">
-                                    {{ $selectedAddress->label }}
-                                </span>
-
-                                <i
-                                    data-lucide="star"
-                                    class="w-4 h-4 shrink-0 {{ $selectedAddress->is_default ? 'text-goldenrod-500 fill-current' : 'text-darkbrown-400' }}"
-                                    title="{{ $selectedAddress->is_default ? 'Alamat Utama' : 'Bukan alamat utama' }}"
-                                    aria-label="{{ $selectedAddress->is_default ? 'Alamat Utama' : 'Bukan alamat utama' }}"
-                                ></i>
-                            </div>
-
-                            <p class="text-xs sm:text-sm text-darkbrown-800 leading-relaxed">
-                                {{ $selectedAddress->formatted_address }}
-                            </p>
-
-                            @if ($selectedAddress->notes)
-                                <p class="text-xs text-darkbrown-600 italic">
-                                    Catatan: {{ $selectedAddress->notes }}
-                                </p>
-                            @endif
-                        </div>
-
-                        {{-- Tombol Aksi per Alamat --}}
-                        <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-wheat-100">
-                            <button
-                                type="button"
-                                wire:click="startEditing({{ $selectedAddress->id }})"
-                                class="p-1.5 rounded-lg text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 transition"
-                                title="Ubah Alamat"
-                            >
-                                <i data-lucide="edit-3" class="w-4 h-4"></i>
-                            </button>
-
-                            <button
-                                type="button"
-                                wire:confirm="Yakin ingin menghapus alamat ini?"
-                                wire:click="deleteAddress({{ $selectedAddress->id }})"
-                                class="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition"
-                                title="Hapus Alamat"
-                            >
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Alamat Lainnya --}}
-                @if ($otherAddresses->isNotEmpty())
-                    <div class="px-1" x-data="{ open: false }">
-                        <button
-                            type="button"
-                            id="btn-dropdown-alamat-lainnya"
-                            @click="open = ! open"
-                            :aria-expanded="open"
-                            aria-controls="daftar-alamat-lainnya"
-                            class="flex w-full items-center justify-between gap-3 text-left cursor-pointer text-xs sm:text-sm font-semibold text-darkbrown-800"
-                        >
-                            <span>Alamat lainnya ({{ $otherAddresses->count() }})</span>
-
-                            <span class="shrink-0 transition-transform duration-200" :class="{ 'rotate-180': open }">
-                                <i data-lucide="chevron-down" class="w-4 h-4 text-darkbrown-500"></i>
-                            </span>
-                        </button>
-
-                        <ul id="daftar-alamat-lainnya" x-show="open" x-cloak class="mt-2 divide-y divide-wheat-100">
-                            @foreach ($otherAddresses as $other)
-                                <li wire:key="menu-addr-{{ $other->id }}">
-                                    <button
-                                        type="button"
-                                        wire:click="selectAddress({{ $other->id }})"
-                                        class="w-full text-left py-2.5 flex items-start gap-2.5 hover:bg-wheat-50 transition rounded-lg px-1"
-                                    >
-                                        <i
-                                            data-lucide="star"
-                                            class="w-4 h-4 shrink-0 mt-0.5 {{ $other->is_default ? 'text-goldenrod-500 fill-current' : 'text-darkbrown-400' }}"
-                                        ></i>
-
-                                        <span class="min-w-0">
-                                            <span class="block text-xs font-bold text-darkbrown-900">
-                                                {{ $other->label }}
-                                            </span>
-
-                                            <span class="block text-[11px] sm:text-xs text-darkbrown-600 leading-snug">
-                                                {{ $other->formatted_address }}
-                                            </span>
-                                        </span>
-                                    </button>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-            @endif
-
-        @else
-            {{-- Tampilan Ketika Belum Ada Alamat --}}
-            <div class="text-center py-8 px-4 rounded-xl bg-wheat-50 border border-wheat-200 space-y-3">
-                <div class="w-12 h-12 mx-auto rounded-xl bg-wheat-100 text-darkbrown-400 flex items-center justify-center">
-                    <i data-lucide="map-pin-off" class="w-6 h-6"></i>
-                </div>
-
-                <div>
-                    <h3 class="text-sm font-bold text-darkbrown-900">
-                        Belum ada alamat tersimpan
-                    </h3>
-
-                    <p class="text-xs text-darkbrown-500 mt-0.5">
-                        Tambahkan alamat agar Anda dapat memilih lokasi pengantaran saat memesan perlengkapan camping.
-                    </p>
-                </div>
-
-                @if (! $isCreating)
-                    <button
-                        type="button"
-                        wire:click="startCreating"
-                        class="btn-tendaku-primary inline-flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold shadow-sm"
-                    >
-                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                        <span>Tambah Alamat Pertama</span>
-                    </button>
-                @endif
-            </div>
-        @endif
-    </div>
+    @include('livewire.profile.partials.address-list')
 </section>

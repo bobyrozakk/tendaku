@@ -124,7 +124,7 @@ new class extends Component
     }
 }; ?>
 
-<section wire:poll.30s aria-labelledby="my-rentals-title">
+<section wire:poll.30s.visible aria-labelledby="my-rentals-title">
     <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-wheat-200 pb-4">
         <div>
             <h2 id="my-rentals-title" class="text-lg font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
