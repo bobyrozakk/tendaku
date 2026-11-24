@@ -10,9 +10,10 @@
     $hasDates = $hasStartDate || $hasEndDate;
     $hasSort = $sort !== 'latest';
     $hasActiveFilters = $hasSearch || $hasCategory || $hasVendor || $hasPrice || $hasDates || $onlyAvailable || $hasSort;
-    $hasAdvancedFilters = $hasVendor || $hasPrice || $hasDates || $onlyAvailable;
+    $hasAdvancedFilters = $hasCategory || $hasVendor || $hasPrice || $hasDates || $onlyAvailable;
 
     $advancedFilterCount = collect([
+        $hasCategory,
         $hasVendor,
         $hasPrice,
         $hasDates,
@@ -62,14 +63,14 @@
 
 <div
     class="space-y-6"
-    x-data="{ filtersOpen: @js($hasAdvancedFilters) }"
+    x-data="{ filtersOpen: false }"
 >
     {{-- Panel pencarian & filter --}}
     <section
         aria-labelledby="catalog-filter-heading"
-        class="relative overflow-hidden rounded-3xl border border-wheat-200 bg-white shadow-tendaku-sm"
+        class="relative rounded-3xl border border-wheat-200 bg-white shadow-tendaku-sm"
     >
-        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-avocado-500 via-sunglow-300 to-goldenrod-400" aria-hidden="true"></div>
+        <div class="absolute inset-x-0 top-0 h-1 rounded-t-3xl bg-gradient-to-r from-avocado-500 via-sunglow-300 to-goldenrod-400" aria-hidden="true"></div>
         <h2 id="catalog-filter-heading" class="sr-only">Pencarian dan filter katalog</h2>
 
         <div class="space-y-4 p-4 pt-5 sm:p-5 sm:pt-6">
@@ -108,199 +109,206 @@
                     </div>
                 </form>
 
-                <button
-                    type="button"
-                    @click="filtersOpen = !filtersOpen"
-                    :aria-expanded="filtersOpen ? 'true' : 'false'"
-                    aria-controls="catalog-advanced-filters"
-                    class="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl border border-wheat-300 bg-wheat-100 px-4 text-sm font-semibold text-darkbrown-800 transition hover:bg-wheat-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
+                <div
+                    class="relative shrink-0"
+                    @keydown.escape.window="filtersOpen = false"
+                    @click.outside="filtersOpen = false"
                 >
-                    <i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i>
-                    <span x-text="filtersOpen ? 'Tutup Filter' : 'Filter'">Filter</span>
-                    @if ($advancedFilterCount > 0)
-                        <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-avocado-600 px-1 text-[10px] font-bold text-white" aria-hidden="true">
-                            {{ $advancedFilterCount }}
-                        </span>
-                    @endif
-                    <i
-                        data-lucide="chevron-down"
-                        class="h-4 w-4 transition-transform duration-200 motion-reduce:transition-none"
-                        :class="filtersOpen ? 'rotate-180' : ''"
-                        aria-hidden="true"
-                    ></i>
-                </button>
-            </div>
-
-            {{-- Kategori --}}
-            <div class="space-y-2">
-                <div class="flex items-center justify-between gap-3">
-                    <span class="text-[11px] font-bold uppercase tracking-[.18em] text-darkbrown-500">Kategori</span>
-                    <span class="hidden text-[11px] font-medium text-darkbrown-400 sm:inline">
-                        Pilih satu kategori untuk mempersempit hasil
-                    </span>
-                </div>
-
-                <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none sm:-mx-6 sm:px-6 lg:mx-0 lg:flex-wrap lg:px-0">
                     <button
                         type="button"
-                        wire:click="selectCategory(null)"
-                        aria-pressed="{{ is_null($categoryId) ? 'true' : 'false' }}"
-                        class="inline-flex min-h-[2.5rem] shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ is_null($categoryId) ? 'border-avocado-700 bg-avocado-600 text-white shadow-sm' : 'border-wheat-300 bg-white text-darkbrown-700 hover:border-avocado-400 hover:bg-wheat-50' }}"
+                        @click="filtersOpen = !filtersOpen"
+                        :aria-expanded="filtersOpen ? 'true' : 'false'"
+                        aria-controls="catalog-advanced-filters"
+                        class="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 sm:w-auto {{ $advancedFilterCount > 0 ? 'border-avocado-800 bg-avocado-700 text-white hover:bg-avocado-800' : 'border-wheat-300 bg-wheat-100 text-darkbrown-800 hover:bg-wheat-200' }}"
                     >
-                        <i data-lucide="sparkles" class="h-3.5 w-3.5" aria-hidden="true"></i>
-                        <span>Semua Kategori</span>
+                        <i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i>
+                        @if ($advancedFilterCount > 0)
+                            <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-avocado-800" aria-hidden="true">
+                                {{ $advancedFilterCount }}
+                            </span>
+                        @endif
+                        <i
+                            data-lucide="chevron-down"
+                            class="h-4 w-4 transition-transform duration-200 motion-reduce:transition-none"
+                            :class="filtersOpen ? 'rotate-180' : ''"
+                            aria-hidden="true"
+                        ></i>
                     </button>
 
-                    @foreach ($categories as $cat)
-                        @php
-                            $isActive = $categoryId === $cat->id;
-                            $catIcon = match (strtolower($cat->icon ?? '')) {
-                                'tent' => 'tent',
-                                'moon' => 'moon',
-                                'flame' => 'flame',
-                                'sun', 'flashlight' => 'flashlight',
-                                'bag', 'backpack' => 'backpack',
-                                default => match (true) {
-                                    str_contains(strtolower($cat->name), 'tenda') => 'tent',
-                                    str_contains(strtolower($cat->name), 'sleep') || str_contains(strtolower($cat->name), 'tidur') => 'moon',
-                                    str_contains(strtolower($cat->name), 'masak') || str_contains(strtolower($cat->name), 'cook') => 'flame',
-                                    str_contains(strtolower($cat->name), 'lampu') || str_contains(strtolower($cat->name), 'light') => 'flashlight',
-                                    str_contains(strtolower($cat->name), 'tas') || str_contains(strtolower($cat->name), 'carrier') || str_contains(strtolower($cat->name), 'bag') => 'backpack',
-                                    default => 'tag',
-                                },
-                            };
-                        @endphp
-
-                        <button
-                            type="button"
-                            wire:click="selectCategory({{ $cat->id }})"
-                            aria-pressed="{{ $isActive ? 'true' : 'false' }}"
-                            class="inline-flex min-h-[2.5rem] shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isActive ? 'border-avocado-700 bg-avocado-600 text-white shadow-sm' : 'border-wheat-300 bg-white text-darkbrown-700 hover:border-avocado-400 hover:bg-wheat-50' }}"
-                        >
-                            <i data-lucide="{{ $catIcon }}" class="h-3.5 w-3.5" aria-hidden="true"></i>
-                            <span>{{ $cat->name }}</span>
-                            @if (isset($cat->items_count))
-                                <span class="ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] {{ $isActive ? 'bg-avocado-800 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
-                                    {{ $cat->items_count }}
+                    <div
+                        id="catalog-advanced-filters"
+                        role="dialog"
+                        aria-label="Filter katalog"
+                        x-cloak
+                        x-show="filtersOpen"
+                        x-transition.origin.top.right.duration.150ms
+                        class="absolute right-0 top-full z-40 mt-2 w-full space-y-4 rounded-2xl border border-wheat-200 bg-white p-4 shadow-tendaku-lg sm:w-[36rem] sm:max-w-[calc(100vw-4rem)]"
+                    >
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-[11px] font-bold uppercase tracking-[.18em] text-darkbrown-500">Kategori</span>
+                                <span class="hidden text-[11px] font-medium text-darkbrown-400 sm:inline">
+                                    Pilih satu kategori untuk mempersempit hasil
                                 </span>
-                            @endif
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-
-            {{-- Filter lanjutan --}}
-            <div
-                id="catalog-advanced-filters"
-                role="region"
-                aria-label="Filter lanjutan"
-                x-cloak
-                x-show="filtersOpen"
-                class="border-t border-wheat-100 pt-4"
-            >
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <div>
-                        <label for="catalog-vendor" class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
-                            Vendor / Toko
-                        </label>
-                        <select
-                            id="catalog-vendor"
-                            wire:model.live="vendorId"
-                            class="input-tendaku h-11 w-full px-3 text-sm font-medium"
-                        >
-                            <option value="">Semua Vendor</option>
-                            @foreach ($vendors as $ven)
-                                <option value="{{ $ven->id }}">{{ $ven->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
-                            Rentang Harga / Hari
-                        </span>
-                        <div class="flex items-center gap-2">
-                            <div class="relative min-w-0 flex-1">
-                                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-400" aria-hidden="true">Rp</span>
-                                <input
-                                    type="number"
-                                    inputmode="numeric"
-                                    min="0"
-                                    step="1000"
-                                    wire:model.live.debounce.400ms="minPrice"
-                                    placeholder="Min"
-                                    aria-label="Harga minimum per hari"
-                                    class="input-tendaku h-11 w-full pl-9 pr-2 text-sm font-medium"
-                                />
                             </div>
-                            <span class="text-xs text-darkbrown-400" aria-hidden="true">–</span>
-                            <div class="relative min-w-0 flex-1">
-                                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-400" aria-hidden="true">Rp</span>
-                                <input
-                                    type="number"
-                                    inputmode="numeric"
-                                    min="0"
-                                    step="1000"
-                                    wire:model.live.debounce.400ms="maxPrice"
-                                    placeholder="Maks"
-                                    aria-label="Harga maksimum per hari"
-                                    class="input-tendaku h-11 w-full pl-9 pr-2 text-sm font-medium"
-                                />
+
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    wire:click="selectCategory(null)"
+                                    aria-pressed="{{ is_null($categoryId) ? 'true' : 'false' }}"
+                                    class="inline-flex min-h-[2.5rem] shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ is_null($categoryId) ? 'border-avocado-700 bg-avocado-600 text-white shadow-sm' : 'border-wheat-300 bg-white text-darkbrown-700 hover:border-avocado-400 hover:bg-wheat-50' }}"
+                                >
+                                    <i data-lucide="sparkles" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                    <span>Semua Kategori</span>
+                                </button>
+
+                                @foreach ($categories as $cat)
+                                    @php
+                                        $isActive = $categoryId === $cat->id;
+                                        $catIcon = match (strtolower($cat->icon ?? '')) {
+                                            'tent' => 'tent',
+                                            'moon' => 'moon',
+                                            'flame' => 'flame',
+                                            'sun', 'flashlight' => 'flashlight',
+                                            'bag', 'backpack' => 'backpack',
+                                            default => match (true) {
+                                                str_contains(strtolower($cat->name), 'tenda') => 'tent',
+                                                str_contains(strtolower($cat->name), 'sleep') || str_contains(strtolower($cat->name), 'tidur') => 'moon',
+                                                str_contains(strtolower($cat->name), 'masak') || str_contains(strtolower($cat->name), 'cook') => 'flame',
+                                                str_contains(strtolower($cat->name), 'lampu') || str_contains(strtolower($cat->name), 'light') => 'flashlight',
+                                                str_contains(strtolower($cat->name), 'tas') || str_contains(strtolower($cat->name), 'carrier') || str_contains(strtolower($cat->name), 'bag') => 'backpack',
+                                                default => 'tag',
+                                            },
+                                        };
+                                    @endphp
+
+                                    <button
+                                        type="button"
+                                        wire:click="selectCategory({{ $cat->id }})"
+                                        aria-pressed="{{ $isActive ? 'true' : 'false' }}"
+                                        class="inline-flex min-h-[2.5rem] shrink-0 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isActive ? 'border-avocado-700 bg-avocado-600 text-white shadow-sm' : 'border-wheat-300 bg-white text-darkbrown-700 hover:border-avocado-400 hover:bg-wheat-50' }}"
+                                    >
+                                        <i data-lucide="{{ $catIcon }}" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                        <span>{{ $cat->name }}</span>
+                                        @if (isset($cat->items_count))
+                                            <span class="ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] {{ $isActive ? 'bg-avocado-800 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
+                                                {{ $cat->items_count }}
+                                            </span>
+                                        @endif
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div class="border-t border-wheat-100 pt-4">
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label for="catalog-vendor" class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+                                        Vendor / Toko
+                                    </label>
+                                    <select
+                                        id="catalog-vendor"
+                                        wire:model.live="vendorId"
+                                        class="input-tendaku h-11 w-full px-3 text-sm font-medium"
+                                    >
+                                        <option value="">Semua Vendor</option>
+                                        @foreach ($vendors as $ven)
+                                            <option value="{{ $ven->id }}">{{ $ven->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+                                        Rentang Harga / Hari
+                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <div class="relative min-w-0 flex-1">
+                                            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-400" aria-hidden="true">Rp</span>
+                                            <input
+                                                type="number"
+                                                inputmode="numeric"
+                                                min="0"
+                                                step="1000"
+                                                wire:model.live.debounce.400ms="minPrice"
+                                                placeholder="Min"
+                                                aria-label="Harga minimum per hari"
+                                                class="input-tendaku h-11 w-full pl-9 pr-2 text-sm font-medium"
+                                            />
+                                        </div>
+                                        <span class="text-xs text-darkbrown-400" aria-hidden="true">–</span>
+                                        <div class="relative min-w-0 flex-1">
+                                            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-400" aria-hidden="true">Rp</span>
+                                            <input
+                                                type="number"
+                                                inputmode="numeric"
+                                                min="0"
+                                                step="1000"
+                                                wire:model.live.debounce.400ms="maxPrice"
+                                                placeholder="Maks"
+                                                aria-label="Harga maksimum per hari"
+                                                class="input-tendaku h-11 w-full pl-9 pr-2 text-sm font-medium"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="sm:col-span-2">
+                                    <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+                                        Tanggal Sewa
+                                    </span>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <label class="block min-w-0">
+                                            <span class="mb-1 block text-[11px] font-semibold text-darkbrown-600">Mulai</span>
+                                            <input
+                                                type="date"
+                                                wire:model.live="startDate"
+                                                min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
+                                                class="input-tendaku h-11 w-full px-3 text-xs font-medium"
+                                            />
+                                        </label>
+                                        <label class="block min-w-0">
+                                            <span class="mb-1 block text-[11px] font-semibold text-darkbrown-600">Selesai</span>
+                                            <input
+                                                type="date"
+                                                wire:model.live="endDate"
+                                                min="{{ $startDate ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
+                                                class="input-tendaku h-11 w-full px-3 text-xs font-medium"
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <label class="flex cursor-pointer items-start justify-between gap-3 rounded-2xl border border-wheat-200 bg-wheat-50/60 p-3.5 transition hover:border-avocado-300 sm:col-span-2">
+                                    <span class="flex min-w-0 items-start gap-2.5">
+                                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-avocado-700 shadow-sm">
+                                            <i data-lucide="calendar-check" class="h-4 w-4" aria-hidden="true"></i>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-xs font-bold text-darkbrown-900">Hanya tampilkan yang tersedia</span>
+                                            <span class="mt-0.5 block text-[11px] leading-relaxed text-darkbrown-500">
+                                                Sembunyikan alat yang sudah penuh pada tanggal sewa yang dipilih.
+                                            </span>
+                                        </span>
+                                    </span>
+                                    <input
+                                        type="checkbox"
+                                        wire:model.live="onlyAvailable"
+                                        role="switch"
+                                        class="peer sr-only"
+                                    />
+                                    <span
+                                        class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-wheat-300 transition after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:bg-avocado-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-avocado-500 peer-focus-visible:ring-offset-2"
+                                        aria-hidden="true"
+                                    ></span>
+                                </label>
                             </div>
                         </div>
                     </div>
-
-                    <div class="sm:col-span-2">
-                        <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
-                            Tanggal Sewa
-                        </span>
-                        <div class="grid grid-cols-2 gap-2">
-                            <label class="block min-w-0">
-                                <span class="mb-1 block text-[11px] font-semibold text-darkbrown-600">Mulai</span>
-                                <input
-                                    type="date"
-                                    wire:model.live="startDate"
-                                    min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                                    class="input-tendaku h-11 w-full px-3 text-xs font-medium"
-                                />
-                            </label>
-                            <label class="block min-w-0">
-                                <span class="mb-1 block text-[11px] font-semibold text-darkbrown-600">Selesai</span>
-                                <input
-                                    type="date"
-                                    wire:model.live="endDate"
-                                    min="{{ $startDate ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
-                                    class="input-tendaku h-11 w-full px-3 text-xs font-medium"
-                                />
-                            </label>
-                        </div>
-                    </div>
-
-                    <label class="flex cursor-pointer items-start justify-between gap-3 rounded-2xl border border-wheat-200 bg-wheat-50/60 p-3.5 transition hover:border-avocado-300 sm:col-span-2 xl:col-span-4">
-                        <span class="flex min-w-0 items-start gap-2.5">
-                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-avocado-700 shadow-sm">
-                                <i data-lucide="calendar-check" class="h-4 w-4" aria-hidden="true"></i>
-                            </span>
-                            <span class="min-w-0">
-                                <span class="block text-xs font-bold text-darkbrown-900">Hanya tampilkan yang tersedia</span>
-                                <span class="mt-0.5 block text-[11px] leading-relaxed text-darkbrown-500">
-                                    Sembunyikan alat yang sudah penuh pada tanggal sewa yang dipilih.
-                                </span>
-                            </span>
-                        </span>
-                        <input
-                            type="checkbox"
-                            wire:model.live="onlyAvailable"
-                            role="switch"
-                            class="peer sr-only"
-                        />
-                        <span
-                            class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-wheat-300 transition after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition after:content-[''] peer-checked:bg-avocado-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-avocado-500 peer-focus-visible:ring-offset-2"
-                            aria-hidden="true"
-                        ></span>
-                    </label>
                 </div>
             </div>
+
 
             {{-- Ringkasan filter aktif --}}
             @if ($hasActiveFilters)
