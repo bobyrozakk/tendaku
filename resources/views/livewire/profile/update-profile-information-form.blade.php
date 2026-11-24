@@ -124,7 +124,7 @@ new class extends Component
 <section id="biodata" x-on:edit-biodata.window="$wire.startEditing(); $el.scrollIntoView({ behavior: 'smooth', block: 'start' })">
     <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-wheat-200 pb-4">
         <div>
-            <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading">
+            <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
                 <i data-lucide="user-round" class="w-5 h-5 text-avocado-600"></i>
                 <span>{{ __('Biodata Profil') }}</span>
             </h2>
@@ -209,7 +209,7 @@ new class extends Component
                     <p class="text-sm font-bold text-darkbrown-900 font-mono">
                         {{ $maskedNik ?: 'Belum diisi' }}
                     </p>
-                    <span class="text-[10px] text-darkbrown-500">Untuk jaminan KTP fisik saat pengambilan perlengkapan camping.</span>
+                    <span class="text-[10px] text-darkbrown-500">Untuk jaminan KTP saat pengambilan perlengkapan camping.</span>
                 </div>
             </div>
         </div>

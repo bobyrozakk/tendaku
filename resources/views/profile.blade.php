@@ -32,9 +32,6 @@
         </x-slot>
 
         <div class="max-w-6xl mx-auto space-y-6 py-2">
-            {{-- ============================================================
-                 Kepala profil: avatar, nama, waktu setempat, email, aksi cepat
-                 ============================================================ --}}
             <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-5">
                     <div class="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0" x-data="{ failed: false }">
@@ -62,7 +59,7 @@
                                   x-data="{ time: '{{ now()->format('H:i') }}' }"
                                   x-init="const tick = () => { time = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }).replace('.', ':'); }; tick(); setInterval(tick, 30000);">
                                 <i data-lucide="clock" class="w-4 h-4 text-darkbrown-400"></i>
-                                <span><span x-text="time">{{ now()->format('H:i') }}</span> waktu setempat</span>
+                                <span><span x-text="time">{{ now()->format('H:i') }}</span> WIB</span>
                             </span>
 
                             <span class="inline-flex items-center gap-1.5 min-w-0">
