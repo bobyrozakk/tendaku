@@ -78,6 +78,22 @@ new class extends Component
         };
     }
 
+    /**
+     * Info ringkas untuk baris riwayat: rentang tanggal sewa dan total bayar.
+     *
+     * @return array{0: string, 1: string}
+     */
+    public function historyMeta(Rental $rental): array
+    {
+        $from = $rental->pickup_date ? $this->shortDate($rental->pickup_date) : null;
+        $to = $rental->return_date ? $this->shortDate($rental->return_date) : null;
+
+        return [
+            $from && $to ? ($from === $to ? $from : "{$from} - {$to}") : '-',
+            'Rp '.number_format((float) $rental->grand_total, 0, ',', '.'),
+        ];
+    }
+
     private function shortDate(?Carbon $date): string
     {
         return $date ? $date->copy()->locale('id')->translatedFormat('d M Y') : '-';
@@ -105,7 +121,7 @@ new class extends Component
             ->pluck('total', 'status');
 
         $rentals = $user->rentalsAsCustomer()
-            ->with(['vendor', 'details.masterItem', 'payments'])
+            ->with(['vendor', 'details.masterItem.primaryImage', 'payments'])
             ->whereIn('status', $showHistory ? $historyStatuses : $activeStatuses)
             ->when(
                 $showHistory,
@@ -124,37 +140,34 @@ new class extends Component
     }
 }; ?>
 
-<section wire:poll.30s.visible aria-labelledby="my-rentals-title">
-    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-wheat-200 pb-4">
-        <div>
-            <h2 id="my-rentals-title" class="text-lg font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
-                <i data-lucide="tent" class="w-5 h-5 text-avocado-600"></i>
-                <span>{{ __('Sewa Saya') }}</span>
-            </h2>
-            <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
-                {{ __('Pantau status sewa Anda.') }}
-            </p>
+<section wire:poll.30s.visible aria-labelledby="my-rentals-title" class="rent-section">
+    <header class="rent-head">
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="rent-head-icon"><i data-lucide="tent" class="w-5 h-5"></i></span>
+            <div class="min-w-0">
+                <h2 id="my-rentals-title" class="text-lg font-extrabold text-darkbrown-900 font-heading leading-tight">
+                    {{ __('Sewa Saya') }}
+                </h2>
+                <p class="mt-0.5 text-xs text-darkbrown-500">{{ __('Pantau status sewa Anda.') }}</p>
+            </div>
         </div>
 
-        <a href="{{ route('customer.booking.index') }}"
-           class="btn-tendaku-secondary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all self-start sm:self-auto">
+        <a href="{{ route('customer.booking.index') }}" class="rent-all-link">
             <span>{{ __('Lihat Semua') }}</span>
             <i data-lucide="arrow-right" class="w-4 h-4"></i>
         </a>
     </header>
 
-    <div class="mt-4 inline-flex rounded-xl bg-wheat-100 p-1 text-xs font-bold" role="tablist">
-        <button type="button" role="tab" wire:click="setTab('aktif')" aria-selected="{{ $showHistory ? 'false' : 'true' }}"
-                class="px-3.5 py-1.5 rounded-lg transition {{ $showHistory ? 'text-darkbrown-600 hover:text-darkbrown-900' : 'bg-white text-darkbrown-900 shadow-sm' }}">
+    <div class="rent-tabs" role="tablist">
+        <button type="button" role="tab" wire:click="setTab('aktif')" aria-selected="{{ $showHistory ? 'false' : 'true' }}" class="rent-tab">
             {{ __('Aktif') }} ({{ $activeCount }})
         </button>
-        <button type="button" role="tab" wire:click="setTab('riwayat')" aria-selected="{{ $showHistory ? 'true' : 'false' }}"
-                class="px-3.5 py-1.5 rounded-lg transition {{ $showHistory ? 'bg-white text-darkbrown-900 shadow-sm' : 'text-darkbrown-600 hover:text-darkbrown-900' }}">
+        <button type="button" role="tab" wire:click="setTab('riwayat')" aria-selected="{{ $showHistory ? 'true' : 'false' }}" class="rent-tab">
             {{ __('Riwayat') }} ({{ $historyCount }})
         </button>
     </div>
 
-    <ul class="mt-3 divide-y divide-wheat-100">
+    <ul class="rent-list">
         @forelse ($rentals as $rental)
             @php
                 [$hintText, $hintTone] = $this->scheduleHint($rental);
@@ -162,61 +175,67 @@ new class extends Component
                 $isActive = in_array($rental->status, ['pending', 'confirmed', 'picked_up', 'returned'], true);
                 $firstItem = $rental->details->first()?->masterItem;
                 $extraItems = max(0, $rental->details->count() - 1);
-                $hintClass = match ($hintTone) {
-                    'success' => 'text-avocado-700',
-                    'warn' => 'text-goldenrod-700',
-                    'danger' => 'text-red-600',
-                    default => 'text-darkbrown-500',
-                };
+                $imageUrl = $firstItem?->primaryImage?->image_url ?: $firstItem?->image_url;
                 $stepLabels = ['Pembayaran', 'Pengambilan', 'Penyewaan', 'Pengembalian'];
             @endphp
 
             <li wire:key="rental-{{ $rental->id }}">
-                <a href="{{ route('booking.status', $rental->booking_code) }}"
-                   class="block py-3.5 px-2 -mx-2 rounded-xl hover:bg-wheat-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500">
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                        <div class="min-w-0 flex-1 basis-56">
-                            <p class="text-sm font-bold text-darkbrown-900 truncate">
-                                {{ $firstItem?->name ?? 'Perlengkapan camping' }}@if ($extraItems > 0) <span class="font-medium text-darkbrown-500">dan {{ $extraItems }} item lainnya</span>@endif
-                            </p>
-                            <p class="mt-0.5 text-xs text-darkbrown-500 truncate">
-                                <span class="font-mono font-semibold text-darkbrown-700">#{{ $rental->booking_code }}</span>
-                                @if ($rental->vendor?->name)
-                                    &middot; {{ $rental->vendor->name }}
-                                @endif
-                            </p>
-                        </div>
-
-                        <x-rental-status-badge :status="$rental->status" :label="$rental->displayStatusLabel()" />
-
-                        <span class="w-full sm:w-auto sm:min-w-[11rem] sm:text-right text-xs font-semibold {{ $hintClass }}">
-                            {{ $hintText }}
-                        </span>
+                <a href="{{ route('booking.status', $rental->booking_code) }}" class="rent-row">
+                    <div class="rent-thumb" data-muted="{{ in_array($rental->status, ['cancelled', 'expired'], true) ? 'true' : 'false' }}">
+                        <i data-lucide="tent"></i>
+                        @if ($imageUrl)
+                            <img src="{{ $imageUrl }}" alt="{{ $firstItem?->name ?? 'Foto alat' }}"
+                                 width="72" height="72" loading="lazy" decoding="async"
+                                 onerror="this.style.display='none'">
+                        @endif
                     </div>
 
-                    @if ($isActive)
-                        <ol class="mt-2.5 grid grid-cols-4 gap-1.5" aria-label="Progres sewa">
-                            @foreach ($stepLabels as $index => $stepLabel)
-                                @php
-                                    $isDone = $index < $steps;
-                                    $isCurrent = $index === $steps;
-                                @endphp
-                                <li class="min-w-0">
-                                    <span class="block h-1.5 rounded-full {{ $isDone ? 'bg-avocado-500' : ($isCurrent ? 'bg-sunglow-300' : 'bg-wheat-200') }}"></span>
-                                    <span class="mt-1 block truncate text-[10px] font-semibold {{ $isDone || $isCurrent ? 'text-darkbrown-700' : 'text-darkbrown-400' }}">
-                                        {{ $stepLabel }}
-                                    </span>
-                                </li>
-                            @endforeach
-                        </ol>
-                    @endif
+                    <div class="rent-body">
+                        <div class="rent-top">
+                            <div class="rent-info">
+                                <p class="rent-title">
+                                    {{ $firstItem?->name ?? 'Perlengkapan camping' }}@if ($extraItems > 0) <small>dan {{ $extraItems }} item lainnya</small>@endif
+                                </p>
+                                <p class="rent-meta">
+                                    <b>#{{ $rental->booking_code }}</b>@if ($rental->vendor?->name) &middot; {{ $rental->vendor->name }}@endif
+                                </p>
+                            </div>
+
+                            <div class="rent-status">
+                                <x-rental-status-badge :status="$rental->status" :label="$rental->displayStatusLabel()" />
+                                @if ($hintText !== '')
+                                    <span class="rent-hint" data-tone="{{ $hintTone }}">{{ $hintText }}</span>
+                                @endif
+                            </div>
+                        </div>
+
+                        @if ($isActive)
+                            <ol class="rent-steps" aria-label="Progres sewa">
+                                @foreach ($stepLabels as $index => $stepLabel)
+                                    @php $state = $index < $steps ? 'done' : ($index === $steps ? 'current' : 'todo'); @endphp
+                                    <li class="rent-step" data-state="{{ $state }}">
+                                        <span class="rent-dot">
+                                            @if ($state === 'done')
+                                                <i data-lucide="check"></i>
+                                            @endif
+                                        </span>
+                                        <span class="rent-step-label">{{ $stepLabel }}</span>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        @else
+                            @php [$rangeText, $totalText] = $this->historyMeta($rental); @endphp
+                            <div class="rent-chips">
+                                <span class="rent-chip"><i data-lucide="calendar-days"></i>{{ $rangeText }}</span>
+                                <span class="rent-chip"><i data-lucide="wallet"></i>{{ $totalText }}</span>
+                            </div>
+                        @endif
+                    </div>
                 </a>
             </li>
         @empty
-            <li class="py-10 text-center space-y-3">
-                <div class="w-12 h-12 mx-auto rounded-xl bg-wheat-100 text-darkbrown-400 flex items-center justify-center">
-                    <i data-lucide="tent" class="w-6 h-6"></i>
-                </div>
+            <li class="rent-empty space-y-3">
+                <span class="rent-empty-icon"><i data-lucide="tent" class="w-6 h-6"></i></span>
                 <div>
                     <h3 class="text-sm font-bold text-darkbrown-900">
                         {{ $showHistory ? __('Belum ada riwayat sewa') : __('Belum ada sewa aktif') }}

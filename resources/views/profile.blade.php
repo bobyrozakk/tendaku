@@ -16,6 +16,10 @@
         $primaryAddress = $profileUser->defaultAddress();
     @endphp
 
+    @push('styles')
+        @vite('resources/css/pages/customer/profile-rentals.css')
+    @endpush
+
     <x-layouts.customer>
         <x-slot name="header">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
