@@ -163,6 +163,39 @@
             </div>
         </div>
     </x-layouts.customer>
+@elseif (auth()->user()?->isVendorStaff())
+    <x-layouts.vendor title="Tendaku - Profil Toko">
+        <x-slot name="header">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-extrabold text-darkbrown-900 tracking-tight">
+                        {{ auth()->user()->isVendorOwner() ? 'Profil Toko' : 'Profil' }}
+                    </h1>
+                    <p class="text-xs text-darkbrown-500 mt-0.5">
+                        Kelola informasi akun, kata sandi, dan keamanan portal toko Anda.
+                    </p>
+                </div>
+            </div>
+        </x-slot>
+
+        <div class="max-w-4xl space-y-6">
+            <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
+                <livewire:profile.update-profile-information-form />
+            </div>
+
+            <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
+                <div class="max-w-xl">
+                    <livewire:profile.update-password-form />
+                </div>
+            </div>
+
+            <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-red-200">
+                <div class="max-w-xl">
+                    <livewire:profile.delete-user-form />
+                </div>
+            </div>
+        </div>
+    </x-layouts.vendor>
 @else
     <x-app-layout>
         <x-slot name="header">
