@@ -31,7 +31,7 @@
             </div>
         </x-slot>
 
-        <div class="max-w-6xl mx-auto space-y-6 py-2">
+        <div class="w-full space-y-6 py-2">
             <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-5">
                     <div class="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0" x-data="{ failed: false }">
@@ -132,24 +132,6 @@
                                 <p class="text-[11px] font-semibold text-darkbrown-600">Total</p>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="card-tendaku p-5 sm:p-6 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
-                        <h2 class="text-base font-extrabold text-darkbrown-900 font-heading">Alamat Utama</h2>
-                        @if ($primaryAddress)
-                            <div class="mt-3 space-y-1">
-                                <p class="text-sm font-bold text-darkbrown-900">
-                                    {{ $primaryAddress->label }}
-                                    <span class="font-medium text-darkbrown-500">&middot; {{ $primaryAddress->recipient_name }}</span>
-                                </p>
-                                <p class="text-xs text-darkbrown-700 leading-relaxed">{{ $primaryAddress->formatted_address }}</p>
-                            </div>
-                        @else
-                            <p class="mt-3 text-xs text-darkbrown-500">Belum ada alamat tersimpan.</p>
-                        @endif
-                        <a href="#alamat" class="mt-3 inline-flex items-center gap-1 text-xs font-bold text-avocado-700 hover:text-avocado-800 underline">
-                            Kelola alamat
-                        </a>
                     </div>
 
                     <div class="card-tendaku p-5 sm:p-6 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
