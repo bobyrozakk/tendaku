@@ -84,7 +84,18 @@
                             </span>
                         </button>
 
-                        <ul id="daftar-alamat-lainnya" x-show="open" x-cloak class="mt-2 divide-y divide-wheat-100">
+                        <ul
+                            id="daftar-alamat-lainnya"
+                            x-show="open"
+                            x-cloak
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 -translate-y-2"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 -translate-y-2"
+                            class="mt-2 divide-y divide-wheat-100"
+                        >
                             @foreach ($otherAddresses as $other)
                                 <li wire:key="menu-addr-{{ $other->id }}">
                                     <button

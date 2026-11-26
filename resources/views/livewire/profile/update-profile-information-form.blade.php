@@ -370,21 +370,6 @@ new class extends Component
                 />
                 <x-input-error class="mt-1.5" :messages="$errors->get('nik')" />
             </div>
-
-            <!-- Alamat Lengkap -->
-            <div @class(['sm:col-span-2' => ! $compact])>
-                <label for="address" class="block text-xs font-bold uppercase text-darkbrown-700 mb-1.5 tracking-wider">
-                    Alamat Domisili
-                </label>
-                <textarea
-                    wire:model="address"
-                    id="address"
-                    rows="3"
-                    placeholder="Tuliskan nama jalan, RT/RW, kelurahan, kecamatan, dan kota..."
-                    class="input-tendaku w-full py-2.5 px-3.5 rounded-xl text-sm font-medium border-wheat-300 focus:ring-2 focus:ring-avocado-500"
-                ></textarea>
-                <x-input-error class="mt-1.5" :messages="$errors->get('address')" />
-            </div>
         </div>
 
         <!-- Tombol Aksi Form -->

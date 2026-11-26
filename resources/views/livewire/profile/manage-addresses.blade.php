@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Models\CustomerAddress;
@@ -361,7 +360,7 @@ new class extends Component
             :as-form="true"
             wire:submit="save"
             wire:key="customer-address-autofill-{{ $editingId ?? 'create' }}"
-            class="mt-6 space-y-4 p-5 rounded-xl bg-wheat-50/70 border border-wheat-200"
+            class="pf-form-in mt-6 space-y-4 p-5 rounded-xl bg-wheat-50/70 border border-wheat-200"
         >
             <div class="flex items-center justify-between border-b border-wheat-200 pb-3">
                 <h3 class="text-sm font-extrabold text-darkbrown-900 font-heading">

@@ -502,6 +502,116 @@
     border-top: 1px solid var(--pf-line);
 }
 
+/* ---------- Animasi alamat (hanya transform/opacity, ringan) ---------- */
+
+@keyframes pf-rise {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pf-pop {
+    0% {
+        transform: scale(0.4) rotate(-25deg);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.25) rotate(8deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) rotate(0);
+    }
+}
+
+@keyframes pf-form-in {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.pf-rise {
+    animation: pf-rise 0.35s ease-out both;
+}
+
+.pf-form-in {
+    animation: pf-form-in 0.3s ease-out both;
+    transform-origin: top center;
+}
+
+.pf-addr-card {
+    animation: pf-rise 0.35s ease-out both;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.pf-addr-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--pf-green-line);
+    box-shadow: 0 10px 22px -14px rgba(43, 34, 2, 0.28);
+}
+
+.pf-addr-card .fill-current {
+    animation: pf-pop 0.5s ease-out 0.15s both;
+}
+
+.pf-icon-btn {
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        transform 0.15s ease;
+}
+
+.pf-icon-btn:hover {
+    transform: scale(1.12);
+}
+
+.pf-icon-btn:active {
+    transform: scale(0.92);
+}
+
+.pf-addr .pf-btn > i,
+.pf-addr .pf-btn > svg {
+    transition: transform 0.25s ease;
+}
+
+.pf-addr .pf-btn:hover > i,
+.pf-addr .pf-btn:hover > svg {
+    transform: rotate(90deg);
+}
+
+.pf-addr .pf-btn:active {
+    transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-rise,
+    .pf-form-in,
+    .pf-addr-card,
+    .pf-addr-card .fill-current {
+        animation: none;
+    }
+
+    .pf-addr-card:hover,
+    .pf-icon-btn:hover,
+    .pf-addr .pf-btn:hover > i,
+    .pf-addr .pf-btn:hover > svg {
+        transform: none;
+    }
+}
+
 /* ---------- Keamanan akun ---------- */
 
 .pf-sec-list {
