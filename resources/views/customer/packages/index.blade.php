@@ -1,4 +1,8 @@
 <x-layouts.customer>
+    <x-slot name="headerBg">
+        <x-page-header-art image="forest_autumn.jpeg" />
+    </x-slot>
+
     <x-slot name="header">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
             <div class="min-w-0 max-w-2xl">

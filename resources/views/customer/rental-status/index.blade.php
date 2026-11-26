@@ -4,21 +4,7 @@
     </x-slot>
 
     <x-slot name="headerBg">
-        {{-- Gambar kemah di sisi kanan header, memudar ke kiri & bawah --}}
-        <div
-            aria-hidden="true"
-            class="pointer-events-none absolute inset-y-0 right-0 hidden w-[55%] md:block lg:w-[48%] [-webkit-mask-image:linear-gradient(to_right,transparent,#000_70%)] [mask-image:linear-gradient(to_right,transparent,#000_70%)]"
-        >
-            <img
-                src="{{ asset('images/forest.jpeg') }}"
-                alt=""
-                width="800"
-                height="448"
-                decoding="async"
-                class="h-full w-full object-cover object-[center_62%] opacity-50"
-            />
-            <div class="absolute inset-0 bg-gradient-to-t from-[#FDF6E3]/70 via-transparent to-transparent"></div>
-        </div>
+        <x-page-header-art image="forest_winter.jpeg" />
     </x-slot>
 
     <x-slot name="header">
@@ -102,7 +88,7 @@
             {{-- Panel kanan: cara mengecek --}}
             <aside class="card-tendaku flex flex-col overflow-hidden">
                 <img
-                    src="{{ asset('images/status-sewa-camp.jpg') }}"
+                    src="{{ asset('images/forest_winter.jpeg') }}"
                     alt="Area perkemahan di tengah hutan"
                     width="800"
                     height="448"

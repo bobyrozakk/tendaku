@@ -32,7 +32,10 @@
                 {{ $headerBg }}
             @endisset
 
-            <div class="relative max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
+            <div @class([
+                'relative max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8',
+                'md:min-h-[11rem]' => isset($headerBg),
+            ])>
                 {{ $header }}
             </div>
         </header>
