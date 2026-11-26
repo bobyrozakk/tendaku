@@ -114,21 +114,22 @@
             'pickupTime'        => $booking['pickup_time'] ?? '09:00',
         ];
 
-        $inputBase = 'w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-darkbrown-900 placeholder:text-darkbrown-400 focus:ring-2 transition';
+        $inputBase = 'w-full rounded-xl border bg-white px-3.5 py-3 text-base sm:text-sm text-darkbrown-900 placeholder:text-darkbrown-400 focus:ring-2 transition';
         $okBorder  = 'border-wheat-300 focus:border-avocado-600 focus:ring-avocado-500/30';
         $errBorder = 'border-red-400 focus:border-red-500 focus:ring-red-200';
     @endphp
 
-    <div x-data="checkoutPage({{ \Illuminate\Support\Js::from($checkoutConfig) }})" class="py-2 sm:py-4">
+    <div x-data="checkoutPage({{ \Illuminate\Support\Js::from($checkoutConfig) }})" class="py-2 sm:py-4 pb-28 lg:pb-4">
         @include('customer.booking.partials.create.handoff')
         <div class="co-collapse" :class="{ 'is-collapsed': phase !== 'form' }">
             <div class="co-inner space-y-6">
                 @include('customer.booking.partials.create.trip-banner')
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
                     <div class="lg:col-span-7 xl:col-span-8 space-y-6" :inert="isProcessing">
-                        @include('customer.booking.partials.create.renter-identity')
-                        @include('customer.booking.partials.create.delivery-method')
+                        {{-- Urutan alur: apa yang disewa & kapan -> cara terima -> siapa penyewa --}}
                         @include('customer.booking.partials.create.rental-details')
+                        @include('customer.booking.partials.create.delivery-method')
+                        @include('customer.booking.partials.create.renter-identity')
 
                         {{-- Panel Cuaca Masa Sewa --}}
                         @auth
@@ -169,6 +170,7 @@
                 </div>
             </div>
         </div>
+        @include('customer.booking.partials.create.mobile-checkout-bar')
         @include('customer.booking.partials.create.add-address-modal')
     </div>
 </x-layouts.customer>

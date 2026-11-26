@@ -8,6 +8,7 @@
 
 <footer class="site-footer"
         style="--footer-photo: url('{{ asset($f['image']) }}')"
+        @open-footer-doc.window="open($event.detail, null)"
         x-data="{
             doc: null,
             opener: null,

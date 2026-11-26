@@ -1,18 +1,16 @@
-                <!-- DATA PENYEWA -->
+                <!-- 3. DATA PENYEWA -->
                 <section id="section-identity" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm">
-                    <div class="flex items-center gap-3 px-5 sm:px-6 pt-5 sm:pt-6">
-                        <span class="w-8 h-8 rounded-full bg-avocado-700 text-white font-bold flex items-center justify-center shrink-0">1</span>
-                        <div>
-                            <h2 class="text-lg font-bold text-darkbrown-900 font-heading leading-tight">Data penyewa</h2>
-                            <p class="text-sm text-darkbrown-500">
-                                @if ($isGuest || $needsName || $needsPhone || $needsNik)
-                                    Dipakai vendor untuk mencocokkan identitas saat serah terima alat.
-                                @else
-                                    Data diambil dari akun Anda. Sudah lengkap.
-                                @endif
-                            </p>
-                        </div>
-                    </div>
+                    @php
+                        $identitySubtitle = ($isGuest || $needsName || $needsPhone || $needsNik)
+                            ? 'Dipakai vendor untuk mencocokkan identitas saat serah terima alat.'
+                            : 'Data diambil dari akun Anda. Sudah lengkap.';
+                    @endphp
+                    @include('customer.booking.partials.create.section-heading', [
+                        'step' => 3,
+                        'title' => 'Data penyewa',
+                        'subtitle' => $identitySubtitle,
+                        'aside' => $isGuest ? '<a href="'.e(route('login')).'" class="font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2 whitespace-nowrap">Sudah punya akun? Masuk</a>' : null,
+                    ])
 
                     <div class="p-5 sm:p-6 space-y-4">
 
@@ -55,7 +53,10 @@
 
                             @if ($needsNik)
                             <div>
-                                <label for="f_nik" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">NIK (nomor KTP)</label>
+                                <div class="flex items-baseline justify-between mb-1.5">
+                                    <label for="f_nik" class="text-sm font-semibold text-darkbrown-800">NIK (nomor KTP)</label>
+                                    <span class="text-xs tabular-nums" :class="nik.length === 16 ? 'text-avocado-700 font-semibold' : 'text-darkbrown-400'" x-text="nik.length + '/16'"></span>
+                                </div>
                                 <div class="relative">
                                     <input type="text" id="f_nik"
                                         x-model="nik"
@@ -63,10 +64,11 @@
                                         inputmode="numeric"
                                         maxlength="16"
                                         autocomplete="off"
-                                        placeholder="Masukkan NIK"
+                                        placeholder="16 digit sesuai KTP" aria-describedby="hint_nik"
                                         :class="errors.nik ? '{{ $errBorder }}' : '{{ $okBorder }}'"
                                         class="{{ $inputBase }} font-mono tracking-wide">
                                 </div>
+                                <p x-show="!errors.nik" id="hint_nik" class="mt-1 text-xs text-darkbrown-500">Sesuai KTP yang dibawa saat ambil alat.</p>
                                 <p x-show="errors.nik" x-text="errors.nik" x-cloak class="mt-1 text-sm text-red-700"></p>
                             </div>
                             @endif
@@ -74,9 +76,10 @@
                             @if ($needsPhone)
                             <div>
                                 <label for="f_phone" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">No. WhatsApp aktif</label>
-                                <input type="tel" id="f_phone" x-model="phone" inputmode="numeric" autocomplete="tel" placeholder="Masukkan nomor" maxlength="13" @input="phone = phone.replace(/\D/g, '').slice(0, 13)"
+                                <input type="tel" id="f_phone" x-model="phone" inputmode="numeric" autocomplete="tel" placeholder="08xxxxxxxxxx" aria-describedby="hint_phone" maxlength="13" @input="phone = phone.replace(/\D/g, '').slice(0, 13)"
                                        :class="errors.phone ? '{{ $errBorder }}' : '{{ $okBorder }}'"
                                        class="{{ $inputBase }}">
+                                <p x-show="!errors.phone" id="hint_phone" class="mt-1 text-xs text-darkbrown-500">Pastikan nomor aktif di WhatsApp.</p>
                                 <p x-show="errors.phone" x-text="errors.phone" x-cloak class="mt-1 text-sm text-red-700"></p>
                             </div>
                             @endif
