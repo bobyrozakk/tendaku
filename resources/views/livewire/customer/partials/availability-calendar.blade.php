@@ -75,7 +75,7 @@
              @if (! $embedded) aria-labelledby="kalender-ketersediaan" @else aria-label="Kalender ketersediaan" @endif
              x-data="{ month: 0, last: {{ count($calendarMonths) - 1 }} }">
         @if (! $embedded)
-            <h2 id="kalender-ketersediaan" class="mb-3 text-lg font-extrabold tracking-tight text-darkbrown-900">Kalender Ketersediaan</h2>
+            <h2 id="kalender-ketersediaan" class="mb-3 font-display text-xl font-normal text-darkbrown-900 sm:text-2xl">Kalender Ketersediaan</h2>
         @endif
 
         {{-- Kalender ber-outline: header putih, isi abu muda --}}

@@ -12,7 +12,7 @@
         {{-- Header Halaman --}}
         <div class="flex items-center justify-between mb-6">
             <div>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
+                <h1 class="font-display font-normal tracking-tight text-3xl sm:text-4xl text-darkbrown-900">
                     Keranjang Sewa
                 </h1>
                 <p class="text-xs sm:text-sm text-darkbrown-600 mt-1">

@@ -79,7 +79,7 @@
     <section aria-labelledby="package-results-heading" class="space-y-3">
         <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
-                <h2 id="package-results-heading" class="font-heading text-xl font-extrabold tracking-tight text-darkbrown-900">
+                <h2 id="package-results-heading" class="font-display font-normal text-2xl text-darkbrown-900">
                     Daftar Paket Tersedia
                 </h2>
                 <span wire:loading class="animate-pulse text-[11px] font-semibold text-avocado-700">

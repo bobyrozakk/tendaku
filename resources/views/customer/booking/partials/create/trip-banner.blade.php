@@ -16,7 +16,7 @@
                     <span class="text-[11px] font-semibold uppercase tracking-wider text-avocado-100">
                         Checkout
                     </span>
-                    <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight font-heading leading-tight text-avocado-50">
+                    <h2 class="font-display font-normal text-2xl sm:text-3xl leading-tight text-avocado-50">
                         Lengkapi pemesanan
                     </h2>
                 </div>
