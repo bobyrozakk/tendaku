@@ -111,7 +111,7 @@ function statusPage(cfg) {
         cardCls(key) {
             const s = this.state(key);
             if (s === "active")
-                return "bg-white border-goldenrod-400 ring-2 ring-goldenrod-400/20 shadow-tendaku-sm";
+                return "bg-white border-goldenrod-400 ring-4 ring-goldenrod-400/20 shadow-tendaku-sm";
             if (s === "done") return "bg-white border-avocado-200";
             return "bg-[#FAF6ED] border-wheat-200";
         },

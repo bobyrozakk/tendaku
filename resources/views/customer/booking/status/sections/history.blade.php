@@ -1,6 +1,6 @@
             @if($hasList)
             <!-- ============ DAFTAR BOOKING (riwayat) ============ -->
-            <aside class="status-list" x-data="{ listOpen: false }">
+            <aside class="status-list {{ ($asBar ?? false) ? 'status-list--bar mb-6' : '' }}" x-data="{ listOpen: false }">
                 @if($hasRental)
                     <button type="button" class="bk-toggle w-full items-center justify-between gap-3 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm px-4 py-3 text-left"
                             @click="listOpen = !listOpen" :aria-expanded="listOpen.toString()">
@@ -12,7 +12,7 @@
                     </button>
                 @endif
 
-                <div class="bk-body {{ $hasRental ? '' : 'is-open' }} space-y-3" :class="{ 'is-open': listOpen }">
+                <div class="bk-body {{ $hasRental ? '' : 'is-open' }} {{ ($asBar ?? false) ? '' : 'space-y-3' }}" :class="{ 'is-open': listOpen }">
 
                     <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm p-4 space-y-3">
                         <div class="flex items-center justify-between gap-2">
