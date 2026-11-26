@@ -220,7 +220,6 @@ class CatalogIndex extends Component
 
         $totalCount = $result['total_count'] ?? 1;
 
-        // Update badge keranjang di navbar dan tampilkan notifikasi sukses
         $this->dispatch('cart-updated', count: $totalCount);
 
         $this->dispatch('notify',
@@ -232,15 +231,32 @@ class CatalogIndex extends Component
 
     public function render(CatalogAvailability $availability): View
     {
-        // Data filter (kategori + vendor) hampir tidak berubah, tetapi sebelumnya di-query ulang
-        // pada setiap interaksi Livewire (tiap ketikan/filter). Cache singkat cukup aman.
-        $categories = Cache::remember('catalog:filter-categories:v1', now()->addMinutes(5), fn () => ItemCategory::withCount(['items' => function ($query) {
-            $query->publicCatalog();
-        }])->get());
+        $categories = collect(Cache::remember(
+            'catalog:filter-categories:v2',
+            now()->addMinutes(5),
+            fn (): array => ItemCategory::query()
+                ->select(['id', 'name', 'icon'])
+                ->withCount(['items' => fn ($query) => $query->publicCatalog()])
+                ->orderBy('name')
+                ->get()
+                ->map(fn (ItemCategory $category): array => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'icon' => $category->icon,
+                    'items_count' => (int) $category->items_count,
+                ])
+                ->all()
+        ))->map(fn (array $row): object => (object) $row);
 
-        $vendors = Cache::remember('catalog:filter-vendors:v1', now()->addMinutes(5), fn () => Vendor::whereIn('status', ['active', 'approved'])
-            ->orderBy('name')
-            ->get(['id', 'name']));
+        $vendors = collect(Cache::remember(
+            'catalog:filter-vendors:v2',
+            now()->addMinutes(5),
+            fn (): array => Vendor::whereIn('status', ['active', 'approved'])
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (Vendor $vendor): array => ['id' => $vendor->id, 'name' => $vendor->name])
+                ->all()
+        ))->map(fn (array $row): object => (object) $row);
 
         $itemsQuery = MasterItem::publicCatalog()
             ->with(['category:id,name', 'vendor:id,name,slug', 'units:id,master_item_id,condition,purchase_date']);
