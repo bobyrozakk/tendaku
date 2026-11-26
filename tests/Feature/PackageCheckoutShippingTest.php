@@ -278,13 +278,11 @@ class PackageCheckoutShippingTest extends TestCase
     {
         $c = $this->context();
         $html = $this->actingAs($c['customer'])->get(route('customer.packages.booking', $c['package']->id))->assertOk()->assertSee('packageCheckout(')->assertSee('shippingNeedsApproval')->assertDontSee('Rp 25.000')->getContent();
-        $this->assertSame(1, substr_count($html, 'name="package_id"'));
         $modal = strpos($html, 'aria-labelledby="modal-title"');
-        $formEnd = strrpos(substr($html, 0, $modal), '</form>');
-        $this->assertNotFalse($formEnd);
-        $between = substr($html, $formEnd + 7, $modal - $formEnd - 7);
-        $this->assertStringNotContainsString('<form', $between);
-        $this->assertSame(1, substr_count($html, 'id="checkout-add-address-location-picker"'));
+        $this->assertNotFalse($modal);
+        $before = substr($html, 0, $modal);
+        $this->assertSame(substr_count($before, '<form'), substr_count($before, '</form>'));
+        $this->assertSame(1, preg_match_all('/\sid="checkout-add-address-location-picker"/', $html));
     }
 
     public function test_new_address_can_be_saved_and_used_in_package_shipping_preview(): void

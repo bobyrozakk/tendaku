@@ -392,16 +392,17 @@
                                    class="input-tendaku !rounded-full py-2 pl-10 pr-4 text-xs font-medium sm:w-56" />
                         </div>
 
-                        <label class="inline-flex items-center gap-2 rounded-full border border-wheat-200 bg-white py-1 pl-4 pr-1 text-xs shadow-tendaku-sm">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-wheat-200 bg-white py-1 pl-4 pr-1 text-xs shadow-tendaku-sm">
                             <span class="text-darkbrown-500">Urutkan</span>
-                            <select name="sort"
-                                    onchange="this.form.submit()"
-                                    class="cursor-pointer rounded-full border-0 bg-transparent py-1.5 pl-1 pr-8 text-xs font-bold text-darkbrown-900 focus:ring-2 focus:ring-avocado-500/40">
-                                @foreach($sortOptions as $value => $label)
-                                    <option value="{{ $value }}" @selected($sort === $value)>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </label>
+                            <x-dropdown-select
+                                variant="inline"
+                                mode="submit"
+                                name="sort"
+                                label="Urutkan"
+                                :options="$sortOptions"
+                                :value="$sort"
+                            />
+                        </div>
 
                         <noscript>
                             <button type="submit" class="btn-tendaku-primary !py-2 text-xs">Terapkan</button>

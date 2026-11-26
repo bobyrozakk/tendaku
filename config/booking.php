@@ -18,7 +18,7 @@ return [
     'statuses' => [
         'pending' => [
             'label' => 'Menunggu Pembayaran',
-            'filter' => 'Menunggu Pembayaran / Validasi',
+            'filter' => 'Menunggu',
         ],
         'confirmed' => [
             'label' => 'Dikonfirmasi',

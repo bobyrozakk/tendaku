@@ -45,6 +45,16 @@ class BookingWeather extends Component
     ];
 
     /**
+     * Nama bulan singkat dalam Bahasa Indonesia.
+     *
+     * @var array<int, string>
+     */
+    public const MONTH_SHORT = [
+        1 => 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+    ];
+
+    /**
      * Kunci spot cuaca aktif (lihat config/weather.php).
      */
     public string $spot = '';
@@ -65,13 +75,20 @@ class BookingWeather extends Component
     public string $vendorCity = '';
 
     /**
+     * Tampilan ringkas (ringkasan suhu + kolom per hari) untuk halaman checkout.
+     */
+    public bool $compact = false;
+
+    /**
      * Inisialisasi rentang tanggal dari halaman checkout.
      */
     public function mount(
         ?string $vendorCity = null,
         ?string $pickupDate = null,
         ?string $returnDate = null,
+        bool $compact = false,
     ): void {
+        $this->compact = $compact;
         $this->vendorCity = (string) $vendorCity;
         $this->pickupDate = (string) $pickupDate;
         $this->returnDate = (string) $returnDate;
@@ -159,7 +176,10 @@ class BookingWeather extends Component
                 .'jadi data tanggal sewa akan muncul mulai '.$this->dateLabel($availableFrom).'.';
         }
 
-        return view('livewire.customer.booking-weather', [
+        return view($this->compact
+            ? 'livewire.customer.booking-weather-compact'
+            : 'livewire.customer.booking-weather', [
+            'summary' => $this->summarize($days),
             'forecast' => $forecast,
             'days' => $days,
             'extremeDays' => $extremeDays,
@@ -177,9 +197,45 @@ class BookingWeather extends Component
     /**
      * Tampilan ringan sebelum komponen dimuat (lazy loading).
      */
-    public function placeholder(): string
+    public function placeholder(array $params = []): string
     {
-        return view('livewire.customer.booking-weather-placeholder')->render();
+        $view = ($params['compact'] ?? false)
+            ? 'livewire.customer.booking-weather-compact-placeholder'
+            : 'livewire.customer.booking-weather-placeholder';
+
+        return view($view)->render();
+    }
+
+    /**
+     * Ringkasan masa sewa: rentang suhu dan kondisi paling berat di antara hari-hari sewa.
+     *
+     * @param  array<int, array<string, mixed>>  $days
+     * @return array<string, string>|null
+     */
+    protected function summarize(array $days): ?array
+    {
+        if ($days === []) {
+            return null;
+        }
+
+        $rank = ['safe' => 0, 'watch' => 1, 'warning' => 2, 'alert' => 3, 'danger' => 4];
+        $worst = $days[0];
+
+        foreach ($days as $day) {
+            if (($rank[$day['severity']] ?? 0) > ($rank[$worst['severity']] ?? 0)) {
+                $worst = $day;
+            }
+        }
+
+        $min = min(array_column($days, 'temp_min'));
+        $max = max(array_column($days, 'temp_max'));
+
+        return [
+            'icon' => (string) $worst['icon'],
+            'label' => (string) ($worst['label'] ?? ''),
+            'severity' => (string) $worst['severity'],
+            'temp_range' => number_format((float) $min, 0).'° – '.number_format((float) $max, 0).'°C',
+        ];
     }
 
     /**
@@ -222,6 +278,8 @@ class BookingWeather extends Component
 
             $day['icon'] = $this->iconFor((int) ($day['weather_code'] ?? 0));
             $day['day_name'] = self::DAY_NAMES[$date->format('l')] ?? $date->format('l');
+            $day['day_short'] = mb_substr($day['day_name'], 0, 3);
+            $day['date_compact'] = $day['day_short'].', '.$date->day.' '.self::MONTH_SHORT[$date->month];
             $day['date_short'] = $date->format('d M');
             $day['date_full'] = $this->dateLabel($date);
             $day['is_today'] = $date->isSameDay($today);

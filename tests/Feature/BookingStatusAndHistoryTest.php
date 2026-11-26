@@ -182,7 +182,7 @@ class BookingStatusAndHistoryTest extends TestCase
             ->assertSee('Jadwal Penyewaan')
             ->assertSee('Lokasi Pengambilan')
             ->assertSee('Instruksi Pengambilan')
-            ->assertSee('Lihat Receipt Pesanan')
+            ->assertSee('Lihat Resi Pesanan')
             ->assertDontSee('Pending Validasi Kasir')
             ->assertDontSee('Menunggu Pengecekan');
     }

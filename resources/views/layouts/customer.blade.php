@@ -23,14 +23,27 @@
     <x-navbar role="customer" />
 
     @isset($header)
-        <header class="bg-white border-b border-wheat-200/80 shadow-[0_1px_3px_rgba(43,34,2,0.03)]">
-            <div class="max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8">
+        <header @class([
+            'border-b border-wheat-200/80 shadow-[0_1px_3px_rgba(43,34,2,0.03)]',
+            'bg-white' => ! isset($headerBg),
+            'relative overflow-hidden bg-gradient-to-r from-[#FFFBF0] via-[#FDF6E3] to-[#F3F1D6]' => isset($headerBg),
+        ])>
+            @isset($headerBg)
+                {{ $headerBg }}
+            @endisset
+
+            <div @class([
+                'relative max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8',
+                'md:min-h-[11rem]' => isset($headerBg),
+            ])>
                 {{ $header }}
             </div>
         </header>
     @endisset
 
     <x-toast />
+
+    <x-desktop-mode-notice />
 
     <main class="flex-1 w-full {{ $fullWidth ? '' : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8' }}">
         {{ $slot }}

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Customer;
 
+use App\Models\CustomerAddress;
 use App\Models\Rental;
 use App\Models\User;
 use App\Models\Vendor;
@@ -16,6 +17,7 @@ class ProfileRentalTrackerTest extends TestCase
     public function test_profile_page_uses_indonesian_labels_and_shows_rental_tracker(): void
     {
         $customer = User::factory()->create(['role' => 'customer']);
+        CustomerAddress::factory()->default()->create(['user_id' => $customer->id]);
 
         $this->actingAs($customer)
             ->get(route('profile'))
@@ -23,14 +25,15 @@ class ProfileRentalTrackerTest extends TestCase
             ->assertSee('Akun Saya')
             ->assertSee('Sewa Saya')
             ->assertSee('Biodata Profil')
-            ->assertSee('Edit Biodata')
-            ->assertSee('Perbarui Kata Sandi')
+            ->assertSee('Edit Profil')
+            ->assertSee('Ubah Kata Sandi')
             ->assertSee('Kata Sandi Saat Ini')
             ->assertSee('Kata Sandi Baru')
             ->assertSee('Konfirmasi Kata Sandi Baru')
             ->assertSee('Hapus Akun')
             ->assertSee('Alamat Utama')
-            ->assertSee('Email Terverifikasi')
+            ->assertSee('Alamat Email')
+            ->assertSee('Terverifikasi')
             ->assertDontSee('Update Password')
             ->assertDontSee('Delete Account')
             ->assertDontSee('Current Password');

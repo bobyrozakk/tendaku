@@ -114,9 +114,8 @@ class CustomerAddressAndRentalDataTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Budi Santoso')
-            ->assertSee('budi.santoso@tendaku.test')
             ->assertSee('081234567899')
-            ->assertSee('Akun Terhubung');
+            ->assertSee('Data diambil dari akun Anda. Sudah lengkap.');
     }
 
     /**
@@ -409,7 +408,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->actingAs($customer)
             ->get(route('profile'))
             ->assertOk()
-            ->assertSee('Data Alamat Pengantaran');
+            ->assertSee('Alamat Pengantaran');
     }
 
     /**

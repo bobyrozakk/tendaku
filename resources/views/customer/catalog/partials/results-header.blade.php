@@ -23,19 +23,14 @@
 
     <div class="flex w-full shrink-0 items-center gap-2 sm:w-auto">
         <span class="text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">Urutkan</span>
-        <div class="relative flex-1 sm:flex-none">
-            <i data-lucide="arrow-up-down" class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-darkbrown-400" aria-hidden="true"></i>
-            <select
-                id="catalog-sort"
-                wire:model.live="sort"
-                aria-label="Urutkan peralatan"
-                class="input-tendaku h-10 w-full pl-9 pr-8 text-xs font-semibold sm:min-w-[10.5rem]"
-            >
-                <option value="latest">Terbaru</option>
-                <option value="price_asc">Harga: Termurah</option>
-                <option value="price_desc">Harga: Termahal</option>
-                <option value="name_asc">Nama (A-Z)</option>
-            </select>
-        </div>
+        <x-dropdown-select
+            wire:model.live="sort"
+            icon="arrow-up-down"
+            size="sm"
+            align="right"
+            label="Urutkan peralatan"
+            :options="['latest' => 'Terbaru', 'price_asc' => 'Harga: Termurah', 'price_desc' => 'Harga: Termahal', 'name_asc' => 'Nama (A-Z)']"
+            class="flex-1 sm:flex-none sm:min-w-[11rem]"
+        />
     </div>
 </div>

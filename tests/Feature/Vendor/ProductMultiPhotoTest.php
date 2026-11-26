@@ -86,7 +86,9 @@ class ProductMultiPhotoTest extends TestCase
         $files = [
             UploadedFile::fake()->image('tent_1.jpg', 600, 600)->size(300),
             UploadedFile::fake()->image('tent_2.png', 600, 600)->size(300),
-            UploadedFile::fake()->image('tent_3.webp', 600, 600)->size(300),
+            function_exists('imagewebp')
+                ? UploadedFile::fake()->image('tent_3.webp', 600, 600)->size(300)
+                : UploadedFile::fake()->image('tent_3.jpg', 600, 600)->size(300),
             UploadedFile::fake()->image('tent_4.jpeg', 600, 600)->size(300),
             UploadedFile::fake()->image('tent_5.jpg', 600, 600)->size(300),
         ];

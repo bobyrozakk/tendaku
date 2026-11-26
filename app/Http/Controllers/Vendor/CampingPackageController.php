@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Vendor\CampingPackageRequest;
 use App\Models\CampingPackage;
 use App\Models\MasterItem;
+use App\Services\ImageOptimizer;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -187,7 +188,7 @@ class CampingPackageController extends Controller
             return null;
         }
 
-        return Storage::url($request->file('image')->store('packages', 'public'));
+        return Storage::url(app(ImageOptimizer::class)->store($request->file('image'), 'packages', 'public'));
     }
 
     protected function deleteStoredImage(?string $imageUrl): void

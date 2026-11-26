@@ -11,6 +11,7 @@ export default defineConfig({
                 "resources/js/pages/auth/fog-glass.js",
                 "resources/css/pages/landing/landing.css",
                 "resources/js/pages/landing/landing.js",
+                "resources/css/pages/customer/profile-rentals.css",
             ],
             refresh: true,
         }),

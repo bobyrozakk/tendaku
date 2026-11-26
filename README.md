@@ -283,3 +283,25 @@ Layout yang ada memuat aset melalui:
 
 Jika perubahan style belum terlihat, pastikan server Vite berjalan atau jalankan build ulang.
 
+
+
+## Performa
+
+Optimasi yang sudah diterapkan:
+
+- Ikon Lucide di-tree-shake (`resources/js/lucide-icons.js`). Saat menambah `<i data-lucide="nama-ikon">` baru,
+  tambahkan ikonnya ke file tersebut (nama PascalCase), lalu `npm run build`.
+- Foto produk/paket yang diunggah vendor diperkecil (sisi terpanjang 1600px) lewat `App\Services\ImageOptimizer`.
+- Gambar hero/latar dan video landing sudah dikompres; aset statis di-cache lewat `public/.htaccess`.
+- Index tambahan untuk query ketersediaan stok, riwayat sewa, dan GMV (`2026_11_26_100000_add_performance_indexes`).
+
+Rekomendasi untuk production (konfigurasi server, bukan kode):
+
+```sh
+php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan event:cache
+composer install --no-dev --optimize-autoloader
+```
+
+Gunakan `APP_DEBUG=false`, `APP_ENV=production`, dan pertimbangkan `CACHE_STORE`/`SESSION_DRIVER` ke Redis
+agar tidak membebani database pada setiap request. Jika memakai Nginx, aktifkan `gzip on;` dan beri
+`Cache-Control: public, max-age=31536000, immutable` untuk `/build/assets/`.

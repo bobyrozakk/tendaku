@@ -52,6 +52,8 @@
 <body class="min-h-screen overflow-x-hidden bg-[#0F0E3A] font-sans text-tendaku-brown antialiased">
     <x-toast />
 
+    <x-desktop-mode-notice />
+
     {{-- Bentuk lengkung pemisah panel gambar dan form --}}
     <svg width="0"
         height="0"

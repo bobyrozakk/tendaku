@@ -110,3 +110,15 @@ input[type="number"] {
         animation: none;
     }
 }
+
+/* ===== Bar CTA mobile: hormati safe-area (iPhone notch / gesture bar) ===== */
+.co-mobile-bar {
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .co-collapse,
+    .co-preview {
+        transition: none;
+    }
+}

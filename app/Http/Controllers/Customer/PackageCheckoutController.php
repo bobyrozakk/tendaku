@@ -9,6 +9,7 @@ use App\Http\Requests\Customer\StorePackageCheckoutRequest;
 use App\Models\CampingPackage;
 use App\Services\Booking\CheckoutService;
 use App\Services\Booking\CheckoutShippingService;
+use App\Services\Payment\PaymentService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -74,6 +75,7 @@ class PackageCheckoutController extends Controller
             'rentalDays' => $rentalDays,
             'hours' => $hours,
             'subtotal' => $subtotal,
+            'dpPercentage' => app(PaymentService::class)->dpPercentage(),
         ]);
     }
 
@@ -94,6 +96,7 @@ class PackageCheckoutController extends Controller
         $package = $this->findPackage($id);
         $pickupMethod = $request->validated('pickup_method') ?? 'self_pickup';
         $paymentChannel = 'bca_va';
+        $paymentOption = $request->validated('payment_option') ?: 'full';
         $input = array_filter($request->safe()->only(['pickup_date', 'pickup_time', 'return_date', 'return_time', 'customer_address_id']), fn (mixed $value): bool => $value !== null && $value !== '');
         $input += ['checkout_type' => 'package', 'package_id' => $id, 'pickup_method' => $pickupMethod];
 
@@ -132,7 +135,7 @@ class PackageCheckoutController extends Controller
                 'expires_in_minutes' => (int) config('booking.payment_expiry_minutes'),
                 'notes' => 'Paket Camping: '.$preview['package_name'].' ('.$preview['rental_days'].' hari sewa)',
                 'items' => array_map(fn (array $item): array => ['master_item_id' => $item['id'], 'quantity' => $item['qty']], $preview['items']),
-            ], 'full', $paymentChannel, false);
+            ], $paymentOption, $paymentChannel, false);
         } catch (ShippingPreviewException $exception) {
             if ($exception->errorCode === 'invalid_schedule') {
                 throw ValidationException::withMessages([

@@ -185,6 +185,12 @@ class RentalStatusLookupController extends Controller
             default => null,
         };
 
+        // Pesanan sudah dibayar tapi kasir belum memvalidasi: jangan klaim "dikonfirmasi vendor".
+        if ($rental->status === 'pending' && $isPaid) {
+            $steps[1]['label'] = 'Menunggu Validasi';
+            $steps[1]['description'] = 'Pembayaran sudah diterima. Kasir sedang memvalidasi pesanan Anda.';
+        }
+
         return array_map(
             function (array $step, int $index) use ($currentIndex, $rental): array {
                 $state = match (true) {

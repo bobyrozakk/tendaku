@@ -1,18 +1,14 @@
 <div class="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
     <div>
-        <label for="catalog-vendor" class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+        <span class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
             Vendor / Toko
-        </label>
-        <select
-            id="catalog-vendor"
+        </span>
+        <x-dropdown-select
             wire:model.live="vendorId"
-            class="input-tendaku h-10 w-full px-3 text-sm font-medium"
-        >
-            <option value="">Semua Vendor</option>
-            @foreach ($vendors as $ven)
-                <option value="{{ $ven->id }}">{{ $ven->name }}</option>
-            @endforeach
-        </select>
+            size="md"
+            label="Vendor / Toko"
+            :options="collect($vendors)->pluck('name', 'id')->prepend('Semua Vendor', '')->all()"
+        />
     </div>
 
     <div>
