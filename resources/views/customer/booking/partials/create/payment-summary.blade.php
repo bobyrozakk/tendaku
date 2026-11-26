@@ -144,6 +144,11 @@
                                 <span class="text-sm font-bold">Total Sewa</span>
                                 <span class="text-2xl font-extrabold tracking-tight font-heading" x-text="formatRupiah(grandTotal)"></span>
                             </div>
+                            <div x-show="paymentOption === 'dp'" x-cloak
+                                 class="mt-2.5 pt-2.5 border-t border-avocado-200 flex items-center justify-between gap-3">
+                                <span class="text-sm font-bold">DP</span>
+                                <span class="text-lg font-extrabold tracking-tight font-heading" x-text="formatRupiah(dpAmount)"></span>
+                            </div>
                         </div>
 
                         <div class="space-y-2.5">
