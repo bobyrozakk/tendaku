@@ -1,63 +1,55 @@
-                <!-- 2. CARA MENERIMA ALAT -->
+                <!-- 2. RENCANA PENGAMBILAN ALAT -->
                 <section id="section-delivery" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm">
                     @include('customer.booking.partials.create.section-heading', [
                         'step' => 2,
-                        'title' => 'Cara menerima alat',
-                        'subtitle' => 'Ambil sendiri di toko, atau diantar kurir vendor.',
+                        'title' => 'Rencana pengambilan alat',
+                        'subtitle' => 'Pilih cara menerima alat agar perjalanan Anda lebih nyaman.',
                     ])
 
                     <div class="p-5 sm:p-6 space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Metode pengambilan">
 
                             <!-- Ambil di tempat: semua orang -->
-                            <label :class="pickupMethod === 'self_pickup' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
-                                   class="relative flex gap-3 rounded-2xl border p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                            <label :class="pickupMethod === 'self_pickup' ? 'border-avocado-800 bg-avocado-100/60 shadow-tendaku-sm' : 'border-wheat-200 bg-wheat-50/60 hover:border-avocado-400'"
+                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
                                 <input type="radio" name="ui_pickup_method" value="self_pickup" x-model="pickupMethod" class="sr-only">
-                                <div class="w-10 h-10 rounded-xl bg-avocado-100 text-avocado-700 flex items-center justify-center shrink-0">
+                                <div class="w-10 h-10 rounded-xl bg-avocado-100 text-avocado-800 flex items-center justify-center shrink-0">
                                     <i data-lucide="store" class="w-5 h-5"></i>
                                 </div>
-                                <div class="min-w-0 flex-1 pr-6">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span class="font-bold text-darkbrown-900">Ambil di toko</span>
-                                        <span class="rounded-md bg-avocado-100 border border-avocado-200 px-2 py-0.5 text-xs font-bold text-avocado-800">Gratis</span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <span class="font-bold text-lg text-darkbrown-900 leading-tight">Ambil di toko</span>
+                                        <span class="rounded-full bg-avocado-200/70 border border-avocado-300 px-2.5 py-0.5 text-xs font-bold text-avocado-900 shrink-0">Gratis</span>
                                     </div>
                                     <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Datang langsung ke outlet vendor di {{ $booking['vendor']['city'] }}. Tanpa ongkir.</p>
                                 </div>
-                                <span class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition"
-                                      :class="pickupMethod === 'self_pickup' ? 'bg-avocado-600 border-avocado-600' : 'border-wheat-400 bg-white'" aria-hidden="true">
-                                    <i data-lucide="check" x-show="pickupMethod === 'self_pickup'" class="w-3 h-3 text-white"></i>
-                                </span>
                             </label>
 
                             <!-- Diantar: hanya member login -->
                             @if ($isLoggedIn)
-                            <label :class="pickupMethod === 'delivery' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
-                                   class="relative flex gap-3 rounded-2xl border p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                            <label :class="pickupMethod === 'delivery' ? 'border-avocado-800 bg-avocado-100/60 shadow-tendaku-sm' : 'border-wheat-200 bg-wheat-50/60 hover:border-avocado-400'"
+                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
                                 <input type="radio" name="ui_pickup_method" value="delivery" x-model="pickupMethod" class="sr-only">
                                 <div class="w-10 h-10 rounded-xl bg-sunglow-200 text-goldenrod-800 flex items-center justify-center shrink-0">
                                     <i data-lucide="truck" class="w-5 h-5"></i>
                                 </div>
-                                <div class="min-w-0 flex-1 pr-6">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <span class="font-bold text-darkbrown-900">Diantar ke lokasi</span>
-                                        <span class="rounded-md bg-sunglow-100 border border-sunglow-300 px-2 py-0.5 text-xs font-bold text-darkbrown-900">Ongkir otomatis</span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <span class="font-bold text-lg text-darkbrown-900 leading-tight">Diantar ke lokasi</span>
+                                        <span class="rounded-full bg-sunglow-100 border border-sunglow-300 px-2.5 py-0.5 text-xs font-bold text-darkbrown-900 shrink-0">Ongkir otomatis</span>
                                     </div>
                                     <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Kurir vendor mengantar ke rumah atau titik kumpul trip. Area Malang Raya & Batu.</p>
                                 </div>
-                                <span class="absolute top-3 right-3 w-5 h-5 rounded-full border-2 flex items-center justify-center transition"
-                                      :class="pickupMethod === 'delivery' ? 'bg-avocado-600 border-avocado-600' : 'border-wheat-400 bg-white'" aria-hidden="true">
-                                    <i data-lucide="check" x-show="pickupMethod === 'delivery'" class="w-3 h-3 text-white"></i>
-                                </span>
                             </label>
                             @else
-                            <div class="flex gap-3 rounded-2xl border border-dashed border-wheat-400 bg-wheat-50 p-4" aria-disabled="true">
+                            <div class="flex gap-3 rounded-2xl border-2 border-wheat-200 bg-wheat-50/60 p-4" aria-disabled="true">
                                 <div class="w-10 h-10 rounded-xl bg-wheat-200 text-darkbrown-500 flex items-center justify-center shrink-0">
                                     <i data-lucide="lock" class="w-5 h-5"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <span class="font-bold text-darkbrown-700">Diantar ke lokasi</span>
+                                    <span class="font-bold text-lg text-darkbrown-900 leading-tight">Diantar ke lokasi</span>
                                     <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Khusus member, karena alamat dan serah terima kurir perlu akun terverifikasi.</p>
-                                    <a href="{{ route('login') }}" class="mt-2 inline-flex items-center gap-1 text-sm font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">
+                                    <a href="{{ route('login') }}" class="mt-2 inline-flex items-center gap-1 text-sm font-bold text-avocado-800 hover:text-avocado-900 underline underline-offset-2">
                                         Masuk atau daftar dulu
                                         <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                                     </a>
@@ -71,28 +63,43 @@
                             $pickupName = trim((string) ($booking['vendor']['pickup_location'] ?? ''));
                             $pickupAddr = trim((string) ($booking['vendor']['address'] ?? ''));
                             $pickupHours = trim((string) ($booking['vendor']['operational_hours'] ?? ''));
+                            $vendorPhone = trim((string) ($booking['vendor']['phone'] ?? ''));
                             $mapsQuery = $pickupAddr !== '' ? $pickupAddr : $pickupName;
                         @endphp
-                        <div x-show="pickupMethod === 'self_pickup'" x-cloak class="flex items-start gap-3 rounded-xl bg-wheat-50 border border-wheat-200 p-4 text-sm">
-                            <i data-lucide="map-pin" class="w-5 h-5 text-avocado-700 shrink-0 mt-0.5"></i>
+                        <div x-show="pickupMethod === 'self_pickup'" x-cloak class="flex items-start gap-3 rounded-2xl bg-wheat-50/70 border border-wheat-200 p-4 text-sm">
+                            <i data-lucide="map-pin" class="w-5 h-5 text-avocado-800 shrink-0 mt-0.5"></i>
                             <div class="min-w-0 flex-1 space-y-1">
-                                <div class="text-xs font-semibold uppercase tracking-wider text-darkbrown-500">Lokasi pengambilan</div>
-                                <div class="font-bold text-darkbrown-900">{{ $booking['vendor']['name'] }}</div>
+                                <div class="text-xs font-bold text-darkbrown-900">Lokasi pengambilan</div>
+                                <div class="font-bold text-base text-darkbrown-900">{{ $booking['vendor']['name'] }}</div>
                                 @if ($pickupName !== '' && $pickupName !== $pickupAddr)
                                     <div class="text-darkbrown-700">{{ $pickupName }}</div>
                                 @endif
                                 @if ($pickupAddr !== '')
-                                    <div class="text-darkbrown-600">{{ $pickupAddr }}</div>
+                                    <div class="flex items-start gap-1.5 text-xs text-darkbrown-600">
+                                        <i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
+                                        <span>{{ $pickupAddr }}</span>
+                                    </div>
                                 @endif
                                 @if ($pickupHours !== '')
-                                    <div class="text-darkbrown-600 pt-0.5">Jam operasional: <strong class="text-darkbrown-800">{{ $pickupHours }}</strong></div>
+                                    <div class="text-xs text-darkbrown-600 pt-0.5">Jam operasional: <strong class="text-darkbrown-800">{{ $pickupHours }}</strong></div>
                                 @endif
-                                @if ($mapsQuery !== '')
-                                    <a href="https://www.google.com/maps/search/?api=1&amp;query={{ urlencode($mapsQuery) }}" target="_blank" rel="noopener"
-                                       class="inline-flex items-center gap-1 pt-1 text-sm font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">
-                                        Buka di Maps
-                                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                    </a>
+                                @if ($mapsQuery !== '' || $vendorPhone !== '')
+                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+                                        @if ($mapsQuery !== '')
+                                            <a href="https://www.google.com/maps/search/?api=1&amp;query={{ urlencode($mapsQuery) }}" target="_blank" rel="noopener"
+                                               class="inline-flex items-center gap-1 text-sm font-bold text-avocado-800 hover:text-avocado-900 underline underline-offset-2">
+                                                Lihat di Maps
+                                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                            </a>
+                                        @endif
+                                        @if ($vendorPhone !== '')
+                                            <a href="tel:{{ $vendorPhone }}" aria-label="Hubungi vendor {{ $vendorPhone }}"
+                                               class="inline-flex items-center gap-1 text-sm font-bold text-avocado-800 hover:text-avocado-900 underline underline-offset-2">
+                                                <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                                                Hubungi vendor
+                                            </a>
+                                        @endif
+                                    </div>
                                 @endif
                             </div>
                         </div>

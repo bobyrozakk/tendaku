@@ -1,24 +1,24 @@
         <!-- ============ TRIP BANNER ============ -->
         <div class="relative overflow-hidden rounded-2xl bg-avocado-900 text-white shadow-tendaku">
-            <div class="relative p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="relative p-4 sm:p-5 flex flex-col md:flex-row md:items-start justify-between gap-4">
                 <div class="min-w-0 space-y-3">
                     <div>
-                        <span class="text-xs font-semibold uppercase tracking-wider text-avocado-200">Checkout</span>
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-avocado-100">Checkout</span>
                         <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight font-heading leading-tight">Lengkapi pemesanan</h2>
                     </div>
 
                     <div class="flex flex-wrap gap-2 text-sm">
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1">
-                            <i data-lucide="store" class="w-4 h-4 text-sunglow-300"></i>
-                            {{ $booking['vendor']['name'] }}
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 pl-1 pr-3 py-1 max-w-full">
+                            <span class="w-6 h-6 rounded-full bg-white text-avocado-900 flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                            <span class="truncate">{{ $booking['vendor']['name'] }}</span>
                         </span>
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1">
-                            <i data-lucide="calendar" class="w-4 h-4 text-sunglow-300"></i>
-                            <span x-text="fmtShort(pickupDate) + ' – ' + fmtShort(returnDate)">{{ $booking['pickup_date'] }} – {{ $booking['return_date'] }}</span>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/5 border border-sunglow-300/40 pl-1 pr-3 py-1">
+                            <span class="w-6 h-6 rounded-full border border-sunglow-300 text-sunglow-300 flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                            <span x-text="fmtRange()">{{ $booking['pickup_date'] }} – {{ $booking['return_date'] }}</span>
                         </span>
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-3 py-1">
-                            <i data-lucide="moon" class="w-4 h-4 text-sunglow-300"></i>
-                            <span x-text="rentalDays + ' hari'">{{ (int) $booking['rental_days'] }} hari</span>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/5 border border-sunglow-300/40 pl-1 pr-3 py-1">
+                            <span class="w-6 h-6 rounded-full border border-sunglow-300 text-sunglow-300 flex items-center justify-center text-xs font-bold shrink-0">3</span>
+                            {{ $isGuest ? 'Tamu' : 'Member' }}
                         </span>
                     </div>
                 </div>

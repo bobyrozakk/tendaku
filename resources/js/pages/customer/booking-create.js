@@ -57,6 +57,21 @@ document.addEventListener("alpine:init", () => {
             "Desember",
         ],
 
+        monthNamesShort: [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "Mei",
+            "Jun",
+            "Jul",
+            "Agu",
+            "Sep",
+            "Okt",
+            "Nov",
+            "Des",
+        ],
+
         // Timepicker state (wheel, 24 jam, dibatasi 07.00 - 17.00)
         timeOpen: false,
         timeItemH: 40,
@@ -309,19 +324,25 @@ document.addEventListener("alpine:init", () => {
             return !this.hasBookedDateInRange(this.pickupDate, this.returnDate);
         },
 
-        openCalendar(type) {
-            this.calOpen = this.calOpen === type ? null : type;
-            const cur = type === "pickup" ? this.pickupDate : this.returnDate;
-            if (cur) {
-                const d = new Date(cur);
+        // Satu dropdown rentang: klik pertama = tanggal ambil, klik kedua = tanggal kembali
+        openCalendar() {
+            this.timeOpen = false;
+            if (this.calOpen) {
+                this.calOpen = null;
+                return;
+            }
+            this.calOpen = "pickup";
+            if (this.pickupDate) {
+                const d = new Date(this.pickupDate);
                 if (!isNaN(d)) {
-                    this.calYear = d.getFullYear();
-                    this.calMonth = d.getMonth();
+                    this.calYear = d.getUTCFullYear();
+                    this.calMonth = d.getUTCMonth();
                 }
             }
-            if (this.calOpen) {
-                this.fetchAvailability(this.calYear, this.calMonth);
-            }
+            this.fetchAvailability(this.calYear, this.calMonth);
+        },
+        get calendarTitle() {
+            return this.monthNamesShort[this.calMonth] + " " + this.calYear;
         },
         prevMonth() {
             if (this.calMonth === 0) {
@@ -345,33 +366,32 @@ document.addEventListener("alpine:init", () => {
             const isPast = iso < this.minDate;
             const isBooked = this.isDateBooked(iso);
 
-            let isBlocked = false;
-            if (this.calOpen === "pickup") {
-                isBlocked = isBooked;
-            } else if (this.calOpen === "return") {
-                const isBeforePickup =
-                    this.pickupDate && iso < this.minReturnDate;
-                const rangeBlocked =
-                    this.pickupDate &&
-                    this.hasBookedDateInRange(this.pickupDate, iso);
-                isBlocked = isBeforePickup || isBooked || rangeBlocked;
+            // Langkah "kembali": tanggal sebelum minimal kembali boleh dipilih
+            // untuk memulai ulang rentang (dianggap tanggal ambil baru).
+            let isBlocked = isBooked;
+            if (
+                this.calOpen === "return" &&
+                this.pickupDate &&
+                iso >= this.minReturnDate
+            ) {
+                isBlocked =
+                    isBooked || this.hasBookedDateInRange(this.pickupDate, iso);
             }
 
-            const isSelected =
-                (this.calOpen === "pickup" && this.pickupDate === iso) ||
-                (this.calOpen === "return" && this.returnDate === iso);
+            const isStart = !!this.pickupDate && iso === this.pickupDate;
+            const isEnd = !!this.returnDate && iso === this.returnDate;
             const inRange =
-                this.pickupDate &&
-                this.returnDate &&
+                !!this.pickupDate &&
+                !!this.returnDate &&
                 iso >= this.pickupDate &&
                 iso <= this.returnDate;
 
-            // Tidak bisa dipilih karena sudah lewat / penuh (beda dari sekadar
-            // "sebelum tanggal ambil"), dipakai untuk warna abu-abu di kalender.
+            // Tidak bisa dipilih karena sudah lewat / penuh, dipakai untuk warna abu-abu.
             const isFull =
                 isBooked ||
                 (this.calOpen === "return" &&
                     this.pickupDate &&
+                    iso >= this.minReturnDate &&
                     this.hasBookedDateInRange(this.pickupDate, iso));
 
             return {
@@ -380,13 +400,16 @@ document.addEventListener("alpine:init", () => {
                 outside: outside,
                 unavailable: isPast || isFull,
                 disabled: isPast || isBlocked,
-                selected: isSelected,
+                start: isStart,
+                end: isEnd,
                 inRange: inRange,
             };
         },
         get calendarDays() {
             const days = [];
-            const firstDay = new Date(this.calYear, this.calMonth, 1).getDay();
+            // Minggu dimulai hari Senin (Sen ... Min)
+            const firstDay =
+                (new Date(this.calYear, this.calMonth, 1).getDay() + 6) % 7;
             const totalDays = new Date(
                 this.calYear,
                 this.calMonth + 1,
@@ -416,14 +439,21 @@ document.addEventListener("alpine:init", () => {
             return days;
         },
         selectCalDate(iso) {
-            if (this.calOpen === "pickup") {
-                this.pickupDate = iso;
-                this.onPickupChange();
-            } else {
+            if (
+                this.calOpen === "return" &&
+                this.pickupDate &&
+                iso >= this.minReturnDate
+            ) {
                 this.returnDate = iso;
                 this.onReturnChange();
+                this.calOpen = null;
+                return;
             }
-            this.calOpen = null;
+
+            // Langkah 1 (atau mulai ulang rentang): set tanggal ambil, lanjut pilih kembali
+            this.pickupDate = iso;
+            this.onPickupChange();
+            this.calOpen = "return";
         },
 
         init() {
@@ -759,6 +789,24 @@ document.addEventListener("alpine:init", () => {
                       year: "numeric",
                       timeZone: "UTC",
                   });
+        },
+
+        // "27 Nov – 30 Nov 2026"
+        fmtRange() {
+            if (!this.pickupDate) return "Pilih tanggal sewa";
+            const a = new Date(this.pickupDate);
+            if (isNaN(a)) return "Pilih tanggal sewa";
+            const b = this.returnDate ? new Date(this.returnDate) : null;
+            const fmt = (d, withYear) =>
+                d.toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    ...(withYear ? { year: "numeric" } : {}),
+                    timeZone: "UTC",
+                });
+            if (!b || isNaN(b)) return fmt(a, true);
+            const sameYear = a.getUTCFullYear() === b.getUTCFullYear();
+            return fmt(a, !sameYear) + " – " + fmt(b, true);
         },
 
         changeQty(i, delta) {

@@ -85,5 +85,24 @@
                             @endif
                         </div>
                         @endif
+
+                        {{-- Tamu: ajakan masuk akun agar proses booking lebih cepat --}}
+                        @if ($isGuest)
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-sunglow-100/70 border border-sunglow-200 px-4 py-3.5">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="w-10 h-10 rounded-full bg-sunglow-200/80 text-goldenrod-700 flex items-center justify-center shrink-0">
+                                    <x-icon name="lightbulb" class="w-5 h-5" />
+                                </span>
+                                <div class="text-sm min-w-0">
+                                    <p class="font-bold text-darkbrown-900">Proses pemesanan lebih cepat dengan akun.</p>
+                                    <p class="text-darkbrown-700">Daftar atau masuk untuk pengalaman terbaik.</p>
+                                </div>
+                            </div>
+                            <a href="{{ route('login') }}"
+                               class="inline-flex items-center justify-center rounded-xl border border-goldenrod-400 bg-white px-4 py-2 text-sm font-bold text-darkbrown-900 hover:bg-sunglow-100 transition shrink-0">
+                                Masuk Akun
+                            </a>
+                        </div>
+                        @endif
                     </div>
                 </section>

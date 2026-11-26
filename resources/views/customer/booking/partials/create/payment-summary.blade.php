@@ -1,7 +1,7 @@
             <div id="checkout-summary" class="space-y-4 lg:sticky lg:top-24 scroll-mt-24">
 
                 <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm overflow-hidden">
-                    <div class="px-5 sm:px-6 py-4 bg-wheat-100 border-b border-wheat-200">
+                    <div class="px-5 sm:px-6 py-4 bg-wheat-50 border-b border-wheat-200">
                         <h3 class="text-lg font-extrabold text-darkbrown-900 font-heading">Ringkasan pembayaran</h3>
                     </div>
 
@@ -55,33 +55,37 @@
                         <fieldset :disabled="isProcessing">
                             <legend class="text-sm font-bold text-darkbrown-900 mb-2.5">Pilih cara bayar</legend>
                             <div class="grid grid-cols-2 gap-3">
-                                <label :class="paymentOption === 'full' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
-                                       class="relative rounded-xl border p-3 pr-8 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                <label :class="paymentOption === 'full' ? 'border-avocado-800 bg-avocado-100/60' : 'border-wheat-200 bg-white hover:border-avocado-400'"
+                                       class="relative flex items-start gap-2.5 rounded-2xl border-2 p-3 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
                                     <input type="radio" name="ui_payment_option" value="full" x-model="paymentOption" class="sr-only">
-                                    <span class="absolute top-3 right-3 w-4 h-4 rounded-full border-2 flex items-center justify-center transition"
-                                          :class="paymentOption === 'full' ? 'bg-avocado-600 border-avocado-600' : 'border-wheat-400 bg-white'" aria-hidden="true">
+                                    <span class="mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+                                          :class="paymentOption === 'full' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
                                         <span x-show="paymentOption === 'full'" class="w-1.5 h-1.5 rounded-full bg-white"></span>
                                     </span>
-                                    <span class="block font-bold text-sm text-darkbrown-900">Bayar lunas</span>
-                                    <span class="block mt-0.5 text-xs text-darkbrown-600 leading-relaxed">Tidak ada tagihan lagi di toko.</span>
-                                    <span class="block mt-1.5 text-sm font-extrabold text-avocado-800" x-text="formatRupiah(grandTotal)"></span>
+                                    <span class="min-w-0">
+                                        <span class="block font-bold text-sm text-darkbrown-900">Bayar lunas</span>
+                                        <span class="block mt-0.5 text-[11px] text-darkbrown-600 leading-snug">Tidak ada tagihan lagi di toko.</span>
+                                        <span class="block mt-1.5 text-sm font-extrabold text-avocado-800" x-text="formatRupiah(grandTotal)"></span>
+                                    </span>
                                 </label>
-                                <label :class="paymentOption === 'dp' ? 'border-avocado-600 bg-avocado-50 ring-2 ring-avocado-600/20' : 'border-wheat-300 bg-white hover:border-avocado-400'"
-                                       class="relative rounded-xl border p-3 pr-8 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                <label :class="paymentOption === 'dp' ? 'border-avocado-800 bg-avocado-100/60' : 'border-wheat-200 bg-white hover:border-avocado-400'"
+                                       class="relative flex items-start gap-2.5 rounded-2xl border-2 p-3 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
                                     <input type="radio" name="ui_payment_option" value="dp" x-model="paymentOption" class="sr-only">
-                                    <span class="absolute top-3 right-3 w-4 h-4 rounded-full border-2 flex items-center justify-center transition"
-                                          :class="paymentOption === 'dp' ? 'bg-avocado-600 border-avocado-600' : 'border-wheat-400 bg-white'" aria-hidden="true">
+                                    <span class="mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+                                          :class="paymentOption === 'dp' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
                                         <span x-show="paymentOption === 'dp'" class="w-1.5 h-1.5 rounded-full bg-white"></span>
                                     </span>
-                                    <span class="block font-bold text-sm text-darkbrown-900">Uang muka (DP)</span>
-                                    <span class="block mt-0.5 text-xs text-darkbrown-600 leading-relaxed">Bayar <span x-text="dpPercentage + '%'"></span> dulu, sisanya saat ambil alat.</span>
-                                    <span class="block mt-1.5 text-sm font-extrabold text-avocado-800" x-text="formatRupiah(dpAmount)"></span>
+                                    <span class="min-w-0">
+                                        <span class="block font-bold text-sm text-darkbrown-900">Uang muka (DP)</span>
+                                        <span class="block mt-0.5 text-[11px] text-darkbrown-600 leading-snug">Bayar <span x-text="dpPercentage + '%'"></span> dulu, sisanya saat ambil alat.</span>
+                                        <span class="block mt-1.5 text-sm font-extrabold text-goldenrod-700" x-text="formatRupiah(dpAmount)"></span>
+                                    </span>
                                 </label>
                             </div>
                         </fieldset>
 
                         <!-- Kejelasan nominal: bayar sekarang vs sisa -->
-                        <div x-show="grandTotal !== null" x-cloak class="rounded-xl border border-wheat-200 bg-wheat-50 px-4 py-3 text-sm space-y-1.5">
+                        <div x-show="grandTotal !== null" x-cloak class="rounded-2xl border border-wheat-200 bg-white px-4 py-3.5 text-sm space-y-1.5">
                             <div class="flex items-center justify-between">
                                 <span class="font-semibold text-darkbrown-900">Dibayar sekarang</span>
                                 <span class="font-extrabold text-darkbrown-900" x-text="formatRupiah(payableAmount)"></span>
@@ -103,7 +107,7 @@
                         </div>
 
                         <!-- Yang perlu disiapkan saat ambil alat (netral, bukan peringatan merah/kuning) -->
-                        <div class="rounded-xl border border-wheat-200 bg-wheat-50 p-3.5 text-sm text-darkbrown-800 space-y-2">
+                        <div class="rounded-2xl border border-wheat-200 bg-white p-4 text-sm text-darkbrown-800 space-y-2">
                             <div class="flex items-center gap-2 font-bold text-darkbrown-900">
                                 <i data-lucide="info" class="w-4 h-4 text-avocado-700 shrink-0"></i>
                                 <span>Yang perlu disiapkan saat ambil alat</span>
@@ -140,7 +144,7 @@
                         <div class="font-bold text-darkbrown-900">Butuh bantuan?</div>
                         <div class="text-darkbrown-500">Kendala bayar atau ubah jadwal.</div>
                     </div>
-                    <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 inline-flex items-center gap-1.5 font-bold text-avocado-700 hover:text-avocado-800">
+                    <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-wheat-300 bg-wheat-50 hover:bg-wheat-100 px-3 py-2 text-xs font-bold text-avocado-900 transition">
                         <i data-lucide="message-circle" class="w-4 h-4"></i>
                         WhatsApp CS
                     </a>
