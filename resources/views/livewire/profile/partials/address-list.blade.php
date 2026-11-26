@@ -2,21 +2,20 @@
     {{-- ============================================================
          2. DAFTAR ALAMAT TERSIMPAN
          ============================================================ --}}
-    <div class="mt-6 space-y-4">
+    <div class="mt-4 space-y-3">
         @if ($addresses->isNotEmpty())
 
             {{-- Kartu Alamat Terpilih --}}
             @if ($selectedAddress)
                 <div
                     wire:key="addr-{{ $selectedAddress->id }}"
-                    class="p-4 sm:p-5 rounded-xl border transition-all {{ $selectedAddress->is_default ? 'bg-white border-avocado-400 ring-1 ring-avocado-400/30' : 'bg-white border-wheat-200 hover:border-wheat-300' }}"
+                    class="pf-addr-card"
+                    data-default="{{ $selectedAddress->is_default ? 'true' : 'false' }}"
                 >
-                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div class="flex items-start justify-between gap-3">
                         <div class="space-y-1.5 min-w-0 flex-1">
                             <div class="flex items-center gap-2 flex-wrap">
-                                <span class="px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wider bg-wheat-100 text-darkbrown-800 border border-wheat-300">
-                                    {{ $selectedAddress->label }}
-                                </span>
+                                <span class="pf-chip">{{ $selectedAddress->label }}</span>
 
                                 <i
                                     data-lucide="star"
@@ -26,7 +25,7 @@
                                 ></i>
                             </div>
 
-                            <p class="text-xs sm:text-sm text-darkbrown-800 leading-relaxed">
+                            <p class="text-sm text-darkbrown-800 leading-relaxed">
                                 {{ $selectedAddress->formatted_address }}
                             </p>
 
@@ -38,7 +37,7 @@
                         </div>
 
                         {{-- Tombol Aksi per Alamat --}}
-                        <div class="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-0 border-wheat-100">
+                        <div class="flex items-center gap-0.5 shrink-0">
                             <button
                                 type="button"
                                 wire:click="startEditing({{ $selectedAddress->id }})"
@@ -46,20 +45,22 @@
                                 wire:loading.attr="disabled"
                                 wire:loading.class="opacity-60 cursor-wait"
                                 wire:target="startEditing"
-                                class="p-1.5 rounded-lg text-darkbrown-600 hover:text-darkbrown-900 hover:bg-wheat-100 transition"
+                                class="pf-icon-btn"
                                 title="Ubah Alamat"
+                                aria-label="Ubah Alamat"
                             >
-                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                <i data-lucide="edit-3"></i>
                             </button>
 
                             <button
                                 type="button"
                                 wire:confirm="Yakin ingin menghapus alamat ini?"
                                 wire:click="deleteAddress({{ $selectedAddress->id }})"
-                                class="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition"
+                                class="pf-icon-btn pf-icon-btn--danger"
                                 title="Hapus Alamat"
+                                aria-label="Hapus Alamat"
                             >
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                <i data-lucide="trash-2"></i>
                             </button>
                         </div>
                     </div>
@@ -67,7 +68,7 @@
 
                 {{-- Alamat Lainnya --}}
                 @if ($otherAddresses->isNotEmpty())
-                    <div class="px-1" x-data="{ open: false }">
+                    <div class="pf-more px-1" x-data="{ open: false }">
                         <button
                             type="button"
                             id="btn-dropdown-alamat-lainnya"

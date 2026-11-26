@@ -2,7 +2,7 @@
     @php
         $profileUser = auth()->user();
 
-        // Ringkasan sewa untuk header & kartu samping (hanya baca, tanpa mengubah data).
+        // Ringkasan sewa untuk kartu samping (hanya baca, tanpa mengubah data).
         $rentalCounts = $profileUser->rentalsAsCustomer()
             ->selectRaw('status, count(*) as total')
             ->groupBy('status')
@@ -13,7 +13,19 @@
         $completedRentalCount = (int) ($rentalCounts['completed'] ?? 0);
         $totalRentalCount = (int) $rentalCounts->sum();
 
-        $primaryAddress = $profileUser->defaultAddress();
+        // Sewa yang melewati jadwal ambil / kembali, untuk pesan status di kartu samping.
+        $overdueRentalCount = $profileUser->rentalsAsCustomer()
+            ->whereIn('status', ['confirmed', 'picked_up'])
+            ->get(['id', 'status', 'pickup_date', 'pickup_time', 'return_date', 'return_time'])
+            ->filter(fn ($rental) => $rental->isPickupOverdue()
+                || ($rental->status === 'picked_up' && $rental->returnDateTime()->isPast()))
+            ->count();
+
+        [$summaryTone, $summaryIcon, $summaryText] = match (true) {
+            $overdueRentalCount > 0 => ['warn', 'triangle-alert', "Ada {$overdueRentalCount} sewa yang melewati jadwal. Cek detail sewa Anda."],
+            $activeRentalCount === 0 => ['neutral', 'tent', 'Belum ada sewa aktif saat ini.'],
+            default => ['ok', 'check', 'Semua sewa Anda dalam keadaan baik.'],
+        };
     @endphp
 
     @push('styles')
@@ -35,17 +47,18 @@
             </div>
         </x-slot>
 
-        <div class="w-full space-y-6 py-2">
-            <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
-                <div class="flex flex-col sm:flex-row sm:items-center gap-5">
-                    <div class="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0" x-data="{ failed: false }">
+        <div class="pf-page w-full space-y-6 py-2">
+            {{-- ===================== Header profil ===================== --}}
+            <section class="pf-card pf-hero">
+                <div class="pf-hero-inner">
+                    <div class="pf-avatar" x-data="{ failed: false }">
                         @if ($profileUser->avatar_url)
                             <img src="{{ $profileUser->avatar_url }}"
                                  alt="Foto profil {{ $profileUser->name }}"
                                  referrerpolicy="no-referrer"
                                  x-show="! failed"
                                  x-on:error="failed = true"
-                                 class="w-full h-full rounded-full object-cover border border-wheat-200 shadow-sm">
+                                 class="w-full h-full rounded-full object-cover border-2 border-white shadow-sm">
                         @endif
                         <span @if ($profileUser->avatar_url) x-show="failed" x-cloak @endif
                               class="w-full h-full rounded-full bg-gradient-to-br from-sunglow-300 to-goldenrod-500 text-darkbrown-900 font-extrabold text-3xl sm:text-4xl font-heading flex items-center justify-center shadow-sm">
@@ -54,7 +67,7 @@
                     </div>
 
                     <div class="flex-1 min-w-0">
-                        <h2 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 font-heading truncate">
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-darkbrown-900 font-heading truncate">
                             {{ $profileUser->name }}
                         </h2>
 
@@ -73,77 +86,72 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            <div class="pf-layout">
                 {{-- ===================== Kolom utama ===================== --}}
-                <div class="lg:col-span-2 space-y-6 min-w-0">
-                    <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
+                <div class="pf-col">
+                    <div class="pf-card pf-card--pad">
                         <livewire:profile.my-rentals />
                     </div>
 
-                    {{-- ============================================================
-                         Biodata Profil
-                         ============================================================ --}}
-                    <div class="card-tendaku p-6 sm:p-8 bg-white rounded-2xl shadow-tendaku border border-wheat-200 divide-y divide-wheat-200 space-y-8">
-                        <div>
-                            <livewire:profile.update-profile-information-form />
-                        </div>
-
-                        <div class="pt-8">
-                            <livewire:profile.manage-addresses />
-                        </div>
+                    {{-- Biodata Profil + Alamat Pengantaran (berdampingan di layar lebar) --}}
+                    <div class="pf-card pf-card--pad pf-duo">
+                        <livewire:profile.update-profile-information-form variant="compact" />
+                        <livewire:profile.manage-addresses />
                     </div>
                 </div>
 
                 {{-- ===================== Kolom samping ===================== --}}
-                <aside class="space-y-6 min-w-0">
-                    <div class="card-tendaku p-5 sm:p-6 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
-                        <h2 class="text-base font-extrabold text-darkbrown-900 font-heading">Tentang Saya</h2>
-                        <dl class="mt-4 space-y-3 text-sm">
-                            <div class="flex items-start justify-between gap-3">
-                                <dt class="text-darkbrown-500">Nomor WhatsApp</dt>
-                                <dd class="font-semibold text-darkbrown-900 text-right">{{ $profileUser->phone ?: '-' }}</dd>
+                <aside class="pf-col">
+                    <div class="pf-card pf-card--pad">
+                        <header class="pf-head">
+                            <span class="pf-icon"><i data-lucide="chart-column"></i></span>
+                            <div class="min-w-0">
+                                <h2 class="pf-title font-heading">Ringkasan Sewa</h2>
+                                <p class="pf-sub">Status sewa Anda saat ini</p>
                             </div>
-                            <div class="flex items-start justify-between gap-3">
-                                <dt class="text-darkbrown-500">Status email</dt>
-                                <dd class="font-semibold text-right {{ $profileUser->hasVerifiedEmail() ? 'text-green-700' : 'text-goldenrod-700' }}">
-                                    {{ $profileUser->hasVerifiedEmail() ? 'Email Terverifikasi' : 'Belum terverifikasi' }}
-                                </dd>
-                            </div>
-                            <div class="flex items-start justify-between gap-3">
-                                <dt class="text-darkbrown-500">Bergabung sejak</dt>
-                                <dd class="font-semibold text-darkbrown-900 text-right">
-                                    {{ $profileUser->created_at?->copy()->locale('id')->translatedFormat('F Y') ?? '-' }}
-                                </dd>
-                            </div>
-                        </dl>
-                    </div>
+                        </header>
 
-                    <div class="card-tendaku p-5 sm:p-6 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
-                        <h2 class="text-base font-extrabold text-darkbrown-900 font-heading">Ringkasan Sewa</h2>
-                        <div class="mt-4 grid grid-cols-3 gap-2 text-center">
-                            <div class="rounded-xl bg-avocado-50 border border-avocado-200 py-3">
-                                <p class="text-xl font-extrabold text-avocado-800 font-heading">{{ $activeRentalCount }}</p>
-                                <p class="text-[11px] font-semibold text-darkbrown-600">Aktif</p>
-                            </div>
-                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 py-3">
-                                <p class="text-xl font-extrabold text-darkbrown-900 font-heading">{{ $completedRentalCount }}</p>
-                                <p class="text-[11px] font-semibold text-darkbrown-600">Selesai</p>
-                            </div>
-                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 py-3">
-                                <p class="text-xl font-extrabold text-darkbrown-900 font-heading">{{ $totalRentalCount }}</p>
-                                <p class="text-[11px] font-semibold text-darkbrown-600">Total</p>
-                            </div>
+                        <ul class="pf-stats">
+                            <li class="pf-stat" data-current="true">
+                                <p class="pf-stat-num font-heading">{{ $activeRentalCount }}</p>
+                                <p class="pf-stat-label">Aktif</p>
+                            </li>
+                            <li class="pf-stat">
+                                <p class="pf-stat-num font-heading">{{ $completedRentalCount }}</p>
+                                <p class="pf-stat-label">Selesai</p>
+                            </li>
+                            <li class="pf-stat">
+                                <p class="pf-stat-num font-heading">{{ $totalRentalCount }}</p>
+                                <p class="pf-stat-label">Total</p>
+                            </li>
+                        </ul>
+
+                        <div class="pf-notice" data-tone="{{ $summaryTone }}">
+                            <span class="pf-notice-icon"><i data-lucide="{{ $summaryIcon }}"></i></span>
+                            <p>{{ $summaryText }}</p>
                         </div>
                     </div>
 
-                    <div class="card-tendaku p-5 sm:p-6 bg-white rounded-2xl shadow-tendaku border border-wheat-200">
-                        <livewire:profile.update-password-form />
-                    </div>
+                    <div class="pf-card pf-card--pad">
+                        <header class="pf-head">
+                            <span class="pf-icon"><i data-lucide="shield-check"></i></span>
+                            <div class="min-w-0">
+                                <h2 class="pf-title font-heading">Keamanan Akun</h2>
+                                <p class="pf-sub">Jaga keamanan akun Anda.</p>
+                            </div>
+                        </header>
 
-                    <div class="card-tendaku p-5 sm:p-6 bg-white rounded-2xl shadow-tendaku border border-red-200">
-                        <livewire:profile.delete-user-form />
+                        <div class="pf-sec-list">
+                            <livewire:profile.update-password-form variant="row" />
+                            <livewire:profile.delete-user-form variant="row" />
+                        </div>
+
+                        <p class="pf-note">
+                            <i data-lucide="info"></i>
+                            <span>Dengan menghapus akun, semua data Anda akan dihapus secara permanen.</span>
+                        </p>
                     </div>
                 </aside>
             </div>

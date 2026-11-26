@@ -312,40 +312,35 @@ new class extends Component
     }
 }; ?>
 
-<section id="alamat">
-    <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-wheat-200 pb-4">
-        <div>
-            <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
-                <i data-lucide="map-pin" class="w-5 h-5 text-avocado-600"></i>
-                <span>{{ __('Data Alamat Pengantaran') }}</span>
-            </h2>
-
-            <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
-                {{ __('Kelola alamat domisili atau titik serah terima untuk pengantaran dari vendor.') }}
-            </p>
+<section id="alamat" @class(['pf-addr', 'pf-addr--editing' => $isCreating || $editingId])>
+    <header class="pf-head pf-head--split">
+        <div class="pf-head-main">
+            <span class="pf-icon"><i data-lucide="map-pin"></i></span>
+            <div class="min-w-0">
+                <h2 class="pf-title font-heading">{{ __('Alamat Pengantaran') }}</h2>
+                <p class="pf-sub">{{ __('Kelola alamat domisili atau titik serah terima.') }}</p>
+            </div>
         </div>
 
         @if (! $isCreating && ! $editingId)
-            <div class="flex items-center gap-2 flex-wrap self-start sm:self-auto">
-                @if ($canAddMore)
-                    <button
-                        type="button"
-                        wire:click="startCreating"
-                        data-preload-leaflet
-                        wire:loading.attr="disabled"
-                        wire:loading.class="opacity-60 cursor-wait"
-                        wire:target="startCreating"
-                        class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all self-start sm:self-auto"
-                    >
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span>{{ __('Tambah Alamat') }}</span>
-                    </button>
-                @else
-                    <span class="text-xs font-semibold text-darkbrown-500">
-                        Batas {{ $maxAddresses }} alamat tercapai
-                    </span>
-                @endif
-            </div>
+            @if ($canAddMore)
+                <button
+                    type="button"
+                    wire:click="startCreating"
+                    data-preload-leaflet
+                    wire:loading.attr="disabled"
+                    wire:loading.class="opacity-60 cursor-wait"
+                    wire:target="startCreating"
+                    class="pf-btn pf-btn--solid"
+                >
+                    <i data-lucide="plus"></i>
+                    <span>{{ __('Tambah Alamat') }}</span>
+                </button>
+            @else
+                <span class="text-xs font-semibold text-darkbrown-500">
+                    Batas {{ $maxAddresses }} alamat tercapai
+                </span>
+            @endif
         @endif
     </header>
 

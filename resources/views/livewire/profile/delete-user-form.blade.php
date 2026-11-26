@@ -2,11 +2,21 @@
 
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
 
 new class extends Component
 {
     public string $password = '';
+
+    /** Tampilan: 'form' (tombol + penjelasan, default) atau 'row' (baris di kartu Keamanan Akun). */
+    #[Locked]
+    public string $variant = 'form';
+
+    public function mount(string $variant = 'form'): void
+    {
+        $this->variant = $variant === 'row' ? 'row' : 'form';
+    }
 
     /**
      * Hapus akun pengguna yang sedang login.
@@ -28,7 +38,19 @@ new class extends Component
     }
 }; ?>
 
-<section class="space-y-6">
+<section @class(['space-y-6' => $variant !== 'row'])>
+    @if ($variant === 'row')
+        <button
+            type="button"
+            x-data
+            x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
+            class="pf-sec-row pf-sec-row--danger"
+        >
+            <i data-lucide="trash-2"></i>
+            <span>{{ __('Hapus Akun') }}</span>
+            <i data-lucide="chevron-right"></i>
+        </button>
+    @else
     <header>
         <h2 class="text-lg font-extrabold text-red-700 font-heading flex items-center gap-2">
             <i data-lucide="trash-2" class="w-5 h-5"></i>
@@ -44,6 +66,7 @@ new class extends Component
         x-data=""
         x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
     >{{ __('Hapus Akun') }}</x-danger-button>
+    @endif
 
     <x-modal name="confirm-user-deletion" :show="$errors->isNotEmpty()" focusable>
         <form wire:submit="deleteUser" class="p-6">

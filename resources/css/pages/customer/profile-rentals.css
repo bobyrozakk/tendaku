@@ -1,9 +1,595 @@
-/* Sewa Saya (profil customer): daftar sewa dengan foto item + stepper progres. */
+/*
+ * Profil customer (halaman Akun Saya).
+ * pf-*   : kerangka halaman (kartu, header, biodata, alamat, keamanan)
+ * rent-* : kartu "Sewa Saya" (tab, panel, daftar sewa, stepper)
+ */
+
+.pf-page {
+    --pf-ink: var(--color-dark-brown);
+    --pf-green: #546e06;
+    --pf-green-strong: #3f5306;
+    --pf-green-soft: #f4f7e6;
+    --pf-green-line: #d0de8f;
+    --pf-line: color-mix(in srgb, var(--color-dark-brown) 10%, transparent);
+    --pf-cream: color-mix(in srgb, var(--color-wheat) 16%, white);
+    --pf-muted: color-mix(in srgb, var(--color-dark-brown) 58%, white);
+}
+
+/* ---------- Kerangka ---------- */
+
+.pf-card {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--pf-line);
+    border-radius: 1.25rem;
+    box-shadow:
+        0 1px 2px rgba(43, 34, 2, 0.04),
+        0 8px 20px -14px rgba(43, 34, 2, 0.14);
+}
+
+.pf-card--pad {
+    padding: 1.25rem;
+}
+
+@media (min-width: 640px) {
+    .pf-card--pad {
+        padding: 1.5rem;
+    }
+}
+
+.pf-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+    .pf-layout {
+        grid-template-columns: minmax(0, 1fr) 21.5rem;
+        align-items: start;
+    }
+}
+
+.pf-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    min-width: 0;
+}
+
+/* ---------- Header profil ---------- */
+
+.pf-hero {
+    overflow: hidden;
+    padding: 1.25rem;
+    background: linear-gradient(
+        100deg,
+        #fff 55%,
+        color-mix(in srgb, var(--color-avocado) 6%, white)
+    );
+}
+
+@media (min-width: 640px) {
+    .pf-hero {
+        padding: 1.5rem 2rem;
+    }
+}
+
+.pf-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: min(55%, 32rem);
+    pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 140' preserveAspectRatio='none'%3E%3Cpath fill='%236c8b08' fill-opacity='.11' d='M0 140V92C60 72 110 18 190 26c70 7 110 62 230 14V140Z'/%3E%3Cpath fill='%23d5a007' fill-opacity='.10' d='M90 140V108C160 86 225 70 292 80c50 7 90 5 128-10V140Z'/%3E%3C/svg%3E")
+        no-repeat right bottom / 100% 100%;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 55%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 55%);
+}
+
+.pf-hero-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.pf-avatar {
+    position: relative;
+    width: 4.5rem;
+    height: 4.5rem;
+    flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .pf-avatar {
+        width: 5.5rem;
+        height: 5.5rem;
+    }
+}
+
+/* ---------- Kepala kartu (ikon + judul) ---------- */
+
+.pf-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.pf-head--split {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+}
+
+.pf-head-main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.pf-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    color: var(--pf-green);
+    background: color-mix(in srgb, var(--color-avocado) 14%, white);
+}
+
+.pf-icon > i,
+.pf-icon > svg {
+    width: 1.35rem;
+    height: 1.35rem;
+}
+
+.pf-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+    line-height: 1.25;
+    color: var(--pf-ink);
+}
+
+.pf-sub {
+    margin: 0.15rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--pf-muted);
+}
+
+/* ---------- Tombol pil ---------- */
+
+.pf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.95rem;
+    border: 1px solid var(--pf-green);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.pf-btn > i,
+.pf-btn > svg {
+    width: 0.9rem;
+    height: 0.9rem;
+}
+
+.pf-btn--outline {
+    color: var(--pf-green);
+    background: #fff;
+    border-color: color-mix(in srgb, var(--pf-green) 45%, white);
+}
+
+.pf-btn--outline:hover {
+    background: var(--pf-green-soft);
+}
+
+.pf-btn--solid {
+    color: #fff;
+    background: var(--pf-green);
+}
+
+.pf-btn--solid:hover {
+    background: var(--pf-green-strong);
+}
+
+.pf-btn:focus-visible,
+.pf-sec-row:focus-visible {
+    outline: 2px solid var(--pf-green);
+    outline-offset: 2px;
+}
+
+/* ---------- Ringkasan Sewa (kartu samping) ---------- */
+
+.pf-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+    margin: 1.1rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.pf-stat {
+    position: relative;
+    padding: 0.85rem 0.4rem 0.8rem;
+    text-align: center;
+    border: 1px solid var(--pf-line);
+    border-radius: 0.9rem;
+    background: var(--pf-cream);
+}
+
+.pf-stat[data-current="true"] {
+    border-color: var(--pf-green-line);
+    background: var(--pf-green-soft);
+}
+
+.pf-stat[data-current="true"]::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0.3rem;
+    left: 0;
+    width: 2.2rem;
+    height: 3px;
+    margin: 0 auto;
+    border-radius: 999px;
+    background: var(--pf-green);
+}
+
+.pf-stat-num {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--pf-ink);
+}
+
+.pf-stat-label {
+    margin: 0.2rem 0 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--pf-muted);
+}
+
+.pf-stat[data-current="true"] .pf-stat-label {
+    color: var(--pf-green);
+}
+
+.pf-notice {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.9rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--pf-ink);
+    background: var(--pf-green-soft);
+}
+
+.pf-notice p {
+    margin: 0;
+}
+
+.pf-notice-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--pf-green);
+}
+
+.pf-notice-icon > i,
+.pf-notice-icon > svg {
+    width: 1rem;
+    height: 1rem;
+    stroke-width: 3;
+}
+
+.pf-notice[data-tone="warn"] {
+    background: #fef5db;
+}
+
+.pf-notice[data-tone="warn"] .pf-notice-icon {
+    background: var(--color-goldenrod);
+}
+
+.pf-notice[data-tone="neutral"] {
+    background: var(--pf-cream);
+}
+
+.pf-notice[data-tone="neutral"] .pf-notice-icon {
+    background: color-mix(in srgb, var(--color-dark-brown) 35%, white);
+}
+
+/* ---------- Biodata + Alamat (dua kolom dalam satu kartu) ---------- */
+
+.pf-duo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.pf-duo > .pf-addr {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--pf-line);
+}
+
+@media (min-width: 1280px) {
+    .pf-duo {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr);
+    }
+
+    .pf-duo > .pf-bio {
+        padding-right: 1.5rem;
+    }
+
+    .pf-duo > .pf-addr {
+        margin-top: 0;
+        padding-top: 0;
+        padding-left: 1.5rem;
+        border-top: 0;
+        border-left: 1px solid var(--pf-line);
+    }
+}
+
+/* Saat form alamat terbuka, form memakai lebar penuh kartu. */
+
+.pf-duo > .pf-addr--editing {
+    grid-column: 1 / -1;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    padding-left: 0;
+    border-top: 1px solid var(--pf-line);
+    border-left: 0;
+}
+
+.pf-duo:has(> .pf-addr--editing) > .pf-bio {
+    grid-column: 1 / -1;
+    padding-right: 0;
+}
+
+.pf-field-list {
+    margin: 1rem 0 0;
+    padding: 0.4rem 1rem;
+    list-style: none;
+    border: 1px solid var(--pf-line);
+    border-radius: 1rem;
+    background: var(--pf-cream);
+}
+
+.pf-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    padding: 0.65rem 0;
+}
+
+.pf-field > i,
+.pf-field > svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+    color: var(--pf-muted);
+}
+
+.pf-field-body {
+    min-width: 0;
+}
+
+.pf-field-label {
+    margin: 0;
+    font-size: 0.72rem;
+    color: var(--pf-muted);
+}
+
+.pf-field-value {
+    margin: 0.1rem 0 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--pf-ink);
+    overflow-wrap: anywhere;
+}
+
+.pf-verify {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.4rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    vertical-align: middle;
+    color: var(--pf-green);
+    background: var(--pf-green-soft);
+}
+
+.pf-verify[data-state="no"] {
+    color: #8e5706;
+    background: #fef5db;
+}
+
+/* ---------- Alamat ---------- */
+
+.pf-addr-card {
+    padding: 1rem 1.1rem;
+    border: 1px solid var(--pf-line);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--color-wheat) 18%, white);
+}
+
+.pf-addr-card[data-default="true"] {
+    border-color: var(--pf-green-line);
+}
+
+.pf-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.12rem 0.55rem;
+    border-radius: 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #75440c;
+    background: #fde8b3;
+}
+
+.pf-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 0;
+    border-radius: 0.5rem;
+    color: var(--pf-muted);
+    background: transparent;
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.pf-icon-btn:hover {
+    color: var(--pf-ink);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.pf-icon-btn--danger {
+    color: #dc2626;
+}
+
+.pf-icon-btn--danger:hover {
+    color: #b91c1c;
+    background: #fef2f2;
+}
+
+.pf-icon-btn > i,
+.pf-icon-btn > svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.pf-more {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--pf-line);
+}
+
+/* ---------- Keamanan akun ---------- */
+
+.pf-sec-list {
+    margin-top: 1rem;
+}
+
+.pf-sec-list > section {
+    border-top: 1px solid var(--pf-line);
+}
+
+.pf-sec-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    width: 100%;
+    padding: 0.95rem 0.25rem;
+    border: 0;
+    border-radius: 0.5rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: left;
+    color: var(--pf-ink);
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.pf-sec-row:hover {
+    background: var(--pf-cream);
+}
+
+.pf-sec-row > span {
+    flex: 1;
+}
+
+.pf-sec-row > i,
+.pf-sec-row > svg {
+    width: 1.35rem;
+    height: 1.35rem;
+    flex-shrink: 0;
+}
+
+.pf-sec-row > i:last-child,
+.pf-sec-row > svg:last-child {
+    width: 1.1rem;
+    height: 1.1rem;
+    color: var(--pf-muted);
+}
+
+.pf-sec-row--danger {
+    color: #dc2626;
+}
+
+.pf-sec-row--danger > i:last-child,
+.pf-sec-row--danger > svg:last-child {
+    color: #dc2626;
+}
+
+.pf-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    margin: 1rem 0 0;
+    padding: 0.9rem 1rem;
+    border-radius: 0.9rem;
+    font-size: 0.75rem;
+    line-height: 1.45;
+    color: var(--pf-muted);
+    background: color-mix(in srgb, var(--color-wheat) 22%, white);
+}
+
+.pf-note > i,
+.pf-note > svg {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+/* =====================================================================
+   Sewa Saya
+   ===================================================================== */
 
 .rent-section {
     --rent-ink: var(--color-dark-brown);
-    --rent-line: color-mix(in srgb, var(--color-dark-brown) 12%, transparent);
-    --rent-soft: color-mix(in srgb, var(--color-wheat) 22%, white);
+    --rent-line: color-mix(in srgb, var(--color-dark-brown) 10%, transparent);
+    --rent-soft: color-mix(in srgb, var(--color-wheat) 20%, white);
+    --rent-green: #546e06;
 }
 
 /* ---------- Header ---------- */
@@ -20,96 +606,121 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     flex-shrink: 0;
-    border: 1px solid var(--rent-line);
-    border-radius: 0.75rem;
-    color: var(--color-avocado);
-    background: var(--color-wheat);
+    border-radius: 50%;
+    color: var(--rent-green);
+    background: color-mix(in srgb, var(--color-avocado) 14%, white);
 }
 
 .rent-all-link {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    padding: 0.45rem 0.75rem;
-    border: 1px solid var(--rent-line);
-    border-radius: 0.5rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--rent-ink);
-    background: transparent;
-    transition:
-        background-color 0.15s ease,
-        border-color 0.15s ease;
+    padding: 0.45rem 0.95rem;
+    border: 1px solid color-mix(in srgb, var(--rent-green) 45%, white);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--rent-green);
+    background: #fff;
+    transition: background-color 0.15s ease;
 }
 
 .rent-all-link:hover {
-    background: var(--rent-soft);
-    border-color: color-mix(
-        in srgb,
-        var(--color-goldenrod) 35%,
-        var(--rent-line)
-    );
+    background: #f4f7e6;
 }
 
-/* ---------- Tabs ---------- */
+/* ---------- Tab ---------- */
 
 .rent-tabs {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-top: 1.25rem;
-    padding: 0.25rem;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--color-wheat) 35%, white);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1.1rem;
 }
 
 .rent-tab {
-    width: 6rem;
-    padding: 0.45rem 0.9rem;
-    border: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 8.5rem;
+    padding: 0.5rem 0;
+    border: 1px solid var(--rent-line);
     border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-align: center;
-    color: color-mix(in srgb, var(--rent-ink) 60%, white);
-    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--rent-ink) 72%, white);
+    background: var(--rent-soft);
+    cursor: pointer;
     transition:
         background-color 0.15s ease,
         color 0.15s ease;
 }
 
+.rent-tab > i,
+.rent-tab > svg {
+    width: 1rem;
+    height: 1rem;
+}
+
 .rent-tab:hover {
     color: var(--rent-ink);
-    background: rgba(255, 255, 255, 0.7);
 }
 
 .rent-tab[aria-selected="true"] {
     color: #fff;
-    background: var(--color-avocado);
+    border-color: var(--rent-green);
+    background: var(--rent-green);
 }
 
-/* ---------- Daftar ---------- */
+/* ---------- Panel daftar ---------- */
+
+.rent-panel {
+    margin-top: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--rent-line);
+    border-radius: 1rem;
+    background: #fff;
+}
+
+.rent-panel-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 1.1rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--rent-ink);
+    background: color-mix(in srgb, var(--color-avocado) 9%, white);
+}
+
+.rent-live {
+    width: 0.55rem;
+    height: 0.55rem;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--rent-green);
+}
 
 .rent-list {
-    margin: 0.75rem 0 0;
+    margin: 0;
     padding: 0;
     list-style: none;
 }
 
-.rent-list > li + li {
+.rent-list > li {
     border-top: 1px solid var(--rent-line);
 }
 
 .rent-row {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.875rem;
-    padding: 1rem 0.625rem;
-    margin: 0 -0.625rem;
-    border-radius: 0.5rem;
+    align-items: center;
+    gap: 0.875rem 1rem;
+    padding: 1rem 1.1rem;
     transition: background-color 0.15s ease;
 }
 
@@ -118,19 +729,24 @@
 }
 
 .rent-row:focus-visible {
-    outline: 2px solid var(--color-avocado);
-    outline-offset: 2px;
+    outline: 2px solid var(--rent-green);
+    outline-offset: -2px;
+}
+
+@media (min-width: 640px) {
+    .rent-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
 }
 
 /* ---------- Foto item ---------- */
 
 .rent-thumb {
     position: relative;
-    width: 4rem;
-    height: 4rem;
+    width: 4.5rem;
+    height: 4.5rem;
     overflow: hidden;
-    border: 1px solid var(--rent-line);
-    border-radius: 0.75rem;
+    border-radius: 0.9rem;
     background: var(--rent-soft);
 }
 
@@ -145,6 +761,8 @@
 }
 
 .rent-thumb > img {
+    font-size: 0;
+    color: transparent;
     position: relative;
     display: block;
     width: 100%;
@@ -159,8 +777,8 @@
 
 @media (min-width: 640px) {
     .rent-thumb {
-        width: 4.5rem;
-        height: 4.5rem;
+        width: 5rem;
+        height: 5rem;
     }
 }
 
@@ -170,24 +788,11 @@
     min-width: 0;
 }
 
-.rent-top {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem 1rem;
-}
-
-.rent-info {
-    min-width: 0;
-    flex: 1 1 13rem;
-}
-
 .rent-title {
     display: -webkit-box;
     overflow: hidden;
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 700;
     line-height: 1.35;
     color: var(--rent-ink);
@@ -211,32 +816,77 @@
 }
 
 .rent-meta b {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-weight: 600;
     color: color-mix(in srgb, var(--rent-ink) 82%, white);
 }
 
-.rent-status {
+/* ---------- Kolom jadwal di kanan baris ---------- */
+
+.rent-aside {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3rem;
+    gap: 0.55rem;
+    grid-column: 1 / -1;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--rent-line);
 }
 
 @media (min-width: 640px) {
-    .rent-status {
-        align-items: flex-end;
-        text-align: right;
+    .rent-aside {
+        grid-column: auto;
+        width: 11.75rem;
+        padding: 0 0 0 1.25rem;
+        border-top: 0;
+        border-left: 1px solid var(--rent-line);
     }
 }
 
-/* ---------- Status hint ---------- */
+.rent-date {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.rent-date-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    border: 1px solid color-mix(in srgb, var(--rent-green) 35%, white);
+    border-radius: 0.5rem;
+    color: var(--rent-green);
+    background: #f4f7e6;
+}
+
+.rent-date-icon > i,
+.rent-date-icon > svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+.rent-date-label {
+    margin: 0;
+    font-size: 0.7rem;
+    color: color-mix(in srgb, var(--rent-ink) 58%, white);
+}
+
+.rent-date-value {
+    margin: 0.05rem 0 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--rent-ink);
+    white-space: nowrap;
+}
+
+/* ---------- Petunjuk jadwal ---------- */
 
 .rent-hint {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: color-mix(in srgb, var(--rent-ink) 58%, white);
 }
@@ -251,7 +901,7 @@
 }
 
 .rent-hint[data-tone="success"] {
-    color: var(--color-avocado);
+    color: var(--rent-green);
 }
 
 .rent-hint[data-tone="warn"] {
@@ -287,15 +937,15 @@
     content: "";
     position: absolute;
     top: 0.6rem;
-    right: calc(50% + 0.65rem);
-    left: calc(-50% + 0.65rem);
+    right: calc(50% + 0.7rem);
+    left: calc(-50% + 0.7rem);
     height: 1px;
     background: var(--rent-line);
 }
 
 .rent-step[data-state="done"]::before,
 .rent-step[data-state="current"]::before {
-    background: var(--color-avocado);
+    background: var(--rent-green);
 }
 
 .rent-dot {
@@ -304,24 +954,24 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    border: 1px solid var(--rent-line);
+    width: 1.3rem;
+    height: 1.3rem;
+    border: 1px solid color-mix(in srgb, var(--rent-ink) 18%, transparent);
     border-radius: 50%;
     background: #fff;
 }
 
 .rent-dot > i,
 .rent-dot > svg {
-    width: 0.7rem;
-    height: 0.7rem;
+    width: 0.72rem;
+    height: 0.72rem;
     stroke-width: 3;
     color: #fff;
 }
 
 .rent-step[data-state="done"] .rent-dot {
-    border-color: var(--color-avocado);
-    background: var(--color-avocado);
+    border-color: var(--rent-green);
+    background: var(--rent-green);
 }
 
 .rent-step[data-state="current"] .rent-dot {
@@ -343,7 +993,7 @@
     overflow: hidden;
     font-size: 0.65rem;
     font-weight: 600;
-    color: color-mix(in srgb, var(--rent-ink) 40%, white);
+    color: color-mix(in srgb, var(--rent-ink) 45%, white);
     text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -372,7 +1022,6 @@
     font-size: 0.7rem;
     font-weight: 600;
     color: color-mix(in srgb, var(--rent-ink) 78%, white);
-    background: transparent;
 }
 
 .rent-chip > i,
@@ -385,7 +1034,7 @@
 /* ---------- Kosong ---------- */
 
 .rent-empty {
-    padding: 2.5rem 0;
+    padding: 2.5rem 1rem;
     text-align: center;
 }
 
@@ -395,8 +1044,7 @@
     justify-content: center;
     width: 3rem;
     height: 3rem;
-    border: 1px solid var(--rent-line);
-    border-radius: 0.75rem;
+    border-radius: 50%;
     color: color-mix(in srgb, var(--rent-ink) 40%, white);
     background: var(--rent-soft);
 }
