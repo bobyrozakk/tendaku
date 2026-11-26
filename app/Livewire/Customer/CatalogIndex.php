@@ -10,6 +10,7 @@ use App\Services\Booking\CatalogAvailability;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -231,13 +232,15 @@ class CatalogIndex extends Component
 
     public function render(CatalogAvailability $availability): View
     {
-        $categories = ItemCategory::withCount(['items' => function ($query) {
+        // Data filter (kategori + vendor) hampir tidak berubah, tetapi sebelumnya di-query ulang
+        // pada setiap interaksi Livewire (tiap ketikan/filter). Cache singkat cukup aman.
+        $categories = Cache::remember('catalog:filter-categories:v1', now()->addMinutes(5), fn () => ItemCategory::withCount(['items' => function ($query) {
             $query->publicCatalog();
-        }])->get();
+        }])->get());
 
-        $vendors = Vendor::whereIn('status', ['active', 'approved'])
+        $vendors = Cache::remember('catalog:filter-vendors:v1', now()->addMinutes(5), fn () => Vendor::whereIn('status', ['active', 'approved'])
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name']));
 
         $itemsQuery = MasterItem::publicCatalog()
             ->with(['category:id,name', 'vendor:id,name,slug', 'units:id,master_item_id,condition,purchase_date']);

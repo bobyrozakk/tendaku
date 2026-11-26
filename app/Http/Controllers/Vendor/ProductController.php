@@ -8,6 +8,7 @@ use App\Http\Requests\Vendor\UpdateProductRequest;
 use App\Models\ItemCategory;
 use App\Models\MasterItem;
 use App\Models\MasterItemImage;
+use App\Services\ImageOptimizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -132,7 +133,7 @@ class ProductController extends Controller
             $primaryImageUrl = null;
 
             foreach ($files as $index => $file) {
-                $path = $file->store('products', 'public');
+                $path = app(ImageOptimizer::class)->store($file, 'products', 'public');
                 $storedPaths[] = $path;
                 $imageUrl = Storage::url($path);
 
@@ -251,7 +252,7 @@ class ProductController extends Controller
             $currentMaxOrder = $product->images()->max('sort_order') ?? 0;
 
             foreach ($newFiles as $index => $file) {
-                $path = $file->store('products', 'public');
+                $path = app(ImageOptimizer::class)->store($file, 'products', 'public');
                 $storedPaths[] = $path;
                 $imageUrl = Storage::url($path);
 
