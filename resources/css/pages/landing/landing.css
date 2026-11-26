@@ -124,6 +124,13 @@ section[id] {
     border-radius: 1rem;
     position: relative;
     background: #f4f4ee;
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+.ld-prod-card:hover .ld-prod-wrap {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px -4px rgba(43, 34, 2, 0.18);
 }
 .ld-prod-wrap img {
     width: 100%;
@@ -170,7 +177,7 @@ section[id] {
         border-color 0.22s ease;
 }
 .ld-cust-feat:hover {
-    transform: translateX(5px);
+    transform: translateY(-3px);
     border-color: rgba(108, 139, 8, 0.32);
     box-shadow: 0 4px 16px rgba(108, 139, 8, 0.1);
 }

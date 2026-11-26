@@ -44,25 +44,24 @@
             </div>
 
             {{-- Right: feature list --}}
-            <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-stretch">
                 @php $custFeats = [
                     ['icon'=>'calendar-check', 'color'=>'avocado',   'title'=>'Booking Online Instan',
                      'desc'=>'Pilih alat, tentukan tanggal, bayar — selesai dalam menit tanpa perlu datang ke toko.'],
                     ['icon'=>'credit-card',    'color'=>'goldenrod',  'title'=>'Bayar via Transfer / QRIS',
                      'desc'=>'Pembayaran lunas atau uang muka (DP 50%) melalui transfer bank, QRIS, atau dompet digital.'],
-                    ['icon'=>'map-pin',        'color'=>'avocado',   'title'=>'Ambil di Toko atau Dikirim',
+                    ['icon'=>'map-pin',        'color'=>'goldenrod',   'title'=>'Ambil di Toko atau Dikirim',
                      'desc'=>'Pilih ambil sendiri di outlet vendor (gratis) atau diantar langsung ke lokasi Anda.'],
-                    ['icon'=>'activity',       'color'=>'sunglow',   'title'=>'Pantau Status Booking',
+                    ['icon'=>'activity',       'color'=>'avocado',   'title'=>'Pantau Status Booking',
                      'desc'=>'Cek status pemesanan secara real-time — mulai dari konfirmasi, siap pickup, hingga selesai.'],
-                    ['icon'=>'clock',          'color'=>'goldenrod',  'title'=>'Riwayat Penyewaan Lengkap',
+                    ['icon'=>'clock',          'color'=>'avocado',  'title'=>'Riwayat Penyewaan Lengkap',
                      'desc'=>'Semua history sewa tersimpan rapi — mudah dilihat kembali untuk booking selanjutnya.'],
-                    ['icon'=>'cloud-sun',      'color'=>'avocado',   'title'=>'Cek Cuaca Sebelum Sewa',
+                    ['icon'=>'cloud-sun',      'color'=>'goldenrod',   'title'=>'Cek Cuaca Sebelum Sewa',
                      'desc'=>'Lihat prakiraan cuaca di halaman detail produk untuk memilih tanggal camping yang tepat.'],
-                    ['icon'=>'shield-check',   'color'=>'avocado',   'title'=>'Jaminan KTP Tanpa Deposit',
-                     'desc'=>'Tidak perlu siapkan deposit uang — cukup tunjukkan KTP asli saat ambil unit di toko.'],
                 ]; @endphp
                 @foreach($custFeats as $i => $f)
-                    <div class="ld-cust-feat" data-sr data-sr-delay="{{ $i * 60 }}">
+                    <div data-sr data-sr-delay="{{ $i * 60 }}">
+                    <div class="ld-cust-feat h-full">
                         <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
                              style="background:{{ $f['color']==='goldenrod' ? '#FCF6C5' : ($f['color']==='sunglow' ? '#FEF5DB' : '#E7EDC5') }}">
                             <i data-lucide="{{ $f['icon'] }}" class="w-4 h-4"
@@ -73,6 +72,7 @@
                             <h4 class="text-sm font-bold text-darkbrown-900">{{ $f['title'] }}</h4>
                             <p class="text-xs text-darkbrown-500 leading-relaxed mt-0.5">{{ $f['desc'] }}</p>
                         </div>
+                    </div>
                     </div>
                 @endforeach
             </div>
