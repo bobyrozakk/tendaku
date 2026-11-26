@@ -2,7 +2,7 @@
         @php
             $bannerSteps = [
                 ['id' => 'section-rental', 'label' => $isGuest ? 'Jadwal Sewa' : 'Jadwal & Perkiraan Cuaca'],
-                ['id' => 'section-equipment', 'label' => 'Peralatan'],
+                ['id' => 'section-equipment', 'label' => $equipmentLabel ?? 'Peralatan'],
                 ['id' => 'section-delivery', 'label' => 'Pengambilan Alat'],
                 ['id' => 'section-identity', 'label' => 'Data Penyewa'],
             ];

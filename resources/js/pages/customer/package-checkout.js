@@ -5,11 +5,21 @@ document.addEventListener("alpine:init", () => {
         ...cfg,
         errorMessage: "",
         isValid: true,
-        isSubmitting: false,
+        isProcessing: false,
         formError: "",
-        nikInput: cfg.nikInput || "",
-        phoneInput: cfg.phone || "",
+        errors: {},
+        nik: cfg.nik || "",
+        phone: "",
+        notes: "",
+        address: "",
+        touched: false,
+        paymentOption: cfg.paymentOption || "full",
         showAddressPicker: false,
+
+        // Serah terima setelah booking dibuat: form -> handoff -> halaman status
+        phase: "form",
+        createdCode: "",
+        shippingReloadRequired: false,
 
         ...checkoutAddressState(cfg),
         shippingState: "incomplete",
@@ -25,9 +35,9 @@ document.addEventListener("alpine:init", () => {
         calOpen: null,
         calYear: cfg.calYear !== undefined ? cfg.calYear : new Date().getFullYear(),
         calMonth: cfg.calMonth !== undefined ? cfg.calMonth : new Date().getMonth(),
-        monthNames: [
-            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-            "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+        monthNamesShort: [
+            "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+            "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
         ],
 
         // Timepicker state (wheel, 07:00–17:00)
@@ -51,6 +61,8 @@ document.addEventListener("alpine:init", () => {
                 this.selectedAddressId = this.addresses[0].id;
             }
             this.$watch("shippingKey", () => this.scheduleShipping());
+            this.$watch("pickupDate", () => this.dispatchWeatherRange());
+            this.$watch("returnDate", () => this.dispatchWeatherRange());
             this.scheduleShipping();
             this.$nextTick(() => {
                 if (typeof window.renderLucideIcons === "function") {
@@ -78,6 +90,8 @@ document.addEventListener("alpine:init", () => {
         setTime(h, m) {
             [h, m] = this.normTime(h, m);
             this.pickupTime = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+            this.returnTime = this.pickupTime;
+            this.touched = true;
         },
         toggleTime() {
             this.timeOpen = !this.timeOpen;
@@ -138,16 +152,24 @@ document.addEventListener("alpine:init", () => {
         get minReturnDate() {
             return this.pickupDate ? this.addDaysIso(this.pickupDate, 1) : this.minDate;
         },
-        openCalendar(type) {
-            this.calOpen = this.calOpen === type ? null : type;
-            const cur = type === "pickup" ? this.pickupDate : this.returnDate;
-            if (cur) {
-                const d = new Date(cur);
+        // Satu dropdown rentang: klik pertama = tanggal ambil, klik kedua = tanggal kembali
+        openCalendar() {
+            this.timeOpen = false;
+            if (this.calOpen) {
+                this.calOpen = null;
+                return;
+            }
+            this.calOpen = "pickup";
+            if (this.pickupDate) {
+                const d = new Date(this.pickupDate);
                 if (!isNaN(d)) {
-                    this.calYear = d.getFullYear();
-                    this.calMonth = d.getMonth();
+                    this.calYear = d.getUTCFullYear();
+                    this.calMonth = d.getUTCMonth();
                 }
             }
+        },
+        get calendarTitle() {
+            return this.monthNamesShort[this.calMonth] + " " + this.calYear;
         },
         prevMonth() {
             if (this.calMonth === 0) { this.calMonth = 11; this.calYear--; }
@@ -159,25 +181,24 @@ document.addEventListener("alpine:init", () => {
         },
         buildCalendarCell(iso, outside = false) {
             const isPast = iso < this.minDate;
-            const isBeforePickup = this.calOpen === "return" && this.pickupDate && iso < this.minReturnDate;
-            const isBlocked = isPast || isBeforePickup;
-            const isSelected =
-                (this.calOpen === "pickup" && this.pickupDate === iso) ||
-                (this.calOpen === "return" && this.returnDate === iso);
-            const inRange = this.pickupDate && this.returnDate && iso >= this.pickupDate && iso <= this.returnDate;
+            const isStart = !!this.pickupDate && iso === this.pickupDate;
+            const isEnd = !!this.returnDate && iso === this.returnDate;
+            const inRange = !!this.pickupDate && !!this.returnDate && iso >= this.pickupDate && iso <= this.returnDate;
             return {
                 day: Number(iso.slice(8, 10)),
                 iso,
                 outside,
-                unavailable: isPast || isBeforePickup,
-                disabled: isBlocked,
-                selected: isSelected,
+                unavailable: isPast,
+                disabled: isPast,
+                start: isStart,
+                end: isEnd,
                 inRange,
             };
         },
         get calendarDays() {
             const days = [];
-            const firstDay = new Date(this.calYear, this.calMonth, 1).getDay();
+            // Minggu dimulai hari Senin (Sen ... Min)
+            const firstDay = (new Date(this.calYear, this.calMonth, 1).getDay() + 6) % 7;
             const totalDays = new Date(this.calYear, this.calMonth + 1, 0).getDate();
             for (let i = 0; i < firstDay; i++) days.push({ empty: true });
             const mm = String(this.calMonth + 1).padStart(2, "0");
@@ -193,14 +214,25 @@ document.addEventListener("alpine:init", () => {
             return days;
         },
         selectCalDate(iso) {
-            if (this.calOpen === "pickup") {
-                this.pickupDate = iso;
-                this.onPickupChange();
-            } else {
+            if (this.calOpen === "return" && this.pickupDate && iso >= this.minReturnDate) {
                 this.returnDate = iso;
+                this.returnTime = this.pickupTime;
                 this.onReturnChange();
+                this.calOpen = null;
+                return;
             }
-            this.calOpen = null;
+            // Langkah 1 (atau mulai ulang rentang): set tanggal ambil, lanjut pilih kembali
+            this.pickupDate = iso;
+            this.onPickupChange();
+            this.calOpen = "return";
+        },
+        dispatchWeatherRange() {
+            const detail = { pickupDate: this.pickupDate, returnDate: this.returnDate };
+            if (typeof this.$dispatch === "function") this.$dispatch("booking-weather-updated", detail);
+            if (typeof window !== "undefined" && window.Livewire?.dispatch) {
+                window.Livewire.dispatch("booking-weather-updated", detail);
+            }
+            window.dispatchEvent(new CustomEvent("booking-weather-updated", { detail }));
         },
 
         // ─── Date helpers ─────────────────────────────────────────────────────
@@ -211,6 +243,32 @@ document.addEventListener("alpine:init", () => {
         fmtLong(iso) {
             const d = new Date(iso);
             return isNaN(d) ? "-" : d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+        },
+
+        // "27 Nov – 30 Nov 2026"
+        fmtRange() {
+            if (!this.pickupDate) return "Pilih tanggal sewa";
+            const a = new Date(this.pickupDate);
+            if (isNaN(a)) return "Pilih tanggal sewa";
+            const b = this.returnDate ? new Date(this.returnDate) : null;
+            const fmt = (d, withYear) => d.toLocaleDateString("id-ID", {
+                day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}), timeZone: "UTC",
+            });
+            if (!b || isNaN(b)) return fmt(a, true);
+            const sameYear = a.getUTCFullYear() === b.getUTCFullYear();
+            return fmt(a, !sameYear) + " – " + fmt(b, true);
+        },
+        fmtRangeDay() {
+            const a = new Date(this.pickupDate);
+            if (isNaN(a)) return "-";
+            const fmt = (d) => d.toLocaleDateString("id-ID", {
+                weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+            });
+            const b = new Date(this.returnDate);
+            return isNaN(b) ? fmt(a) : fmt(a) + " – " + fmt(b);
+        },
+        formatMeasurement(value) {
+            return Number(value).toLocaleString("id-ID", { maximumFractionDigits: 2 });
         },
 
         // ─── Duration / recalculate ───────────────────────────────────────────
@@ -227,9 +285,11 @@ document.addEventListener("alpine:init", () => {
             this.recalculate();
         },
         onPickupChange() {
+            this.touched = true;
             this.setDuration(this.durationDays);
         },
         onReturnChange() {
+            this.touched = true;
             this.recalculate();
         },
         recalculate() {
@@ -288,19 +348,66 @@ document.addEventListener("alpine:init", () => {
 
         // ─── Shipping ─────────────────────────────────────────────────────────
         get shippingKey() {
-            return JSON.stringify([this.packageId, this.method, this.selectedAddressId, this.pickupDate, this.pickupTime, this.returnDate, this.returnTime]);
+            return JSON.stringify([this.packageId, this.pickupMethod, this.selectedAddressId, this.pickupDate, this.pickupTime, this.returnDate, this.returnTime]);
         },
         get shippingReady() {
-            return !(this.method === "delivery" && this.needsAddressLocation()) && this.shippingState === "ready" && this.shippingResultKey === this.shippingKey;
+            return !(this.pickupMethod === "delivery" && this.needsAddressLocation()) && this.shippingState === "ready" && this.shippingResultKey === this.shippingKey;
         },
         get deliveryFee() {
-            return this.method === "self_pickup" ? 0 : (this.shippingReady ? this.shipping.delivery_fee : null);
+            return this.pickupMethod === "self_pickup" ? 0 : (this.shippingReady ? this.shipping.delivery_fee : null);
         },
         get grandTotal() {
             return this.shippingReady ? this.shipping.grand_total : null;
         },
-        get canSubmit() {
-            return this.isValid && this.shippingReady && !this.isSubmitting && !this.newAddressSubmitting && !this.showAddAddressModal && !this.shippingNeedsApproval;
+        get rentalDays() {
+            return this.durationDays;
+        },
+        get dpAmount() {
+            if (!this.shippingReady) return null;
+            return Math.floor((Math.max(0, this.shipping.grand_total) * this.dpPercentage + 99) / 100);
+        },
+        get payableAmount() {
+            return this.paymentOption === "dp" ? this.dpAmount : this.grandTotal;
+        },
+        get canSubmitBooking() {
+            return this.isValid && this.shippingReady && !this.isProcessing && !this.newAddressSubmitting && !this.showAddAddressModal && !this.shippingNeedsApproval;
+        },
+        get isGuest() {
+            return false;
+        },
+        get needsName() {
+            return false;
+        },
+        get totalWeightKg() {
+            return this.shippingReady ? this.shipping.total_weight_kg : null;
+        },
+        validate() {
+            const e = {};
+            if (this.needsPhone && !/^[0-9]{10,13}$/.test(this.phone)) {
+                e.phone = "Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.";
+            }
+            if (this.needsNik && !/^\d{16}$/.test(this.nik)) e.nik = "NIK harus 16 digit angka.";
+            if (this.pickupMethod === "delivery" && !this.selectedAddressId) {
+                e.address = "Silakan pilih atau tambahkan alamat pengantaran terlebih dahulu.";
+            }
+            if (!this.isValid) e.dates = this.errorMessage || "Lengkapi jadwal sewa terlebih dahulu.";
+            this.errors = e;
+            const target = e.phone || e.nik ? "section-identity" : e.address ? "section-delivery" : e.dates ? "section-rental" : null;
+            if (target) {
+                this.$nextTick(() => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+            }
+            return Object.keys(e).length === 0;
+        },
+        async playHandoff(data) {
+            const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+            const full = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            this.createdCode = data.booking_code || "";
+            const url = new URL(data.redirect_url, window.location.origin);
+            url.searchParams.set("new", "1");
+            window.scrollTo({ top: 0, behavior: full ? "smooth" : "auto" });
+            this.phase = "handoff";
+            await wait(full ? 2400 : 300);
+            window.location.href = url.toString();
         },
         scheduleShipping() {
             clearTimeout(this.shippingTimer);
@@ -311,8 +418,8 @@ document.addEventListener("alpine:init", () => {
             this.shippingState = "incomplete";
             this.recalculate();
             this.shippingMessage = this.isValid ? "Pilih alamat pengantaran terlebih dahulu." : (this.errorMessage || "Lengkapi jadwal sewa terlebih dahulu.");
-            if (!this.isValid || (this.method === "delivery" && !this.selectedAddressId)) return;
-            if (this.method === "delivery" && this.needsAddressLocation()) {
+            if (!this.isValid || (this.pickupMethod === "delivery" && !this.selectedAddressId)) return;
+            if (this.pickupMethod === "delivery" && this.needsAddressLocation()) {
                 this.shippingMessage = "Lengkapi titik lokasi alamat pengantaran terlebih dahulu.";
                 return;
             }
@@ -332,8 +439,8 @@ document.addEventListener("alpine:init", () => {
                     body: JSON.stringify({
                         checkout_type: "package",
                         package_id: this.packageId,
-                        pickup_method: this.method,
-                        customer_address_id: this.method === "delivery" ? this.selectedAddressId : null,
+                        pickup_method: this.pickupMethod,
+                        customer_address_id: this.pickupMethod === "delivery" ? this.selectedAddressId : null,
                         pickup_date: this.pickupDate,
                         pickup_time: this.pickupTime,
                         return_date: this.returnDate,
@@ -362,7 +469,8 @@ document.addEventListener("alpine:init", () => {
             this.shippingMessage = "";
             this.packagePrice = data.package_price;
             this.packageName = data.package_name;
-            this.packageItems = data.items;
+            const known = new Map((this.packageItems || []).map((it) => [Number(it.id), it]));
+            this.packageItems = (data.items || []).map((it) => ({ ...(known.get(Number(it.id)) || {}), ...it, name: it.name || known.get(Number(it.id))?.name }));
             this.subtotal = data.subtotal;
             this.durationDays = data.rental_days;
             this.totalHours = data.total_hours;
@@ -374,8 +482,8 @@ document.addEventListener("alpine:init", () => {
 
         // ─── Submit ───────────────────────────────────────────────────────────
         async submitBooking() {
-            if (!this.canSubmit) return;
-            this.isSubmitting = true;
+            if (!this.canSubmitBooking || !this.validate()) return;
+            this.isProcessing = true;
             this.formError = "";
             try {
                 const body = new FormData();
@@ -385,27 +493,18 @@ document.addEventListener("alpine:init", () => {
                 body.set("pickup_time", this.pickupTime);
                 body.set("return_date", this.returnDate);
                 body.set("return_time", this.returnTime);
-                body.set("pickup_method", this.method);
-                if (this.method === "delivery" && this.selectedAddressId) {
+                body.set("pickup_method", this.pickupMethod);
+                body.set("payment_option", this.paymentOption);
+                if (this.pickupMethod === "delivery" && this.selectedAddressId) {
                     body.set("customer_address_id", this.selectedAddressId);
                 }
                 body.set("expected_delivery_fee", this.shipping.delivery_fee);
                 body.set("expected_shipping_context", this.shipping.shipping_context);
 
                 // NIK / phone if needed
-                if (this.nikInput) body.set("nik", this.nikInput);
-                if (this.phoneInput) body.set("phone", this.phoneInput);
-                // Guest fields
-                const guestName = document.getElementById("guest_name");
-                if (guestName) body.set("guest_name", guestName.value);
-                const guestPhone = document.getElementById("guest_phone");
-                if (guestPhone) body.set("guest_phone", guestPhone.value);
-                const guestId = document.getElementById("guest_id_number");
-                if (guestId) body.set("guest_id_number", guestId.value);
-
-                // attempt ID from hidden form
-                const attemptInput = document.querySelector("#pkg-booking-form input[name='checkout_attempt_id']");
-                if (attemptInput) body.set("checkout_attempt_id", attemptInput.value);
+                if (this.needsNik && this.nik) body.set("nik", this.nik);
+                if (this.needsPhone && this.phone) body.set("phone", this.phone);
+                body.set("checkout_attempt_id", this.checkoutAttemptId);
 
                 const response = await fetch(this.storeUrl, {
                     method: "POST",
@@ -417,19 +516,19 @@ document.addEventListener("alpine:init", () => {
                     this.applyShipping(data.shipping, this.shippingKey);
                     this.shippingNeedsApproval = true;
                     this.formError = data.message;
-                    this.isSubmitting = false;
+                    this.isProcessing = false;
                     return;
                 }
                 if (!response.ok) {
                     this.formError = Object.values(data.errors || {}).flat().join(" ") || data.message || "Pesanan belum dapat diproses.";
-                    this.isSubmitting = false;
+                    this.isProcessing = false;
                     return;
                 }
                 if (!data.redirect_url) throw new Error("Halaman status booking tidak tersedia.");
-                window.location.assign(data.redirect_url);
+                await this.playHandoff(data);
             } catch (error) {
                 this.formError = "Koneksi bermasalah. Silakan coba lagi; permintaan yang sama akan memakai booking yang sudah dibuat.";
-                this.isSubmitting = false;
+                this.isProcessing = false;
             }
         },
         destroy() {
