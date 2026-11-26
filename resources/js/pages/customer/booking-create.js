@@ -809,6 +809,21 @@ document.addEventListener("alpine:init", () => {
             return fmt(a, !sameYear) + " – " + fmt(b, true);
         },
 
+        fmtRangeDay() {
+            const a = new Date(this.pickupDate);
+            if (isNaN(a)) return "-";
+            const fmt = (d) =>
+                d.toLocaleDateString("id-ID", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "UTC",
+                });
+            const b = new Date(this.returnDate);
+            return isNaN(b) ? fmt(a) : fmt(a) + " – " + fmt(b);
+        },
+
         changeQty(i, delta) {
             this.items[i].qty = Number(this.items[i].qty || 1) + delta;
             this.clampQty(i);
@@ -945,9 +960,11 @@ document.addEventListener("alpine:init", () => {
                     ? "section-identity"
                     : e.address || e.notes
                       ? "section-delivery"
-                      : e.dates || e.items
-                        ? "section-rental"
-                        : null;
+                      : e.items
+                        ? "section-equipment"
+                        : e.dates
+                          ? "section-rental"
+                          : null;
             if (!target) return;
             const el = document.getElementById(target);
             if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });

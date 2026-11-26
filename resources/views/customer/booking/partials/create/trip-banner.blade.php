@@ -1,44 +1,41 @@
         <!-- ============ TRIP BANNER ============ -->
+        @php
+            $bannerSteps = [
+                ['id' => 'section-rental', 'label' => $isGuest ? 'Jadwal Sewa' : 'Jadwal & Perkiraan Cuaca'],
+                ['id' => 'section-equipment', 'label' => 'Peralatan'],
+                ['id' => 'section-delivery', 'label' => 'Pengambilan Alat'],
+                ['id' => 'section-identity', 'label' => 'Data Penyewa'],
+            ];
+        @endphp
         <div class="relative overflow-hidden rounded-2xl bg-avocado-900 text-white shadow-tendaku">
-            <div class="relative p-4 sm:p-5 flex flex-col md:flex-row md:items-start justify-between gap-4">
-                <div class="min-w-0 space-y-3">
-                    <div>
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-avocado-100">Checkout</span>
-                        <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight font-heading leading-tight">Lengkapi pemesanan</h2>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2 text-sm">
-                        <span class="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 pl-1 pr-3 py-1 max-w-full">
-                            <span class="w-6 h-6 rounded-full bg-white text-avocado-900 flex items-center justify-center text-xs font-bold shrink-0">1</span>
-                            <span class="truncate">{{ $booking['vendor']['name'] }}</span>
-                        </span>
-                        <span class="inline-flex items-center gap-2 rounded-full bg-white/5 border border-sunglow-300/40 pl-1 pr-3 py-1">
-                            <span class="w-6 h-6 rounded-full border border-sunglow-300 text-sunglow-300 flex items-center justify-center text-xs font-bold shrink-0">2</span>
-                            <span x-text="fmtRange()">{{ $booking['pickup_date'] }} – {{ $booking['return_date'] }}</span>
-                        </span>
-                        <span class="inline-flex items-center gap-2 rounded-full bg-white/5 border border-sunglow-300/40 pl-1 pr-3 py-1">
-                            <span class="w-6 h-6 rounded-full border border-sunglow-300 text-sunglow-300 flex items-center justify-center text-xs font-bold shrink-0">3</span>
-                            {{ $isGuest ? 'Tamu' : 'Member' }}
-                        </span>
-                    </div>
+            <svg class="absolute -right-10 -bottom-16 w-96 h-64 text-avocado-800/60 pointer-events-none" viewBox="0 0 400 260" fill="none" aria-hidden="true">
+                <path d="M400 20c-60 10-90 60-150 80s-110-10-170 40S30 260 0 260h400V20Z" fill="currentColor"/>
+            </svg>
+            <div class="relative p-4 sm:p-5 space-y-4">
+                <div>
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-avocado-100">
+                        Checkout
+                    </span>
+                    <h2 class="text-xl sm:text-2xl font-extrabold tracking-tight font-heading leading-tight text-avocado-50">
+                        Lengkapi pemesanan
+                    </h2>
                 </div>
 
-                {{-- Progres: orientasi user, sekarang di langkah 1 --}}
-                <ol class="flex items-center gap-2 text-xs font-semibold shrink-0" aria-label="Tahapan sewa">
-                    <li class="inline-flex items-center gap-1.5 rounded-full bg-sunglow-300 text-darkbrown-900 pl-1.5 pr-3 py-1" aria-current="step">
-                        <span class="w-5 h-5 rounded-full bg-darkbrown-900 text-sunglow-300 flex items-center justify-center text-[11px] font-bold">1</span>
-                        Booking
-                    </li>
-                    <span class="w-4 h-px bg-white/30" aria-hidden="true"></span>
-                    <li class="inline-flex items-center gap-1.5 text-avocado-100 pl-1.5 pr-2 py-1">
-                        <span class="w-5 h-5 rounded-full border border-white/30 flex items-center justify-center text-[11px]">2</span>
-                        Bayar
-                    </li>
-                    <span class="w-4 h-px bg-white/30" aria-hidden="true"></span>
-                    <li class="inline-flex items-center gap-1.5 text-avocado-100 pl-1.5 pr-2 py-1">
-                        <span class="w-5 h-5 rounded-full border border-white/30 flex items-center justify-center text-[11px]">3</span>
-                        Ambil alat
-                    </li>
+                <ol class="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm" aria-label="Tahapan pemesanan">
+                    @foreach ($bannerSteps as $i => $step)
+                        <li class="inline-flex items-center gap-2">
+                            <a href="#{{ $step['id'] }}"
+                               @click.prevent="document.getElementById('{{ $step['id'] }}')?.scrollIntoView({ behavior: 'smooth', block: 'start' })"
+                               @if ($i === 0) aria-current="step" @endif
+                               class="inline-flex items-center gap-2 rounded-full pl-1 pr-3 py-1 transition {{ $i === 0 ? 'text-white' : 'text-avocado-100 hover:text-white' }}">
+                                <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 {{ $i === 0 ? 'bg-white text-avocado-900' : 'border border-white/40' }}">{{ $i + 1 }}</span>
+                                <span class="whitespace-nowrap">{{ $step['label'] }}</span>
+                            </a>
+                            @unless ($loop->last)
+                                <span class="hidden sm:inline-block w-5 border-t border-dashed border-white/40" aria-hidden="true"></span>
+                            @endunless
+                        </li>
+                    @endforeach
                 </ol>
             </div>
         </div>

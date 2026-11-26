@@ -54,7 +54,7 @@
         $needsAddress = $isLoggedIn && empty($addressList) && blank($savedAddress);
 
         $maskedNik = (! $isGuest && ! empty($user?->nik))
-            ? substr($user->nik, 0, 4) . str_repeat('•', max(0, strlen($user->nik) - 8)) . substr($user->nik, -4)
+            ? substr($user->nik, 0, 4) . ' ' . str_repeat('•', max(0, strlen($user->nik) - 8)) . ' ' . substr($user->nik, -4)
             : null;
 
         // Tanggal ISO (Y-m-d) untuk input date. Idealnya controller kirim pickup_date_iso & return_date_iso.
@@ -72,6 +72,7 @@
             'category'         => $it['category'] ?? '',
             'specs'            => $it['specs'] ?? '',
             'icon'             => $it['icon'] ?? 'default',
+            'image_url'        => $it['image_url'] ?? null,
             'price_per_day'    => (int) $it['price_per_day'],
             'weight_kg'        => (float) $it['weight_kg'],
             'deposit_per_unit' => (int) ($it['deposit_per_unit'] ?? 0),
@@ -124,9 +125,9 @@
         <div class="co-collapse" :class="{ 'is-collapsed': phase !== 'form' }">
             <div class="co-inner space-y-6">
                 @include('customer.booking.partials.create.trip-banner')
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
                     <div class="lg:col-span-7 xl:col-span-8 space-y-6" :inert="isProcessing">
-                        {{-- Urutan alur: jadwal (+ cuaca khusus member) -> cara terima -> siapa penyewa --}}
+                        {{-- Urutan alur: jadwal (+ cuaca khusus member) -> peralatan -> cara terima -> siapa penyewa --}}
                         @include('customer.booking.partials.create.rental-details')
                         @include('customer.booking.partials.create.delivery-method')
                         @include('customer.booking.partials.create.renter-identity')

@@ -1,13 +1,13 @@
-                <!-- 3. DATA PENYEWA -->
-                <section id="section-identity" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm">
+                <!-- 4. DATA PENYEWA -->
+                <section id="section-identity" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm scroll-mt-24">
                     @php
                         $identitySubtitle = ($isGuest || $needsName || $needsPhone || $needsNik)
                             ? 'Dipakai vendor untuk mencocokkan identitas saat serah terima alat.'
                             : 'Data diambil dari akun Anda. Sudah lengkap.';
                     @endphp
                     @include('customer.booking.partials.create.section-heading', [
-                        'step' => 3,
-                        'title' => 'Data penyewa',
+                        'step' => 4,
+                        'title' => 'Data Penyewa',
                         'subtitle' => $identitySubtitle,
                         'aside' => $isGuest ? '<a href="'.e(route('login')).'" class="font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2 whitespace-nowrap">Sudah punya akun? Masuk</a>' : null,
                     ])
@@ -16,22 +16,25 @@
 
                         {{-- Member: tampilkan data yang sudah ada --}}
                         @if ($isLoggedIn && (! $needsName || ! $needsPhone || ! $needsNik))
-                        <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                        <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border border-wheat-200 bg-wheat-50/60 px-4 py-3.5 text-sm">
                             @unless ($needsName)
-                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5">
-                                <dt class="text-darkbrown-500">Nama</dt>
+                            <div class="flex items-center gap-3 min-w-0">
+                                <dt class="sr-only">Nama</dt>
+                                <i data-lucide="user" class="w-5 h-5 text-avocado-800 shrink-0"></i>
                                 <dd class="font-bold text-darkbrown-900 truncate">{{ $user->name }}</dd>
                             </div>
                             @endunless
                             @unless ($needsPhone)
-                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5">
-                                <dt class="text-darkbrown-500">WhatsApp</dt>
+                            <div class="flex items-center gap-3 min-w-0 sm:border-l sm:border-wheat-200 sm:pl-4">
+                                <dt class="sr-only">WhatsApp</dt>
+                                <i data-lucide="message-circle" class="w-5 h-5 text-avocado-800 shrink-0"></i>
                                 <dd class="font-bold text-darkbrown-900">{{ $user->phone }}</dd>
                             </div>
                             @endunless
                             @unless ($needsNik)
-                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5">
-                                <dt class="text-darkbrown-500">NIK</dt>
+                            <div class="flex items-center gap-3 min-w-0 sm:border-l sm:border-wheat-200 sm:pl-4">
+                                <dt class="sr-only">NIK</dt>
+                                <i data-lucide="id-card" class="w-5 h-5 text-avocado-800 shrink-0"></i>
                                 <dd class="font-mono font-bold text-darkbrown-900">{{ $maskedNik }}</dd>
                             </div>
                             @endunless

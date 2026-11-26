@@ -1,23 +1,52 @@
             <div id="checkout-summary" class="space-y-4 lg:sticky lg:top-24 scroll-mt-24">
 
                 <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm overflow-hidden">
-                    <div class="px-5 sm:px-6 py-4 bg-wheat-50 border-b border-wheat-200">
-                        <h3 class="text-lg font-extrabold text-darkbrown-900 font-heading">Ringkasan pembayaran</h3>
+                    <div class="px-5 sm:px-6 py-4 bg-avocado-900">
+                        <h3 class="text-lg font-extrabold text-white font-heading">Ringkasan Pembayaran</h3>
                     </div>
 
                     <div class="p-5 sm:p-6 space-y-5">
                         <div class="space-y-3 text-sm">
-                            <div class="flex items-center justify-between text-darkbrown-600">
-                                <span x-text="'Sewa alat (' + totalUnits + ' unit, ' + rentalDays + ' hari)'"></span>
-                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(subtotal)"></span>
+                            <div class="flex items-center gap-2 rounded-lg bg-avocado-100/70 px-3 py-2 font-bold text-avocado-900">
+                                <i data-lucide="receipt-text" class="w-4 h-4"></i>
+                                <span>Ringkasan Sewa</span>
                             </div>
 
-                            <div class="flex items-start justify-between text-darkbrown-600">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="font-bold text-darkbrown-900">Sewa alat</p>
+                                    <p class="mt-0.5 text-xs text-darkbrown-600" x-text="fmtRangeDay()"></p>
+                                </div>
+                                <span class="shrink-0 rounded-full bg-darkbrown-900 text-wheat-100 px-2.5 py-0.5 text-xs font-bold whitespace-nowrap" x-text="rentalDays + ' hari'"></span>
+                            </div>
+
+                            <ul class="divide-y divide-wheat-200 rounded-xl border border-wheat-200 bg-wheat-50/60 px-3">
+                                <template x-for="item in items" :key="item.id">
+                                    <li class="flex items-center gap-3 py-3">
+                                        <span class="w-11 h-11 rounded-lg bg-avocado-100 text-avocado-800 flex items-center justify-center shrink-0 overflow-hidden">
+                                            <template x-if="item.image_url">
+                                                <img :src="item.image_url" :alt="item.name" loading="lazy" class="w-full h-full object-cover">
+                                            </template>
+                                            <template x-if="!item.image_url">
+                                                <i data-lucide="tent" class="w-5 h-5"></i>
+                                            </template>
+                                        </span>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-sm font-semibold text-darkbrown-900 leading-snug line-clamp-2" x-text="item.name"></span>
+                                            <span class="block mt-0.5 text-xs text-darkbrown-500" x-text="item.qty + ' unit × ' + formatRupiah(item.price_per_day) + ' / hari'"></span>
+                                        </span>
+                                        <span class="shrink-0 text-sm font-bold text-darkbrown-900" x-text="formatRupiah((Number(item.qty) || 0) * item.price_per_day * rentalDays)"></span>
+                                    </li>
+                                </template>
+                            </ul>
+
+                            <div class="flex items-center justify-between gap-3 text-darkbrown-700">
                                 <div>
                                     <span>Ongkos kirim</span>
+                                    <span x-show="pickupMethod === 'self_pickup'" class="block text-xs text-darkbrown-500">Ambil di toko</span>
                                     <span x-show="pickupMethod === 'delivery'" x-cloak class="block text-xs text-goldenrod-700 font-semibold">Kurir vendor ke lokasi</span>
                                 </div>
-                                <span class="font-bold text-darkbrown-900 text-right" x-text="pickupMethod === 'self_pickup' ? 'Gratis — Ambil di Toko' : formatRupiah(deliveryFee)">—</span>
+                                <span class="font-bold text-right" :class="pickupMethod === 'self_pickup' ? 'text-avocado-700' : 'text-darkbrown-900'" x-text="pickupMethod === 'self_pickup' ? 'Gratis' : formatRupiah(deliveryFee)">—</span>
                             </div>
 
                             <div x-show="pickupMethod === 'delivery' && shippingReady" x-cloak class="flex items-center justify-between text-darkbrown-600">
@@ -40,63 +69,46 @@
                             </div>
                         </div>
 
-                        <div class="rounded-xl bg-avocado-900 text-white px-4 py-3.5">
-                            <div class="flex items-baseline justify-between gap-3">
-                                <span class="text-sm text-avocado-100">Total sewa</span>
-                                <span class="text-2xl font-extrabold tracking-tight font-heading" x-text="formatRupiah(grandTotal)"></span>
-                            </div>
-                        </div>
-
-                        <p x-show="touched" x-cloak class="text-xs text-darkbrown-500 leading-relaxed">
+                        <p x-show="touched" x-cloak class="-mt-2 text-[11px] text-darkbrown-500 leading-relaxed">
                             Total dihitung ulang dari perubahan jadwal atau jumlah unit.
                         </p>
 
                         <!-- Opsi Pembayaran-->
                         <fieldset :disabled="isProcessing">
-                            <legend class="text-sm font-bold text-darkbrown-900 mb-2.5">Pilih cara bayar</legend>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label :class="paymentOption === 'full' ? 'border-avocado-800 bg-avocado-100/60' : 'border-wheat-200 bg-white hover:border-avocado-400'"
-                                       class="relative flex items-start gap-2.5 rounded-2xl border-2 p-3 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                            <legend class="flex items-center gap-2 text-sm font-bold text-darkbrown-900 mb-2.5">
+                                <i data-lucide="wallet" class="w-4 h-4 text-avocado-800"></i>
+                                Pilihan Pembayaran
+                            </legend>
+                            <div class="space-y-2.5">
+                                <label :class="paymentOption === 'full' ? 'border-avocado-700 bg-avocado-100/60' : 'border-wheat-200 bg-white hover:border-avocado-400'"
+                                       class="relative flex items-center gap-3 rounded-xl border-2 p-3.5 cursor-pointer transition">
                                     <input type="radio" name="ui_payment_option" value="full" x-model="paymentOption" class="sr-only">
-                                    <span class="mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+                                    <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
                                           :class="paymentOption === 'full' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
-                                        <span x-show="paymentOption === 'full'" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                        <span x-show="paymentOption === 'full'" class="w-2 h-2 rounded-full bg-white"></span>
                                     </span>
-                                    <span class="min-w-0">
+                                    <span class="min-w-0 flex-1">
                                         <span class="block font-bold text-sm text-darkbrown-900">Bayar lunas</span>
-                                        <span class="block mt-0.5 text-[11px] text-darkbrown-600 leading-snug">Tidak ada tagihan lagi di toko.</span>
-                                        <span class="block mt-1.5 text-sm font-extrabold text-avocado-800" x-text="formatRupiah(grandTotal)"></span>
+                                        <span class="block mt-0.5 text-xs text-darkbrown-600 leading-snug">Tidak ada tambahan biaya</span>
                                     </span>
                                 </label>
-                                <label :class="paymentOption === 'dp' ? 'border-avocado-800 bg-avocado-100/60' : 'border-wheat-200 bg-white hover:border-avocado-400'"
-                                       class="relative flex items-start gap-2.5 rounded-2xl border-2 p-3 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                <label :class="paymentOption === 'dp' ? 'border-avocado-700 bg-avocado-100/60' : 'border-wheat-200 bg-white hover:border-avocado-400'"
+                                       class="relative flex items-center gap-3 rounded-xl border-2 p-3.5 cursor-pointer transition">
                                     <input type="radio" name="ui_payment_option" value="dp" x-model="paymentOption" class="sr-only">
-                                    <span class="mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+                                    <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
                                           :class="paymentOption === 'dp' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
-                                        <span x-show="paymentOption === 'dp'" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                                        <span x-show="paymentOption === 'dp'" class="w-2 h-2 rounded-full bg-white"></span>
                                     </span>
-                                    <span class="min-w-0">
+                                    <span class="min-w-0 flex-1">
                                         <span class="block font-bold text-sm text-darkbrown-900">Uang muka (DP)</span>
-                                        <span class="block mt-0.5 text-[11px] text-darkbrown-600 leading-snug">Bayar <span x-text="dpPercentage + '%'"></span> dulu, sisanya saat ambil alat.</span>
-                                        <span class="block mt-1.5 text-sm font-extrabold text-goldenrod-700" x-text="formatRupiah(dpAmount)"></span>
+                                        <span class="block mt-0.5 text-xs text-darkbrown-600 leading-snug">Bayar <span x-text="dpPercentage + '%'"></span> dulu, sisanya saat ambil alat.</span>
                                     </span>
+                                    <span class="shrink-0 text-sm font-extrabold text-darkbrown-900" x-text="formatRupiah(dpAmount)"></span>
                                 </label>
                             </div>
                         </fieldset>
 
-                        <!-- Kejelasan nominal: bayar sekarang vs sisa -->
-                        <div x-show="grandTotal !== null" x-cloak class="rounded-2xl border border-wheat-200 bg-white px-4 py-3.5 text-sm space-y-1.5">
-                            <div class="flex items-center justify-between">
-                                <span class="font-semibold text-darkbrown-900">Dibayar sekarang</span>
-                                <span class="font-extrabold text-darkbrown-900" x-text="formatRupiah(payableAmount)"></span>
-                            </div>
-                            <div x-show="paymentOption === 'dp'" x-cloak class="flex items-center justify-between text-darkbrown-600">
-                                <span>Sisa dibayar di toko saat ambil alat</span>
-                                <span class="font-semibold" x-text="formatRupiah(Math.max(0, grandTotal - dpAmount))"></span>
-                            </div>
-                        </div>
-
-<div x-show="formError" x-cloak role="alert" class="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-3 text-sm text-red-800">
+                        <div x-show="formError" x-cloak role="alert" class="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-3.5 py-3 text-sm text-red-800">
                             <i data-lucide="alert-circle" class="w-5 h-5 shrink-0 mt-0.5"></i>
                             <span x-text="formError"></span>
                         </div>
@@ -106,16 +118,32 @@
                             <button type="button" @click="approveShippingChange()" class="font-bold text-avocado-700">Saya setuju dengan total terbaru</button>
                         </div>
 
-                        <!-- Yang perlu disiapkan saat ambil alat (netral, bukan peringatan merah/kuning) -->
-                        <div class="rounded-2xl border border-wheat-200 bg-white p-4 text-sm text-darkbrown-800 space-y-2">
+                        <div class="rounded-xl border border-wheat-200 bg-wheat-50/60 p-4 text-sm text-darkbrown-800 space-y-2.5">
                             <div class="flex items-center gap-2 font-bold text-darkbrown-900">
                                 <i data-lucide="info" class="w-4 h-4 text-avocado-700 shrink-0"></i>
-                                <span>Yang perlu disiapkan saat ambil alat</span>
+                                <span>Yang perlu disiapkan saat ambil alat:</span>
                             </div>
-                            <ul class="list-disc pl-5 space-y-1 text-darkbrown-700 leading-relaxed">
-                                <li><strong>KTP asli</strong> dan nomor booking. KTP ditahan selama masa sewa dan dikembalikan setelah alat diperiksa.</li>
-                                <li x-show="paymentOption === 'dp'" x-cloak><strong>Sisa tagihan</strong> dilunasi di kasir toko saat serah terima.</li>
+                            <ul class="space-y-1.5 text-darkbrown-700 leading-relaxed">
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-avocado-700 shrink-0 mt-0.5"></i>
+                                    <span><strong>KTP asli</strong> dan nomor booking. KTP ditahan selama masa sewa dan dikembalikan setelah alat diperiksa.</span>
+                                </li>
+                                <li class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-avocado-700 shrink-0 mt-0.5"></i>
+                                    <span>Tunjukkan struk atau kode pemesanan.</span>
+                                </li>
+                                <li x-show="paymentOption === 'dp'" x-cloak class="flex items-start gap-2">
+                                    <i data-lucide="check" class="w-4 h-4 text-avocado-700 shrink-0 mt-0.5"></i>
+                                    <span><strong>Sisa tagihan</strong> dilunasi di kasir toko saat serah terima.</span>
+                                </li>
                             </ul>
+                        </div>
+
+                        <div class="rounded-xl bg-avocado-100 border border-avocado-200 text-avocado-900 px-4 py-3.5">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-sm font-bold">Total Sewa</span>
+                                <span class="text-2xl font-extrabold tracking-tight font-heading" x-text="formatRupiah(grandTotal)"></span>
+                            </div>
                         </div>
 
                         <div class="space-y-2.5">
@@ -124,16 +152,13 @@
                                     class="w-full py-3.5 px-5 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
                                 <i x-show="isProcessing" x-cloak data-lucide="loader" class="w-5 h-5 animate-spin"></i>
                                 <span x-text="isProcessing ? 'Membuat booking...' : 'Buat booking'"></span>
-                                <span x-show="!isProcessing" x-text="'· ' + formatRupiah(payableAmount)"></span>
                             </button>
-                            <p class="text-xs text-center text-darkbrown-500 leading-relaxed">
-                                Pembayaran dilakukan di langkah berikutnya, setelah booking dibuat.
-                            </p>
-                            <p class="text-xs text-center text-darkbrown-500 leading-relaxed">
-                                Dengan membuat booking, Anda menyetujui
-                                <button type="button" @click="$dispatch('open-footer-doc', 'terms')" class="font-semibold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">Syarat &amp; Ketentuan</button>
-                                dan
-                                <button type="button" @click="$dispatch('open-footer-doc', 'cancellation')" class="font-semibold text-avocado-700 hover:text-avocado-800 underline underline-offset-2">Kebijakan Pembatalan</button>.
+                            <p class="flex items-center justify-center gap-1.5 text-xs text-center text-darkbrown-500 leading-relaxed">
+                                <i
+                                    data-lucide="shield-check"
+                                    class="w-4 h-4 text-avocado-700 fill-avocado-200 stroke-avocado-700 shrink-0"
+                                ></i>
+                                <span>Pembayaran dilakukan dengan aman.</span>
                             </p>
                         </div>
                     </div>

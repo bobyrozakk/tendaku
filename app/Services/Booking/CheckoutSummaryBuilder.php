@@ -58,7 +58,7 @@ class CheckoutSummaryBuilder
             $rawItems
         ));
 
-        $masterItems = MasterItem::with(['vendor', 'category'])
+        $masterItems = MasterItem::with(['vendor', 'category', 'primaryImage'])
             ->whereIn('id', $masterItemIds)
             ->get()
             ->keyBy('id');
@@ -291,6 +291,7 @@ class CheckoutSummaryBuilder
             'max_qty' => $quantityLimit,
             'subtotal' => $subtotal,
             'icon' => $item->category?->icon,
+            'image_url' => $item->image_url ?: $item->primaryImage?->image_url,
         ];
     }
 

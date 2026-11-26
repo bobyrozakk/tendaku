@@ -1,9 +1,9 @@
-                <!-- 2. RENCANA PENGAMBILAN ALAT -->
-                <section id="section-delivery" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm">
+                <!-- 3. PENGAMBILAN ALAT -->
+                <section id="section-delivery" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm scroll-mt-24">
                     @include('customer.booking.partials.create.section-heading', [
-                        'step' => 2,
-                        'title' => 'Rencana pengambilan alat',
-                        'subtitle' => 'Pilih cara menerima alat agar perjalanan Anda lebih nyaman.',
+                        'step' => 3,
+                        'title' => 'Pengambilan Alat',
+                        'subtitle' => 'Pilih cara pengambilan alat Anda.',
                     ])
 
                     <div class="p-5 sm:p-6 space-y-4">
@@ -11,16 +11,17 @@
 
                             <!-- Ambil di tempat: semua orang -->
                             <label :class="pickupMethod === 'self_pickup' ? 'border-avocado-800 bg-avocado-100/60 shadow-tendaku-sm' : 'border-wheat-200 bg-wheat-50/60 hover:border-avocado-400'"
-                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition">
                                 <input type="radio" name="ui_pickup_method" value="self_pickup" x-model="pickupMethod" class="sr-only">
+                                <span class="mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+                                      :class="pickupMethod === 'self_pickup' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
+                                    <span x-show="pickupMethod === 'self_pickup'" class="w-2 h-2 rounded-full bg-white"></span>
+                                </span>
                                 <div class="w-10 h-10 rounded-xl bg-avocado-100 text-avocado-800 flex items-center justify-center shrink-0">
                                     <i data-lucide="store" class="w-5 h-5"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <span class="font-bold text-lg text-darkbrown-900 leading-tight">Ambil di toko</span>
-                                        <span class="rounded-full bg-avocado-200/70 border border-avocado-300 px-2.5 py-0.5 text-xs font-bold text-avocado-900 shrink-0">Gratis</span>
-                                    </div>
+                                    <span class="block font-bold text-lg text-darkbrown-900 leading-tight">Ambil di toko</span>
                                     <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Datang langsung ke outlet vendor di {{ $booking['vendor']['city'] }}. Tanpa ongkir.</p>
                                 </div>
                             </label>
@@ -28,17 +29,18 @@
                             <!-- Diantar: hanya member login -->
                             @if ($isLoggedIn)
                             <label :class="pickupMethod === 'delivery' ? 'border-avocado-800 bg-avocado-100/60 shadow-tendaku-sm' : 'border-wheat-200 bg-wheat-50/60 hover:border-avocado-400'"
-                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-avocado-600">
+                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition">
                                 <input type="radio" name="ui_pickup_method" value="delivery" x-model="pickupMethod" class="sr-only">
+                                <span class="mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
+                                      :class="pickupMethod === 'delivery' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
+                                    <span x-show="pickupMethod === 'delivery'" class="w-2 h-2 rounded-full bg-white"></span>
+                                </span>
                                 <div class="w-10 h-10 rounded-xl bg-sunglow-200 text-goldenrod-800 flex items-center justify-center shrink-0">
                                     <i data-lucide="truck" class="w-5 h-5"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <span class="font-bold text-lg text-darkbrown-900 leading-tight">Diantar ke lokasi</span>
-                                        <span class="rounded-full bg-sunglow-100 border border-sunglow-300 px-2.5 py-0.5 text-xs font-bold text-darkbrown-900 shrink-0">Ongkir otomatis</span>
-                                    </div>
-                                    <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Kurir vendor mengantar ke rumah atau titik kumpul trip. Area Malang Raya & Batu.</p>
+                                    <span class="block font-bold text-lg text-darkbrown-900 leading-tight">Diantar ke lokasi</span>
+                                    <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Kurir vendor mengantar ke area {{ $booking['vendor']['city'] }}. Ongkir dihitung otomatis.</p>
                                 </div>
                             </label>
                             @else
@@ -84,23 +86,31 @@
                                     <div class="text-xs text-darkbrown-600 pt-0.5">Jam operasional: <strong class="text-darkbrown-800">{{ $pickupHours }}</strong></div>
                                 @endif
                                 @if ($mapsQuery !== '' || $vendorPhone !== '')
-                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
-                                        @if ($mapsQuery !== '')
-                                            <a href="https://www.google.com/maps/search/?api=1&amp;query={{ urlencode($mapsQuery) }}" target="_blank" rel="noopener"
-                                               class="inline-flex items-center gap-1 text-sm font-bold text-avocado-800 hover:text-avocado-900 underline underline-offset-2">
-                                                Lihat di Maps
-                                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                            </a>
-                                        @endif
-                                        @if ($vendorPhone !== '')
-                                            <a href="tel:{{ $vendorPhone }}" aria-label="Hubungi vendor {{ $vendorPhone }}"
-                                               class="inline-flex items-center gap-1 text-sm font-bold text-avocado-800 hover:text-avocado-900 underline underline-offset-2">
-                                                <i data-lucide="phone" class="w-3.5 h-3.5"></i>
-                                                Hubungi vendor
-                                            </a>
-                                        @endif
-                                    </div>
-                                @endif
+                                <div class="flex flex-wrap items-center gap-2 pt-1">
+                                    @if ($mapsQuery !== '')
+                                        <a
+                                            href="https://www.google.com/maps/search/?api=1&query={{ urlencode($mapsQuery) }}"
+                                            target="_blank"
+                                            rel="noopener"
+                                            class="inline-flex h-9 min-w-[128px] items-center justify-center gap-1.5 rounded-full border border-avocado-700 bg-avocado-800 px-4 text-xs font-bold text-white transition-colors hover:bg-avocado-900"
+                                        >
+                                            <i data-lucide="map-pin" class="h-3.5 w-3.5 shrink-0"></i>
+                                            <span>Lihat di Maps</span>
+                                        </a>
+                                    @endif
+
+                                    @if ($vendorPhone !== '')
+                                        <a
+                                            href="tel:{{ $vendorPhone }}"
+                                            aria-label="Hubungi vendor {{ $vendorPhone }}"
+                                            class="inline-flex h-9 min-w-[128px] items-center justify-center gap-1.5 rounded-full border border-avocado-700 bg-avocado-800 px-4 text-xs font-bold text-white transition-colors hover:bg-avocado-900"
+                                        >
+                                            <i data-lucide="phone" class="h-3.5 w-3.5 shrink-0"></i>
+                                            <span>Hubungi vendor</span>
+                                        </a>
+                                    @endif
+                                </div>
+                            @endif
                             </div>
                         </div>
 
