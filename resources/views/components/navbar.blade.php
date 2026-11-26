@@ -11,7 +11,7 @@
         <!-- Customer Top Navigation Bar -->
         <header x-ref="navbarHeader"
                 class="tendaku-navbar"
-                :class="{ 'is-scrolled': scrolled && !mobileOpen }">
+                :class="{ 'is-scrolled': scrolled || mobileOpen }">
         <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
             <!-- Brand Logo -->
             <div class="flex items-center gap-6 lg:gap-10">
@@ -33,11 +33,6 @@
                        class="tendaku-nav-link {{ request()->routeIs('customer.catalog.index', 'customer.product.show', 'checkout.index') ? 'is-active' : '' }}">
                         Katalog Alat
                     </a>
-                    <a href="{{ route('customer.rental-status.index') }}"
-                       title="Cek status penyewaan dengan kode dari receipt"
-                       class="tendaku-nav-link {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
-                        Status Sewa
-                    </a>
                     @auth
                         <a href="{{ route('customer.packages.index') }}"
                            title="Paket camping siap sewa"
@@ -51,6 +46,11 @@
                             Riwayat Sewa
                         </a>
                     @endauth
+                    <a href="{{ route('customer.rental-status.index') }}"
+                       title="Cek status penyewaan dengan kode dari receipt"
+                       class="tendaku-nav-link {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
+                        Status Sewa
+                    </a>
                 </div>
             </div>
 

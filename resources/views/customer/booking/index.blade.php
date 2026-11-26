@@ -9,27 +9,10 @@
                    sm:items-center sm:justify-between"
         >
             <div>
-                <nav
-                    class="mb-2 flex items-center gap-2 text-xs
-                           text-darkbrown-500"
-                    aria-label="Breadcrumb"
-                >
-                    <a
-                        href="{{ route('home') }}"
-                        class="transition hover:text-avocado-600"
-                    >
-                        Beranda
-                    </a>
-
-                    <span aria-hidden="true">/</span>
-
-                    <span
-                        aria-current="page"
-                        class="font-semibold text-darkbrown-800"
-                    >
-                        Riwayat Sewa
-                    </span>
-                </nav>
+                <x-breadcrumb class="mb-2" :items="[
+                    ['label' => 'Beranda', 'url' => route('home')],
+                    ['label' => 'Riwayat Sewa'],
+                ]" />
 
                 <h1
                     class="flex items-center gap-2.5

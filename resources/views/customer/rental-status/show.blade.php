@@ -5,16 +5,15 @@
 
     <x-slot name="header">
         <div>
-            <nav class="mb-1.5 flex flex-wrap items-center gap-2 text-xs text-darkbrown-500" aria-label="Breadcrumb">
-                <a href="{{ route('home') }}" class="transition hover:text-avocado-600">Beranda</a>
-                <span class="text-wheat-400">/</span>
-                <a href="{{ route('customer.rental-status.index') }}" class="transition hover:text-avocado-600">Status Sewa</a>
-                <span class="text-wheat-400">/</span>
-                <span class="font-semibold text-darkbrown-800">#{{ $rental->booking_code }}</span>
-            </nav>
+            <x-breadcrumb :items="[
+                ['label' => 'Beranda', 'url' => route('home')],
+                ['label' => 'Status Sewa', 'url' => route('customer.rental-status.index')],
+                ['label' => '#'.$rental->booking_code],
+            ]" />
 
-            <h1 class="font-heading text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
-                Status Sewa
+            <h1 class="flex items-center gap-2.5 font-heading text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
+                <i data-lucide="package-search" class="h-7 w-7 shrink-0" aria-hidden="true"></i>
+                <span>Status Sewa</span>
             </h1>
             <p class="mt-1 max-w-2xl text-xs text-darkbrown-600 sm:text-sm">
                 Detail pesanan dan perkembangan penyewaan untuk kode sewa di bawah ini.
