@@ -46,11 +46,6 @@
                             Riwayat Sewa
                         </a>
                     @endauth
-                    <a href="{{ route('customer.rental-status.index') }}"
-                       title="Cek status penyewaan dengan kode dari receipt"
-                       class="tendaku-nav-link {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
-                        Status Sewa
-                    </a>
                 </div>
             </div>
 
