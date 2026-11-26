@@ -16,11 +16,20 @@
                 ]" />
 
                 <h1 class="flex items-center gap-2.5 font-heading text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
-                    <i data-lucide="package-search" class="h-7 w-7 shrink-0" aria-hidden="true"></i>
+                    <i
+                        data-lucide="package-search"
+                        class="h-7 w-7 shrink-0"
+                        aria-hidden="true"
+                    ></i>
                     <span>Status Sewa</span>
                 </h1>
-                <p class="mt-1 max-w-xl text-xs text-darkbrown-600 sm:text-sm">
-                    Cek detail pesanan dan perkembangan penyewaan Anda menggunakan kode sewa pada receipt.
+
+                <p class="mt-0.5 text-sm font-semibold text-avocado-800 sm:text-base">
+                    Pantau penyewaanmu, kapan saja dan di mana saja.
+                </p>
+
+                <p class="mt-2 max-w-xl text-sm leading-relaxed text-darkbrown-600">
+                    Cek detail pesanan dan perkembangan penyewaan menggunakan kode sewa pada receipt.
                     Tidak perlu membuat akun atau login.
                 </p>
             </div>

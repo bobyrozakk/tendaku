@@ -143,7 +143,7 @@
                     @endif
 
                     {{-- Logout (gaya sama dengan tombol logout kasir) --}}
-                    <form method="POST" action="{{ route('logout') }}" class="inline-block">
+                    <form method="POST" action="{{ route('logout') }}" class="hidden md:inline-block">
                         @csrf
                         <button type="submit"
                                 class="tendaku-nav-icon text-red-300/90 hover:text-red-200 hover:bg-red-500/15 cursor-pointer"
@@ -156,7 +156,7 @@
                         Masuk
                     </a>
                     <a href="{{ route('register') }}"
-                       class="tendaku-nav-btn-primary">
+                       class="tendaku-nav-btn-primary hidden sm:inline-flex">
                         Daftar
                     </a>
                 @endauth
@@ -172,46 +172,67 @@
         </nav>
 
         <!-- Mobile Drawer Navigation -->
-        <div x-show="mobileOpen"
-             x-cloak
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="opacity-0 -translate-y-2"
-             x-transition:enter-end="opacity-100 translate-y-0"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="opacity-100 translate-y-0"
-             x-transition:leave-end="opacity-0 -translate-y-2"
-             class="md:hidden px-4 pt-2 pb-5 space-y-1 border-t border-white/10">
-            <a href="{{ url('/') }}"
-               class="tendaku-nav-link tendaku-nav-link-block {{ request()->is('/') ? 'is-active' : '' }}">
+        <div
+            x-show="mobileOpen"
+            x-cloak
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-y-2"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-2"
+            class="md:hidden px-4 pt-2 pb-5 space-y-1 border-t border-white/10"
+        >
+            <a
+                href="{{ url('/') }}"
+                class="tendaku-nav-link tendaku-nav-link-block {{ request()->is('/') ? 'is-active' : '' }}"
+            >
                 Beranda
             </a>
-            <a href="{{ url('/katalog') }}"
-               class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.catalog.index', 'customer.product.show') ? 'is-active' : '' }}">
+
+            <a
+                href="{{ url('/katalog') }}"
+                class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.catalog.index', 'customer.product.show') ? 'is-active' : '' }}"
+            >
                 Katalog Alat
             </a>
+
             @guest
-                <a href="{{ route('customer.rental-status.index') }}"
-                   class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
+                <a
+                    href="{{ route('customer.rental-status.index') }}"
+                    class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}"
+                >
                     Status Sewa
                 </a>
             @endguest
+
             @auth
-                <a href="{{ route('customer.packages.index') }}"
-                   class="tendaku-nav-link tendaku-nav-link-block">
+                <a
+                    href="{{ route('customer.packages.index') }}"
+                    class="tendaku-nav-link tendaku-nav-link-block"
+                >
                     Paket Camping
                 </a>
-                <a href="{{ route('customer.booking.index') }}"
-                   class="tendaku-nav-link tendaku-nav-link-block">
+
+                <a
+                    href="{{ route('customer.booking.index') }}"
+                    class="tendaku-nav-link tendaku-nav-link-block"
+                >
                     Riwayat Sewa
                 </a>
-                <a href="{{ route('profile') }}"
-                   class="tendaku-nav-link tendaku-nav-link-block flex items-center gap-2.5">
+
+                <a
+                    href="{{ route('profile') }}"
+                    class="tendaku-nav-link tendaku-nav-link-block flex items-center gap-2.5"
+                >
                     @if (auth()->user()->avatar_url)
-                        <img src="{{ auth()->user()->avatar_url }}"
-                             alt="{{ auth()->user()->name }}"
-                             referrerpolicy="no-referrer"
-                             class="w-6 h-6 rounded-full object-cover border border-white/20 shadow-sm"
-                             onerror="this.onerror=null; this.parentElement.querySelector('.mobile-initials-fallback')?.classList.remove('hidden'); this.remove();">
+                        <img
+                            src="{{ auth()->user()->avatar_url }}"
+                            alt="{{ auth()->user()->name }}"
+                            referrerpolicy="no-referrer"
+                            class="w-6 h-6 rounded-full object-cover border border-white/20 shadow-sm"
+                            onerror="this.onerror=null; this.parentElement.querySelector('.mobile-initials-fallback')?.classList.remove('hidden'); this.remove();"
+                        >
                         <span class="mobile-initials-fallback hidden w-6 h-6 rounded-full bg-gradient-to-br from-sunglow-300 to-goldenrod-500 text-darkbrown-900 font-bold text-[10px] flex items-center justify-center border border-white/20 shadow-sm">
                             {{ auth()->user()->initials }}
                         </span>
@@ -220,15 +241,36 @@
                             {{ auth()->user()->initials }}
                         </span>
                     @endif
+
                     <span>Akun Saya</span>
                 </a>
+
+                {{-- Logout khusus mobile --}}
+                <form method="POST" action="{{ route('logout') }}" class="mt-2 border-t border-white/10 pt-3">
+                    @csrf
+                    <button
+                        type="submit"
+                        class="tendaku-nav-link tendaku-nav-link-block flex w-full items-center gap-2.5 text-red-300/90 hover:bg-red-500/10 hover:text-red-200"
+                    >
+                        <i data-lucide="log-out" class="h-4 w-4 shrink-0"></i>
+                        <span>Keluar</span>
+                    </button>
+                </form>
             @endauth
+
             @guest
-                <div class="pt-3 mt-2 border-t border-white/10 flex items-center gap-2">
-                    <a href="{{ route('login') }}" class="tendaku-nav-btn-secondary flex-1">
+                <div class="mt-2 flex items-center justify-center gap-2 border-t border-white/10 pt-3">
+                    <a
+                        href="{{ route('login') }}"
+                        class="tendaku-nav-btn-secondary flex-1"
+                    >
                         Masuk
                     </a>
-                    <a href="{{ route('register') }}" class="tendaku-nav-btn-primary flex-1">
+
+                    <a
+                        href="{{ route('register') }}"
+                        class="tendaku-nav-btn-primary flex-1"
+                    >
                         Daftar
                     </a>
                 </div>
