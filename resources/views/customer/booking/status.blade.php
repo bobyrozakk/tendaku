@@ -27,7 +27,7 @@
                         <span class="text-darkbrown-800 font-semibold">Status Booking</span>
                     @endauth
                 </nav>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
+                <h1 class="font-display font-normal tracking-tight text-3xl sm:text-4xl text-darkbrown-900">
                     @auth Riwayat & Status Sewa @else Status Booking & Rental @endauth
                 </h1>
                 <p class="text-sm text-darkbrown-600 mt-1">

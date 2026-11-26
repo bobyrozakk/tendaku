@@ -1,6 +1,6 @@
 {{-- Timeline utama booking. Variabel berasal dari view induk. --}}
 <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading">Alur pemesanan</h2>
+                    <h2 class="font-display font-normal text-xl text-darkbrown-900">Alur pemesanan</h2>
                     <span class="px-3 py-1 rounded-full text-sm font-bold border"
                           :class="current ? 'bg-sunglow-100 border-sunglow-300 text-darkbrown-900' : 'bg-red-50 border-red-200 text-red-800'"
                           x-text="statusLabels[status]">{{ $statusLabels[$status] ?? $status }}</span>

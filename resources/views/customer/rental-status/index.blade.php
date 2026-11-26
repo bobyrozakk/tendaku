@@ -15,7 +15,7 @@
                     ['label' => 'Status Sewa'],
                 ]" />
 
-                <h1 class="flex items-center gap-2.5 font-heading text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
+                <h1 class="font-display font-normal tracking-tight flex items-center gap-2.5 text-3xl text-darkbrown-900 sm:text-4xl">
                     <i
                         data-lucide="package-search"
                         class="h-7 w-7 shrink-0"
@@ -78,7 +78,7 @@
                             </div>
 
                             <div class="min-w-0">
-                                <h2 class="font-heading text-lg font-extrabold text-darkbrown-900 sm:text-xl">
+                                <h2 class="font-display font-normal text-xl text-darkbrown-900 sm:text-2xl">
                                     Cek Status Penyewaan
                                 </h2>
                                 <p class="mt-0.5 text-sm leading-relaxed text-darkbrown-600">
@@ -107,7 +107,7 @@
                 />
 
                 <div class="space-y-5 p-5">
-                    <h2 class="font-heading text-xl font-extrabold tracking-tight text-darkbrown-900">Cara Mengecek Status</h2>
+                    <h2 class="font-display font-normal text-2xl text-darkbrown-900">Cara Mengecek Status</h2>
 
                     <ol class="space-y-3.5 text-sm text-darkbrown-700">
                         <li class="flex items-center gap-3">

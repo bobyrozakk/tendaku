@@ -11,7 +11,7 @@
                 ['label' => '#'.$rental->booking_code],
             ]" />
 
-            <h1 class="flex items-center gap-2.5 font-heading text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
+            <h1 class="font-display font-normal tracking-tight flex items-center gap-2.5 text-3xl text-darkbrown-900 sm:text-4xl">
                 <i data-lucide="package-search" class="h-7 w-7 shrink-0" aria-hidden="true"></i>
                 <span>Status Sewa</span>
             </h1>
@@ -64,7 +64,7 @@
         {{-- Perkembangan sewa: horizontal di desktop, vertikal di mobile --}}
         <section class="card-tendaku overflow-hidden">
             <header class="border-b border-wheat-200 p-5">
-                <h2 class="font-heading text-lg font-extrabold text-darkbrown-900">Perkembangan Sewa</h2>
+                <h2 class="font-display font-normal text-xl text-darkbrown-900">Perkembangan Sewa</h2>
                 <p class="mt-0.5 text-xs text-darkbrown-500">Tahapan mengikuti proses di Tendaku.</p>
             </header>
 
@@ -119,7 +119,7 @@
         <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <section class="card-tendaku flex flex-col overflow-hidden">
                 <header class="flex items-center justify-between gap-3 border-b border-wheat-200 p-5">
-                    <h2 class="font-heading text-lg font-extrabold text-darkbrown-900">Detail Pesanan</h2>
+                    <h2 class="font-display font-normal text-xl text-darkbrown-900">Detail Pesanan</h2>
                     <span class="badge-wheat">{{ $rental->rental_days }} hari sewa</span>
                 </header>
 
@@ -190,7 +190,7 @@
 
             <section class="card-tendaku flex flex-col overflow-hidden">
                 <header class="flex items-center justify-between gap-3 border-b border-wheat-200 p-5">
-                    <h2 class="font-heading text-lg font-extrabold text-darkbrown-900">Barang yang Disewa</h2>
+                    <h2 class="font-display font-normal text-xl text-darkbrown-900">Barang yang Disewa</h2>
                     <span class="badge-wheat">{{ $receipt['items']->count() }} jenis</span>
                 </header>
 

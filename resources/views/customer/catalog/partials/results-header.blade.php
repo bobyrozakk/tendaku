@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-            <h2 id="catalog-results-heading" class="font-heading text-xl font-extrabold tracking-tight text-darkbrown-900">
+            <h2 id="catalog-results-heading" class="font-display font-normal text-2xl text-darkbrown-900">
                 Daftar Peralatan Tersedia
             </h2>
             <span wire:loading class="animate-pulse text-[11px] font-semibold text-avocado-700">
