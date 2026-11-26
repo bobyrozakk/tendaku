@@ -33,13 +33,11 @@
                        class="tendaku-nav-link {{ request()->routeIs('customer.catalog.index', 'customer.product.show', 'checkout.index') ? 'is-active' : '' }}">
                         Katalog Alat
                     </a>
-                    @guest
-                        <a href="{{ route('customer.rental-status.index') }}"
-                           title="Cek status penyewaan dengan kode dari receipt"
-                           class="tendaku-nav-link {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
-                            Status Sewa
-                        </a>
-                    @endguest
+                    <a href="{{ route('customer.rental-status.index') }}"
+                       title="Cek status penyewaan dengan kode dari receipt"
+                       class="tendaku-nav-link {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
+                        Status Sewa
+                    </a>
                     @auth
                         <a href="{{ route('customer.packages.index') }}"
                            title="Paket camping siap sewa"
@@ -189,12 +187,10 @@
                class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.catalog.index', 'customer.product.show') ? 'is-active' : '' }}">
                 Katalog Alat
             </a>
-            @guest
-                <a href="{{ route('customer.rental-status.index') }}"
-                   class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
-                    Status Sewa
-                </a>
-            @endguest
+            <a href="{{ route('customer.rental-status.index') }}"
+               class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
+                Status Sewa
+            </a>
             @auth
                 <a href="{{ route('customer.packages.index') }}"
                    class="tendaku-nav-link tendaku-nav-link-block">
