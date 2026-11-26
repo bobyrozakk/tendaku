@@ -1,32 +1,57 @@
 <x-layouts.customer>
+    <x-slot name="title">Checkout Paket Camping - Tendaku</x-slot>
     <x-slot name="header">
-        <div class="flex items-center gap-2 text-xs font-semibold text-darkbrown-600 mb-2">
-            <a href="{{ route('customer.packages.show', $package) }}" class="hover:text-avocado-700 transition flex items-center gap-1">
-                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-                <span>Kembali ke Detail Paket</span>
-            </a>
-            <span>/</span>
-            <span class="text-darkbrown-900 font-bold">Konfirmasi Sewa</span>
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+                <nav class="flex items-center gap-2 text-sm text-darkbrown-500 mb-1.5">
+                    <a href="{{ route('home') }}" class="hover:text-avocado-700 transition">Beranda</a>
+                    <span class="text-wheat-400">/</span>
+                    <a href="{{ route('customer.packages.index') }}" class="hover:text-avocado-700 transition">Paket Camping</a>
+                    <span class="text-wheat-400">/</span>
+                    <a href="{{ route('customer.packages.show', $package) }}" class="hover:text-avocado-700 transition">{{ $package->name }}</a>
+                    <span class="text-wheat-400">/</span>
+                    <span class="text-darkbrown-800 font-semibold">Booking</span>
+                </nav>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
+                    Checkout &amp; Pembayaran
+                </h1>
+            </div>
         </div>
-        <h1 class="font-extrabold text-2xl md:text-3xl text-darkbrown-900 tracking-tight font-heading">
-            Sewa Paket Camping
-        </h1>
-        <p class="text-sm text-darkbrown-600 mt-1">
-            Lengkapi data penyewaan, lalu lanjutkan ke pembayaran.
-        </p>
     </x-slot>
 
     @php
+        $user = auth()->user();
+        $isGuest = false;
         $price = (float) $package->price;
         $vendorName = $package->vendor?->name ?? 'Tendaku Vendor';
+        $vendorCity = $package->vendor?->city ?? '';
         $image = $package->image_url
             ?: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80';
-        $user = auth()->user();
-        $maskedNik = ($isLoggedIn && filled($user?->nik))
-            ? substr($user->nik, 0, 4) . str_repeat('•', max(0, strlen($user->nik) - 8)) . substr($user->nik, -4)
+
+        // Data penyewa: hanya minta yang belum ada di akun (sama seperti checkout katalog)
+        $needsName = false;
+        $needsPhone = blank($user?->phone);
+        $needsNik = blank($user?->nik);
+        $maskedNik = ! $needsNik
+            ? substr($user->nik, 0, 4) . ' ' . str_repeat('•', max(0, strlen($user->nik) - 8)) . ' ' . substr($user->nik, -4)
             : null;
-        $needsPhone = $isLoggedIn && blank($user?->phone);
-        $needsNik = $isLoggedIn && blank($user?->nik);
+
+        // Data vendor untuk partial jadwal & pengambilan alat (bentuk sama dengan checkout katalog)
+        $booking = [
+            'vendor' => [
+                'name' => $vendorName,
+                'city' => $vendorCity,
+                'pickup_location' => $package->vendor?->pickup_location ?? $vendorName,
+                'address' => $package->vendor?->address ?? '',
+                'operational_hours' => $package->vendor?->operational_hours ?? '',
+                'phone' => $package->vendor?->phone ?? '',
+            ],
+            'items' => [['stock' => 1]],
+        ];
+        $initialPickupDate = old('pickup_date', $pickupDate->format('Y-m-d'));
+        $initialReturnDate = old('return_date', $returnDate->format('Y-m-d'));
+        $equipmentLabel = 'Isi Paket';
+
         $selectedAddrId = old('customer_address_id', $defaultAddress?->id ?? ($addresses->first()?->id ?? null));
         $addressListJson = $addresses->map(fn ($a) => [
             'id' => $a->id,
@@ -46,451 +71,76 @@
             'delivery_snapshot' => $a->toDeliverySnapshot(),
             'is_default' => (bool) $a->is_default,
         ])->values();
+
         $packageCheckoutConfig = [
-            'packageId' => $package->id, 'method' => old('pickup_method', $pickupMethod),
-            'packagePrice' => $price, 'packageName' => $package->name,
-            'pickupDate' => old('pickup_date', $pickupDate->format('Y-m-d')),
+            'packageId' => $package->id,
+            'pickupMethod' => old('pickup_method', $pickupMethod),
+            'packagePrice' => $price,
+            'packageName' => $package->name,
+            'pickupDate' => $initialPickupDate,
             'pickupTime' => old('pickup_time', $pickupTime),
-            'returnDate' => old('return_date', $returnDate->format('Y-m-d')),
+            'returnDate' => $initialReturnDate,
             'returnTime' => old('return_time', $returnTime),
-            'durationDays' => $rentalDays, 'totalHours' => $hours, 'subtotal' => $subtotal,
-            'csrf' => csrf_token(), 'shippingPreviewUrl' => route('checkout.shipping.preview'),
-            'storeAddressUrl' => route('customer.addresses.store'), 'addresses' => $addressListJson,
+            'dpPercentage' => (int) $dpPercentage,
+            'paymentOption' => old('payment_option', 'full') === 'dp' ? 'dp' : 'full',
+            'durationDays' => $rentalDays,
+            'totalHours' => $hours,
+            'subtotal' => $subtotal,
+            'csrf' => csrf_token(),
+            'shippingPreviewUrl' => route('checkout.shipping.preview'),
+            'storeAddressUrl' => route('customer.addresses.store'),
             'updateAddressUrl' => route('customer.addresses.update', ['address' => '__ADDRESS__']),
-            'selectedAddressId' => $selectedAddrId, 'name' => $user?->name ?? '', 'phone' => $user?->phone ?? '',
-            'nikInput' => old('nik', $user?->nik ?? ''),
+            'addresses' => $addressListJson,
+            'selectedAddressId' => $selectedAddrId,
+            'name' => $user?->name ?? '',
+            'phone' => $user?->phone ?? '',
+            'nik' => old('nik', ''),
+            'needsPhone' => $needsPhone,
+            'needsNik' => $needsNik,
             'requiresApproval' => session()->has('shipping_conflict'),
-            'packageItems' => $package->packageItems->map(fn ($item) => ['id' => $item->master_item_id, 'name' => $item->masterItem?->name, 'qty' => $item->quantity])->values(),
+            'packageItems' => $package->packageItems->map(fn ($item) => [
+                'id' => $item->master_item_id,
+                'name' => $item->masterItem?->name,
+                'qty' => $item->quantity,
+                'category' => $item->masterItem?->category?->name,
+                'image_url' => $item->masterItem?->image_url,
+            ])->values(),
+            'minDate' => now()->toDateString(),
+            'calYear' => (int) $pickupDate->format('Y'),
+            'calMonth' => (int) $pickupDate->format('n') - 1,
+            'storeUrl' => route('customer.packages.booking.store', $package),
+            'checkoutAttemptId' => old('checkout_attempt_id', (string) \Illuminate\Support\Str::uuid()),
+            'vendorCity' => $vendorCity,
+            'vendorPickupLocation' => $booking['vendor']['pickup_location'],
+            'vendorAddress' => $booking['vendor']['address'],
+            'vendorOperationalHours' => $booking['vendor']['operational_hours'],
         ];
+
+        $inputBase = 'w-full rounded-xl border bg-white px-3.5 py-3 text-base sm:text-sm text-darkbrown-900 placeholder:text-darkbrown-400 focus:ring-2 transition';
+        $okBorder  = 'border-wheat-300 focus:border-avocado-600 focus:ring-avocado-500/30';
+        $errBorder = 'border-red-400 focus:border-red-500 focus:ring-red-200';
     @endphp
 
-    <div x-data="packageCheckout({{ \Illuminate\Support\Js::from($packageCheckoutConfig) }})">
-        <form method="POST" action="{{ route('customer.packages.checkout.store', $package) }}"
-              class="grid grid-cols-1 lg:grid-cols-12 gap-8 py-2" @submit.prevent="submitBooking($event.currentTarget)" :inert="isSubmitting">
-            @csrf
-            <input type="hidden" name="package_id" value="{{ $package->id }}" />
-            <input type="hidden" name="checkout_attempt_id" value="{{ old('checkout_attempt_id', (string) \Illuminate\Support\Str::uuid()) }}" />
-
-        <!-- Kolom Kiri: Form Data Penyewa -->
-        <div class="lg:col-span-7 space-y-6">
-            <!-- Jadwal Sewa -->
-            <div class="card-tendaku rounded-2xl bg-white p-6 border border-wheat-200 shadow-tendaku space-y-4">
-                <h2 class="text-base font-extrabold text-darkbrown-900 border-b border-wheat-200 pb-3 font-heading flex items-center justify-between">
-                    <span class="flex items-center gap-2">
-                        <i data-lucide="calendar-days" class="w-4 h-4 text-avocado-600"></i>
-                        Jadwal Sewa & Waktu Pengambilan
-                    </span>
-                </h2>
-
-                <!-- Waktu Pengambilan -->
-                <div class="space-y-1.5">
-                    <div class="flex items-center justify-between">
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-700">
-                            Waktu Pengambilan Barang *
-                        </label>
-                        <span class="text-[10px] text-darkbrown-500 font-medium">Mulai tanggal & jam pengambilan</span>
+    <div x-data="packageCheckout({{ \Illuminate\Support\Js::from($packageCheckoutConfig) }})" class="py-2 sm:py-4 pb-28 lg:pb-4">
+        @include('customer.booking.partials.create.handoff')
+        <div class="co-collapse" :class="{ 'is-collapsed': phase !== 'form' }">
+            <div class="co-inner space-y-6">
+                @include('customer.booking.partials.create.trip-banner')
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                    <div class="lg:col-span-7 xl:col-span-8 space-y-6" :inert="isProcessing">
+                        {{-- Urutan alur: jadwal (+ cuaca) -> isi paket -> cara terima -> siapa penyewa --}}
+                        @include('customer.booking.partials.create.rental-schedule')
+                        @include('customer.checkout.partials.package-contents')
+                        @include('customer.booking.partials.create.delivery-method')
+                        @include('customer.booking.partials.create.renter-identity')
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <input type="date" id="pickup_date" name="pickup_date"
-                                   x-model="pickupDate"
-                                   @change="onPickupChange()"
-                                   min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                                   required
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                            <x-input-error :messages="$errors->get('pickup_date')" class="mt-1" />
-                        </div>
-                        <div>
-                            <input type="time" id="pickup_time" name="pickup_time"
-                                   x-model="pickupTime"
-                                   @change="onPickupChange()"
-                                   required
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                            <x-input-error :messages="$errors->get('pickup_time')" class="mt-1" />
-                        </div>
+                    <div class="lg:col-span-5 xl:col-span-4">
+                        @include('customer.checkout.partials.package-summary')
                     </div>
-                </div>
-
-                <!-- Durasi Sewa -->
-                <div class="flex items-center justify-between py-2 px-3 rounded-xl bg-wheat-50 border border-wheat-200">
-                    <span class="text-[11px] font-bold text-darkbrown-800 flex items-center gap-1.5">
-                        <i data-lucide="clock" class="w-3.5 h-3.5 text-avocado-600"></i>
-                        Durasi Sewa
-                    </span>
-                    <div class="flex items-center gap-1">
-                        <button type="button"
-                                @click="setDuration(Math.max(1, durationDays - 1))"
-                                class="w-7 h-7 rounded-md border border-wheat-300 bg-white hover:bg-wheat-100 text-darkbrown-800 font-bold flex items-center justify-center transition shadow-sm text-xs">
-                            -
-                        </button>
-                        <div class="w-9 h-7 text-center font-bold text-xs text-darkbrown-900 bg-white flex items-center justify-center rounded-md border border-wheat-300 shadow-inner">
-                            <span x-text="durationDays">{{ $rentalDays }}</span>
-                        </div>
-                        <button type="button"
-                                @click="setDuration(durationDays + 1)"
-                                class="w-7 h-7 rounded-md border border-wheat-300 bg-white hover:bg-wheat-100 text-darkbrown-800 font-bold flex items-center justify-center transition shadow-sm text-xs">
-                            +
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Waktu Pengembalian -->
-                <div class="space-y-1.5">
-                    <div class="flex items-center justify-between">
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-700">
-                            Waktu Pengembalian Barang *
-                        </label>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <input type="date" id="return_date" name="return_date"
-                                   x-model="returnDate"
-                                   @change="onReturnChange()"
-                                   :min="pickupDate"
-                                   required
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                            <x-input-error :messages="$errors->get('return_date')" class="mt-1" />
-                        </div>
-                        <div>
-                            <input type="time" id="return_time" name="return_time"
-                                   x-model="returnTime"
-                                   @change="onReturnChange()"
-                                   required
-                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                            <x-input-error :messages="$errors->get('return_time')" class="mt-1" />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pesan Error Validasi Tanggal/Waktu -->
-                <div x-show="errorMessage" x-cloak class="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
-                    <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 shrink-0 mt-0.5"></i>
-                    <span x-text="errorMessage"></span>
-                </div>
-
-                <div>
-                    <span class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                        Metode Pengambilan
-                    </span>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <label class="flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition"
-                               :class="method === 'self_pickup' ? 'border-avocado-500 bg-avocado-50' : 'border-wheat-300 bg-white hover:bg-wheat-50'">
-                            <input type="radio" name="pickup_method" value="self_pickup" x-model="method"
-                                   class="mt-0.5 text-avocado-600 focus:ring-avocado-500" />
-                            <span>
-                                <span class="block text-xs font-bold text-darkbrown-900">Ambil di Toko</span>
-                                <span class="block text-[11px] text-darkbrown-500">Gratis, ambil langsung di {{ $vendorName }}.</span>
-                            </span>
-                        </label>
-
-                        <label class="flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition"
-                               :class="method === 'delivery' ? 'border-avocado-500 bg-avocado-50' : 'border-wheat-300 bg-white hover:bg-wheat-50'">
-                            <input type="radio" name="pickup_method" value="delivery" x-model="method"
-                                   class="mt-0.5 text-avocado-600 focus:ring-avocado-500" />
-                            <span>
-                                <span class="block text-xs font-bold text-darkbrown-900">
-                                    Diantar (ongkir otomatis)
-                                </span>
-                                <span class="block text-[11px] text-darkbrown-500">
-                                    Pilih alamat pengantaran yang sudah tersimpan di akun Anda.
-                                </span>
-                            </span>
-                        </label>
-                    </div>
-                    <x-input-error :messages="$errors->get('pickup_method')" class="mt-1" />
-
-                    @if ($isLoggedIn)
-                        <div x-show="method === 'delivery'" x-cloak class="mt-4 pt-4 border-t border-wheat-200 space-y-3">
-                            <div class="flex items-center justify-between">
-                                <label class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-700">
-                                    Pilih Alamat Pengantaran *
-                                </label>
-                                <button type="button" @click="openAddAddressModal()"
-                                        class="text-[11px] font-bold text-avocado-700 hover:text-avocado-800 underline">
-                                    Tambah Alamat Baru
-                                </button>
-                            </div>
-
-                            <div x-show="addresses.length > 0" class="space-y-2">
-                                <template x-for="addr in addresses" :key="addr.id">
-                                    <label class="flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition hover:bg-wheat-50"
-                                           :class="parseInt(selectedAddressId) === parseInt(addr.id) ? 'border-avocado-600 bg-avocado-50/50 ring-1 ring-avocado-600' : 'border-wheat-200 bg-white'">
-                                        <input type="radio" name="customer_address_id" :value="addr.id"
-                                               x-model="selectedAddressId"
-                                               class="mt-1 text-avocado-600 focus:ring-avocado-500" />
-                                        <div class="min-w-0 flex-1 text-xs">
-                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-wheat-100 text-darkbrown-800" x-text="addr.label"></span>
-                                                <span class="font-bold text-darkbrown-900" x-text="addr.recipient_name"></span>
-                                                <span class="text-darkbrown-500" x-text="'(' + addr.phone_number + ')'"></span>
-                                                <template x-if="addr.is_default">
-                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-avocado-100 text-avocado-800">Utama</span>
-                                                </template>
-                                            </div>
-                                            <p class="text-darkbrown-600 mt-1 leading-relaxed" x-text="addr.formatted_address"></p>
-                                        </div>
-                                    </label>
-                                </template>
-                            </div>
-
-                            <div x-show="addresses.length === 0" x-cloak class="rounded-xl border border-dashed border-wheat-300 p-4 bg-wheat-50 space-y-3 text-center">
-                                <p class="text-xs text-darkbrown-700 font-semibold">Anda belum memiliki alamat tersimpan di profil.</p>
-                                <button type="button" @click="openAddAddressModal()"
-                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 rounded-xl shadow-sm transition">
-                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                                    <span>Tambah Alamat Baru</span>
-                                </button>
-                            </div>
-                            @include('customer.booking.partials.create.address-location-notice')
-
-                            <x-input-error :messages="$errors->get('customer_address_id')" class="mt-1" />
-                            <x-input-error :messages="$errors->get('delivery_address')" class="mt-1" />
-                        </div>
-                    @endif
-                </div>
-            </div>
-
-            <!-- Data Penyewa -->
-            <section id="section-identity" class="card-tendaku rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm">
-                <div class="flex items-center gap-3 px-5 sm:px-6 pt-5 sm:pt-6">
-                    <span class="w-8 h-8 rounded-full bg-avocado-700 text-white font-bold flex items-center justify-center shrink-0">1</span>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h2 class="text-lg font-bold text-darkbrown-900 font-heading leading-tight">Data penyewa</h2>
-                            @if ($isLoggedIn)
-                                <span class="text-[10px] font-semibold text-avocado-800 bg-avocado-100 border border-avocado-200 px-2 py-0.5 rounded-md">
-                                    Akun Terhubung
-                                </span>
-                            @endif
-                        </div>
-                        <p class="text-sm text-darkbrown-500">
-                            @if ($isLoggedIn)
-                                Terhubung dengan {{ $user->email }}. Dipakai vendor untuk mencocokkan identitas saat serah terima alat.
-                            @else
-                                Dipakai vendor untuk mencocokkan identitas saat serah terima alat.
-                            @endif
-                        </p>
-                    </div>
-                </div>
-
-                <div class="p-5 sm:p-6 space-y-4">
-                    @if ($isLoggedIn)
-                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                            <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5">
-                                <dt class="text-darkbrown-500 text-xs">Nama</dt>
-                                <dd class="font-bold text-darkbrown-900 truncate mt-0.5">{{ $user->name }}</dd>
-                            </div>
-                            @if (filled($user->phone))
-                                <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5">
-                                    <dt class="text-darkbrown-500 text-xs">WhatsApp</dt>
-                                    <dd class="font-bold text-darkbrown-900 mt-0.5">{{ $user->phone }}</dd>
-                                </div>
-                            @endif
-                            @if (filled($user->nik))
-                                <div class="rounded-xl bg-wheat-50 border border-wheat-200 px-3.5 py-2.5 sm:col-span-2">
-                                    <dt class="text-darkbrown-500 text-xs">NIK</dt>
-                                    <dd class="font-mono font-bold text-darkbrown-900 mt-0.5">{{ $maskedNik }}</dd>
-                                </div>
-                            @endif
-                        </dl>
-
-                        @if ($needsPhone || $needsNik)
-                            <div class="space-y-3">
-                                @if ($needsNik)
-                                    <div>
-                                        <label for="nik" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">NIK (nomor KTP)</label>
-                                        <div class="relative">
-                                            <input type="text" id="nik" name="nik" x-model="nikInput"
-                                                   @input="nikInput = nikInput.replace(/\D/g, '').slice(0, 16)"
-                                                   inputmode="numeric" maxlength="16" autocomplete="off" placeholder="16 digit angka"
-                                                   value="{{ old('nik') }}"
-                                                   class="input-tendaku w-full py-2.5 px-3 rounded-xl text-sm font-mono tracking-wide border-wheat-300 pr-14" required>
-                                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono"
-                                                  :class="nikInput.length === 16 ? 'text-avocado-700 font-bold' : 'text-darkbrown-400'"
-                                                  x-text="nikInput.length + '/16'"></span>
-                                        </div>
-                                        <p x-show="nikInput.length > 0 && nikInput.length < 16" x-cloak class="mt-1 text-sm text-red-700">NIK harus 16 digit angka.</p>
-                                        <x-input-error :messages="$errors->get('nik')" class="mt-1" />
-                                    </div>
-                                @endif
-
-                                @if ($needsPhone)
-                                    <div>
-                                        <label for="phone" class="block text-sm font-semibold text-darkbrown-800 mb-1.5">No. WhatsApp aktif</label>
-                                        <input type="tel" id="phone" name="phone" value="{{ old('phone') }}"
-                                               inputmode="tel" autocomplete="tel" placeholder="08xxxxxxxxxx" required
-                                               class="input-tendaku w-full py-2.5 px-3 rounded-xl text-sm font-medium border-wheat-300">
-                                        <x-input-error :messages="$errors->get('phone')" class="mt-1" />
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
-
-                        <div class="flex items-start gap-2.5 rounded-xl bg-sunglow-100/70 border border-sunglow-300/70 px-3.5 py-3 text-sm text-darkbrown-800">
-                            <i data-lucide="credit-card" class="w-5 h-5 text-goldenrod-700 shrink-0 mt-0.5"></i>
-                            <span>Bawa <strong>KTP asli</strong> dan nomor booking saat mengambil alat. KTP ditahan toko selama masa sewa dan dikembalikan setelah alat diperiksa.</span>
-                        </div>
-
-                        @if (filled($user->phone))
-                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-avocado-50 border border-avocado-200 px-3.5 py-3 text-sm text-avocado-950">
-                                <span>
-                                    Pengingat pengembalian (H-1 &amp; hari pengembalian) dikirim ke <strong>{{ $user->phone }}</strong>.
-                                </span>
-                                <a href="{{ route('profile') }}" class="font-bold text-avocado-800 underline underline-offset-2 hover:text-avocado-900 shrink-0">
-                                    Ubah di profil
-                                </a>
-                            </div>
-                        @endif
-                    @else
-                        {{-- Guest form --}}
-                        <div class="p-3 rounded-xl bg-sunglow-50 border border-sunglow-200">
-                            <p class="text-xs font-bold text-darkbrown-900">Pemesanan tanpa akun (guest)</p>
-                            <p class="text-[11px] text-darkbrown-600 mt-0.5">
-                                Sudah punya akun?
-                                <a href="{{ route('login') }}" class="font-bold text-avocado-700 underline">Masuk di sini</a>
-                                agar data terisi otomatis dan riwayat sewa tersimpan.
-                            </p>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div class="sm:col-span-2">
-                                <label for="guest_name" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                                    Nama Lengkap *
-                                </label>
-                                <input type="text" id="guest_name" name="guest_name" value="{{ old('guest_name') }}"
-                                       required placeholder="Sesuai KTP"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                                <x-input-error :messages="$errors->get('guest_name')" class="mt-1" />
-                            </div>
-
-                            <div>
-                                <label for="guest_phone" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                                    Nomor WhatsApp *
-                                </label>
-                                <input type="text" id="guest_phone" name="guest_phone" value="{{ old('guest_phone') }}"
-                                       required placeholder="08xxxxxxxxxx"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                                <x-input-error :messages="$errors->get('guest_phone')" class="mt-1" />
-                            </div>
-
-                            <div>
-                                <label for="guest_id_number" class="block text-[11px] font-bold uppercase tracking-wider text-darkbrown-600 mb-1.5">
-                                    NIK (KTP) *
-                                </label>
-                                <input type="text" id="guest_id_number" name="guest_id_number" value="{{ old('guest_id_number') }}"
-                                       required placeholder="16 digit NIK"
-                                       class="input-tendaku w-full py-2.5 px-3 rounded-xl text-xs font-medium border-wheat-300" />
-                                <x-input-error :messages="$errors->get('guest_id_number')" class="mt-1" />
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </section>
-
-        </div>
-
-        <!-- Kolom Kanan: Ringkasan Pesanan -->
-        <div class="lg:col-span-5">
-            <div class="lg:sticky lg:top-24 space-y-4">
-                <div class="card-tendaku rounded-2xl bg-white border border-wheat-200 shadow-tendaku overflow-hidden">
-                    <div class="relative aspect-[16/9] bg-wheat-100">
-                        <img src="{{ $image }}" alt="{{ $package->name }}" class="w-full h-full object-cover" />
-                        <span class="absolute top-3 left-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-darkbrown-900/85 text-wheat-200 backdrop-blur-md"
-                              x-text="durationDays > 0 ? durationDays + ' Hari Sewa' : 'Pilih Jadwal'">
-                            {{ $rentalDays }} Hari Sewa
-                        </span>
-                    </div>
-
-                    <div class="p-5 space-y-4">
-                        <div>
-                            <p class="text-[11px] font-semibold text-goldenrod-800 flex items-center gap-1.5">
-                                <i data-lucide="store" class="w-3.5 h-3.5"></i>
-                                {{ $vendorName }}
-                            </p>
-                            <h2 class="text-base font-extrabold text-darkbrown-900 font-heading mt-1">
-                                <span x-text="packageName">{{ $package->name }}</span>
-                            </h2>
-                        </div>
-
-                        <ul class="text-[11px] text-darkbrown-600 space-y-1 max-h-40 overflow-y-auto pr-1">
-                            <template x-for="item in packageItems" :key="item.id">
-                                <li class="flex items-center justify-between gap-2 py-1 border-b border-wheat-100 last:border-0">
-                                    <span class="truncate" x-text="item.name"></span>
-                                    <span class="font-bold text-darkbrown-900 shrink-0" x-text="item.qty + 'x'"></span>
-                                </li>
-                            </template>
-                        </ul>
-
-                        <div class="pt-3 border-t border-wheat-200 space-y-2 text-xs">
-                            <div class="flex items-center justify-between">
-                                <span class="text-darkbrown-600">Harga paket / 24 jam</span>
-                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(packagePrice)">Rp {{ number_format($price, 0, ',', '.') }}</span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-darkbrown-600">
-                                    Subtotal (<span x-text="durationDays + ' hari sewa'">{{ $rentalDays }} hari sewa</span>)
-                                </span>
-                                <span class="font-bold text-darkbrown-900" x-text="formatRupiah(subtotal)">
-                                    Rp {{ number_format($price * $rentalDays, 0, ',', '.') }}
-                                </span>
-                            </div>
-                            <div class="flex items-center justify-between">
-                                <span class="text-darkbrown-600">Ongkos kirim</span>
-                                <span class="font-bold text-darkbrown-900 text-right" x-text="method === 'self_pickup' ? 'Gratis — Ambil di Toko' : formatRupiah(deliveryFee)">—</span>
-                            </div>
-                            <div x-show="shippingReady" x-cloak class="flex items-center justify-between">
-                                <span>Berat total paket</span><span x-text="shipping ? measurement(shipping.total_weight_kg) + ' kg' : '—'"></span>
-                            </div>
-                            <div x-show="method === 'delivery' && shippingReady" x-cloak class="flex items-center justify-between">
-                                <span>Jarak pengiriman</span><span x-text="shipping?.distance_km == null ? '—' : measurement(shipping.distance_km) + ' km'"></span>
-                            </div>
-                            <div x-show="!shippingReady" x-cloak role="status" aria-live="polite" class="rounded-xl border border-wheat-200 bg-wheat-50 p-3 text-darkbrown-600">
-                                <span x-text="shippingMessage"></span>
-                                <button type="button" x-show="shippingState === 'error'" @click="scheduleShipping()" class="block mt-2 font-bold text-avocado-700">Coba lagi</button>
-                            </div>
-                            <div class="flex items-center justify-between pt-2 border-t border-wheat-200">
-                                <span class="font-bold text-darkbrown-900">Total Bayar</span>
-                                <span class="text-lg font-extrabold text-avocado-800 font-heading"
-                                      x-text="formatRupiah(grandTotal)">
-                                    —
-                                </span>
-                            </div>
-                        </div>
-
-                        <div x-show="formError" x-cloak role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800" x-text="formError"></div>
-                        <div x-show="shippingNeedsApproval" x-cloak class="rounded-xl border border-wheat-300 bg-wheat-50 p-3 text-sm text-darkbrown-700 space-y-2">
-                            <p>Periksa rincian paket dan total terbaru sebelum melanjutkan.</p>
-                            <button type="button" @click="approveShippingChange()" class="font-bold text-avocado-700">Saya setuju dengan total terbaru</button>
-                        </div>
-                        <button type="submit" disabled
-                                :disabled="!canSubmit"
-                                class="btn-tendaku-primary w-full py-3 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span x-text="isSubmitting ? 'Membuat pesanan...' : 'Buat Pesanan & Lanjut Bayar'"></span>
-                        </button>
-
-                        <p class="text-[10px] text-darkbrown-500 text-center leading-relaxed">
-                            Dengan menekan tombol di atas, Anda menyetujui syarat sewa Tendaku.
-                            Pembayaran dilunasi sebelum pengambilan unit.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="card-tendaku rounded-2xl bg-white p-4 border border-wheat-200 text-[11px] text-darkbrown-600 space-y-2">
-                    <p class="flex items-center gap-2">
-                        <i data-lucide="calendar-check" class="w-3.5 h-3.5 text-avocado-600 shrink-0"></i>
-                        <span>
-                            Mulai <strong x-text="formatDateIndo(pickupDate) + ' ' + pickupTime"></strong> &middot; kembali <strong x-text="formatDateIndo(returnDate) + ' ' + returnTime"></strong>
-                        </span>
-                    </p>
-                    <p class="flex items-center gap-2">
-                        <i data-lucide="shield-check" class="w-3.5 h-3.5 text-avocado-600 shrink-0"></i>
-                        Jaminan KTP asli, tanpa deposit uang tunai.
-                    </p>
                 </div>
             </div>
         </div>
-        </form>
-
+        @include('customer.booking.partials.create.mobile-checkout-bar')
         @include('customer.booking.partials.create.add-address-modal')
     </div>
 </x-layouts.customer>

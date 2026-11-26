@@ -1,4 +1,4 @@
-<div class="space-y-6" wire:poll.30s>
+<div class="space-y-6" wire:poll.60s.visible>
     @php
         $formatRupiah = fn (float $value): string => 'Rp '.number_format($value, 0, ',', '.');
 

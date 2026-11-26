@@ -1,4 +1,4 @@
-<div wire:poll.10s class="relative" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false">
+<div wire:poll.20s.visible class="relative" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false">
     <!-- Notification Bell Button -->
     <button @click="open = !open; $nextTick(() => { if (typeof window.renderLucideIcons === 'function') window.renderLucideIcons(); })"
             type="button"

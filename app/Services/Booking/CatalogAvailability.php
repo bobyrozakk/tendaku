@@ -53,4 +53,32 @@ class CatalogAvailability
             return null;
         }
     }
+
+    /**
+     * Hitung sisa stok untuk beberapa master item sekaligus dalam rentang tanggal.
+     *
+     * @param  array<int>  $masterItemIds
+     * @param  array{start_date: string, end_date: string}|null  $dateRange
+     * @return array<int, int|null>
+     */
+    public function batchStock(array $masterItemIds, ?array $dateRange): array
+    {
+        if (empty($masterItemIds)) {
+            return [];
+        }
+
+        if ($dateRange === null) {
+            return array_fill_keys($masterItemIds, null);
+        }
+
+        try {
+            return $this->availabilityService->checkBatchAvailabilityMap(
+                $masterItemIds, $dateRange['start_date'], $dateRange['end_date']
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return array_fill_keys($masterItemIds, null);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-<div id="kelola-vendor" class="scroll-mt-24 card-tendaku overflow-hidden" wire:poll.15s>
+<div id="kelola-vendor" class="scroll-mt-24 card-tendaku overflow-hidden" wire:poll.30s.visible>
     <!-- Header, Filter, & Pencarian -->
     <div class="border-b border-wheat-200 bg-white p-4 sm:p-5">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">

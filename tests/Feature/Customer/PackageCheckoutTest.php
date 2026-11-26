@@ -123,13 +123,13 @@ class PackageCheckoutTest extends TestCase
 
     public function test_guest_cannot_access_checkout_and_is_redirected_to_login(): void
     {
-        $this->get(route('customer.packages.checkout', $this->package->id))
+        $this->get(route('customer.packages.booking', $this->package->id))
             ->assertRedirect(route('login'));
     }
 
     public function test_guest_cannot_submit_checkout_and_is_redirected_to_login(): void
     {
-        $this->post(route('customer.packages.checkout.store', $this->package->id), [
+        $this->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => Carbon::tomorrow()->toDateString(),
             'pickup_method' => 'self_pickup',
@@ -143,21 +143,20 @@ class PackageCheckoutTest extends TestCase
         $vendorStaff = User::factory()->create(['role' => 'vendor_owner']);
 
         $this->actingAs($vendorStaff)
-            ->get(route('customer.packages.checkout', $this->package->id))
+            ->get(route('customer.packages.booking', $this->package->id))
             ->assertRedirect(route('dashboard'));
     }
 
     public function test_checkout_page_renders_package_summary_for_customer(): void
     {
         $response = $this->actingAs($this->customer)
-            ->get(route('customer.packages.checkout', $this->package->id));
+            ->get(route('customer.packages.booking', $this->package->id));
 
         $response->assertOk();
         $response->assertSee('Paket Camping 2 Hari');
-        $response->assertSee('Rp 300.000');
+        $response->assertViewHas('package', fn ($package): bool => (float) $package->price === 300000.0);
         $response->assertSee('Tenda Dome 4P');
         $response->assertDontSee('BCA Virtual Account');
-        $response->assertDontSee('QRIS');
         $response->assertSee($this->customer->name);
     }
 
@@ -166,7 +165,7 @@ class PackageCheckoutTest extends TestCase
         $pickupDate = Carbon::tomorrow();
 
         $response = $this->actingAs($this->customer)
-            ->post(route('customer.packages.checkout.store', $this->package->id), [
+            ->post(route('customer.packages.booking.store', $this->package->id), [
                 'package_id' => $this->package->id,
                 'pickup_date' => $pickupDate->toDateString(),
                 'pickup_method' => 'self_pickup',
@@ -200,7 +199,7 @@ class PackageCheckoutTest extends TestCase
     public function test_customer_checkout_requires_valid_pickup_date(): void
     {
         $response = $this->actingAs($this->customer)
-            ->post(route('customer.packages.checkout.store', $this->package->id), [
+            ->post(route('customer.packages.booking.store', $this->package->id), [
                 'package_id' => $this->package->id,
                 'pickup_method' => 'self_pickup',
             ]);
@@ -217,13 +216,13 @@ class PackageCheckoutTest extends TestCase
         ]);
 
         $response = $this->actingAs($customerWithoutAddress)
-            ->post(route('customer.packages.checkout.store', $this->package->id), [
+            ->post(route('customer.packages.booking.store', $this->package->id), [
                 'package_id' => $this->package->id,
                 'pickup_date' => Carbon::tomorrow()->toDateString(),
                 'pickup_method' => 'delivery',
             ]);
 
-        $response->assertRedirect(route('customer.packages.checkout', $this->package->id));
+        $response->assertRedirect(route('customer.packages.booking', $this->package->id));
         $response->assertSessionHas('warning');
         $this->assertDatabaseCount('rentals', 0);
     }
@@ -258,7 +257,7 @@ class PackageCheckoutTest extends TestCase
             ->assertJsonPath('delivery_fee', 27680)->json();
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
-        $response = $this->post(route('customer.packages.checkout.store', $this->package->id), $payload + [
+        $response = $this->post(route('customer.packages.booking.store', $this->package->id), $payload + [
             'expected_delivery_fee' => $preview['delivery_fee'],
             'expected_shipping_context' => $preview['shipping_context'],
             'checkout_attempt_id' => (string) Str::uuid(),
@@ -288,7 +287,7 @@ class PackageCheckoutTest extends TestCase
         $this->package->packageItems()->where('master_item_id', $this->tenda->id)->update(['quantity' => 3]);
 
         $response = $this->actingAs($this->customer)
-            ->post(route('customer.packages.checkout.store', $this->package->id), [
+            ->post(route('customer.packages.booking.store', $this->package->id), [
                 'package_id' => $this->package->id,
                 'pickup_date' => Carbon::tomorrow()->toDateString(),
                 'pickup_method' => 'self_pickup',
@@ -304,11 +303,11 @@ class PackageCheckoutTest extends TestCase
         $this->tenda->delete();
 
         $this->actingAs($this->customer)
-            ->get(route('customer.packages.checkout', $this->package->id))
+            ->get(route('customer.packages.booking', $this->package->id))
             ->assertNotFound();
 
         $this->actingAs($this->customer)
-            ->post(route('customer.packages.checkout.store', $this->package->id), [
+            ->post(route('customer.packages.booking.store', $this->package->id), [
                 'package_id' => $this->package->id,
                 'pickup_date' => Carbon::tomorrow()->toDateString(),
                 'pickup_method' => 'self_pickup',
@@ -327,7 +326,7 @@ class PackageCheckoutTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-10-27 00:00:00'));
 
-        $response = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $response = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-28',
             'pickup_time' => '05:00',
@@ -353,7 +352,7 @@ class PackageCheckoutTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-10-27 00:00:00'));
 
-        $response = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $response = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-28',
             'pickup_time' => '05:00',
@@ -375,7 +374,7 @@ class PackageCheckoutTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-10-27 00:00:00'));
 
-        $response = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $response = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-28',
             'pickup_time' => '05:00',
@@ -397,7 +396,7 @@ class PackageCheckoutTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-10-30 00:00:00'));
 
-        $response = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $response = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-31',
             'pickup_time' => '05:00',
@@ -421,7 +420,7 @@ class PackageCheckoutTest extends TestCase
     {
         Carbon::setTestNow(Carbon::parse('2026-12-30 00:00:00'));
 
-        $response = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $response = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-12-31',
             'pickup_time' => '05:00',
@@ -446,7 +445,7 @@ class PackageCheckoutTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-10-27 00:00:00'));
 
         // Case A: Tanggal sama dan jam sama
-        $responseA = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $responseA = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-28',
             'pickup_time' => '05:00',
@@ -459,7 +458,7 @@ class PackageCheckoutTest extends TestCase
         $this->assertDatabaseCount('rentals', 0);
 
         // Case B: Tanggal sama, jam pengembalian lebih awal
-        $responseB = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $responseB = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-28',
             'pickup_time' => '05:00',
@@ -472,7 +471,7 @@ class PackageCheckoutTest extends TestCase
         $this->assertDatabaseCount('rentals', 0);
 
         // Case C: Tanggal pengembalian sebelum tanggal pengambilan
-        $responseC = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $responseC = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-28',
             'pickup_time' => '05:00',
@@ -485,7 +484,7 @@ class PackageCheckoutTest extends TestCase
         $this->assertDatabaseCount('rentals', 0);
 
         // Case D: Tanggal pengambilan di masa lalu
-        $responseD = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $responseD = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-26',
             'pickup_time' => '05:00',
@@ -503,7 +502,7 @@ class PackageCheckoutTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-10-27 00:00:00'));
 
         // Query 3 hari (72 jam)
-        $response3Days = $this->actingAs($this->customer)->get(route('customer.packages.checkout', [
+        $response3Days = $this->actingAs($this->customer)->get(route('customer.packages.booking', [
             'id' => $this->package->id,
             'pickup_date' => '2026-10-28',
             'pickup_time' => '05:00',
@@ -514,11 +513,9 @@ class PackageCheckoutTest extends TestCase
         $response3Days->assertOk();
         $response3Days->assertViewHas('rentalDays', 3);
         $response3Days->assertViewHas('subtotal', 900000.0);
-        $response3Days->assertSee('3 hari sewa');
-        $response3Days->assertSee('Rp 900.000');
 
         // Query 1 hari (24 jam)
-        $response1Day = $this->actingAs($this->customer)->get(route('customer.packages.checkout', [
+        $response1Day = $this->actingAs($this->customer)->get(route('customer.packages.booking', [
             'id' => $this->package->id,
             'pickup_date' => '2026-10-28',
             'pickup_time' => '05:00',
@@ -529,8 +526,6 @@ class PackageCheckoutTest extends TestCase
         $response1Day->assertOk();
         $response1Day->assertViewHas('rentalDays', 1);
         $response1Day->assertViewHas('subtotal', 300000.0);
-        $response1Day->assertSee('1 hari sewa');
-        $response1Day->assertSee('Rp 300.000');
     }
 
     public function test_scenario_8_frontend_and_backend_calculation_consistency_with_ceil_rounding(): void
@@ -544,7 +539,7 @@ class PackageCheckoutTest extends TestCase
         $returnTime = '06:00';
 
         // 1. Konsistensi tampilan frontend / checkout view
-        $responseView = $this->actingAs($this->customer)->get(route('customer.packages.checkout', [
+        $responseView = $this->actingAs($this->customer)->get(route('customer.packages.booking', [
             'id' => $this->package->id,
             'pickup_date' => $pickupDate,
             'pickup_time' => $pickupTime,
@@ -555,11 +550,9 @@ class PackageCheckoutTest extends TestCase
         $responseView->assertOk();
         $responseView->assertViewHas('rentalDays', 2);
         $responseView->assertViewHas('subtotal', 600000.0);
-        $responseView->assertSee('2 hari sewa');
-        $responseView->assertSee('Rp 600.000');
 
         // 2. Konsistensi backend penyimpanan rental
-        $responseStore = $this->actingAs($this->customer)->post(route('customer.packages.checkout.store', $this->package->id), [
+        $responseStore = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [
             'package_id' => $this->package->id,
             'pickup_date' => $pickupDate,
             'pickup_time' => $pickupTime,

@@ -352,6 +352,69 @@ class AvailabilityServiceTest extends TestCase
         $this->assertTrue($result['items'][0]['is_available']);
     }
 
+    public function test_daily_availability_marks_partial_and_fully_booked_days(): void
+    {
+        $unit1 = $this->createUnit('TD-001');
+        $unit2 = $this->createUnit('TD-002');
+
+        // 12-13 Oktober: 1 unit terpakai; 13 Oktober: unit kedua ikut terpakai.
+        $this->createRentalDetail($this->createRental('2026-10-12', '2026-10-13', 'confirmed'), $unit1);
+        $this->createRentalDetail($this->createRental('2026-10-13', '2026-10-13', 'picked_up'), $unit2);
+
+        $result = $this->service->dailyAvailability($this->item->id, '2026-10-10', '2026-10-15');
+
+        $this->assertSame(2, $result['total']);
+        $this->assertSame(2, $result['days']['2026-10-11']);
+        $this->assertSame(1, $result['days']['2026-10-12']);
+        $this->assertSame(0, $result['days']['2026-10-13']);
+        $this->assertSame(2, $result['days']['2026-10-14']);
+        $this->assertCount(6, $result['days']);
+    }
+
+    public function test_daily_availability_ignores_cancelled_and_expired_pending_bookings(): void
+    {
+        $unit = $this->createUnit('TD-001');
+
+        $this->createRentalDetail($this->createRental('2026-10-12', '2026-10-12', 'cancelled'), $unit);
+        $this->createRentalDetail(
+            $this->createRental('2026-10-13', '2026-10-13', 'pending', Carbon::now()->subHour()),
+            $unit
+        );
+        $this->createRentalDetail(
+            $this->createRental('2026-10-14', '2026-10-14', 'pending', Carbon::now()->addHour()),
+            $unit
+        );
+
+        $days = $this->service->dailyAvailability($this->item->id, '2026-10-10', '2026-10-15')['days'];
+
+        $this->assertSame(1, $days['2026-10-12']);
+        $this->assertSame(1, $days['2026-10-13']);
+        $this->assertSame(0, $days['2026-10-14']);
+    }
+
+    public function test_daily_availability_clamps_past_start_date_to_today(): void
+    {
+        $this->createUnit('TD-001');
+
+        $days = $this->service->dailyAvailability($this->item->id, '2026-10-01', '2026-10-12')['days'];
+
+        $this->assertSame('2026-10-10', array_key_first($days));
+        $this->assertSame('2026-10-12', array_key_last($days));
+    }
+
+    public function test_product_page_shows_availability_calendar_with_booked_dates(): void
+    {
+        $unit = $this->createUnit('TD-001');
+        $this->createRentalDetail($this->createRental('2026-10-14', '2026-10-15', 'confirmed'), $unit);
+
+        $this->get(route('customer.product.show', $this->item->id))
+            ->assertOk()
+            ->assertSee('Kalender ketersediaan')
+            ->assertSee('14 Oktober 2026: semua unit sudah dibooking')
+            ->assertSee('15 Oktober 2026: semua unit sudah dibooking')
+            ->assertSee('16 Oktober 2026: tersedia');
+    }
+
     private function createUnit(string $code, string $status = 'available', string $condition = 'good'): ItemUnit
     {
         return ItemUnit::query()->create([

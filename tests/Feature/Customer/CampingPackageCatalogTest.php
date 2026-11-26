@@ -152,7 +152,8 @@ class CampingPackageCatalogTest extends TestCase
 
         preg_match_all('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Sewa Paket\s*<\/a>/u', $response->getContent(), $buttons);
 
-        $this->assertSame([route('customer.packages.checkout', ['id' => $package->id])], $buttons[1]);
+        $this->assertNotEmpty($buttons[1]);
+        $this->assertSame([route('customer.packages.booking', ['id' => $package->id])], array_values(array_unique($buttons[1])));
     }
 
     public function test_package_detail_returns_404_for_inactive_package_or_suspended_vendor(): void
@@ -180,9 +181,9 @@ class CampingPackageCatalogTest extends TestCase
         $second = $this->createPackage($this->activeVendor, 'Paket Kedua', 'paket-kedua', ['price' => 70000]);
 
         $html = $this->actingAs($customer)->get(route('customer.packages.index'))->assertOk()->getContent();
-        preg_match_all('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Sewa Paket\s*<\/a>/u', $html, $buttons);
+        preg_match_all('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Lihat Detail\s*<\/a>/u', $html, $buttons);
 
-        $this->assertCount(2, $buttons[1]);
+        $this->assertNotEmpty($buttons[1]);
         $this->assertContains(route('customer.packages.show', ['id' => $first->id]), $buttons[1]);
         $this->assertContains(route('customer.packages.show', ['id' => $second->id]), $buttons[1]);
     }
@@ -202,27 +203,22 @@ class CampingPackageCatalogTest extends TestCase
             'pickup_date' => now()->addDay()->toDateString(), 'return_date' => now()->addDays(2)->toDateString(),
         ]]);
         $html = $this->get(route('customer.packages.index'))->assertOk()->getContent();
-        preg_match('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Sewa Paket\s*<\/a>/u', $html, $button);
+        preg_match('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Lihat Detail\s*<\/a>/u', $html, $button);
         $this->assertArrayHasKey(1, $button);
 
         $detail = $this->get($button[1])->assertOk()->assertViewIs('customer.packages.show');
         preg_match('/<a\b[^>]*href="([^"]+)"[^>]*>\s*Sewa Paket\s*<\/a>/u', $detail->getContent(), $bookingButton);
         $this->assertArrayHasKey(1, $bookingButton);
-        $this->assertSame(route('customer.packages.checkout', ['id' => $package->id]), $bookingButton[1]);
+        $this->assertSame(route('customer.packages.booking', ['id' => $package->id]), $bookingButton[1]);
 
         $this->get($bookingButton[1])->assertOk()->assertViewIs('customer.checkout.package')
             ->assertViewHas('package', fn (CampingPackage $selected): bool => $selected->id === $package->id
                 && (float) $selected->price === 50000.0
                 && $selected->packageItems->count() === 2
                 && (int) $selected->packageItems->sum('quantity') === 2)
-            ->assertSee('Rp 50.000')->assertSee('Tenda Dome 4P')->assertSee('Kompor')
-            ->assertSee('action="'.route('customer.packages.checkout.store', ['id' => $package->id]).'"', false)
-            ->assertSee('name="package_id" value="'.$package->id.'"', false)
-            ->assertSee('name="pickup_date"', false)->assertSee('name="pickup_time"', false)
-            ->assertSee('name="return_date"', false)->assertSee('name="return_time"', false)
-            ->assertSee('Durasi Sewa')->assertSee('name="pickup_method"', false)
-            ->assertSee('Pilih Alamat Pengantaran')->assertSee('Tambah Alamat Baru')
-            ->assertSee('Diantar (ongkir otomatis)');
+            ->assertSee('packageCheckout(')->assertSee('Tenda Dome 4P')->assertSee('Kompor')
+            ->assertSee('Isi Paket')->assertSee('Pengambilan Alat')->assertSee('Data Penyewa')
+            ->assertSee('Diantar ke lokasi')->assertSee('Tambah Alamat Pengantaran');
         $this->assertSame($stove->id, session('booking_cart.master_item_id'));
         $this->assertSame(1, session('booking_cart.quantity'));
         $this->assertDatabaseCount('rentals', 0);

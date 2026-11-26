@@ -134,19 +134,22 @@
                 Bawa KTP asli dan tunjukkan kode booking berikut kepada kasir.
             @endif
         </p>
-        <p class="mt-2 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 font-mono text-sm font-bold text-darkbrown-900">
-            <i data-lucide="hash" class="h-4 w-4 text-darkbrown-500"></i>
-            {{ $rental->booking_code }}
-        </p>
+        <button type="button" x-data="{ copied: false }"
+                @click="navigator.clipboard?.writeText(@js($rental->booking_code)); copied = true; setTimeout(() => copied = false, 2000)"
+                aria-label="Salin kode booking {{ $rental->booking_code }}"
+                class="mt-2 inline-flex items-center gap-3 rounded-lg border border-wheat-200 bg-white px-3 py-2 font-mono text-sm font-bold text-darkbrown-900 transition hover:border-avocado-400">
+            <span>{{ $rental->booking_code }}</span>
+            <span class="font-sans text-xs font-bold" :class="copied ? 'text-avocado-700' : 'text-avocado-800 underline underline-offset-2'" x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
+        </button>
 
         <div class="mt-4 flex flex-col gap-2 border-t border-wheat-200 pt-3 sm:flex-row sm:items-center">
             <a href="{{ route('booking.receipt', $rental->booking_code) }}"
                class="inline-flex items-center justify-center gap-2 rounded-xl border border-wheat-300 bg-white px-4 py-2.5 text-sm font-semibold text-darkbrown-800 transition hover:bg-wheat-100">
                 <i data-lucide="receipt-text" class="h-4 w-4"></i>
-                Lihat Receipt Pesanan
+                Lihat Resi Pesanan
             </a>
 
-            <div x-show="status === 'confirmed' || (status === 'pending' && isPaid)" x-cloak>
+            <div x-show="status === 'confirmed' || (status === 'pending' && isPaid)" x-cloak class="sm:ml-auto">
                 <div x-data="{ reason: @js(old('cancel_reason', '')) }"
                      x-init="@if ($errors->hasAny(['cancel_reason', 'cancel_note', 'confirm_cancel'])) $nextTick(() => $refs.cancelDialog.showModal()) @endif">
                     <button type="button" @click="$refs.cancelDialog.showModal()"
@@ -169,14 +172,16 @@
                             </div>
 
                             <div>
-                                <label for="cancel_reason" class="mb-1.5 block text-sm font-semibold text-darkbrown-800">Alasan pembatalan</label>
-                                <select id="cancel_reason" name="cancel_reason" x-model="reason" required
-                                        class="w-full rounded-xl border border-wheat-300 bg-white px-3 py-2 text-sm text-darkbrown-900 focus:border-avocado-600 focus:ring-2 focus:ring-avocado-500/30">
-                                    <option value="">Pilih alasan…</option>
-                                    @foreach (config('booking.cancel_reasons', []) as $key => $label)
-                                        <option value="{{ $key }}">{{ $label }}</option>
-                                    @endforeach
-                                </select>
+                                <span class="mb-1.5 block text-sm font-semibold text-darkbrown-800">Alasan pembatalan</span>
+                                <x-dropdown-select
+                                    name="cancel_reason"
+                                    required
+                                    placeholder="Pilih alasan…"
+                                    label="Alasan pembatalan"
+                                    :options="config('booking.cancel_reasons', [])"
+                                    :value="old('cancel_reason', '')"
+                                    @dropdown-change="reason = $event.detail.value"
+                                />
                                 @error('cancel_reason') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
                             </div>
 

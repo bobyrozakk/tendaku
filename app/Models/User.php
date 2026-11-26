@@ -28,6 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'role',
         'is_active',
         'cart',
+        'avatar_url',
     ];
 
     protected $hidden = [
@@ -81,5 +82,25 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->addresses()->where('is_default', true)->first()
             ?? $this->addresses()->latest('id')->first();
+    }
+
+    /**
+     * Get initials from user's name (e.g. "John Doe" -> "JD", "Admin" -> "A")
+     */
+    public function getInitialsAttribute(): string
+    {
+        $words = preg_split('/\s+/', trim((string) $this->name)) ?: [];
+        $initials = '';
+
+        foreach ($words as $word) {
+            if ($word !== '') {
+                $initials .= mb_substr($word, 0, 1);
+            }
+            if (mb_strlen($initials) >= 2) {
+                break;
+            }
+        }
+
+        return mb_strtoupper($initials ?: 'U');
     }
 }

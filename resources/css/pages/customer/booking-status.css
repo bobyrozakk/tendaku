@@ -255,6 +255,41 @@
     }
 }
 
+/* Daftar riwayat sebagai bar di atas konten (layout dua kolom) */
+.status-list--bar .bk-body.is-open {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+}
+@media (min-width: 768px) {
+    .status-list--bar .bk-body.is-open {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .status-list--bar .bk-body.is-open > :first-child,
+    .status-list--bar .bk-body.is-open > :last-child {
+        grid-column: 1 / -1;
+    }
+}
+@media (min-width: 1024px) {
+    .status-list.status-list--bar {
+        position: static;
+        max-height: none;
+        overflow: visible;
+        padding: 0;
+    }
+    .status-list--bar .bk-toggle {
+        display: flex;
+    }
+    .status-list--bar .bk-body {
+        display: none;
+        margin-top: 0.75rem;
+    }
+    .status-list--bar .bk-body.is-open {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .va-loading {
         animation: none;

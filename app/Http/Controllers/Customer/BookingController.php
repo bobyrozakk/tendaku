@@ -40,7 +40,7 @@ class BookingController extends Controller
     /**
      * Riwayat sewa customer (harus login).
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
         Rental::query()
             ->where('user_id', Auth::id())
@@ -58,11 +58,17 @@ class BookingController extends Controller
 
         $status = $validated['status'] ?? '';
 
+        if ($status === 'returned') {
+            return redirect()->route('customer.booking.index', ['status' => 'completed']);
+        }
+
         $rentals = Rental::query()
             ->where('user_id', Auth::id())
             ->when(
                 $status !== '',
-                fn ($query) => $query->where('status', $status)
+                fn ($query) => $status === 'completed'
+                    ? $query->whereIn('status', ['completed', 'returned'])
+                    : $query->where('status', $status)
             )
             ->with([
                 'vendor:id,name,phone,city',

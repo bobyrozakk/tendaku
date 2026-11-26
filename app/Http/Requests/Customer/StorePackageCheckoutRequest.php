@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validasi POST /paket-camping/{id}/checkout.
+ * Validasi POST /paket-camping/{id}/booking.
  */
 class StorePackageCheckoutRequest extends FormRequest
 {
@@ -32,6 +32,7 @@ class StorePackageCheckoutRequest extends FormRequest
             'return_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:pickup_date'],
             'return_time' => ['nullable', 'date_format:H:i'],
             'pickup_method' => ['nullable', 'in:self_pickup,delivery'],
+            'payment_option' => ['nullable', 'string', 'in:full,dp'],
             'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:255'],
             'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
             'guest_id_number' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],

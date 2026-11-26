@@ -27,7 +27,7 @@
     $suspendedVendorShare = $totalVendors > 0 ? ($suspendedVendorsCount / $totalVendors) * 100 : 0;
 @endphp
 
-<div class="space-y-5" wire:poll.15s>
+<div class="space-y-5" wire:poll.30s.visible>
     <!-- Filter & Ringkasan GMV -->
     <section class="card-tendaku overflow-hidden" aria-labelledby="gmv-filter-heading">
         <div class="flex flex-col gap-3 border-b border-wheat-200 bg-wheat-50/60 px-4 py-3.5 sm:px-5 xl:flex-row xl:items-end xl:justify-between">

@@ -92,28 +92,17 @@
 
         {{-- Dropdown Pemilih Spot Cuaca --}}
         <div class="w-full sm:w-64 shrink-0 rounded-xl bg-white/90 border border-wheat-200/90 p-2.5 shadow-2xs">
-            <label for="booking-weather-spot" class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-darkbrown-500 mb-1.5">
+            <span class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-darkbrown-500 mb-1.5">
                 <x-icon name="map-pin" class="w-3 h-3 text-avocado-600" />
                 Lokasi Cuaca
-            </label>
-            <div class="relative">
-                <select
-                    id="booking-weather-spot"
-                    wire:model.live="spot"
-                    class="w-full appearance-none rounded-lg bg-wheat-50/70 hover:bg-wheat-50 border border-wheat-200/80 py-2 pl-3 pr-8 text-xs font-bold text-darkbrown-900 focus:bg-white focus:border-avocado-500 focus:ring-2 focus:ring-avocado-500/20 transition-all cursor-pointer"
-                >
-                    @foreach ($spotGroups as $regionLabel => $regionSpots)
-                        <optgroup label="{{ $regionLabel }}">
-                            @foreach ($regionSpots as $spotKey => $spotLabel)
-                                <option value="{{ $spotKey }}">{{ $spotLabel }}</option>
-                            @endforeach
-                        </optgroup>
-                    @endforeach
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-darkbrown-400">
-                    <x-icon name="chevron-down" class="w-4 h-4" />
-                </div>
-            </div>
+            </span>
+            <x-dropdown-select
+                wire:model.live="spot"
+                grouped
+                size="sm"
+                label="Lokasi cuaca"
+                :options="$spotGroups"
+            />
         </div>
     </div>
 

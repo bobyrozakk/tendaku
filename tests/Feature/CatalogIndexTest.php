@@ -266,7 +266,7 @@ class CatalogIndexTest extends TestCase
 
     public function test_catalog_pagination(): void
     {
-        // Buat 15 item untuk menguji pagination 12 per halaman
+        // Buat 15 item untuk menguji paginasi 12 per halaman
         for ($i = 1; $i <= 15; $i++) {
             MasterItem::create([
                 'vendor_id' => $this->activeVendor->id,
@@ -280,9 +280,20 @@ class CatalogIndexTest extends TestCase
 
         $component = Livewire::test(CatalogIndex::class);
         $this->assertCount(12, $component->viewData('items')->items());
+        $component->assertSee('Barang Camping 01')
+            ->assertSee('Barang Camping 12')
+            ->assertDontSee('Barang Camping 13')
+            ->assertDontSee('Bagian 1')
+            ->assertDontSee('Bagian 2')
+            ->assertSee('data-lucide="chevron-left"', false)
+            ->assertSee('data-lucide="chevron-right"', false);
 
+        // Halaman 2: menampilkan alat ke 13-15 (3 alat)
         $component->call('setPage', 2);
         $this->assertCount(3, $component->viewData('items')->items());
+        $component->assertSee('Barang Camping 13')
+            ->assertSee('Barang Camping 15')
+            ->assertDontSee('Barang Camping 01');
     }
 
     public function test_product_detail_page_renders_with_real_data(): void

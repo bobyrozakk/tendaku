@@ -42,6 +42,11 @@ class GoogleAuthenticationTest extends TestCase
 
     public function test_google_redirect_uses_the_configured_app_host(): void
     {
+        config([
+            'app.url' => 'http://localhost',
+            'services.supabase.redirect_urls' => [],
+        ]);
+
         $response = $this->get('https://untrusted.example/auth/google/redirect');
         parse_str((string) parse_url((string) $response->headers->get('Location'), PHP_URL_QUERY), $query);
 

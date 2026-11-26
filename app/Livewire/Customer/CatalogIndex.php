@@ -10,6 +10,7 @@ use App\Services\Booking\CatalogAvailability;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -219,7 +220,6 @@ class CatalogIndex extends Component
 
         $totalCount = $result['total_count'] ?? 1;
 
-        // Update badge keranjang di navbar dan tampilkan notifikasi sukses
         $this->dispatch('cart-updated', count: $totalCount);
 
         $this->dispatch('notify',
@@ -231,16 +231,35 @@ class CatalogIndex extends Component
 
     public function render(CatalogAvailability $availability): View
     {
-        $categories = ItemCategory::withCount(['items' => function ($query) {
-            $query->publicCatalog();
-        }])->get();
+        $categories = collect(Cache::remember(
+            'catalog:filter-categories:v2',
+            now()->addMinutes(5),
+            fn (): array => ItemCategory::query()
+                ->select(['id', 'name', 'icon'])
+                ->withCount(['items' => fn ($query) => $query->publicCatalog()])
+                ->orderBy('name')
+                ->get()
+                ->map(fn (ItemCategory $category): array => [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'icon' => $category->icon,
+                    'items_count' => (int) $category->items_count,
+                ])
+                ->all()
+        ))->map(fn (array $row): object => (object) $row);
 
-        $vendors = Vendor::whereIn('status', ['active', 'approved'])
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $vendors = collect(Cache::remember(
+            'catalog:filter-vendors:v2',
+            now()->addMinutes(5),
+            fn (): array => Vendor::whereIn('status', ['active', 'approved'])
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(fn (Vendor $vendor): array => ['id' => $vendor->id, 'name' => $vendor->name])
+                ->all()
+        ))->map(fn (array $row): object => (object) $row);
 
         $itemsQuery = MasterItem::publicCatalog()
-            ->with(['category', 'vendor']);
+            ->with(['category:id,name', 'vendor:id,name,slug', 'units:id,master_item_id,condition,purchase_date']);
 
         $trimmedSearch = trim($this->search);
         if ($trimmedSearch !== '') {
@@ -276,19 +295,21 @@ class CatalogIndex extends Component
         $dateRange = $availability->dateRange($this->startDate, $this->endDate);
         $dateStockMap = [];
         if ($this->onlyAvailable) {
-            $candidateItems = (clone $itemsQuery)->setEagerLoads([])->get(['id']);
-            foreach ($candidateItems as $item) {
-                $dateStockMap[$item->id] = $availability->stock($item->id, $dateRange);
-            }
+            $candidateIds = (clone $itemsQuery)->setEagerLoads([])->pluck('id')->all();
+            $dateStockMap = $availability->batchStock($candidateIds, $dateRange);
             $availableIds = array_keys(array_filter($dateStockMap, fn (?int $stock): bool => $stock !== null && $stock > 0));
             $itemsQuery->whereIn('id', $availableIds);
         }
 
         $items = $itemsQuery->paginate(12);
+        $missingIds = [];
         foreach ($items as $item) {
             if (! array_key_exists($item->id, $dateStockMap)) {
-                $dateStockMap[$item->id] = $availability->stock($item->id, $dateRange);
+                $missingIds[] = $item->id;
             }
+        }
+        if (! empty($missingIds)) {
+            $dateStockMap += $availability->batchStock($missingIds, $dateRange);
         }
 
         return view('livewire.customer.catalog-index', [

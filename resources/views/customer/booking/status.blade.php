@@ -17,31 +17,33 @@
                         @if(isset($rental) && $rental)
                             <a href="{{ route('customer.booking.index') }}" class="hover:text-avocado-600 transition">Riwayat Sewa</a>
                             <span class="text-wheat-400">/</span>
-                            <span class="text-darkbrown-800 font-semibold">Status #{{ $rental->booking_code }}</span>
+                            <span class="text-darkbrown-800 font-semibold">Status Booking</span>
                         @else
                             <span class="text-darkbrown-800 font-semibold">Riwayat Sewa</span>
                         @endif
                     @else
                         <a href="{{ route('customer.catalog.index') }}" class="hover:text-avocado-600 transition">Katalog</a>
                         <span class="text-wheat-400">/</span>
-                        <span class="text-darkbrown-800 font-semibold">Status #{{ $rental->booking_code }}</span>
+                        <span class="text-darkbrown-800 font-semibold">Status Booking</span>
                     @endauth
                 </nav>
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
                     @auth Riwayat & Status Sewa @else Status Booking & Rental @endauth
                 </h1>
-                @auth
-                    <p class="text-xs text-darkbrown-600 mt-1">
-                        Daftar seluruh pesanan peralatan camping dan status sewa Anda di Tendaku.
-                    </p>
-                @endauth
+                <p class="text-sm text-darkbrown-600 mt-1">
+                    @auth
+                        Daftar status pesanan penyewaan camping dan status sewa Anda di Tendaku.
+                    @else
+                        Pantau status pembayaran, serah terima, dan masa sewa pesanan Anda di Tendaku.
+                    @endauth
+                </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-3 self-start sm:self-auto">
                 @if(isset($rental) && $rental)
-                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-wheat-100 rounded-2xl border border-wheat-300 shadow-tendaku-sm">
+                    <div x-data="{ copied: false }" class="flex items-center gap-4 pl-4 pr-2.5 py-2.5 bg-wheat-100 rounded-2xl border border-wheat-300">
                         <div>
-                            <span class="text-xs font-semibold text-darkbrown-500 block leading-none mb-0.5">Kode booking</span>
+                            <span class="text-xs font-semibold text-darkbrown-500 block leading-none mb-1">Kode booking</span>
                             <span class="font-mono text-sm sm:text-base font-extrabold text-darkbrown-900">#{{ $rental->booking_code }}</span>
                         </div>
                     </div>
@@ -74,7 +76,6 @@
             'pending'   => 'Menunggu Pembayaran / Validasi',
             'confirmed' => 'Dikonfirmasi (Siap Pickup)',
             'picked_up' => 'Sedang Dipakai (Disewa)',
-            'returned'  => 'Telah Dikembalikan',
             'completed' => 'Selesai',
             'cancelled' => 'Dibatalkan',
             'expired'   => 'Kedaluwarsa',
@@ -201,20 +202,20 @@
         $acts = collect();
         $acts->push(['title' => 'Booking dibuat', 'sub' => '#' . $rental->booking_code, 'at' => $rental->created_at, 'type' => 'doc', 'tone' => 'plain']);
         foreach ($rental->payments as $p) {
-            $isPaid = $p->status === 'paid';
-            $label = $isPaid ? 'Pembayaran diterima' : match ($p->status) {
+            $pPaid = $p->status === 'paid';
+            $label = $pPaid ? 'Pembayaran diterima' : match ($p->status) {
                 'pending'                  => 'Tagihan dibuat',
                 'expire', 'expired'        => 'Tagihan kedaluwarsa',
                 'failed', 'deny', 'cancel' => 'Pembayaran gagal',
                 default                    => 'Tagihan ' . $p->status,
             };
-            $actTime = $isPaid ? ($p->paid_at ?? $p->created_at) : $p->created_at;
+            $actTime = $pPaid ? ($p->paid_at ?? $p->created_at) : $p->created_at;
             $acts->push([
                 'title' => $label,
                 'sub'   => $rupiah($p->amount),
                 'at'    => $actTime ? \Carbon\Carbon::parse($actTime)->timezone(config('app.timezone', 'Asia/Jakarta'))->toIso8601String() : now()->toIso8601String(),
                 'type'  => 'card',
-                'tone'  => $isPaid ? 'green' : ($p->status === 'pending' ? 'amber' : 'red'),
+                'tone'  => $pPaid ? 'green' : ($p->status === 'pending' ? 'amber' : 'red'),
             ]);
         }
         if ($rental->picked_up_at)   $acts->push(['title' => 'Alat diserahkan',      'sub' => '', 'at' => $rental->picked_up_at,   'type' => 'bag',    'tone' => 'green']);
@@ -284,8 +285,14 @@
 
         @include('customer.booking.status.sections.expired-notice')
 
-        <div class="status-grid {{ $hasList ? '' : 'no-list' }} {{ $hasRental ? '' : 'no-right' }}">
-            @include('customer.booking.status.sections.history')
+        @if($hasRental)
+            @include('customer.booking.status.sections.history', ['asBar' => true])
+        @endif
+
+        <div class="status-grid {{ $hasRental ? 'no-list' : 'no-right' }}">
+            @unless($hasRental)
+                @include('customer.booking.status.sections.history', ['asBar' => false])
+            @endunless
 
             <main class="status-main space-y-6">
                 @if($hasRental)
