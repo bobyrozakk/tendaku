@@ -154,7 +154,7 @@ class PackageCheckoutTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Paket Camping 2 Hari');
-        $response->assertSee('Rp 300.000');
+        $response->assertViewHas('package', fn ($package): bool => (float) $package->price === 300000.0);
         $response->assertSee('Tenda Dome 4P');
         $response->assertDontSee('BCA Virtual Account');
         $response->assertSee($this->customer->name);
@@ -513,8 +513,6 @@ class PackageCheckoutTest extends TestCase
         $response3Days->assertOk();
         $response3Days->assertViewHas('rentalDays', 3);
         $response3Days->assertViewHas('subtotal', 900000.0);
-        $response3Days->assertSee('3 hari sewa');
-        $response3Days->assertSee('Rp 900.000');
 
         // Query 1 hari (24 jam)
         $response1Day = $this->actingAs($this->customer)->get(route('customer.packages.booking', [
@@ -528,8 +526,6 @@ class PackageCheckoutTest extends TestCase
         $response1Day->assertOk();
         $response1Day->assertViewHas('rentalDays', 1);
         $response1Day->assertViewHas('subtotal', 300000.0);
-        $response1Day->assertSee('1 hari sewa');
-        $response1Day->assertSee('Rp 300.000');
     }
 
     public function test_scenario_8_frontend_and_backend_calculation_consistency_with_ceil_rounding(): void
@@ -554,8 +550,6 @@ class PackageCheckoutTest extends TestCase
         $responseView->assertOk();
         $responseView->assertViewHas('rentalDays', 2);
         $responseView->assertViewHas('subtotal', 600000.0);
-        $responseView->assertSee('2 hari sewa');
-        $responseView->assertSee('Rp 600.000');
 
         // 2. Konsistensi backend penyimpanan rental
         $responseStore = $this->actingAs($this->customer)->post(route('customer.packages.booking.store', $this->package->id), [

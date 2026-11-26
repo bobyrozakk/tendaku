@@ -132,7 +132,7 @@ class SuperAdminPanelTest extends TestCase
             ->assertSee('Ringkasan GMV')
             ->assertSee('Kelola & Approval Vendor')
             ->assertSee($this->vendor1->name)
-            ->assertSee('wire:poll.15s', false)
+            ->assertSee('wire:poll.30s.visible', false)
             ->assertDontSee('Lihat Katalog');
 
         $this->assertFalse(Route::has('admin.dashboard'));

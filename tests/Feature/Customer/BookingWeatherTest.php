@@ -309,7 +309,6 @@ class BookingWeatherTest extends TestCase
         $this->actingAs($user)
             ->get(route('checkout.index'))
             ->assertOk()
-            ->assertSee('Cuaca Masa Sewa')
             ->assertSee('Menyiapkan prakiraan cuaca untuk periode sewa');
 
         Http::assertNothingSent();
@@ -360,9 +359,16 @@ class BookingWeatherTest extends TestCase
 
         Http::fake();
 
+        // Checkout guest tidak memuat panel cuaca; ajakan masuk akun ada di bagian Data Penyewa.
         $this->get(route('checkout.index'))
             ->assertOk()
             ->assertDontSee('Menyiapkan prakiraan cuaca untuk periode sewa')
+            ->assertDontSee('Prakiraan Cuaca Masa Sewa')
+            ->assertSee('Masuk Akun');
+
+        // Banner kunci cuaca untuk guest ada di halaman keranjang.
+        $this->get(route('customer.cart.index'))
+            ->assertOk()
             ->assertSee('Prakiraan Cuaca Masa Sewa')
             ->assertSee('Khusus Member')
             ->assertSee('Masuk Akun');

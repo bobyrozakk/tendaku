@@ -104,7 +104,7 @@ class RentalStatusLookupTest extends TestCase
         $response->assertSee('Rp 150.000');
         $response->assertSee('Sedang Disewa');
         $response->assertSee('Alat Diambil');
-        $response->assertSee('Saat ini');
+        $response->assertSee('Peralatan telah diserahkan kepada penyewa.');
         $response->assertHeader('X-Robots-Tag', 'noindex, nofollow');
 
         // Data pribadi yang tidak diperlukan untuk pengecekan tidak ikut tampil.

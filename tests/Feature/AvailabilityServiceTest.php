@@ -409,7 +409,7 @@ class AvailabilityServiceTest extends TestCase
 
         $this->get(route('customer.product.show', $this->item->id))
             ->assertOk()
-            ->assertSee('Kalender Ketersediaan')
+            ->assertSee('Kalender ketersediaan')
             ->assertSee('14 Oktober 2026: semua unit sudah dibooking')
             ->assertSee('15 Oktober 2026: semua unit sudah dibooking')
             ->assertSee('16 Oktober 2026: tersedia');
