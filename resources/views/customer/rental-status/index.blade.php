@@ -79,7 +79,7 @@
                         </div>
                     </div>
 
-                    <div class="flex-1 p-5 sm:p-6">
+                    <div class="p-2 sm:p-6">
                         @include('customer.rental-status.partials.search-form')
                     </div>
                 </section>
@@ -88,7 +88,7 @@
             {{-- Panel kanan: cara mengecek --}}
             <aside class="card-tendaku flex flex-col overflow-hidden">
                 <img
-                    src="{{ asset('images/forest_winter.jpeg') }}"
+                    src="{{ asset('images/status-sewa-camp.jpg') }}"
                     alt="Area perkemahan di tengah hutan"
                     width="800"
                     height="448"

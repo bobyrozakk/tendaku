@@ -46,6 +46,13 @@
                             Riwayat Sewa
                         </a>
                     @endauth
+                    @guest
+                        <a href="{{ route('customer.rental-status.index') }}"
+                           title="Cek status sewa dengan kode receipt"
+                           class="tendaku-nav-link {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
+                            Status Sewa
+                        </a>
+                    @endguest
                 </div>
             </div>
 
@@ -182,10 +189,12 @@
                class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.catalog.index', 'customer.product.show') ? 'is-active' : '' }}">
                 Katalog Alat
             </a>
-            <a href="{{ route('customer.rental-status.index') }}"
-               class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
-                Status Sewa
-            </a>
+            @guest
+                <a href="{{ route('customer.rental-status.index') }}"
+                   class="tendaku-nav-link tendaku-nav-link-block {{ request()->routeIs('customer.rental-status.*') ? 'is-active' : '' }}">
+                    Status Sewa
+                </a>
+            @endguest
             @auth
                 <a href="{{ route('customer.packages.index') }}"
                    class="tendaku-nav-link tendaku-nav-link-block">
