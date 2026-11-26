@@ -282,13 +282,10 @@ new class extends Component
     </div>
     @endif
 
-{{-- ============================================================
-     2. TAMPILAN FORM EDIT BIODATA (MUNCUL SETELAH KLIK EDIT)
-     ============================================================ --}}
     <form x-show="editing" x-cloak wire:submit="updateProfileInformation" @class(['space-y-5', 'mt-5' => $compact, 'mt-6' => ! $compact])>
         <div class="p-4 rounded-xl bg-sunglow-50 border border-sunglow-200 text-xs font-medium text-darkbrown-800 flex items-center gap-2">
             <i data-lucide="edit-2" class="w-4 h-4 text-goldenrod-700 shrink-0"></i>
-            <span>Ubah biodata di bawah ini, lalu tekan <strong>Simpan Perubahan</strong>.</span>
+            <span>Ubah biodata di bawah ini.</span>
         </div>
 
         <div @class(['grid gap-4', 'grid-cols-1' => $compact, 'grid-cols-1 sm:grid-cols-2' => ! $compact])>
@@ -376,20 +373,18 @@ new class extends Component
         <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
             <button
                 type="submit"
-                class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-6 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
             >
                 <i data-lucide="check" class="w-4 h-4"></i>
-                <span>{{ __('Simpan Perubahan') }}</span>
             </button>
 
             <button
                 type="button"
                 x-on:click="editing = false"
                 wire:click="cancelEditing"
-                class="btn-tendaku-secondary inline-flex items-center gap-2 py-2.5 px-5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
+                class="btn-tendaku-secondary inline-flex items-center gap-2 py-2.5 px-2.5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
             >
                 <i data-lucide="x" class="w-4 h-4"></i>
-                <span>{{ __('Batal') }}</span>
             </button>
         </div>
     </form>

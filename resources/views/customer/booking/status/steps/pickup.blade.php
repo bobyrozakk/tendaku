@@ -169,14 +169,16 @@
                             </div>
 
                             <div>
-                                <label for="cancel_reason" class="mb-1.5 block text-sm font-semibold text-darkbrown-800">Alasan pembatalan</label>
-                                <select id="cancel_reason" name="cancel_reason" x-model="reason" required
-                                        class="w-full rounded-xl border border-wheat-300 bg-white px-3 py-2 text-sm text-darkbrown-900 focus:border-avocado-600 focus:ring-2 focus:ring-avocado-500/30">
-                                    <option value="">Pilih alasan…</option>
-                                    @foreach (config('booking.cancel_reasons', []) as $key => $label)
-                                        <option value="{{ $key }}">{{ $label }}</option>
-                                    @endforeach
-                                </select>
+                                <span class="mb-1.5 block text-sm font-semibold text-darkbrown-800">Alasan pembatalan</span>
+                                <x-dropdown-select
+                                    name="cancel_reason"
+                                    required
+                                    placeholder="Pilih alasan…"
+                                    label="Alasan pembatalan"
+                                    :options="config('booking.cancel_reasons', [])"
+                                    :value="old('cancel_reason', '')"
+                                    @dropdown-change="reason = $event.detail.value"
+                                />
                                 @error('cancel_reason') <p class="mt-1 text-sm text-red-700">{{ $message }}</p> @enderror
                             </div>
 

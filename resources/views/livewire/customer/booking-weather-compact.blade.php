@@ -16,39 +16,15 @@
         ];
     @endphp
 
-    <div x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false" class="relative md:col-span-6">
-        <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-haspopup="listbox"
-                class="w-full flex items-center justify-between gap-3 rounded-xl border border-wheat-300 bg-white px-4 py-3 text-left text-sm font-bold text-darkbrown-900 shadow-2xs hover:border-avocado-600 focus:outline-none focus:ring-2 focus:ring-avocado-500/30 transition">
-            <span class="flex items-center gap-3 min-w-0">
-                <x-icon name="map-pin" class="w-5 h-5 text-avocado-800" />
-                <span class="truncate">{{ $locationLabel }}</span>
-            </span>
-            <span class="inline-flex shrink-0 transition-transform" :class="open ? 'rotate-180' : ''">
-                <x-icon name="chevron-down" class="w-5 h-5 text-darkbrown-600" />
-            </span>
-        </button>
-
-        <div x-show="open" x-cloak x-transition.opacity.duration.150ms role="listbox" aria-label="Lokasi cuaca"
-             class="absolute left-0 top-full z-40 mt-2 w-full min-w-[16rem] max-h-72 overflow-y-auto overscroll-contain rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg p-2">
-            @foreach ($spotGroups as $regionLabel => $regionSpots)
-                <p class="px-3 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">{{ $regionLabel }}</p>
-                @foreach ($regionSpots as $spotKey => $spotLabel)
-                    <button type="button" role="option" aria-selected="{{ $spot === $spotKey ? 'true' : 'false' }}"
-                            wire:click="$set('spot', '{{ $spotKey }}')" @click="open = false"
-                            @class([
-                                'w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition',
-                                'bg-avocado-100 text-avocado-900 font-bold' => $spot === $spotKey,
-                                'text-darkbrown-800 hover:bg-wheat-100' => $spot !== $spotKey,
-                            ])>
-                        <span class="truncate">{{ $spotLabel }}</span>
-                        @if ($spot === $spotKey)
-                            <x-icon name="check" class="w-4 h-4 text-avocado-800" />
-                        @endif
-                    </button>
-                @endforeach
-            @endforeach
-        </div>
-    </div>
+    <x-dropdown-select
+        wire:model.live="spot"
+        grouped
+        icon="map-pin"
+        size="xl"
+        label="Lokasi cuaca"
+        :options="$spotGroups"
+        class="md:col-span-6"
+    />
 
     <div wire:loading.class="opacity-60" wire:target="spot,syncDates" class="col-span-full md:col-span-12 space-y-3 transition-opacity">
         @unless ($hasSelectedDates)

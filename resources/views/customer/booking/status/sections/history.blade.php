@@ -20,13 +20,20 @@
                             <span class="text-xs text-darkbrown-500">{{ method_exists($rentals, 'total') ? $rentals->total() : $rentals->count() }} transaksi</span>
                         </div>
                         <div>
-                            <label for="bk-filter" class="text-xs font-semibold text-darkbrown-600">Filter status</label>
-                            <select id="bk-filter" onchange="window.location.href = this.value"
-                                    class="mt-1 w-full rounded-xl border border-wheat-300 bg-white px-3 py-2 text-sm font-semibold text-darkbrown-900 focus:border-avocado-600 focus:ring-2 focus:ring-avocado-500/30">
-                                @foreach($statusTabs as $tabKey => $tabLabel)
-                                    <option value="{{ route('customer.booking.index', $tabKey ? ['status' => $tabKey] : []) }}" {{ $filterStatus === $tabKey ? 'selected' : '' }}>{{ $tabLabel }}</option>
-                                @endforeach
-                            </select>
+                            @php
+                                $statusOptions = collect($statusTabs)
+                                    ->mapWithKeys(fn ($tabLabel, $tabKey) => [route('customer.booking.index', $tabKey ? ['status' => $tabKey] : []) => $tabLabel])
+                                    ->all();
+                                $statusCurrent = route('customer.booking.index', $filterStatus ? ['status' => $filterStatus] : []);
+                            @endphp
+                            <span class="text-xs font-semibold text-darkbrown-600">Filter status</span>
+                            <x-dropdown-select
+                                mode="navigate"
+                                label="Filter status"
+                                :options="$statusOptions"
+                                :value="$statusCurrent"
+                                class="mt-1"
+                            />
                         </div>
                     </div>
 

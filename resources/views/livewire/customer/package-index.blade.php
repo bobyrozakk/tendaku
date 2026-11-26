@@ -45,31 +45,21 @@
             </form>
 
             <div class="min-w-0 lg:w-48 lg:shrink-0">
-                <label for="package-vendor" class="sr-only">Vendor</label>
-                <select
-                    id="package-vendor"
+                <x-dropdown-select
                     wire:model.live="vendorId"
-                    class="input-tendaku h-11 w-full px-3 text-sm font-medium"
-                >
-                    <option value="">Semua Vendor</option>
-                    @foreach ($vendors as $vendor)
-                        <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
-                    @endforeach
-                </select>
+                    size="lg"
+                    label="Vendor"
+                    :options="collect($vendors)->pluck('name', 'id')->prepend('Semua Vendor', '')->all()"
+                />
             </div>
 
             <div class="min-w-0 lg:w-44 lg:shrink-0">
-                <label for="package-sort" class="sr-only">Urutkan paket</label>
-                <select
-                    id="package-sort"
+                <x-dropdown-select
                     wire:model.live="sort"
-                    class="input-tendaku h-11 w-full px-3 text-sm font-medium"
-                >
-                    <option value="latest">Terbaru</option>
-                    <option value="price_asc">Harga: Termurah</option>
-                    <option value="price_desc">Harga: Termahal</option>
-                    <option value="duration_asc">Durasi Terpendek</option>
-                </select>
+                    size="lg"
+                    label="Urutkan paket"
+                    :options="['latest' => 'Terbaru', 'price_asc' => 'Harga: Termurah', 'price_desc' => 'Harga: Termahal', 'duration_asc' => 'Durasi Terpendek']"
+                />
             </div>
 
             @if ($hasActiveFilters)
