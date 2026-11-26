@@ -14,7 +14,7 @@
 
         $imageOf = fn ($item) => $item?->images?->pluck('image_url')->filter()->first() ?: ($item?->image_url ?: null);
 
-        $sectionHeadingClass = 'text-lg font-extrabold tracking-tight text-darkbrown-900';
+        $sectionHeadingClass = 'font-display text-xl font-normal text-darkbrown-900 sm:text-2xl';
         $visitStorePillClass = 'inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-xs font-bold text-darkbrown-900 shadow-md backdrop-blur transition hover:bg-white hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-darkbrown-900';
     @endphp
 
@@ -101,7 +101,7 @@
             <!-- Panel sewa: nama, harga, ketersediaan, CTA -->
             <aside class="space-y-5 rounded-[2rem] border border-wheat-200/90 bg-gradient-to-br from-wheat-100 via-[#FDFBF7] to-sunglow-100 p-6 shadow-tendaku-sm sm:p-7 lg:sticky lg:top-24 lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1">
                 <div class="space-y-4">
-                    <h1 class="break-words text-3xl font-extrabold leading-[1.08] tracking-tighter text-darkbrown-900 sm:text-4xl">
+                    <h1 class="font-display font-normal tracking-tight break-words text-3xl leading-[1.08] text-darkbrown-900 sm:text-4xl">
                         {{ $package->name }}
                     </h1>
 

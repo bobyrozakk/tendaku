@@ -18,7 +18,7 @@
                     ['label' => 'Riwayat Sewa'],
                 ]" />
 
-                <h1 class="flex items-center gap-2.5 font-heading text-2xl font-extrabold tracking-tight text-darkbrown-900 sm:text-3xl">
+                <h1 class="font-display font-normal tracking-tight flex items-center gap-2.5 text-3xl text-darkbrown-900 sm:text-4xl">
                     <i data-lucide="clipboard-list" class="h-7 w-7 shrink-0" aria-hidden="true"></i>
                     <span>Riwayat Sewa</span>
                 </h1>

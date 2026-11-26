@@ -157,7 +157,7 @@
                         </span>
                     </div>
 
-                    <h1 class="mt-5 break-words text-4xl font-extrabold leading-[1.05] tracking-tighter text-darkbrown-900 sm:text-5xl lg:text-6xl">
+                    <h1 class="font-display font-normal tracking-tight mt-5 break-words text-4xl leading-[1.05] text-darkbrown-900 sm:text-5xl lg:text-6xl">
                         {{ $vendor->name }}
                     </h1>
 

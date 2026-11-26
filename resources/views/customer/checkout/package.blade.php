@@ -12,7 +12,7 @@
                     <span class="text-wheat-400">/</span>
                     <span class="text-darkbrown-800 font-semibold">Booking</span>
                 </nav>
-                <h1 class="text-2xl sm:text-3xl font-extrabold text-darkbrown-900 tracking-tight font-heading">
+                <h1 class="font-display font-normal tracking-tight text-3xl sm:text-4xl text-darkbrown-900">
                     Checkout &amp; Pembayaran
                 </h1>
             </div>

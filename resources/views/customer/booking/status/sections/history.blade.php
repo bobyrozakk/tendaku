@@ -16,7 +16,7 @@
 
                     <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm p-4 space-y-3">
                         <div class="flex items-center justify-between gap-2">
-                            <h2 class="font-extrabold text-darkbrown-900 font-heading">Riwayat sewa</h2>
+                            <h2 class="font-display font-normal text-darkbrown-900">Riwayat sewa</h2>
                             <span class="text-xs text-darkbrown-500">{{ method_exists($rentals, 'total') ? $rentals->total() : $rentals->count() }} transaksi</span>
                         </div>
                         <div>

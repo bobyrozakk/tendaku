@@ -22,7 +22,7 @@
 
     $visitStoreClass = 'inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-wheat-300/80 bg-wheat-100 px-3.5 py-2 text-xs font-bold text-darkbrown-800 transition hover:border-avocado-500 hover:bg-wheat-200 hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2';
 
-    $sectionHeadingClass = 'text-lg font-extrabold tracking-tight text-darkbrown-900';
+    $sectionHeadingClass = 'font-display text-xl font-normal text-darkbrown-900 sm:text-2xl';
 
     $stepperClass = 'flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-wheat-300 bg-wheat-100 font-extrabold text-darkbrown-800 transition hover:bg-wheat-200 disabled:cursor-not-allowed disabled:opacity-40';
 @endphp
@@ -153,7 +153,7 @@
         aria-labelledby="ketersediaan-peralatan"
     >
         <div class="space-y-4">
-            <h1 class="break-words text-3xl font-extrabold leading-[1.08] tracking-tighter text-darkbrown-900 sm:text-4xl">
+            <h1 class="font-display font-normal tracking-tight break-words text-3xl leading-[1.08] text-darkbrown-900 sm:text-4xl">
                 {{ $item->name }}
             </h1>
 
