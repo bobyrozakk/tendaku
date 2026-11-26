@@ -1,6 +1,6 @@
 <?php
 
-// kata2 taro disini
+// Konfigurasi Footer Tendaku.id
 return [
 
     'image' => 'images/tendaku-footer-forest.jpg',
@@ -14,51 +14,58 @@ return [
                        .'agar pengalaman berkemah semakin nyaman dan menyenangkan.',
     ],
 
+    // Sosial media: hanya WhatsApp (Instagram dan TikTok dihapus sesuai permintaan)
     'social' => [
-        ['icon' => 'instagram', 'label' => 'Instagram', 'url' => 'https://instagram.com'],
-        ['icon' => 'tiktok',    'label' => 'TikTok',    'url' => 'https://tiktok.com'],
-        ['icon' => 'whatsapp',  'label' => 'WhatsApp',  'url' => 'https://wa.me/6281234567890'],
+        ['icon' => 'whatsapp', 'label' => 'WhatsApp', 'url' => 'https://wa.me/6281234567890'],
     ],
 
     'columns' => [
         [
             'title' => 'Jelajahi',
             'links' => [
-                ['label' => 'Beranda',           'url' => '/'],
+                ['label' => 'Beranda',           'url' => '/#top'],
                 ['label' => 'Katalog Peralatan', 'url' => '/katalog'],
-                ['label' => 'Lacak Pesanan',     'url' => '/status-sewa'],
-                ['label' => 'Cara Penyewaan',    'modal' => 'how-to-rent'],
+                ['label' => 'Cara Penyewaan',    'url' => '/#cara-penyewaan'],
+                ['label' => 'Hubungi Kami',      'url' => '/hubungi-kami'],
             ],
         ],
         [
-            'title' => 'Informasi & Bantuan',
+            'title' => 'Layanan',
             'links' => [
-                ['label' => 'Sewa Tenda',                  'url' => '/katalog?search=tenda'],
-                ['label' => 'Paket Camping',        'url' => '/paket-camping'],
-                ['label' => 'Jaminan KTP & Pengembalian',  'modal' => 'collateral'],
-                ['label' => 'Kebijakan Pembatalan',        'modal' => 'cancellation'],
-                ['label' => 'FAQ',                         'modal' => 'faq'],
+                ['label' => 'Sewa Tenda',            'url' => '/layanan#sewa-tenda'],
+                ['label' => 'Sewa Matras',           'url' => '/layanan#sewa-matras'],
+                ['label' => 'Perlengkapan Camping',  'url' => '/layanan#perlengkapan-camping'],
+                ['label' => 'Panduan Penyewaan',     'url' => '/layanan#panduan-penyewaan'],
+                ['label' => 'FAQ',                   'url' => '/layanan#faq'],
+            ],
+        ],
+        [
+            'title' => 'Bantuan',
+            'links' => [
+                ['label' => 'Syarat & Ketentuan',     'url' => '/bantuan#syarat-ketentuan'],
+                ['label' => 'Kebijakan Privasi',      'url' => '/bantuan#kebijakan-privasi'],
+                ['label' => 'Deposit & Pengembalian', 'url' => '/bantuan#deposit-pengembalian'],
+                ['label' => 'Kebijakan Pembatalan',   'url' => '/bantuan#kebijakan-pembatalan'],
+                ['label' => 'Panduan Penggunaan',     'url' => '/bantuan#panduan-penggunaan'],
             ],
         ],
     ],
 
+    // Data kontak asli (Malang, Jawa Timur & email admintendaku@gmail.com)
     'contact' => [
         'title' => 'Hubungi Kami',
         'items' => [
-            ['icon' => 'pin',   'text' => 'Jawa Timur, Indonesia'],
-            ['icon' => 'phone', 'text' => '081234567890',      'url' => 'tel:+6281234567890'],
-            ['icon' => 'mail',  'text' => 'gotendaku@tendaku.com',  'url' => 'mailto:gotendaku@gmail.com'],
+            ['icon' => 'pin',   'text' => 'Malang, Jawa Timur, Indonesia'],
+            ['icon' => 'phone', 'text' => '0812-3456-7890',      'url' => 'tel:+6281234567890'],
+            ['icon' => 'mail',  'text' => 'admintendaku@gmail.com',  'url' => 'mailto:admintendaku@gmail.com'],
             ['icon' => 'clock', 'text' => 'Jam Operasional',     'sub' => 'Setiap hari, 08.00 – 20.00 WIB'],
         ],
     ],
 
-    'legal' => [
-        ['label' => 'Syarat & Ketentuan', 'modal' => 'terms'],
-        ['label' => 'Kebijakan Privasi',  'modal' => 'privacy'],
-    ],
+    // Bar bawah bebas dari tautan duplikat
+    'legal' => [],
 
     'documents' => [
-
         'how-to-rent' => [
             'title' => 'Cara Penyewaan',
             'intro' => 'Menyewa perlengkapan di Tendaku.id hanya butuh lima langkah.',
@@ -71,7 +78,6 @@ return [
                 ['heading' => 'Pantau pesananmu', 'body' => ['Gunakan menu Lacak Pesanan dan kode pesanan untuk melihat perkembangan pesanan kapan saja.']],
             ],
         ],
-
         'faq' => [
             'title' => 'Pertanyaan Umum (FAQ)',
             'intro' => 'Jawaban singkat untuk pertanyaan yang paling sering diajukan.',
@@ -85,7 +91,6 @@ return [
                 ['heading' => 'Bagaimana menghubungi kami?', 'body' => ['Lewat WhatsApp, telepon, atau email yang tercantum di bagian Hubungi Kami pada footer.']],
             ],
         ],
-
         'terms' => [
             'title' => 'Syarat & Ketentuan',
             'intro' => 'Dengan menggunakan Tendaku.id, kamu menyetujui ketentuan berikut.',
@@ -98,10 +103,9 @@ return [
                 ['heading' => '6. Kerusakan, kehilangan, dan denda', 'body' => ['Alat yang rusak atau hilang, serta keterlambatan pengembalian, dapat dikenai denda yang ditetapkan saat pemeriksaan oleh petugas vendor.']],
                 ['heading' => '7. Pembatalan', 'body' => ['Pembatalan mengikuti Kebijakan Pembatalan yang berlaku.']],
                 ['heading' => '8. Perubahan ketentuan', 'body' => ['Ketentuan dapat diperbarui sewaktu-waktu. Versi terbaru selalu tersedia di footer situs ini.']],
-                ['heading' => '9. Pertanyaan', 'body' => ['Hubungi gotendaku@gmail.com untuk pertanyaan tentang ketentuan ini.']],
+                ['heading' => '9. Pertanyaan', 'body' => ['Hubungi admintendaku@gmail.com untuk pertanyaan tentang ketentuan ini.']],
             ],
         ],
-
         'privacy' => [
             'title' => 'Kebijakan Privasi',
             'intro' => 'Kami menjaga data pribadimu dan hanya memakainya untuk menjalankan layanan sewa.',
@@ -110,10 +114,9 @@ return [
                 ['heading' => 'Cara kami menggunakan data', 'body' => ['Untuk memproses pesanan, pembayaran, pengantaran, pengingat pengembalian, serta menanggapi pertanyaan dan keluhan.']],
                 ['heading' => 'Berbagi data', 'body' => ['Data pesanan dibagikan kepada vendor yang menyediakan alat dan kepada penyedia pembayaran (Midtrans) sebatas yang dibutuhkan untuk transaksi. Kami tidak menjual data pribadimu.']],
                 ['heading' => 'Keamanan', 'body' => ['Foto KTP jaminan hanya dapat dilihat oleh pihak yang berhak atas pesanan tersebut.']],
-                ['heading' => 'Hak kamu', 'body' => ['Kamu dapat meminta akses, perbaikan, atau penghapusan data melalui gotendaku@gmail.com.']],
+                ['heading' => 'Hak kamu', 'body' => ['Kamu dapat meminta akses, perbaikan, atau penghapusan data melalui admintendaku@gmail.com.']],
             ],
         ],
-
         'collateral' => [
             'title' => 'Jaminan KTP & Pengembalian',
             'intro' => 'Tendaku tidak meminta deposit uang. Sebagai gantinya, penyewa menyerahkan KTP asli.',
@@ -124,7 +127,6 @@ return [
                 ['heading' => 'Jika ada denda', 'body' => ['Apabila alat rusak atau hilang, denda dibayar tunai atau QRIS saat pengembalian sebelum proses pengembalian dinyatakan selesai.']],
             ],
         ],
-
         'cancellation' => [
             'title' => 'Kebijakan Pembatalan',
             'intro' => 'Ketentuan pembatalan pesanan di Tendaku.id.',

@@ -1,4 +1,4 @@
-<section class="ld-hero" aria-label="Hero Tendaku">
+<section class="ld-hero" aria-label="Hero Tendaku" id="top">
     {{-- HTML5 Ambient Background Video (strictly silent / muted) --}}
     <video autoplay muted loop playsinline preload="metadata" aria-hidden="true"
            class="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
