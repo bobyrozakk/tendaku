@@ -241,7 +241,7 @@ class PackageCheckoutTest extends TestCase
         config(['services.openrouteservice.api_key' => 'test-ors-key', 'services.openrouteservice.base_url' => 'https://api.openrouteservice.org', 'services.openrouteservice.profile' => 'driving-car']);
         Http::preventStrayRequests();
         Http::fake([
-            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]),
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 8240, 'duration' => 900]]]]),
         ]);
 
         $payload = [
@@ -252,9 +252,9 @@ class PackageCheckoutTest extends TestCase
             'payment_channel' => 'bca_va',
         ];
         $preview = $this->actingAs($this->customer)->postJson(route('checkout.shipping.preview'), $payload + ['checkout_type' => 'package'])
-            ->assertOk()->assertJsonPath('distance_km', 12.34)->assertJsonPath('total_weight_kg', 8)
-            ->assertJsonPath('distance_fee', 24680)->assertJsonPath('weight_fee', 3000)
-            ->assertJsonPath('delivery_fee', 27680)->json();
+            ->assertOk()->assertJsonPath('distance_km', 8.24)->assertJsonPath('total_weight_kg', 8)
+            ->assertJsonPath('distance_fee', 16480)->assertJsonPath('weight_fee', 3000)
+            ->assertJsonPath('delivery_fee', 19480)->json();
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
         $response = $this->post(route('customer.packages.booking.store', $this->package->id), $payload + [
@@ -270,8 +270,8 @@ class PackageCheckoutTest extends TestCase
 
         $this->assertSame('delivery', $rental->pickup_method);
         $this->assertSame('600000.00', $rental->subtotal);
-        $this->assertSame('27680.00', $rental->delivery_fee);
-        $this->assertSame('627680.00', $rental->grand_total);
+        $this->assertSame('19480.00', $rental->delivery_fee);
+        $this->assertSame('619480.00', $rental->grand_total);
         $this->assertSame($address->id, (int) $rental->customer_address_id);
         $this->assertSame($address->toDeliverySnapshot(), $rental->delivery_address);
         $this->assertDatabaseCount('rentals', 1);

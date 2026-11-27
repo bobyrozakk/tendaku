@@ -16,7 +16,7 @@ function page(fetch) {
         document: { addEventListener: (_, callback) => callback() },
         Alpine: { data: (_, callback) => { factory = callback; } },
         AbortController, FormData, URLSearchParams, fetch,
-        setTimeout: (callback) => { timers.set(++nextTimer, callback); return nextTimer; },
+        setTimeout: (callback, delay = 0) => { timers.set(++nextTimer, { callback, delay }); return nextTimer; },
         clearTimeout: (id) => timers.delete(id), clearInterval() {},
         CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
         window: { dispatchEvent: event => events.push(event) },
@@ -34,7 +34,14 @@ function page(fetch) {
     component.$watch = (key, callback) => { watches[key] = callback; };
     component.scrollToError = () => {};
     component.playHandoff = async () => {};
-    return { component, watches, run: async () => { const pending = [...timers.values()]; timers.clear(); for (const callback of pending) await callback(); }, events };
+    return {
+        component, watches, events,
+        run: async () => {
+            const pending = [...timers.entries()].filter(([, timer]) => timer.delay < 12000);
+            for (const [id] of pending) timers.delete(id);
+            await Promise.all(pending.map(([, timer]) => timer.callback()));
+        },
+    };
 }
 function quote(overrides = {}) {
     return { success: true, status: 'ready', pickup_method: 'delivery', distance_km: 12.34,
@@ -106,6 +113,8 @@ test('an older response cannot overwrite the newly selected address even if abor
 test('preview errors never become zero fee or a final total', async () => {
     const { component, run } = page(async () => response({ success: false, message: 'Rute tidak tersedia' }, 503));
     component.scheduleShipping();
+    await run();
+    assert.equal(component.shippingState, 'loading');
     await run();
     assert.equal(component.shippingState, 'error');
     assert.equal(component.shippingMessage, 'Rute tidak tersedia');

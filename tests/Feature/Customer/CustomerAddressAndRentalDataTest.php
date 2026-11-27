@@ -35,6 +35,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         parent::setUp();
 
         Carbon::setTestNow('2026-10-28 09:00:00');
+        config(['services.midtrans.server_key' => 'test-midtrans-server-key']);
 
         $this->vendor = Vendor::create([
             'name' => 'Tendaku Vendor Outdoor',
@@ -231,7 +232,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->prepareDeliveryShipping();
         Http::preventStrayRequests();
         Http::fake([
-            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]),
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 8240, 'duration' => 900]]]]),
         ]);
 
         $customer = User::factory()->create(['role' => 'customer']);
@@ -271,7 +272,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->assertSame($addr2->id, (int) $rental->customer_address_id);
         $this->assertStringContainsString('Budi Kantor', $rental->delivery_address);
         $this->assertStringContainsString('Jl. Kantor No. 2', $rental->delivery_address);
-        $this->assertSame('24680.00', $rental->fresh()->delivery_fee);
+        $this->assertSame('16480.00', $rental->fresh()->delivery_fee);
         $this->assertDatabaseCount('rentals', 1);
         $this->assertDatabaseCount('payments', 1);
         Http::assertSent(fn (ClientRequest $request): bool => $request['coordinates'] === [
@@ -289,7 +290,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->prepareDeliveryShipping();
         Http::preventStrayRequests();
         Http::fake([
-            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]),
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 8240, 'duration' => 900]]]]),
         ]);
 
         $customer = User::factory()->create(['role' => 'customer']);
@@ -329,7 +330,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         // Bahkan jika alamat dihapus dari profil customer
         $address->delete();
         $this->assertSame($originalSnapshot, $rental->fresh()->delivery_address);
-        $this->assertSame('24680.00', $rental->fresh()->delivery_fee);
+        $this->assertSame('16480.00', $rental->fresh()->delivery_fee);
         $this->assertDatabaseCount('rentals', 1);
         $this->assertDatabaseCount('payments', 1);
         Http::assertSentCount(1);
@@ -401,6 +402,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
 
         $rental = Rental::withoutGlobalScopes()->latest('id')->first();
         $this->assertNotNull($rental);
+        $response->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame($customer->id, $rental->user_id);
         $this->assertNull($rental->delivery_address);
 
@@ -527,7 +529,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->prepareDeliveryShipping();
         Http::preventStrayRequests();
         Http::fake([
-            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]),
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 8240, 'duration' => 900]]]]),
         ]);
 
         $customer = User::factory()->create([
@@ -602,7 +604,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $checkoutRes->assertRedirect(route('booking.status', $rental->booking_code));
         $this->assertSame($address->id, (int) $rental->customer_address_id);
         $this->assertStringContainsString('Jl. Soekarno Hatta No. 9', (string) $rental->delivery_address);
-        $this->assertSame('24680.00', $rental->fresh()->delivery_fee);
+        $this->assertSame('16480.00', $rental->fresh()->delivery_fee);
         $this->assertDatabaseCount('rentals', 1);
         $this->assertDatabaseCount('payments', 1);
         Http::assertSentCount(1);
@@ -810,13 +812,13 @@ class CustomerAddressAndRentalDataTest extends TestCase
         ]);
         Http::fake([
             'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response([
-                'routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]],
+                'routes' => [['summary' => ['distance' => 8240, 'duration' => 900]]],
             ]),
         ]);
 
         $this->postJson(route('checkout.shipping.preview'), $input)->assertOk()
             ->assertJsonPath('customer_address_id', $address->id)
-            ->assertJsonPath('delivery_fee', 24680)
+            ->assertJsonPath('delivery_fee', 16480)
             ->assertJsonPath('delivery_address', $address->fresh()->toDeliverySnapshot());
         Http::assertSent(fn (ClientRequest $request): bool => $request['coordinates'] === [
             [(float) $this->vendor->fresh()->longitude, (float) $this->vendor->fresh()->latitude], [112.65, -7.95],
@@ -856,8 +858,8 @@ class CustomerAddressAndRentalDataTest extends TestCase
     private function confirmDelivery(array $payload): array
     {
         $preview = $this->postJson(route('checkout.shipping.preview'), $payload + ['checkout_type' => 'package'])
-            ->assertOk()->assertJsonPath('distance_km', 12.34)->assertJsonPath('total_weight_kg', 3)
-            ->assertJsonPath('delivery_fee', 24680)->json();
+            ->assertOk()->assertJsonPath('distance_km', 8.24)->assertJsonPath('total_weight_kg', 3)
+            ->assertJsonPath('delivery_fee', 16480)->json();
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
 
