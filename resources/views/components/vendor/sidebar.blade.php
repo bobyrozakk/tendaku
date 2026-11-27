@@ -91,8 +91,6 @@
     if (! in_array(true, $initialOpenGroups, true)) {
         $initialOpenGroups['catalog'] = true;
     }
-
-    $vendorName = auth()->user()?->vendor?->name ?? 'Tendaku Store';
 @endphp
 
 <div
@@ -240,7 +238,7 @@
         </nav>
 
         <!-- Sidebar Footer -->
-        <div class="p-2.5 border-t border-darkbrown-700/70 shrink-0">
+        <div class="p-2.5 border-t border-darkbrown-700/70 shrink-0 space-y-1">
             <!-- Desktop Expand Button (Shown only when collapsed) -->
             <button
                 type="button"
@@ -254,19 +252,32 @@
                 <x-icon name="panel-left-open" stroke-width="1.75" class="w-[18px] h-[18px]" />
             </button>
 
-            <!-- Store Identity Context (Shown when expanded) -->
-            <div
-                x-show="isExpanded"
-                class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-darkbrown-900/50 border border-darkbrown-700/60"
-            >
-                <x-icon name="store" stroke-width="1.75" class="w-4 h-4 text-goldenrod-500 shrink-0" />
-                <div class="min-w-0 flex-1">
-                    <p class="text-xs font-semibold text-wheat-100 truncate leading-tight">
-                        {{ $vendorName }}
-                    </p>
-                    <p class="text-[11px] text-darkbrown-300 truncate leading-tight mt-0.5">
-                        Toko Aktif
-                    </p>
+            <!-- Keluar Akun Button -->
+            <div class="relative group/logout">
+                <button
+                    type="button"
+                    @click="if (window.innerWidth < 1024) mobileOpen = false; $dispatch('open-logout-modal')"
+                    class="w-full flex items-center min-h-[44px] py-2.5 rounded-lg text-[13.5px] leading-5 font-medium text-wheat-300 hover:bg-red-950/60 hover:text-red-200 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300 focus-visible:ring-offset-1 focus-visible:ring-offset-[#1E1A10] cursor-pointer"
+                    :class="isExpanded ? 'px-3 gap-3 justify-start' : 'px-0 justify-center'"
+                    title="Keluar Akun"
+                    aria-label="Keluar Akun"
+                >
+                    <x-icon name="log-out" stroke-width="1.75" class="w-[18px] h-[18px] text-wheat-300/80 group-hover/logout:text-red-300 shrink-0" />
+                    <span
+                        x-show="isExpanded"
+                        class="truncate whitespace-nowrap"
+                    >
+                        Keluar Akun
+                    </span>
+                </button>
+
+                <div
+                    x-show="!isExpanded"
+                    x-cloak
+                    role="tooltip"
+                    class="hidden lg:group-hover/logout:block lg:group-focus-within/logout:block absolute left-full top-1/2 -translate-y-1/2 ml-2.5 px-2.5 py-1.5 rounded-md bg-darkbrown-900 text-wheat-100 text-xs font-medium whitespace-nowrap border border-darkbrown-700 z-50 pointer-events-none"
+                >
+                    Keluar Akun
                 </div>
             </div>
         </div>

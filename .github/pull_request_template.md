@@ -1,7 +1,7 @@
 ## 🚀 Deskripsi Perubahan
 Ringkas perubahan yang dilakukan pada Pull Request ini.
 
-- **Modul Utama:** [Multi-Tenant / Auth / Katalog / Booking / Kasir / Super Admin / WhatsApp / Weather]
+- **Modul Utama:** [Multi-Tenant / Auth / Katalog / Booking / Kasir / Super Admin / Email Notification / Weather]
 - **Tipe Perubahan:** [feat / fix / refactor / test / docs]
 - **Issue Terkait:** #[Nomor Issue]
 

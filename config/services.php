@@ -54,16 +54,6 @@ return [
         'is_3ds' => true,
     ],
 
-    'fonnte' => [
-        // Token API Fonnte (WhatsApp API). Ambil dari dashboard Fonnte.
-        // Paket gratis Fonnte: text-only, kuota per device, tanpa batas waktu.
-        'token' => env('FONNTE_TOKEN'),
-        'base_url' => env('FONNTE_BASE_URL', 'https://api.fonnte.com'),
-        'timeout' => (int) env('FONNTE_TIMEOUT', 10),
-        'retry_times' => (int) env('FONNTE_RETRY_TIMES', 2),
-        'retry_sleep_ms' => (int) env('FONNTE_RETRY_SLEEP_MS', 300),
-    ],
-
     'locationiq' => [
         'api_key' => env('LOCATIONIQ_API_KEY'),
     ],
@@ -74,10 +64,15 @@ return [
         'key' => env('OPENROUTESERVICE_API_KEY', env('ORS_API_KEY')),
         'base_url' => env('OPENROUTESERVICE_BASE_URL', 'https://api.openrouteservice.org'),
         'profile' => env('OPENROUTESERVICE_PROFILE', 'driving-car'),
-        'timeout' => (int) env('OPENROUTESERVICE_TIMEOUT', 10),
-        'retry_times' => (int) env('OPENROUTESERVICE_RETRY_TIMES', 2),
-        'retry_sleep_ms' => (int) env('OPENROUTESERVICE_RETRY_SLEEP_MS', 300),
+        'connect_timeout' => (int) env('OPENROUTESERVICE_CONNECT_TIMEOUT', 2),
+        'timeout' => (int) env('OPENROUTESERVICE_TIMEOUT', 4),
+        'retry_times' => (int) env('OPENROUTESERVICE_RETRY_TIMES', 1),
+        'retry_sleep_ms' => (int) env('OPENROUTESERVICE_RETRY_SLEEP_MS', 150),
         'cache_ttl_minutes' => (int) env('OPENROUTESERVICE_CACHE_TTL', 60),
+        // Bila ORS gagal/timeout: pakai jarak garis lurus x faktor ini sebagai perkiraan
+        // (hasilnya di-cache singkat). Isi 0 untuk menonaktifkan fallback.
+        'fallback_factor' => (float) env('OPENROUTESERVICE_FALLBACK_FACTOR', 1.3),
+        'fallback_ttl_seconds' => (int) env('OPENROUTESERVICE_FALLBACK_TTL', 300),
     ],
 
 ];

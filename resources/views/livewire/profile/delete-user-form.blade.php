@@ -2,23 +2,34 @@
 
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
 
 new class extends Component
 {
     public string $password = '';
 
+    /** Tampilan: 'form' (tombol + penjelasan, default) atau 'row' (baris di kartu Keamanan Akun). */
+    #[Locked]
+    public string $variant = 'form';
+
+    public function mount(string $variant = 'form'): void
+    {
+        $this->variant = $variant === 'row' ? 'row' : 'form';
+    }
+
     /**
-     * Delete the currently authenticated user.
+     * Hapus akun pengguna yang sedang login.
      */
     public function deleteUser(Logout $logout): void
     {
         $this->validate([
             'password' => ['required', 'string', 'current_password'],
         ], [
-            'password.required' => 'Kata sandi wajib diisi.',
-            'password.string' => 'Kata sandi harus berupa teks.',
+            'password.required' => 'Kata sandi wajib diisi untuk menghapus akun.',
             'password.current_password' => 'Kata sandi tidak sesuai.',
+        ], [
+            'password' => 'kata sandi',
         ]);
 
         tap(Auth::user(), $logout(...))->delete();
@@ -27,14 +38,27 @@ new class extends Component
     }
 }; ?>
 
-<section class="space-y-6">
+<section @class(['space-y-6' => $variant !== 'row'])>
+    @if ($variant === 'row')
+        <button
+            type="button"
+            x-data
+            x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
+            class="pf-sec-row pf-sec-row--danger"
+        >
+            <i data-lucide="trash-2"></i>
+            <span>{{ __('Hapus Akun') }}</span>
+            <i data-lucide="chevron-right"></i>
+        </button>
+    @else
     <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Hapus Akun') }}
+        <h2 class="text-lg font-extrabold text-red-700 font-heading flex items-center gap-2">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+            <span>{{ __('Hapus Akun') }}</span>
         </h2>
 
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __('Setelah akun dihapus, seluruh data dan informasi terkait akan dihapus secara permanen. Sebelum menghapus akun, unduh data yang ingin Anda simpan.') }}
+        <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
+            {{ __('Setelah akun dihapus, seluruh data Anda akan dihapus secara permanen. Simpan data yang Anda perlukan sebelum menghapus akun.') }}
         </p>
     </header>
 
@@ -42,16 +66,17 @@ new class extends Component
         x-data=""
         x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
     >{{ __('Hapus Akun') }}</x-danger-button>
+    @endif
 
     <x-modal name="confirm-user-deletion" :show="$errors->isNotEmpty()" focusable>
         <form wire:submit="deleteUser" class="p-6">
 
-            <h2 class="text-lg font-medium text-gray-900">
-                {{ __('Apakah Anda yakin ingin menghapus akun?') }}
+            <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading">
+                {{ __('Yakin ingin menghapus akun Anda?') }}
             </h2>
 
-            <p class="mt-1 text-sm text-gray-600">
-                {{ __('Setelah akun dihapus, seluruh data dan informasi terkait akan dihapus secara permanen. Masukkan kata sandi untuk mengonfirmasi penghapusan akun.') }}
+            <p class="mt-1 text-sm text-darkbrown-600">
+                {{ __('Setelah akun dihapus, seluruh data Anda akan dihapus secara permanen. Masukkan kata sandi Anda untuk mengonfirmasi penghapusan akun.') }}
             </p>
 
             <div class="mt-6">

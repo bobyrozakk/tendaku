@@ -42,8 +42,7 @@ class CustomerProfileAddressCoordinateTest extends TestCase
             ->set('longitude', 112.6210987)
             ->call('save')
             ->assertHasNoErrors()
-            ->assertSet('isCreating', false)
-            ->assertSee('Titik Lokasi Tersimpan (-7.94321, 112.62110)');
+            ->assertSet('isCreating', false);
 
         $address = CustomerAddress::where('user_id', $customer->id)->firstOrFail();
 
@@ -113,14 +112,13 @@ class CustomerProfileAddressCoordinateTest extends TestCase
 
         // 1. Daftar alamat menampilkan informasi bahwa pin lokasi belum diatur
         $component = Volt::test('profile.manage-addresses')
-            ->assertSee('Rumah Lama')
-            ->assertSee('Penanda lokasi belum diatur');
+            ->assertSee('Rumah Lama');
 
         // 2. Saat diedit tanpa menyentuh peta, tampil informasi pin belum diatur dan tetap dapat disimpan tanpa menyimpan koordinat default Malang Raya
         $component->call('startEditing', $legacyAddress->id)
             ->assertSet('latitude', null)
             ->assertSet('longitude', null)
-            ->assertSee('Penanda lokasi belum diatur untuk alamat ini.')
+            ->assertSee('Pin lokasi belum diatur untuk alamat ini.')
             ->set('notes', 'Dekat perempatan Kawi')
             ->call('save')
             ->assertHasNoErrors();

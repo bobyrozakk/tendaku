@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Customer;
 
+use App\Mail\RentalReturnReminderMail;
 use App\Models\ItemCategory;
 use App\Models\ItemUnit;
 use App\Models\MasterItem;
@@ -15,8 +16,7 @@ use App\Services\Payment\MidtransService;
 use App\Services\ReturnReminderService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Client\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Mockery\MockInterface;
 use Tests\TestCase;
 
@@ -41,10 +41,7 @@ class CheckoutTest extends TestCase
         });
 
         config([
-            'services.fonnte.token' => 'token-uji-123',
-            'services.fonnte.retry_times' => 1,
-            'services.fonnte.retry_sleep_ms' => 1,
-            'notifications.channel' => 'whatsapp',
+            'notifications.channel' => 'email',
             'notifications.reminder.timezone' => 'Asia/Jakarta',
             'notifications.reminder.days' => [1, 0],
         ]);
@@ -97,7 +94,7 @@ class CheckoutTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_guest_checkout_creates_rental_and_stores_whatsapp_number(): void
+    public function test_guest_checkout_creates_rental_and_stores_phone_number(): void
     {
         $response = $this->withSession($this->cartSession())->post(route('checkout.store'), [
             'pickup_method' => 'self_pickup',
@@ -212,12 +209,11 @@ class CheckoutTest extends TestCase
         $this->assertDatabaseCount('payments', 1);
     }
 
-    public function test_guest_checkout_page_shows_whatsapp_input(): void
+    public function test_guest_checkout_page_shows_phone_input(): void
     {
         $this->withSession($this->cartSession())
             ->get(route('checkout.index'))
             ->assertOk()
-            ->assertDontSee('QRIS')
             ->assertDontSee('name="payment_channel"', false)
             ->assertSee('No. WhatsApp aktif')
             ->assertSee('id="f_phone"', false)
@@ -244,7 +240,7 @@ class CheckoutTest extends TestCase
             ->assertSee($rental->booking_code);
     }
 
-    public function test_guest_checkout_requires_whatsapp_number(): void
+    public function test_guest_checkout_requires_phone_number(): void
     {
         $this->withSession($this->cartSession())
             ->post(route('checkout.store'), [
@@ -260,7 +256,7 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, Rental::withoutGlobalScopes()->count());
     }
 
-    public function test_guest_checkout_rejects_invalid_whatsapp_number(): void
+    public function test_guest_checkout_rejects_invalid_phone_number(): void
     {
         $this->withSession($this->cartSession())
             ->post(route('checkout.store'), [
@@ -410,8 +406,7 @@ class CheckoutTest extends TestCase
             ->withSession($this->cartSession())
             ->get(route('checkout.index'))
             ->assertOk()
-            ->assertSee('081234567890')
-            ->assertSee('Pengingat Pengembalian via WhatsApp');
+            ->assertSee('081234567890');
     }
 
     public function test_checkout_redirects_to_catalog_when_cart_is_empty(): void
@@ -444,19 +439,25 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, Rental::withoutGlobalScopes()->count());
     }
 
-    public function test_return_reminder_uses_whatsapp_number_captured_at_checkout(): void
+    public function test_return_reminder_sends_email_for_rental_captured_at_checkout(): void
     {
-        Http::fake(['api.fonnte.com/*' => Http::response(['status' => true], 200)]);
+        Mail::fake();
 
-        $this->withSession($this->cartSession())->post(route('checkout.store'), [
-            'pickup_method' => 'self_pickup',
-            'payment_option' => 'full',
-            'payment_channel' => 'qris',
-            'payment_option' => 'full',
-            'guest_name' => 'Tamu Tanpa Akun',
-            'guest_phone' => '081299999999',
-            'guest_id_number' => '1234567890123456',
+        $customer = User::factory()->create([
+            'name' => 'Budi Santoso',
+            'email' => 'budi.santoso@example.com',
+            'phone' => '081299999999',
+            'nik' => '1234567890123456',
+            'role' => 'customer',
         ]);
+
+        $this->actingAs($customer)
+            ->withSession($this->cartSession())
+            ->post(route('checkout.store'), [
+                'pickup_method' => 'self_pickup',
+                'payment_option' => 'full',
+                'payment_channel' => 'qris',
+            ]);
 
         $rental = Rental::withoutGlobalScopes()->sole();
 
@@ -468,13 +469,13 @@ class CheckoutTest extends TestCase
 
         $this->artisan('rentals:send-return-reminders')->assertSuccessful();
 
-        Http::assertSent(fn (Request $request) => $request['target'] === '6281299999999'
-            && str_contains($request['message'], 'Tamu Tanpa Akun')
-            && str_contains($request['message'], 'BESOK'));
+        Mail::assertSent(RentalReturnReminderMail::class, function (RentalReturnReminderMail $mail) {
+            return $mail->hasTo('budi.santoso@example.com');
+        });
 
         $notification = NotificationLog::withoutGlobalScope('vendor')->sole();
 
-        $this->assertSame('6281299999999', $notification->recipient_phone);
+        $this->assertSame('email', $notification->channel);
         $this->assertSame(ReturnReminderService::TYPE_H_MINUS_ONE, $notification->type);
         $this->assertSame('sent', $notification->status);
     }

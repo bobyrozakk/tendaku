@@ -1,47 +1,66 @@
 FROM php:8.4-fpm
 
-# Set working directory
 WORKDIR /var/www
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# System dependencies + nginx
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
+    unzip \
+    zip \
+    nginx \
+    gettext-base \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libzip-dev \
     libonig-dev \
     libxml2-dev \
-    zip \
-    unzip \
     libsqlite3-dev \
     libpq-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-
-# Install PHP extensions
+# PHP extensions
 RUN docker-php-ext-configure gd --with-jpeg --with-freetype \
-    && docker-php-ext-install pdo_pgsql pgsql pdo_sqlite mbstring exif pcntl bcmath gd zip
+    && docker-php-ext-install pdo_pgsql pgsql pdo_sqlite mbstring exif pcntl bcmath gd zip opcache
 
-# Get latest Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install Node.js
+# Node.js untuk build asset Vite
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Add user for laravel application
-RUN groupadd -g 1000 www
-RUN useradd -u 1000 -ms /bin/bash -g www www
+# Dependency PHP (layer cache terpisah)
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
 
-# Copy existing application directory permissions
-COPY --chown=www:www . /var/www
+# Dependency JS (layer cache terpisah)
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
-# Change current user to www
-USER www
+# Source code
+COPY . .
 
-# Expose port 9000 and start php-fpm server
-EXPOSE 9000
-CMD ["php-fpm"]
+# Autoloader production + build asset + permission storage
+RUN composer dump-autoload --optimize --no-dev \
+    && npm run build \
+    && mkdir -p \
+        storage/app/public \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/framework/cache \
+        storage/logs \
+        bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+# Konfigurasi nginx untuk Render
+COPY docker/nginx.render.conf.template /etc/nginx/templates/default.conf.template
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh \
+    && rm -f /etc/nginx/sites-enabled/default
+
+EXPOSE 10000
+
+CMD ["/usr/local/bin/entrypoint.sh"]

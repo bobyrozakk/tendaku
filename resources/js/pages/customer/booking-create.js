@@ -1,6 +1,14 @@
 import { checkoutAddressState } from "../../components/checkout-address.js";
 
+// Cache hasil preview per kombinasi input (jadwal + qty + metode). Menghindari request
+// ulang saat pelanggan bolak-balik memilih tanggal/jumlah yang sama.
+const SHIPPING_CACHE_TTL_MS = 60_000;
+const SHIPPING_MAX_RETRIES = 1;
+const SHIPPING_REQUEST_TIMEOUT_MS = 12_000;
+
 document.addEventListener("alpine:init", () => {
+    const shippingCache = new Map();
+
     Alpine.data("checkoutPage", (cfg) => ({
         ...cfg,
         paymentOption: "full",
@@ -38,6 +46,7 @@ document.addEventListener("alpine:init", () => {
         createdCode: "",
         bookedDates: Array.isArray(cfg.bookedDates) ? [...cfg.bookedDates] : [],
         availabilityUrl: cfg.availabilityUrl || "",
+        availabilityKey: "", // tanda item+qty yang dipakai saat bookedDates dihitung
         calOpen: null, // 'pickup' | 'return' | null
         calYear: new Date().getFullYear(),
         calMonth: new Date().getMonth(),
@@ -54,6 +63,21 @@ document.addEventListener("alpine:init", () => {
             "Oktober",
             "November",
             "Desember",
+        ],
+
+        monthNamesShort: [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "Mei",
+            "Jun",
+            "Jul",
+            "Agu",
+            "Sep",
+            "Okt",
+            "Nov",
+            "Des",
         ],
 
         // Timepicker state (wheel, 24 jam, dibatasi 07.00 - 17.00)
@@ -214,12 +238,17 @@ document.addEventListener("alpine:init", () => {
             }
             return "";
         },
-        async fetchAvailability(year, month) {
-            if (!this.availabilityUrl) return;
-            const mm = String(month + 1).padStart(2, "0");
-            const from = `${year}-${mm}-01`;
-            const lastDay = new Date(year, month + 1, 0).getDate();
-            const to = `${year}-${mm}-${String(lastDay).padStart(2, "0")}`;
+        availabilitySignature() {
+            return (this.items || [])
+                .map((it) => `${it.id}:${it.qty}`)
+                .join("|");
+        },
+        // Ambil tanggal penuh dari server untuk rentang [from, to].
+        // Mengembalikan array tanggal, atau null jika gagal / respons sudah usang
+        // (qty berubah selama request berjalan).
+        async requestBookedDates(from, to) {
+            if (!this.availabilityUrl) return null;
+            const signature = this.availabilitySignature();
 
             try {
                 const query = new URLSearchParams({ from, to });
@@ -233,31 +262,95 @@ document.addEventListener("alpine:init", () => {
                         headers: { Accept: "application/json" },
                     },
                 );
-                if (!res.ok) return;
+                if (!res.ok) return null;
                 const data = await res.json();
-                if (Array.isArray(data.dates)) {
-                    const merged = new Set([
-                        ...this.bookedDates,
-                        ...data.dates,
-                    ]);
-                    this.bookedDates = Array.from(merged);
+                if (!Array.isArray(data.dates)) return null;
+                if (signature !== this.availabilitySignature()) return null;
+                return data.dates;
+            } catch (_) {
+                return null;
+            }
+        },
+        // Ganti tanggal penuh di dalam [from, to] dengan data terbaru dari server.
+        applyBookedDates(from, to, dates) {
+            const outside = (this.bookedDates || []).filter(
+                (d) => d < from || d > to,
+            );
+            this.bookedDates = Array.from(new Set([...outside, ...dates]));
+        },
+        async fetchAvailability(year, month) {
+            if (!this.availabilityUrl) return;
+
+            // Data lama dihitung untuk qty lain: buang supaya tidak ada tanggal
+            // "nyangkut" penuh (atau terlihat kosong) setelah qty diubah.
+            const signature = this.availabilitySignature();
+            if (this.availabilityKey && this.availabilityKey !== signature) {
+                this.bookedDates = [];
+            }
+            this.availabilityKey = signature;
+
+            const mm = String(month + 1).padStart(2, "0");
+            const from = `${year}-${mm}-01`;
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            // +6 hari agar tanggal "sisa" bulan berikutnya di grid kalender ikut dicek
+            const to = this.addDaysIso(
+                `${year}-${mm}-${String(lastDay).padStart(2, "0")}`,
+                6,
+            );
+
+            const dates = await this.requestBookedDates(from, to);
+            if (dates) this.applyBookedDates(from, to, dates);
+
+            // Periode yang sedang dipilih bisa berada di luar bulan yang tampil
+            if (this.pickupDate && this.returnDate) {
+                const rangeDates = await this.requestBookedDates(
+                    this.pickupDate,
+                    this.returnDate,
+                );
+                if (rangeDates) {
+                    this.applyBookedDates(
+                        this.pickupDate,
+                        this.returnDate,
+                        rangeDates,
+                    );
                 }
-            } catch (_) {}
+            }
+        },
+        // Cek ulang periode terpilih ke server tepat sebelum submit.
+        // false = ada tanggal yang sudah penuh; true = aman atau tidak bisa dicek
+        // (server tetap pemutus akhir saat booking dibuat).
+        async verifySelectedRange() {
+            if (!this.availabilityUrl || !this.pickupDate || !this.returnDate) {
+                return true;
+            }
+            const dates = await this.requestBookedDates(
+                this.pickupDate,
+                this.returnDate,
+            );
+            if (!dates) return true;
+            this.applyBookedDates(this.pickupDate, this.returnDate, dates);
+            return !this.hasBookedDateInRange(this.pickupDate, this.returnDate);
         },
 
-        openCalendar(type) {
-            this.calOpen = this.calOpen === type ? null : type;
-            const cur = type === "pickup" ? this.pickupDate : this.returnDate;
-            if (cur) {
-                const d = new Date(cur);
+        // Satu dropdown rentang: klik pertama = tanggal ambil, klik kedua = tanggal kembali
+        openCalendar() {
+            this.timeOpen = false;
+            if (this.calOpen) {
+                this.calOpen = null;
+                return;
+            }
+            this.calOpen = "pickup";
+            if (this.pickupDate) {
+                const d = new Date(this.pickupDate);
                 if (!isNaN(d)) {
-                    this.calYear = d.getFullYear();
-                    this.calMonth = d.getMonth();
+                    this.calYear = d.getUTCFullYear();
+                    this.calMonth = d.getUTCMonth();
                 }
             }
-            if (this.calOpen) {
-                this.fetchAvailability(this.calYear, this.calMonth);
-            }
+            this.fetchAvailability(this.calYear, this.calMonth);
+        },
+        get calendarTitle() {
+            return this.monthNamesShort[this.calMonth] + " " + this.calYear;
         },
         prevMonth() {
             if (this.calMonth === 0) {
@@ -277,9 +370,54 @@ document.addEventListener("alpine:init", () => {
             }
             this.fetchAvailability(this.calYear, this.calMonth);
         },
+        buildCalendarCell(iso, outside = false) {
+            const isPast = iso < this.minDate;
+            const isBooked = this.isDateBooked(iso);
+
+            // Langkah "kembali": tanggal sebelum minimal kembali boleh dipilih
+            // untuk memulai ulang rentang (dianggap tanggal ambil baru).
+            let isBlocked = isBooked;
+            if (
+                this.calOpen === "return" &&
+                this.pickupDate &&
+                iso >= this.minReturnDate
+            ) {
+                isBlocked =
+                    isBooked || this.hasBookedDateInRange(this.pickupDate, iso);
+            }
+
+            const isStart = !!this.pickupDate && iso === this.pickupDate;
+            const isEnd = !!this.returnDate && iso === this.returnDate;
+            const inRange =
+                !!this.pickupDate &&
+                !!this.returnDate &&
+                iso >= this.pickupDate &&
+                iso <= this.returnDate;
+
+            // Tidak bisa dipilih karena sudah lewat / penuh, dipakai untuk warna abu-abu.
+            const isFull =
+                isBooked ||
+                (this.calOpen === "return" &&
+                    this.pickupDate &&
+                    iso >= this.minReturnDate &&
+                    this.hasBookedDateInRange(this.pickupDate, iso));
+
+            return {
+                day: Number(iso.slice(8, 10)),
+                iso: iso,
+                outside: outside,
+                unavailable: isPast || isFull,
+                disabled: isPast || isBlocked,
+                start: isStart,
+                end: isEnd,
+                inRange: inRange,
+            };
+        },
         get calendarDays() {
             const days = [];
-            const firstDay = new Date(this.calYear, this.calMonth, 1).getDay();
+            // Minggu dimulai hari Senin (Sen ... Min)
+            const firstDay =
+                (new Date(this.calYear, this.calMonth, 1).getDay() + 6) % 7;
             const totalDays = new Date(
                 this.calYear,
                 this.calMonth + 1,
@@ -288,53 +426,42 @@ document.addEventListener("alpine:init", () => {
 
             for (let i = 0; i < firstDay; i++) days.push({ empty: true });
 
+            const mm = String(this.calMonth + 1).padStart(2, "0");
             for (let d = 1; d <= totalDays; d++) {
-                const mm = String(this.calMonth + 1).padStart(2, "0");
                 const dd = String(d).padStart(2, "0");
-                const iso = `${this.calYear}-${mm}-${dd}`;
-                const isPast = iso < this.minDate;
-                const isBooked = this.isDateBooked(iso);
+                days.push(
+                    this.buildCalendarCell(`${this.calYear}-${mm}-${dd}`),
+                );
+            }
 
-                let isBlocked = false;
-                if (this.calOpen === "pickup") {
-                    isBlocked = isBooked;
-                } else if (this.calOpen === "return") {
-                    const isBeforePickup =
-                        this.pickupDate && iso < this.minReturnDate;
-                    const rangeBlocked =
-                        this.pickupDate &&
-                        this.hasBookedDateInRange(this.pickupDate, iso);
-                    isBlocked = isBeforePickup || isBooked || rangeBlocked;
-                }
-
-                const isSelected =
-                    (this.calOpen === "pickup" && this.pickupDate === iso) ||
-                    (this.calOpen === "return" && this.returnDate === iso);
-                const inRange =
-                    this.pickupDate &&
-                    this.returnDate &&
-                    iso >= this.pickupDate &&
-                    iso <= this.returnDate;
-
-                days.push({
-                    day: d,
-                    iso: iso,
-                    disabled: isPast || isBlocked,
-                    selected: isSelected,
-                    inRange: inRange,
-                });
+            // Lanjutkan dengan tanggal bulan berikutnya sampai baris terakhir penuh
+            const trailing = (7 - (days.length % 7)) % 7;
+            let nextIso = this.addDaysIso(
+                `${this.calYear}-${mm}-${String(totalDays).padStart(2, "0")}`,
+                1,
+            );
+            for (let i = 0; i < trailing; i++) {
+                days.push(this.buildCalendarCell(nextIso, true));
+                nextIso = this.addDaysIso(nextIso, 1);
             }
             return days;
         },
         selectCalDate(iso) {
-            if (this.calOpen === "pickup") {
-                this.pickupDate = iso;
-                this.onPickupChange();
-            } else {
+            if (
+                this.calOpen === "return" &&
+                this.pickupDate &&
+                iso >= this.minReturnDate
+            ) {
                 this.returnDate = iso;
                 this.onReturnChange();
+                this.calOpen = null;
+                return;
             }
-            this.calOpen = null;
+
+            // Langkah 1 (atau mulai ulang rentang): set tanggal ambil, lanjut pilih kembali
+            this.pickupDate = iso;
+            this.onPickupChange();
+            this.calOpen = "return";
         },
 
         init() {
@@ -350,6 +477,18 @@ document.addEventListener("alpine:init", () => {
                 if (candidate) {
                     this.returnDate = candidate;
                 }
+            }
+            this.availabilityKey = this.availabilitySignature();
+            // Jadwal bawaan sudah penuh: tampilkan peringatan sejak awal
+            if (
+                this.pickupDate &&
+                this.returnDate &&
+                this.hasBookedDateInRange(this.pickupDate, this.returnDate)
+            ) {
+                this.errors = {
+                    ...this.errors,
+                    dates: "Sebagian tanggal pada periode ini sudah penuh dipesan. Pilih jadwal lain.",
+                };
             }
             this.startCountdown();
             if (this.selectedAddressId) {
@@ -450,18 +589,61 @@ document.addEventListener("alpine:init", () => {
                     "Lengkapi titik lokasi alamat pengantaran terlebih dahulu.";
                 return;
             }
-            this.shippingState = "loading";
-            this.shippingMessage = "Menghitung rincian pengiriman…";
-            const sequence = this.shippingSequence;
+
             const key = this.shippingInputKey;
+
+            // Input yang sama baru saja dihitung: pakai hasilnya, tanpa request.
+            const hit = shippingCache.get(key);
+            if (hit && Date.now() - hit.at < SHIPPING_CACHE_TTL_MS) {
+                this.applyShipping(hit.data, key);
+                return;
+            }
+
+            this.shippingState = "loading";
+            this.shippingMessage = "Menghitung rincian pesanan…";
+            const sequence = this.shippingSequence;
             this.shippingTimer = setTimeout(
                 () => this.loadShipping(sequence, key),
-                450,
+                250,
             );
         },
-        async loadShipping(sequence, key) {
+        shippingRetryDelay(response, attempt) {
+            const header = Number(response?.headers?.get("Retry-After"));
+            if (Number.isFinite(header) && header > 0) {
+                return Math.min(header, 8) * 1000;
+            }
+            return 600 * (attempt + 1);
+        },
+        async loadShipping(sequence, key, attempt = 0) {
+            const stale = () =>
+                sequence !== this.shippingSequence ||
+                key !== this.shippingInputKey;
+
             const controller = new AbortController();
             this.shippingController = controller;
+            let timedOut = false;
+            const timeoutId = setTimeout(() => {
+                timedOut = true;
+                controller.abort();
+            }, SHIPPING_REQUEST_TIMEOUT_MS);
+
+            // Gagal sementara (jaringan lambat, 429, 5xx, timeout): coba lagi otomatis
+            // beberapa kali sebelum menampilkan tombol "Coba lagi" ke pelanggan.
+            const retryOrFail = (message, response = null) => {
+                if (attempt < SHIPPING_MAX_RETRIES) {
+                    this.shippingState = "loading";
+                    this.shippingMessage = "Menghitung ulang…";
+                    this.shippingTimer = setTimeout(
+                        () => this.loadShipping(sequence, key, attempt + 1),
+                        this.shippingRetryDelay(response, attempt),
+                    );
+                    return;
+                }
+                this.shippingState = "error";
+                this.shippingMessage =
+                    message || "Koneksi bermasalah. Silakan coba lagi.";
+            };
+
             try {
                 const response = await fetch(this.shippingPreviewUrl, {
                     method: "POST",
@@ -487,24 +669,57 @@ document.addEventListener("alpine:init", () => {
                         })),
                     }),
                 });
-                const data = await response.json();
-                if (
-                    sequence !== this.shippingSequence ||
-                    key !== this.shippingInputKey
-                )
-                    return;
-                if (!response.ok || !data.success)
-                    throw new Error(
-                        data.message || "Ongkir belum dapat dihitung.",
+                clearTimeout(timeoutId);
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (_) {
+                    data = null;
+                }
+                if (stale()) return;
+
+                const transient =
+                    response.status === 429 ||
+                    response.status >= 500 ||
+                    (!response.ok && data === null);
+                if (transient) {
+                    retryOrFail(
+                        response.status === 429
+                            ? "Terlalu banyak permintaan. Coba lagi sebentar."
+                            : data?.message,
+                        response,
                     );
+                    return;
+                }
+
+                if (data?.status === "out_of_delivery_range") {
+                    // Di luar jangkauan: bukan error sementara, jadi tanpa tombol "Coba lagi".
+                    this.shippingState = "out_of_range";
+                    this.shippingMessage = data.message;
+                    return;
+                }
+
+                if (!response.ok || !data?.success)
+                    throw new Error(
+                        data?.message || "Ongkir belum dapat dihitung.",
+                    );
+
+                shippingCache.set(key, { at: Date.now(), data });
                 this.applyShipping(data, key);
             } catch (error) {
-                if (
-                    error.name === "AbortError" ||
-                    sequence !== this.shippingSequence ||
-                    key !== this.shippingInputKey
-                )
+                clearTimeout(timeoutId);
+                if (stale()) return;
+                if (error.name === "AbortError") {
+                    // Dibatalkan sendiri karena terlalu lama: anggap gagal sementara.
+                    if (timedOut) retryOrFail("Perhitungan terlalu lama.");
                     return;
+                }
+                if (error instanceof TypeError) {
+                    // fetch gagal total (offline / koneksi putus)
+                    retryOrFail("Koneksi bermasalah. Silakan coba lagi.");
+                    return;
+                }
                 this.shippingState = "error";
                 this.shippingMessage =
                     error.message || "Koneksi bermasalah. Silakan coba lagi.";
@@ -590,18 +805,31 @@ document.addEventListener("alpine:init", () => {
             if (this.pickupMethod === "self_pickup") return 0;
             return this.shippingReady ? this.shipping.delivery_fee : null;
         },
+        // Ambil di toko tidak ada ongkir, jadi total bisa langsung dihitung di browser
+        // sementara server memverifikasi stok. Tombol booking tetap menunggu server.
+        get canEstimateLocally() {
+            return (
+                this.pickupMethod === "self_pickup" &&
+                !!this.pickupDate &&
+                !!this.returnDate &&
+                this.shippingState !== "error"
+            );
+        },
+        get hasTotal() {
+            return this.shippingReady || this.canEstimateLocally;
+        },
         get grandTotal() {
-            if (!this.shippingReady) return null;
+            if (!this.hasTotal) return null;
             return Math.max(
                 0,
-                this.subtotal + this.deliveryFee - this.discount,
+                this.subtotal + (this.deliveryFee ?? 0) - this.discount,
             );
         },
         get dpAmount() {
-            if (!this.shippingReady) return null;
+            if (!this.hasTotal) return null;
             const base = Math.max(
                 0,
-                this.subtotal + this.deliveryFee - this.discount,
+                this.subtotal + (this.deliveryFee ?? 0) - this.discount,
             );
             return Math.floor((base * this.dpPercentage + 99) / 100);
         },
@@ -658,6 +886,39 @@ document.addEventListener("alpine:init", () => {
                       year: "numeric",
                       timeZone: "UTC",
                   });
+        },
+
+        // "27 Nov – 30 Nov 2026"
+        fmtRange() {
+            if (!this.pickupDate) return "Pilih tanggal sewa";
+            const a = new Date(this.pickupDate);
+            if (isNaN(a)) return "Pilih tanggal sewa";
+            const b = this.returnDate ? new Date(this.returnDate) : null;
+            const fmt = (d, withYear) =>
+                d.toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    ...(withYear ? { year: "numeric" } : {}),
+                    timeZone: "UTC",
+                });
+            if (!b || isNaN(b)) return fmt(a, true);
+            const sameYear = a.getUTCFullYear() === b.getUTCFullYear();
+            return fmt(a, !sameYear) + " – " + fmt(b, true);
+        },
+
+        fmtRangeDay() {
+            const a = new Date(this.pickupDate);
+            if (isNaN(a)) return "-";
+            const fmt = (d) =>
+                d.toLocaleDateString("id-ID", {
+                    weekday: "short",
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "UTC",
+                });
+            const b = new Date(this.returnDate);
+            return isNaN(b) ? fmt(a) : fmt(a) + " – " + fmt(b);
         },
 
         changeQty(i, delta) {
@@ -745,11 +1006,9 @@ document.addEventListener("alpine:init", () => {
             const e = {};
             if (this.needsName && this.name.trim().length < 3)
                 e.name = "Isi nama lengkap sesuai KTP.";
-            if (
-                this.needsPhone &&
-                !/^[0-9]{10,13}$/.test(this.phone)
-            ) {
-                e.phone = "Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.";
+            if (this.needsPhone && !/^[0-9]{10,13}$/.test(this.phone)) {
+                e.phone =
+                    "Nomor ponsel harus terdiri dari 10 sampai 13 digit angka.";
             }
             if (this.needsNik && !/^\d{16}$/.test(this.nik))
                 e.nik = "NIK harus 16 digit angka.";
@@ -798,9 +1057,11 @@ document.addEventListener("alpine:init", () => {
                     ? "section-identity"
                     : e.address || e.notes
                       ? "section-delivery"
-                      : e.dates || e.items
-                        ? "section-rental"
-                        : null;
+                      : e.items
+                        ? "section-equipment"
+                        : e.dates
+                          ? "section-rental"
+                          : null;
             if (!target) return;
             const el = document.getElementById(target);
             if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -826,6 +1087,15 @@ document.addEventListener("alpine:init", () => {
             this.isProcessing = true;
 
             try {
+                if (!(await this.verifySelectedRange())) {
+                    this.errors = {
+                        dates: "Sebagian tanggal pada periode ini baru saja penuh dipesan. Pilih tanggal lain.",
+                    };
+                    this.scrollToError();
+                    this.isProcessing = false;
+                    return;
+                }
+
                 const fd = new FormData();
                 fd.append("_token", this.csrf);
                 fd.append("pickup_method", this.pickupMethod);

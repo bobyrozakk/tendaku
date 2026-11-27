@@ -13,7 +13,7 @@
                             </div>
 
                             <div class="co-copy space-y-2">
-                                <h2 class="text-3xl sm:text-4xl font-extrabold text-darkbrown-900 tracking-tight font-heading">Booking dibuat</h2>
+                                <h2 class="font-display font-normal text-3xl sm:text-4xl text-darkbrown-900">Booking dibuat</h2>
                                 <p x-show="createdCode" x-cloak class="font-mono text-base font-extrabold text-darkbrown-800" x-text="'#' + createdCode"></p>
                                 <p class="text-sm text-darkbrown-600">Menyiapkan halaman pembayaran Anda…</p>
                             </div>

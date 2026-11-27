@@ -17,6 +17,7 @@ use App\Http\Controllers\Customer\RentalStatusLookupController;
 use App\Http\Controllers\Customer\ShippingPreviewController;
 use App\Http\Controllers\Customer\StoreController;
 use App\Http\Controllers\Kasir\FineQrisImageController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\ReverseGeocodingController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
@@ -35,6 +36,11 @@ use Illuminate\Support\Facades\Route;
 // 1. Beranda (Home)
 Route::get('/', [CatalogController::class, 'home'])->name('home');
 
+// Halaman Informasi Publik
+Route::get('/layanan', [PageController::class, 'layanan'])->name('layanan');
+Route::get('/bantuan', [PageController::class, 'bantuan'])->name('bantuan');
+Route::get('/hubungi-kami', [PageController::class, 'hubungiKami'])->name('hubungi-kami');
+
 // Keranjang Sewa
 Route::get('/keranjang', [CartController::class, 'index'])->name('customer.cart.index');
 Route::post('/keranjang/checkout', [CartController::class, 'checkout'])->name('customer.cart.checkout');
@@ -47,12 +53,11 @@ Route::get('/cart', fn () => redirect()->route('customer.cart.index'));
 Route::prefix('katalog/booking')->group(function () {
     Route::post('shipping-preview', ShippingPreviewController::class)
         ->withoutMiddleware(RedirectIfUnverified::class)
-        ->middleware('throttle:10,1')
-        ->block(120, 5)
+        ->middleware('throttle:90,1')
         ->name('checkout.shipping.preview');
     Route::get('availability', CheckoutAvailabilityController::class)
         ->withoutMiddleware(RedirectIfUnverified::class)
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:90,1')
         ->name('checkout.availability');
     Route::get('/', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/', [CheckoutController::class, 'store'])->block(120, 5)->name('checkout.store');
@@ -118,13 +123,13 @@ Route::get('/toko/{vendor}', [StoreController::class, 'show'])->name('customer.s
 Route::middleware(['auth', 'verified', 'role:customer'])->group(function () {
     Route::get('/paket-camping', [CustomerCampingPackageController::class, 'index'])
         ->name('customer.packages.index');
-    Route::get('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'index'])
+    Route::get('/paket-camping/{id}/booking', [PackageCheckoutController::class, 'index'])
         ->whereNumber('id')
-        ->name('customer.packages.checkout');
-    Route::post('/paket-camping/{id}/checkout', [PackageCheckoutController::class, 'store'])
+        ->name('customer.packages.booking');
+    Route::post('/paket-camping/{id}/booking', [PackageCheckoutController::class, 'store'])
         ->whereNumber('id')
         ->block(120, 5)
-        ->name('customer.packages.checkout.store');
+        ->name('customer.packages.booking.store');
     Route::get('/paket-camping/{id}', [CustomerCampingPackageController::class, 'show'])
         ->whereNumber('id')
         ->name('customer.packages.show');
@@ -152,9 +157,6 @@ Route::post('payments/{order_id}/retry', [PaymentRetryController::class, 'store'
 // Webhook Midtrans: tanpa auth/sesi, dikecualikan dari CSRF di bootstrap/app.php (signature SHA512 yang memvalidasi)
 Route::post('webhook/midtrans', [MidtransWebhookController::class, 'handle'])
     ->name('webhook.midtrans');
-
-// Design System Reference
-Route::view('design-system', 'design-system')->name('design-system');
 
 // Authenticated Routes (Dashboard & Profile)
 Route::get('dashboard', function () {

@@ -126,7 +126,7 @@ class ShippingPreviewSecurityTest extends TestCase
 
     public function test_existing_package_checkout_keeps_auth_verification_and_role_guards(): void
     {
-        $url = route('customer.packages.checkout', ['id' => 999]);
+        $url = route('customer.packages.booking', ['id' => 999]);
         $this->get($url)->assertRedirect(route('login'));
         $this->post($url)->assertRedirect(route('login'));
 

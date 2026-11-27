@@ -47,14 +47,36 @@ class WeatherService
         }
 
         $cacheKey = $this->cacheKey($spotKey, $startDate, $endDate);
+        $staleKey = $cacheKey.':stale';
 
-        $ttl = now()->addMinutes((int) config('weather.cache_ttl_minutes', 30));
+        $cached = Cache::get($cacheKey);
 
-        return Cache::remember(
-            $cacheKey,
-            $ttl,
-            fn () => $this->request($spotKey, $spotConfig, $label, $startDate, $endDate)
-        );
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $result = $this->request($spotKey, $spotConfig, $label, $startDate, $endDate);
+
+        if (! ($result['error'] ?? false)) {
+            // Sukses: cache normal + salinan "basi" yang lebih lama sebagai cadangan.
+            Cache::put($cacheKey, $result, now()->addMinutes((int) config('weather.cache_ttl_minutes', 30)));
+            Cache::put($staleKey, $result, now()->addHours(12));
+
+            return $result;
+        }
+
+        // Gagal: JANGAN simpan error selama 30 menit (dulu memakai Cache::remember sehingga
+        // satu kegagalan sesaat membuat cuaca "hilang" untuk semua orang). Pakai data lama
+        // bila ada; kalau tidak, cache error hanya beberapa detik agar tidak membanjiri API.
+        $stale = Cache::get($staleKey);
+
+        if (is_array($stale)) {
+            return $stale;
+        }
+
+        Cache::put($cacheKey, $result, now()->addSeconds(20));
+
+        return $result;
     }
 
     /**
@@ -146,10 +168,11 @@ class WeatherService
         Carbon $end
     ): array {
         try {
-            $response = Http::timeout((int) config('weather.timeout', 10))
+            $response = Http::connectTimeout(4)
+                ->timeout((int) config('weather.timeout', 6))
                 ->retry(
                     (int) config('weather.retry_times', 2),
-                    (int) config('weather.retry_sleep_ms', 300),
+                    (int) config('weather.retry_sleep_ms', 200),
                     throw: false,
                 )
                 ->get((string) config('weather.endpoint'), [

@@ -279,6 +279,27 @@ class ProductBooking extends Component
     }
 
     /**
+     * Sisa unit per hari untuk kalender ketersediaan di halaman detail.
+     *
+     * @return array{total: int, days: array<string, int>}
+     */
+    #[Computed]
+    public function availabilityCalendar(): array
+    {
+        try {
+            return app(AvailabilityService::class)->dailyAvailability(
+                $this->product->id,
+                Carbon::today(),
+                Carbon::today()->addDays(self::CALENDAR_AHEAD_DAYS)
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return ['total' => 0, 'days' => []];
+        }
+    }
+
+    /**
      * True jika SEMUA tanggal di rentang kalender habis (mis. tidak ada unit
      * yang bisa disewa). Lebih jelas ditampilkan sebagai "Stok habis" daripada
      * "61 tanggal stok habis".
@@ -414,6 +435,7 @@ class ProductBooking extends Component
     {
         app(CartService::class)->setDirect($this->selectionData());
 
+        $this->dispatch('checkout-redirecting');
         $this->redirectRoute('checkout.index', ['direct' => 1]);
 
         return null;

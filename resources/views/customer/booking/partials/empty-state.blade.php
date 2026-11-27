@@ -11,8 +11,7 @@
     </div>
 
     @if ($status !== '')
-        <h2 class="font-heading text-lg font-bold
-                   text-darkbrown-900">
+        <h2 class="font-display font-normal text-xl text-darkbrown-900">
             Belum Ada Transaksi di Status Ini
         </h2>
 
@@ -34,8 +33,7 @@
             Lihat Semua Transaksi
         </a>
     @else
-        <h2 class="font-heading text-lg font-bold
-                   text-darkbrown-900">
+        <h2 class="font-display font-normal text-xl text-darkbrown-900">
             Petualanganmu Dimulai di Sini
         </h2>
 

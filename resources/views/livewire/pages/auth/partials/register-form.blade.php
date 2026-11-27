@@ -95,8 +95,10 @@
             name="form.phone"
             label="Nomor HP"
             type="tel"
-            inputmode="tel"
+            inputmode="numeric"
+            pattern="[0-9]*"
             wire:model="form.phone"
+            x-on:input.capture="let v = $el.value.replace(/\D/g, ''); if (v !== $el.value) $el.value = v"
             placeholder="081234567890"
             maxlength="13"
             autocomplete="tel"
@@ -107,8 +109,10 @@
             name="form.nik"
             label="NIK"
             wire:model="form.nik"
+            x-on:input.capture="let v = $el.value.replace(/\D/g, ''); if (v !== $el.value) $el.value = v"
             placeholder="Masukkan NIK 16 digit"
             inputmode="numeric"
+            pattern="[0-9]*"
             maxlength="16"
             required
         />

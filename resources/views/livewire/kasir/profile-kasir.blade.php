@@ -59,7 +59,7 @@
         {{-- Hero Profile Banner (Apple Obsidian & Forest Glassmorphism) --}}
         <div class="relative overflow-hidden rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-darkbrown-950/15 border border-white/15"
              style="background: linear-gradient(135deg, #181403 0%, #292004 45%, #3d4f06 100%);">
-            
+
             {{-- Specular Light Sheen --}}
             <div class="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/20 pointer-events-none"></div>
 
@@ -131,7 +131,7 @@
 
         {{-- 3 Grid Columns: Detail Toko, Hak Akses & Form Data Akun --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-            
+
             {{-- Col 1: Detail Toko & Status Kasir --}}
             <div class="space-y-6">
                 {{-- Card Toko --}}
@@ -202,7 +202,7 @@
 
             {{-- Col 2 & 3: Form Informasi Akun Kasir --}}
             <div class="lg:col-span-2 space-y-6">
-                
+
                 {{-- Form: Data Akun Kasir --}}
                 <div class="bg-white rounded-2xl border border-wheat-200/90 p-6 sm:p-7 shadow-sm">
                     <div class="flex items-center justify-between gap-4 pb-4 border-b border-wheat-200/80">

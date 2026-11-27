@@ -11,12 +11,12 @@ use App\Models\RentalDetail;
 use App\Models\User;
 use App\Services\Payment\MidtransService;
 use App\Services\Payment\PaymentService;
-use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Livewire\Component;
 
@@ -898,7 +898,7 @@ class ReturnFlow extends Component
     }
 
     /**
-     * Kirim notifikasi statis in-app (dan opsional WhatsApp) ke owner/vendor
+     * Kirim notifikasi statis in-app (dan opsional email) ke owner/vendor
      * bahwa ada unit fisik yang dilaporkan hilang saat pengembalian.
      *
      * @param  Rental  $order
@@ -939,17 +939,19 @@ class ReturnFlow extends Component
             ]);
         }
 
-        // Kirim WhatsApp jika owner punya nomor telepon
-        if ($owner && $owner->phone) {
-            $waMessage = "🚨 *Laporan Barang Hilang — {$order->booking_code}*\n"
+        // Kirim email jika owner punya alamat email
+        if ($owner && $owner->email) {
+            $emailMessage = "🚨 Laporan Barang Hilang — {$order->booking_code}\n"
                 ."Kasir melaporkan barang hilang saat pengembalian:\n"
                 ."{$itemNames}\n\n"
                 .'Silakan periksa inventaris atau hapus unit tersebut dari toko melalui menu Kelola Unit.';
 
             try {
-                app(WhatsAppService::class)->send($owner->phone, $waMessage);
+                Mail::raw($emailMessage, function ($mail) use ($owner) {
+                    $mail->to($owner->email)->subject('🚨 Laporan Barang Hilang - TENDAKU');
+                });
             } catch (\Throwable $e) {
-                Log::error('ReturnFlow: gagal kirim WhatsApp notif barang hilang ke owner.', [
+                Log::error('ReturnFlow: gagal kirim email notif barang hilang ke owner.', [
                     'rental_id' => $order->id,
                     'owner_id' => $owner->id,
                     'error' => $e->getMessage(),

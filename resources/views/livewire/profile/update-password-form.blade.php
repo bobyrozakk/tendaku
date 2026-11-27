@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
 
 new class extends Component
@@ -12,8 +13,17 @@ new class extends Component
     public string $password = '';
     public string $password_confirmation = '';
 
+    /** Tampilan: 'form' (inline, default) atau 'row' (baris + modal di kartu Keamanan Akun). */
+    #[Locked]
+    public string $variant = 'form';
+
+    public function mount(string $variant = 'form'): void
+    {
+        $this->variant = $variant === 'row' ? 'row' : 'form';
+    }
+
     /**
-     * Update the password for the currently authenticated user.
+     * Perbarui kata sandi pengguna yang sedang login.
      */
     public function updatePassword(): void
     {
@@ -23,17 +33,14 @@ new class extends Component
                 'password' => ['required', 'string', Password::defaults(), 'confirmed'],
             ], [
                 'current_password.required' => 'Kata sandi saat ini wajib diisi.',
-                'current_password.string' => 'Kata sandi saat ini harus berupa teks.',
                 'current_password.current_password' => 'Kata sandi saat ini tidak sesuai.',
                 'password.required' => 'Kata sandi baru wajib diisi.',
-                'password.string' => 'Kata sandi baru harus berupa teks.',
-                'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
                 'password.min' => 'Kata sandi baru minimal :min karakter.',
-                'password.letters' => 'Kata sandi baru harus mengandung huruf.',
-                'password.mixed' => 'Kata sandi baru harus mengandung huruf besar dan huruf kecil.',
-                'password.numbers' => 'Kata sandi baru harus mengandung angka.',
-                'password.symbols' => 'Kata sandi baru harus mengandung simbol.',
-                'password.uncompromised' => 'Kata sandi ini pernah muncul dalam kebocoran data. Silakan pilih kata sandi lain.',
+                'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
+            ], [
+                'current_password' => 'kata sandi saat ini',
+                'password' => 'kata sandi baru',
+                'password_confirmation' => 'konfirmasi kata sandi baru',
             ]);
         } catch (ValidationException $e) {
             $this->reset('current_password', 'password', 'password_confirmation');
@@ -51,40 +58,52 @@ new class extends Component
     }
 }; ?>
 
-<section>
+@if ($variant === 'row')
+    <section id="keamanan">
+        <button
+            type="button"
+            x-data
+            x-on:click.prevent="$dispatch('open-modal', 'change-password')"
+            class="pf-sec-row"
+        >
+            <i data-lucide="lock-keyhole"></i>
+            <span>{{ __('Ubah Kata Sandi') }}</span>
+            <i data-lucide="chevron-right"></i>
+        </button>
+
+        <x-modal name="change-password" :show="$errors->isNotEmpty()" max-width="md" focusable>
+            <div
+                class="p-6"
+                x-data
+                x-on:password-updated.window="setTimeout(() => $dispatch('close-modal', 'change-password'), 900)"
+            >
+                <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading">
+                    {{ __('Ubah Kata Sandi') }}
+                </h2>
+
+                <p class="mt-1 mb-5 text-sm text-darkbrown-600">
+                    {{ __('Gunakan kata sandi yang panjang dan sulit ditebak agar akun tetap aman.') }}
+                </p>
+
+                @include('livewire.profile.partials.password-form')
+            </div>
+        </x-modal>
+    </section>
+@else
+<section id="keamanan">
     <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Ubah Kata Sandi') }}
+        <h2 class="text-lg font-extrabold text-darkbrown-900 font-heading flex items-center gap-2">
+            <i data-lucide="lock-keyhole" class="w-5 h-5 text-avocado-600"></i>
+            <span>{{ __('Perbarui Kata Sandi') }}</span>
         </h2>
 
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __('Gunakan kata sandi yang panjang dan unik untuk menjaga keamanan akun Anda.') }}
+        <p class="mt-1 text-xs sm:text-sm text-darkbrown-600">
+            {{ __('Gunakan kata sandi yang panjang dan sulit ditebak agar akun tetap aman.') }}
         </p>
     </header>
 
-    <form wire:submit="updatePassword" class="mt-6 space-y-6">
-        <div>
-            <x-input-label for="update_password_current_password" :value="__('Kata Sandi Saat Ini')" />
-            <x-password-input wire:model="current_password" id="update_password_current_password" name="current_password" wrapper-class="mt-1 w-full" class="block w-full" autocomplete="current-password" />
-            <x-input-error :messages="$errors->get('current_password')" class="mt-2" />
-        </div>
-
-        <div>
-            <x-input-label for="update_password_password" :value="__('Kata Sandi Baru')" />
-            <x-password-input wire:model="password" id="update_password_password" name="password" wrapper-class="mt-1 w-full" class="block w-full" autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <div>
-            <x-input-label for="update_password_password_confirmation" :value="__('Konfirmasi Kata Sandi Baru')" />
-            <x-password-input wire:model="password_confirmation" id="update_password_password_confirmation" name="password_confirmation" wrapper-class="mt-1 w-full" class="block w-full" autocomplete="new-password" />
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center gap-4">
-            <x-primary-button>{{ __('Simpan') }}</x-primary-button>
-
-            <x-action-message class="me-3" on="password-updated">Kata sandi berhasil diperbarui.</x-action-message>
-        </div>
-    </form>
+    <div class="mt-5">
+        @include('livewire.profile.partials.password-form')
+    </div>
 </section>
+@endif

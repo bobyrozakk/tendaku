@@ -110,13 +110,12 @@ class CustomerAddressAndRentalDataTest extends TestCase
         ]);
 
         $response = $this->actingAs($customer)
-            ->get(route('customer.packages.checkout', $this->package));
+            ->get(route('customer.packages.booking', $this->package));
 
         $response->assertOk()
             ->assertSee('Budi Santoso')
-            ->assertSee('budi.santoso@tendaku.test')
             ->assertSee('081234567899')
-            ->assertSee('Akun Terhubung');
+            ->assertSee('Data diambil dari akun Anda. Sudah lengkap.');
     }
 
     /**
@@ -263,7 +262,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'payment_channel' => 'bca_va',
         ];
         $confirmed = $this->confirmDelivery($payload);
-        $response = $this->post(route('customer.packages.checkout.store', $this->package), $confirmed);
+        $response = $this->post(route('customer.packages.booking.store', $this->package), $confirmed);
 
         $rental = Rental::withoutGlobalScopes()->latest('id')->first();
         $this->assertNotNull($rental);
@@ -314,7 +313,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'customer_address_id' => $address->id,
         ];
         $confirmed = $this->confirmDelivery($payload);
-        $response = $this->post(route('customer.packages.checkout.store', $this->package), $confirmed);
+        $response = $this->post(route('customer.packages.booking.store', $this->package), $confirmed);
 
         $response->assertRedirect();
         $rental = Rental::withoutGlobalScopes()->latest('id')->firstOrFail();
@@ -390,7 +389,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'nik' => '3273012345670002',
         ]);
 
-        $response = $this->actingAs($customer)->post(route('customer.packages.checkout.store', $this->package), [
+        $response = $this->actingAs($customer)->post(route('customer.packages.booking.store', $this->package), [
             'package_id' => $this->package->id,
             'pickup_date' => '2026-10-29',
             'pickup_time' => '09:00',
@@ -409,7 +408,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $this->actingAs($customer)
             ->get(route('profile'))
             ->assertOk()
-            ->assertSee('Daftar Alamat Pengantaran');
+            ->assertSee('Alamat Pengantaran');
     }
 
     /**
@@ -472,7 +471,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
             ->get(route('checkout.index'));
 
         $packageResponse = $this->actingAs($customer)
-            ->get(route('customer.packages.checkout', $this->package));
+            ->get(route('customer.packages.booking', $this->package));
 
         foreach ([$regularResponse, $packageResponse] as $response) {
             $response->assertOk()
@@ -597,7 +596,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
             'payment_channel' => 'bca_va',
         ];
         $confirmed = $this->confirmDelivery($payload);
-        $checkoutRes = $this->post(route('customer.packages.checkout.store', $this->package), $confirmed);
+        $checkoutRes = $this->post(route('customer.packages.booking.store', $this->package), $confirmed);
 
         $rental = Rental::withoutGlobalScopes()->latest('id')->firstOrFail();
         $checkoutRes->assertRedirect(route('booking.status', $rental->booking_code));
@@ -787,7 +786,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         }
         Http::preventStrayRequests();
 
-        $this->get($type === 'package' ? route('customer.packages.checkout', $this->package) : route('checkout.index'))
+        $this->get($type === 'package' ? route('customer.packages.booking', $this->package) : route('checkout.index'))
             ->assertOk()->assertSee('Rumah Lama')->assertSee('Lengkapi Titik Lokasi')
             ->assertSee('openEditAddressModal()', false);
         $this->postJson(route('checkout.shipping.preview'), $input)

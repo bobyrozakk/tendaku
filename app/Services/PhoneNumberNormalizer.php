@@ -5,7 +5,7 @@ namespace App\Services;
 final class PhoneNumberNormalizer
 {
     /**
-     * Kode negara Indonesia dalam format Fonnte.
+     * Kode negara Indonesia.
      */
     public const COUNTRY_CODE = '62';
 
@@ -17,7 +17,7 @@ final class PhoneNumberNormalizer
     public const MAX_LENGTH = 15;
 
     /**
-     * Normalisasi nomor telepon Indonesia ke format Fonnte (`62xxx`).
+     * Normalisasi nomor telepon Indonesia ke format internasional (`62xxx`).
      *
      * Accepted: `081234567890`, `+6281234567890`, `6281234567890`, `81234567890`.
      * Return null bila nomor kosong, tidak mengandung digit, atau panjangnya

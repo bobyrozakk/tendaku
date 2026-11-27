@@ -21,6 +21,16 @@
 }
 
 @layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto;
+        }
+    }
+
     body {
         font-family:
             "Plus Jakarta Sans",
@@ -54,6 +64,53 @@
 }
 
 @layer components {
+
+    .tendaku-navbar {
+        @apply border-b;
+        background-color: rgba(22, 29, 21, 0.96);
+        border-bottom-color: rgba(249, 227, 182, 0.15);
+        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
+        transition: background-color 300ms ease, border-color 300ms ease, box-shadow 300ms ease, backdrop-filter 300ms ease, -webkit-backdrop-filter 300ms ease;
+    }
+
+    .tendaku-navbar.is-scrolled {
+        background-color: rgba(22, 29, 21, 0.72);
+        border-bottom-color: rgba(249, 227, 182, 0.08);
+        box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.5);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        backdrop-filter: blur(16px) saturate(140%);
+    }
+
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+        .tendaku-navbar.is-scrolled {
+            background-color: rgba(22, 29, 21, 0.92);
+        }
+    }
+
+    .tendaku-nav-link {
+        @apply inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium text-wheat-200/80 transition-colors duration-200 hover:text-white hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/40;
+    }
+
+    .tendaku-nav-link.is-active {
+        @apply text-sunglow-300 bg-white/[0.08];
+    }
+
+    .tendaku-nav-link-block {
+        @apply flex px-3.5 py-2.5;
+    }
+
+    .tendaku-nav-icon {
+        @apply inline-flex items-center justify-center p-2 rounded-lg text-wheat-200/80 transition-colors duration-200 hover:text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/40;
+    }
+
+    .tendaku-nav-btn-secondary {
+        @apply inline-flex items-center justify-center text-center px-4 py-2 rounded-xl text-sm font-semibold text-wheat-100 border border-wheat-300/25 transition-colors duration-200 hover:text-white hover:bg-white/[0.07] hover:border-wheat-300/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/40;
+    }
+
+    .tendaku-nav-btn-primary {
+        @apply inline-flex items-center justify-center text-center px-4 py-2 rounded-xl text-sm font-bold text-darkbrown-900 bg-sunglow-300 shadow-sm transition-colors duration-200 hover:bg-sunglow-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#161d15];
+    }
     /* Tendaku Custom Buttons */
     .btn-tendaku-primary {
         @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white bg-avocado-600 hover:bg-avocado-700 active:bg-avocado-800 shadow-sm hover:shadow transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-2;

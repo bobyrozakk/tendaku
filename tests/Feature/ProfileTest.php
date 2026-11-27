@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\Vendor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Volt\Volt;
 use Tests\TestCase;
@@ -19,6 +20,25 @@ class ProfileTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertSeeVolt('profile.update-profile-information-form')
+            ->assertSeeVolt('profile.update-password-form')
+            ->assertSeeVolt('profile.delete-user-form');
+    }
+
+    public function test_vendor_owner_profile_page_keeps_owner_sidebar(): void
+    {
+        $vendor = Vendor::factory()->create();
+        $owner = User::factory()->create([
+            'role' => User::ROLE_VENDOR_OWNER,
+            'vendor_id' => $vendor->id,
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('profile'));
+
+        $response
+            ->assertOk()
+            ->assertSee('Navigasi Portal Owner')
+            ->assertSee('Profil Toko')
             ->assertSeeVolt('profile.update-profile-information-form')
             ->assertSeeVolt('profile.update-password-form')
             ->assertSeeVolt('profile.delete-user-form');

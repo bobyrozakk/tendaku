@@ -94,17 +94,28 @@ function ensureLeafletStylesheet() {
     document.head.appendChild(linkElement);
 }
 
-function ensureLeafletLoaded() {
-    if (typeof window !== "undefined" && window.L && typeof window.L.map === "function") {
-        ensureLeafletStylesheet();
-        return Promise.resolve(window.L);
-    }
+/**
+ * Jalur utama: Leaflet dari bundle sendiri (paket npm `leaflet`), jadi chunk
+ * terpisah yang hanya diunduh saat peta dibutuhkan dan tidak bergantung CDN.
+ */
+async function loadLeafletFromBundle() {
+    const [leafletModule] = await Promise.all([
+        import("leaflet"),
+        import("leaflet/dist/leaflet.css"),
+    ]);
+    const leaflet = leafletModule.default ?? leafletModule;
 
-    if (leafletLoadPromise) {
-        return leafletLoadPromise;
-    }
+    // Kode lain (checkout, booking) membaca window.L.
+    window.L = window.L ?? leaflet;
 
-    leafletLoadPromise = new Promise((resolve, reject) => {
+    return window.L;
+}
+
+/**
+ * Cadangan bila chunk lokal gagal dimuat: ambil dari CDN seperti sebelumnya.
+ */
+function loadLeafletFromCdn() {
+    return new Promise((resolve, reject) => {
         ensureLeafletStylesheet();
 
         const existingScript = document.querySelector('script[data-tendaku-leaflet-js="true"]');
@@ -130,7 +141,6 @@ function ensureLeafletLoaded() {
                     resolve(window.L);
                     return;
                 }
-                leafletLoadPromise = null;
                 reject(new Error("Pustaka Leaflet tidak tersedia setelah dimuat."));
             },
             { once: true },
@@ -138,17 +148,50 @@ function ensureLeafletLoaded() {
 
         scriptElement.addEventListener(
             "error",
-            () => {
-                leafletLoadPromise = null;
-                reject(new Error("Gagal memuat pustaka peta Leaflet."));
-            },
+            () => reject(new Error("Gagal memuat pustaka peta Leaflet.")),
             { once: true },
         );
 
         document.head.appendChild(scriptElement);
     });
+}
+
+function ensureLeafletLoaded() {
+    if (typeof window !== "undefined" && window.L && typeof window.L.map === "function") {
+        return Promise.resolve(window.L);
+    }
+
+    if (!leafletLoadPromise) {
+        leafletLoadPromise = loadLeafletFromBundle()
+            .catch(() => loadLeafletFromCdn())
+            .catch((error) => {
+                // Boleh dicoba lagi pada pemanggilan berikutnya.
+                leafletLoadPromise = null;
+                throw error;
+            });
+    }
 
     return leafletLoadPromise;
+}
+
+/**
+ * Unduh Leaflet lebih awal (mis. saat pointer berada di tombol Tambah/Ubah
+ * alamat) supaya peta langsung tampil ketika form terbuka.
+ */
+export function preloadLeaflet() {
+    ensureLeafletLoaded().catch(() => {});
+}
+
+if (typeof document !== "undefined") {
+    const warmUpLeaflet = (event) => {
+        if (event?.target?.closest?.("[data-preload-leaflet]")) {
+            preloadLeaflet();
+        }
+    };
+
+    ["pointerover", "focusin", "touchstart"].forEach((eventName) => {
+        document.addEventListener(eventName, warmUpLeaflet, { passive: true });
+    });
 }
 
 function createPinMarkerIcon(leaflet) {

@@ -1,10 +1,18 @@
 import { isValidCoordinatePair, parseCoordinateValue } from "./location-picker.js";
 
+// Nomor ponsel ke bentuk lokal 08xxxxxxxxxx (hanya angka, maks. 13 digit).
+const normalizePhone = (value) => {
+    let digits = String(value ?? "").replace(/\D/g, "");
+    if (digits.startsWith("62")) digits = "0" + digits.slice(2);
+    return digits.slice(0, 13);
+};
+const onlyDigits = (value, max) => String(value ?? "").replace(/\D/g, "").slice(0, max);
+
 export function checkoutAddressState(cfg, defaults = {}) {
     const emptyForm = () => ({
         label: "Rumah",
         recipient_name: cfg.name || "",
-        phone_number: cfg.phone || "",
+        phone_number: normalizePhone(cfg.phone),
         full_address: "",
         province: "Jawa Timur",
         city: "Malang",
@@ -58,7 +66,7 @@ export function checkoutAddressState(cfg, defaults = {}) {
             }
             this.editingAddressId = null;
             this.newAddressForm.recipient_name ||= this.name || "";
-            this.newAddressForm.phone_number ||= this.phone || "";
+            this.newAddressForm.phone_number ||= normalizePhone(this.phone);
             this.openAddressModal();
         },
 
@@ -96,6 +104,19 @@ export function checkoutAddressState(cfg, defaults = {}) {
             this.newAddressErrors = {};
             if ((this.pickupMethod ?? this.method) === "delivery" && !this.addressHasCoordinates(this.newAddressForm)) {
                 this.newAddressErrors = { latitude: ["Pilih titik lokasi yang valid pada peta sebelum menyimpan alamat pengantaran."] };
+                return;
+            }
+            this.newAddressForm.phone_number = normalizePhone(this.newAddressForm.phone_number);
+            this.newAddressForm.postal_code = onlyDigits(this.newAddressForm.postal_code, 5);
+            const formErrors = {};
+            if (!/^08[0-9]{8,11}$/.test(this.newAddressForm.phone_number)) {
+                formErrors.phone_number = ["Nomor telepon harus diawali 08 dan terdiri dari 10 hingga 13 angka."];
+            }
+            if (this.newAddressForm.postal_code && this.newAddressForm.postal_code.length !== 5) {
+                formErrors.postal_code = ["Kode pos harus 5 angka."];
+            }
+            if (Object.keys(formErrors).length) {
+                this.newAddressErrors = formErrors;
                 return;
             }
             this.newAddressSubmitting = true;

@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validasi POST /paket-camping/{id}/checkout.
+ * Validasi POST /paket-camping/{id}/booking.
  */
 class StorePackageCheckoutRequest extends FormRequest
 {
@@ -32,6 +32,7 @@ class StorePackageCheckoutRequest extends FormRequest
             'return_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:pickup_date'],
             'return_time' => ['nullable', 'date_format:H:i'],
             'pickup_method' => ['nullable', 'in:self_pickup,delivery'],
+            'payment_option' => ['nullable', 'string', 'in:full,dp'],
             'guest_name' => [$isGuest ? 'required' : 'nullable', 'string', 'max:255'],
             'guest_phone' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
             'guest_id_number' => [$isGuest ? 'required' : 'nullable', 'string', 'max:32'],
@@ -54,7 +55,7 @@ class StorePackageCheckoutRequest extends FormRequest
             'pickup_date.after_or_equal' => 'Tanggal mulai sewa tidak boleh di masa lalu.',
             'return_date.after_or_equal' => 'Tanggal pengembalian harus sama atau setelah tanggal mulai sewa.',
             'guest_name.required' => 'Nama lengkap wajib diisi untuk pemesanan tanpa akun.',
-            'guest_phone.required' => 'Nomor WhatsApp wajib diisi agar pengingat pengembalian dapat dikirim.',
+            'guest_phone.required' => 'Nomor telepon wajib diisi untuk pemesanan tanpa akun.',
             'guest_id_number.required' => 'NIK wajib diisi untuk pemesanan tanpa akun.',
             'customer_address_id.exists' => 'Alamat pengantaran yang dipilih tidak valid.',
         ];

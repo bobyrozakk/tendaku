@@ -81,6 +81,8 @@
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">No. WhatsApp Penerima *</label>
                                 <input type="tel" x-model="newAddressForm.phone_number" required placeholder="08xxxxxxxxxx"
+                                       inputmode="numeric" pattern="[0-9]*" maxlength="13" autocomplete="tel-national"
+                                       @input="$el.value = $el.value.replace(/\D/g, '').slice(0, 13); newAddressForm.phone_number = $el.value"
                                        class="{{ $inputBase }} text-xs">
                                 <p x-show="newAddressErrors.phone_number" x-text="newAddressErrors.phone_number?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
@@ -129,8 +131,11 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kode Pos</label>
-                                <input type="text" x-model="newAddressForm.postal_code" data-address-field="postal_code" placeholder="40135" maxlength="10"
+                                <input type="text" x-model="newAddressForm.postal_code" data-address-field="postal_code" placeholder="40135"
+                                       inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="postal-code"
+                                       @input="$el.value = $el.value.replace(/\D/g, '').slice(0, 5); newAddressForm.postal_code = $el.value"
                                        class="{{ $inputBase }} text-xs">
+                                <p x-show="newAddressErrors.postal_code" x-text="newAddressErrors.postal_code?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                             <div class="sm:col-span-2">
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Patokan Lokasi</label>

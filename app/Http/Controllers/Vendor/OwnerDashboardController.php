@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Vendor;
 
 use App\Http\Controllers\Controller;
+use App\Services\OwnerDashboardPresenter;
 use App\Services\VendorAnalyticsService;
 use App\Services\XlsxExportService;
 use Carbon\Carbon;
@@ -13,15 +14,9 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class OwnerDashboardController extends Controller
 {
-    /**
-     * Periode analitik yang didukung dashboard.
-     *
-     * @var array<int, string>
-     */
-    private const VALID_PERIODS = ['today', '7_days', '30_days', 'this_month', 'this_year'];
-
     public function __construct(
-        protected VendorAnalyticsService $analyticsService
+        protected VendorAnalyticsService $analyticsService,
+        protected OwnerDashboardPresenter $presenter
     ) {}
 
     /**
@@ -39,6 +34,7 @@ class OwnerDashboardController extends Controller
             'metrics' => $metrics,
             'vendor' => $vendor,
             'selectedPeriod' => $period,
+            'dashboard' => $this->presenter->build($metrics, $period),
         ]);
     }
 
@@ -105,6 +101,6 @@ class OwnerDashboardController extends Controller
     {
         $period = $request->query('period', '30_days');
 
-        return in_array($period, self::VALID_PERIODS, true) ? $period : '30_days';
+        return in_array($period, $this->presenter->validPeriods(), true) ? $period : '30_days';
     }
 }

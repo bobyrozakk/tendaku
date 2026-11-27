@@ -6,7 +6,15 @@
     $ext  = fn (string $u) => str_starts_with($u, 'http') ? 'target="_blank" rel="noopener noreferrer"' : '';
 @endphp
 
-<footer class="site-footer" style="--footer-photo: url('{{ asset($f['image']) }}')">
+<footer class="site-footer"
+        style="--footer-photo: url('{{ asset($f['image']) }}')"
+        @open-footer-doc.window="open($event.detail, null)"
+        x-data="{
+            doc: null,
+            opener: null,
+            open(key, el) { this.doc = key; this.opener = el; },
+            close() { this.doc = null; this.$nextTick(() => this.opener && this.opener.focus()); },
+        }">
     <div class="site-footer__inner">
 
         <div class="site-footer__grid">
@@ -38,7 +46,13 @@
                     <div class="site-footer__head"><h4 class="site-footer__title">{{ $col['title'] }}</h4></div>
                     <ul class="site-footer__list">
                         @foreach ($col['links'] as $link)
-                            <li><a href="{{ $href($link['url']) }}" {!! $ext($link['url']) !!}>{{ $link['label'] }}</a></li>
+                            <li>
+                                @isset($link['modal'])
+                                    <button type="button" class="site-footer__link-btn" aria-haspopup="dialog" x-on:click="open('{{ $link['modal'] }}', $el)">{{ $link['label'] }}</button>
+                                @else
+                                    <a href="{{ $href($link['url']) }}" {!! $ext($link['url']) !!}>{{ $link['label'] }}</a>
+                                @endisset
+                            </li>
                         @endforeach
                     </ul>
                 </nav>
@@ -70,12 +84,20 @@
         {{-- Bar bawah --}}
         <div class="site-footer__bottom">
             <p>&copy; {{ date('Y') }} {{ $f['brand']['name'] }}. Seluruh hak cipta dilindungi.</p>
-            <nav class="site-footer__legal" aria-label="Legal">
-                @foreach ($f['legal'] as $l)
-                    <a href="{{ $href($l['url']) }}">{{ $l['label'] }}</a>
-                @endforeach
-            </nav>
+            @if(!empty($f['legal']))
+                <nav class="site-footer__legal" aria-label="Legal">
+                    @foreach ($f['legal'] as $l)
+                        @isset($l['modal'])
+                            <button type="button" class="site-footer__link-btn" aria-haspopup="dialog" x-on:click="open('{{ $l['modal'] }}', $el)">{{ $l['label'] }}</button>
+                        @else
+                            <a href="{{ $href($l['url']) }}">{{ $l['label'] }}</a>
+                        @endisset
+                    @endforeach
+                </nav>
+            @endif
         </div>
 
     </div>
+
+    <x-footer.dialog :documents="$f['documents']" />
 </footer>

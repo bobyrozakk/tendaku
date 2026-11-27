@@ -209,7 +209,7 @@ class RegularCheckoutShippingTest extends TestCase
     public function test_delivery_page_has_no_flat_fee_or_final_total_until_preview(): void
     {
         $c = $this->context();
-        $this->actingAs($c['customer'])->get(route('checkout.index', ['pickup_method' => 'delivery']))->assertOk()->assertViewHas('booking', fn (array $booking): bool => $booking['delivery_fee'] === null && $booking['grand_total'] === null)->assertSee('Ongkir otomatis')->assertSee('shippingPreviewUrl')->assertSee('shippingNeedsApproval');
+        $this->actingAs($c['customer'])->get(route('checkout.index', ['pickup_method' => 'delivery']))->assertOk()->assertViewHas('booking', fn (array $booking): bool => $booking['delivery_fee'] === null && $booking['grand_total'] === null)->assertSee('Ongkir dihitung otomatis')->assertSee('shippingPreviewUrl')->assertSee('shippingNeedsApproval');
     }
 
     public function test_regular_submit_holds_session_lock_before_ors_and_releases_it_after_response(): void
