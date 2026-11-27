@@ -16,6 +16,12 @@
         ];
     @endphp
 
+    {{-- Judul hanya di mobile: di desktop dropdown sudah berdampingan dengan kalender --}}
+    <div class="col-span-full md:hidden flex items-center gap-2 pt-1 text-sm font-bold text-darkbrown-900">
+        <x-icon name="cloud-sun" class="w-4 h-4 text-avocado-700" />
+        <span>Prakiraan cuaca lokasi camping</span>
+    </div>
+
     <x-dropdown-select
         wire:model.live="spot"
         grouped
@@ -93,10 +99,9 @@
             <p class="flex items-start gap-1.5 text-[11px] text-darkbrown-500 leading-relaxed">
                 <x-icon name="info" class="w-3.5 h-3.5 text-avocado-700 shrink-0 mt-0.5" />
                 <span>
-                    Sumber: Open-Meteo{{ $generatedAt ? ' · Diperbarui '.$generatedAt.' WIB' : '' }}.<br>Cuaca dapat berubah sewaktu-waktu, pastikan membawa perlengkapan yang sesuai.<br>
-                    <i data-lucide="circle-exclamation-point" class="w-4 h-4 text-avocado-700 fill-avocado-200 stroke-avocado-700 shrink-0"></i>
+                    Sumber: Open-Meteo{{ $generatedAt ? ' · Diperbarui '.$generatedAt.' WIB' : '' }}.<br>Cuaca dapat berubah sewaktu-waktu, pastikan membawa perlengkapan yang sesuai.
                     @if ($partialMessage)
-                        {{ $partialMessage }}
+                        <br>{{ $partialMessage }}
                     @endif
                 </span>
             </p>

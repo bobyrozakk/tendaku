@@ -31,11 +31,11 @@ return [
 
     'default_spot' => env('WEATHER_DEFAULT_SPOT', 'gunung_bromo'),
 
-    'timeout' => (int) env('WEATHER_TIMEOUT', 10),
+    'timeout' => (int) env('WEATHER_TIMEOUT', 6),
 
     'retry_times' => (int) env('WEATHER_RETRY_TIMES', 2),
 
-    'retry_sleep_ms' => (int) env('WEATHER_RETRY_SLEEP_MS', 300),
+    'retry_sleep_ms' => (int) env('WEATHER_RETRY_SLEEP_MS', 200),
 
     /*
     |--------------------------------------------------------------------------
