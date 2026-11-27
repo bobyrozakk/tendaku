@@ -17,7 +17,7 @@
         wire:loading.class="opacity-75 cursor-wait"
         x-on:click="redirecting = true"
         x-bind:disabled="redirecting"
-        class="btn-tendaku-primary min-w-0 flex-[0.8] sm:flex-1 rounded-xl font-extrabold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer transition-all duration-200 {{ $compact ? 'py-3 px-3' : 'py-3 px-3' }}"
+        class="btn-tendaku-primary min-w-0 rounded-xl font-extrabold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer transition-all duration-200 py-3 {{ $compact ? 'flex-none px-8' : 'flex-[0.8] sm:flex-1 px-3' }}"
     >
         <span
             x-show="!redirecting"

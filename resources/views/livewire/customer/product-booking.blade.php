@@ -416,7 +416,7 @@
                 </p>
             </div>
 
-            <div class="min-w-0 flex-1 sm:max-w-xs">
+            <div class="ml-auto shrink-0">
                 @include('livewire.customer.partials.product-booking-actions', [
                     'idSuffix' => '-sticky',
                     'compact' => true,
