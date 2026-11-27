@@ -47,12 +47,11 @@ Route::get('/cart', fn () => redirect()->route('customer.cart.index'));
 Route::prefix('katalog/booking')->group(function () {
     Route::post('shipping-preview', ShippingPreviewController::class)
         ->withoutMiddleware(RedirectIfUnverified::class)
-        ->middleware('throttle:10,1')
-        ->block(120, 5)
+        ->middleware('throttle:90,1')
         ->name('checkout.shipping.preview');
     Route::get('availability', CheckoutAvailabilityController::class)
         ->withoutMiddleware(RedirectIfUnverified::class)
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:90,1')
         ->name('checkout.availability');
     Route::get('/', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/', [CheckoutController::class, 'store'])->block(120, 5)->name('checkout.store');
