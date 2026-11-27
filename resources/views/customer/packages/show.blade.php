@@ -10,6 +10,11 @@
         $vendorName = $vendor?->name ?? 'Tendaku Vendor';
         $storeUrl = $vendor ? route('customer.stores.show', $vendor->slug ?? $package->vendor_id) : null;
         $formattedPrice = number_format($price, 0, ',', '.');
+        $duration = max(1, (int) $package->duration_days);
+        $defaultTotal = $price * $duration;
+        $unitCount = (int) $package->total_items_count;
+        $typeCount = (int) $package->item_types_count;
+        $rupiah = fn ($n) => 'Rp '.number_format((float) $n, 0, ',', '.');
         $checkoutUrl = route('customer.packages.booking', ['id' => $package->id]);
 
         $imageOf = fn ($item) => $item?->images?->pluck('image_url')->filter()->first() ?: ($item?->image_url ?: null);
@@ -90,7 +95,7 @@
                             </span>
                             @if ($savings > 0)
                                 <span class="rounded-full bg-sunglow-300 px-3.5 py-1.5 text-xs font-extrabold text-darkbrown-900 shadow-md">
-                                    Hemat Rp {{ number_format($savings, 0, ',', '.') }}
+                                    Hemat Rp {{ number_format($savings, 0, ',', '.') }}/hari
                                 </span>
                             @endif
                         </div>
@@ -111,10 +116,13 @@
                             <span class="text-3xl font-extrabold tracking-tight text-darkbrown-900 sm:text-4xl">Rp {{ $formattedPrice }}</span>
                             <span class="text-sm font-semibold text-darkbrown-500">/ hari</span>
                         </p>
+                        <p class="mt-1.5 text-xs leading-relaxed text-darkbrown-600">
+                            Sewa {{ $duration }} hari = <strong class="text-darkbrown-900">{{ $rupiah($defaultTotal) }}</strong>.
+                            Tanggal sewa bisa Anda atur di halaman booking, harga mengikuti jumlah hari.
+                        </p>
                         @if ($normalPrice > $price)
-                            <p class="mt-1.5 text-[11px] text-darkbrown-400">
-                                Harga normal bila disewa satuan:
-                                <span class="line-through">Rp {{ number_format($normalPrice, 0, ',', '.') }}</span>
+                            <p class="mt-1 text-[11px] text-darkbrown-400">
+                                Bila alat disewa satuan: <span class="line-through">{{ $rupiah($normalPrice) }} / hari</span>
                             </p>
                         @endif
                     </div>
@@ -160,10 +168,10 @@
                         </h2>
 
                         <span class="text-xs text-darkbrown-500">
-                            <span class="font-bold text-darkbrown-900">
-                                {{ $package->total_items_count }}
-                            </span>
-                            item
+                            <span class="font-bold text-darkbrown-900">{{ $unitCount }}</span> unit
+                            @if ($typeCount !== $unitCount)
+                                dari {{ $typeCount }} jenis alat
+                            @endif
                         </span>
                     </div>
 
@@ -225,24 +233,58 @@
                 <section class="rounded-3xl border border-wheat-200/90 bg-white p-6 shadow-tendaku-sm" aria-labelledby="informasi-paket">
                     <h2 id="informasi-paket" class="{{ $sectionHeadingClass }}">Informasi Paket</h2>
                     <dl class="mt-3 divide-y divide-wheat-100 text-sm">
-                        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 first:pt-0">
-                            <dt class="text-darkbrown-600">Durasi Sewa</dt>
-                            <dd class="font-semibold text-darkbrown-900">{{ $package->duration_days }} hari</dd>
-                        </div>
-                        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
-                            <dt class="text-darkbrown-600">Isi Paket</dt>
-                            <dd class="font-semibold text-darkbrown-900">{{ $package->total_items_count }} item</dd>
-                        </div>
-                        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
-                            <dt class="text-darkbrown-600">Kapasitas</dt>
-                            <dd class="font-semibold text-darkbrown-900">{{ $package->max_people ? $package->max_people.' orang' : 'Fleksibel' }}</dd>
-                        </div>
-                        @if ($savings > 0)
-                            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
-                                <dt class="text-darkbrown-600">Hemat dibanding sewa satuan</dt>
-                                <dd class="font-semibold text-avocado-700">Rp {{ number_format($savings, 0, ',', '.') }} / hari</dd>
+                        <div class="py-3 first:pt-0">
+                            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                                <dt class="text-darkbrown-600">Durasi standar</dt>
+                                <dd class="font-semibold text-darkbrown-900">{{ $duration }} hari</dd>
                             </div>
-                        @endif
+                            <p class="mt-1 text-xs leading-relaxed text-darkbrown-500">
+                                Ini lama sewa yang disarankan vendor. Anda boleh memilih lebih singkat atau lebih lama saat booking, dan harganya menyesuaikan.
+                            </p>
+                        </div>
+                        <div class="py-3">
+                            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                                <dt class="text-darkbrown-600">Isi paket</dt>
+                                <dd class="font-semibold text-darkbrown-900">{{ $unitCount }} unit</dd>
+                            </div>
+                            <p class="mt-1 text-xs leading-relaxed text-darkbrown-500">
+                                Total semua alat yang Anda bawa{{ $typeCount !== $unitCount ? ' ('.$typeCount.' jenis alat, ada yang jumlahnya lebih dari satu)' : '' }}.
+                            </p>
+                        </div>
+                        <div class="py-3">
+                            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                                <dt class="text-darkbrown-600">Kapasitas</dt>
+                                <dd class="font-semibold text-darkbrown-900">{{ $package->max_people ? $package->max_people.' orang' : 'Fleksibel' }}</dd>
+                            </div>
+                            <p class="mt-1 text-xs leading-relaxed text-darkbrown-500">
+                                Perkiraan jumlah orang yang cukup memakai perlengkapan ini.
+                            </p>
+                        </div>
+                        <div class="py-3">
+                            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                                <dt class="text-darkbrown-600">Harga paket</dt>
+                                <dd class="font-semibold text-darkbrown-900">{{ $rupiah($price) }} / hari</dd>
+                            </div>
+                            <p class="mt-1 text-xs leading-relaxed text-darkbrown-500">
+                                Harga ini sudah mencakup semua alat di dalam paket. Contoh: sewa {{ $duration }} hari = {{ $rupiah($price) }} x {{ $duration }} = {{ $rupiah($defaultTotal) }}.
+                            </p>
+                        </div>
+                        <div class="py-3 last:pb-0">
+                            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                                <dt class="text-darkbrown-600">Bila disewa satuan</dt>
+                                <dd class="font-semibold text-darkbrown-900">{{ $rupiah($normalPrice) }} / hari</dd>
+                            </div>
+                            @if ($savings > 0)
+                                <p class="mt-1 text-xs leading-relaxed text-avocado-700">
+                                    Hemat <strong>{{ $rupiah($savings) }} per hari</strong> dibanding menyewa tiap alat sendiri-sendiri
+                                    (hemat {{ $rupiah($savings * $duration) }} untuk {{ $duration }} hari).
+                                </p>
+                            @else
+                                <p class="mt-1 text-xs leading-relaxed text-darkbrown-500">
+                                    Harga satuan adalah jumlah tarif harian semua alat di dalam paket ini.
+                                </p>
+                            @endif
+                        </div>
                     </dl>
                 </section>
             </div>

@@ -140,7 +140,7 @@
 
                                 @if ($savings > 0)
                                     <x-badge variant="sunglow" size="sm" class="shadow-sm">
-                                        Hemat Rp {{ number_format($savings, 0, ',', '.') }}
+                                        Hemat Rp {{ number_format($savings, 0, ',', '.') }}/hari
                                     </x-badge>
                                 @endif
                             </div>
@@ -177,7 +177,7 @@
                             <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-darkbrown-500">
                                 <span class="inline-flex items-center gap-1">
                                     <i data-lucide="package" class="h-3 w-3 text-avocado-600" aria-hidden="true"></i>
-                                    {{ $package->total_items_count }} item
+                                    {{ $package->total_items_count }} unit
                                 </span>
                                 @if ($package->max_people)
                                     <span class="text-wheat-400" aria-hidden="true">•</span>
