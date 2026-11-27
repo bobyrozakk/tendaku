@@ -17,6 +17,7 @@ use App\Http\Controllers\Customer\RentalStatusLookupController;
 use App\Http\Controllers\Customer\ShippingPreviewController;
 use App\Http\Controllers\Customer\StoreController;
 use App\Http\Controllers\Kasir\FineQrisImageController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\ReverseGeocodingController;
 use App\Http\Controllers\Vendor\CampingPackageController;
 use App\Http\Controllers\Vendor\CashierController;
@@ -34,6 +35,11 @@ use Illuminate\Support\Facades\Route;
 
 // 1. Beranda (Home)
 Route::get('/', [CatalogController::class, 'home'])->name('home');
+
+// Halaman Informasi Publik
+Route::get('/layanan', [PageController::class, 'layanan'])->name('layanan');
+Route::get('/bantuan', [PageController::class, 'bantuan'])->name('bantuan');
+Route::get('/hubungi-kami', [PageController::class, 'hubungiKami'])->name('hubungi-kami');
 
 // Keranjang Sewa
 Route::get('/keranjang', [CartController::class, 'index'])->name('customer.cart.index');

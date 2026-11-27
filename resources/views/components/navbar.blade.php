@@ -72,8 +72,12 @@
                 <!-- Cart (khusus member yang sudah login) -->
                 @auth
                     @php
-                        $activeCart = app(\App\Services\Booking\CartService::class)->get(auth()->user());
-                        $cartQty = is_array($activeCart) ? (int) ($activeCart['qty'] ?? 0) : 0;
+                        try {
+                            $activeCart = app(\App\Services\Booking\CartService::class)->get(auth()->user());
+                            $cartQty = is_array($activeCart) ? (int) ($activeCart['qty'] ?? 0) : 0;
+                        } catch (\Exception) {
+                            $cartQty = 0;
+                        }
                     @endphp
                     <div
                         x-data="{ qty: {{ $cartQty }} }"

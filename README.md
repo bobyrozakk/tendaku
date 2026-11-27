@@ -5,303 +5,177 @@
 [![Livewire](https://img.shields.io/badge/Livewire-3.x-4E5BA6?style=flat-square&logo=livewire&logoColor=white)](https://livewire.laravel.com)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 
-**Tendaku** adalah platform web penyewaan perlengkapan *outdoor* & camping berbasis **Multi-Tenant (Multi-Vendor)**. Platform ini memungkinkan penyedia jasa sewa perlengkapan outdoor (Vendor) untuk mengelola katalog produk, melacak unit fisik alat secara terperinci (serialized unit tracking), memproses reservasi sewa (pembayaran lunas), mengelola alur serah-terima dengan **Jaminan KTP Fisik & Verifikasi Foto Wajah**, serta menerima pembayaran terintegrasi via **Midtrans**.
+**Tendaku** adalah platform web penyewaan perlengkapan _outdoor_ & camping berbasis **Multi-Tenant (Multi-Vendor)**. Platform ini memungkinkan penyedia jasa sewa perlengkapan outdoor (Vendor) untuk mengelola katalog produk, melacak unit fisik alat secara terperinci (serialized unit tracking), memproses reservasi sewa (pembayaran lunas), mengelola alur serah-terima dengan **Jaminan KTP Fisik & Verifikasi Foto Wajah**, serta menerima pembayaran terintegrasi via **Midtrans**.
 
 ---
 
-## 📌 Fitur Utama Platform (Update Revisi)
+## 📌 Fitur Utama
 
-### 🏢 **1. Multi-Tenancy (Isolasi Data Vendor)**
+### 🏢 1. Multi-Tenancy (Isolasi Data Vendor)
+
 - Isolasi data otomatis per toko sewa berbasis `vendor_id` (`BelongsToVendor` Trait).
 - Setiap vendor memiliki dashboard, katalog, unit barang, dan pengaturan rekening/gateway pembayaran secara mandiri.
 
-### ⛺ **2. Manajemen Katalog & Unit Fisik (Serialized Tracking)**
-- **Master Item:** Pengaturan tarif sewa per hari dan denda keterlambatan per hari *(Tanpa deposit uang tunai)*.
-- **Item Unit:** Pengelolaan unit fisik barang individual (menggunakan kode unit / barcode), pencatatan harga pembelian, serta riwayat status unit (`available`, `rented`, `maintenance`, `lost`).
+### ⛺ 2. Manajemen Katalog & Unit Fisik (Serialized Tracking)
 
-### 🪪 **3. Jaminan Fisik KTP & Foto Verifikasi (Tanpa Deposit Uang)**
-- **Bayar Lunas di Awal:** Seluruh transaksi sewa dibayar lunas melalui Midtrans atau tunai.
-- **Penahanan KTP Fisik saat Pickup:** Penyewa menyerahkan KTP fisik asli sebagai jaminan sewa saat serah-terima barang.
-- **Foto Verifikasi KTP + Wajah:** Admin toko wajib mengambil foto penyewa memegang KTP fisiknya langsung melalui sistem untuk memastikan kesesuaian identitas.
-- **Bukti Digital Tanda Terima Jaminan:** Foto dan bukti penahanan KTP tersimpan di sistem, sehingga penyewa & toko memiliki bukti sah digital penahanan jaminan KTP.
-- **Pengembalian KTP saat Return:** KTP fisik diserahkan kembali saat barang dikembalikan dan status jaminan di-update menjadi `returned`.
+- **Master Item:** Pengaturan tarif sewa per hari dan denda keterlambatan per hari _(tanpa deposit uang tunai)_.
+- **Item Unit:** Pengelolaan unit fisik barang individual (kode unit / barcode), pencatatan harga pembelian, serta riwayat status unit (`available`, `rented`, `maintenance`, `lost`).
 
-### 🔄 **4. Alur Penyewaan & Inspeksi Barang (Pickup & Return Flow)**
-- **Inspeksi Serah Terima:** Pencatatan kondisi barang sebelum sewa (`condition_before`) dan sesudah sewa (`condition_after`).
-- Perhitungan otomatis denda keterlambatan (*late fee*) dan denda kerusakan (*damage fee*).
+### 🪪 3. Jaminan Fisik KTP & Foto Verifikasi (Tanpa Deposit Uang)
 
-### ☀️ **5. Kalender Prediksi Cuaca (Weather Calendar Integration)**
-- Fitur bagi pelanggan untuk mengecek prakiraan cuaca di lokasi camping tujuan pada tanggal reservasi yang dipilih.
+- **Bayar lunas di awal** melalui Midtrans atau tunai.
+- **Penahanan KTP fisik saat pickup** sebagai jaminan sewa.
+- **Foto verifikasi KTP + wajah** diambil admin toko langsung melalui sistem.
+- **Bukti digital tanda terima jaminan** tersimpan di sistem untuk penyewa dan toko.
+- **Pengembalian KTP saat return**, status jaminan di-update menjadi `returned`.
+
+### 🔄 4. Alur Penyewaan & Inspeksi Barang (Pickup & Return Flow)
+
+- Pencatatan kondisi barang sebelum sewa (`condition_before`) dan sesudah sewa (`condition_after`).
+- Perhitungan otomatis denda keterlambatan (_late fee_) dan denda kerusakan (_damage fee_).
+
+### ☀️ 5. Kalender Prediksi Cuaca
+
+- Pelanggan dapat mengecek prakiraan cuaca di lokasi camping tujuan pada tanggal reservasi yang dipilih.
 
 ---
 
-## 📁 Struktur Direktori & Arsitektur Utama
+## 📁 Struktur Direktori
 
 ```
 tendaku/
 ├── app/
 │   ├── Http/Controllers/
-│   │   ├── Customer/             # Controller katalog & checkout pelanggan
-│   │   ├── Vendor/               # Controller produk & manajemen rental vendor
+│   │   ├── Customer/             # Katalog & checkout pelanggan
+│   │   ├── Vendor/               # Produk & manajemen rental vendor
 │   │   └── Webhook/              # Webhook handler Midtrans
 │   ├── Livewire/                 # Komponen interaktif Livewire 3
 │   │   ├── Customer/             # Booking & Weather Calendar
-│   │   └── Vendor/               # Item Unit Manager & Pickup/Return Flow (Upload Foto KTP)
-│   ├── Models/                   # Eloquent Models (User, Vendor, MasterItem, ItemUnit, Rental, dll.)
-│   ├── Services/                 # Layer Logika Bisnis
-│   │   ├── AvailabilityService.php   # Cek ketersediaan unit barang per rentang tanggal
-│   │   ├── RentalService.php         # Kalkulasi pelunasan, foto KTP jaminan, denda
-│   │   ├── MidtransService.php       # Integrasi Snap Payment & Webhook
-│   │   └── WeatherService.php        # Integrasi OpenWeather API
+│   │   └── Vendor/               # Item Unit Manager & Pickup/Return Flow
+│   ├── Models/                   # Eloquent Models
+│   ├── Services/                 # Layer logika bisnis
+│   │   ├── AvailabilityService.php   # Ketersediaan unit per rentang tanggal
+│   │   ├── RentalService.php         # Pelunasan, foto KTP jaminan, denda
+│   │   ├── MidtransService.php       # Snap Payment & Webhook
+│   │   └── WeatherService.php        # OpenWeather API
 │   └── Traits/
-│       └── BelongsToVendor.php       # Global scope isolasi multi-tenant vendor
-├── database/migrations/          # Skema database berurutan
-├── PRD.md                        # Product Requirement Document & Panduan Tim Lengkap
-└── resources/views/              # Template Blade (Customer & Vendor UI)
+│       └── BelongsToVendor.php       # Global scope multi-tenant
+├── database/migrations/
+└── resources/views/              # Template Blade (Customer & Vendor)
 ```
 
 ---
 
-## 📄 Dokumen Kebutuhan Produk (PRD)
+## 📄 Dokumentasi Lain
 
-Untuk informasi terperinci mengenai **Spesifikasi Produk, Skema Database, Peran Pengguna (Role Matrix), Lifecycle Transaksi, serta Standar Pengkodean Tim**, silakan baca dokumen resmi kami:
-👉 **[PRD.md](file:///PRD.md)**
+- **[PRD.md](PRD.md)**: spesifikasi produk, skema database, role matrix, lifecycle transaksi, dan standar pengkodean tim.
+- **[DESIGN.md](DESIGN.md)**: panduan style, palet warna, dan komponen UI.
 
 ---
 
-## 🛠️ Panduan Memulai Development (Quick Start)
+## 🛠️ Quick Start
 
 ### Prerequisites
+
 - PHP 8.3+
 - Composer 2.x
 - Node.js 18+ & NPM
 - Database MySQL / PostgreSQL
 
-### Langkah Instalasi
+### Instalasi
 
-1. **Clone Repository & Masuk ke Direktori Project:**
-   ```bash
-   git clone https://github.com/bobyrozakk/tendaku.git
-   cd tendaku
-   ```
+1. **Clone repository:**
 
-2. **Install Dependency PHP & JavaScript:**
-   ```bash
-   composer install
-   npm install
-   ```
+    ```bash
+    git clone https://github.com/bobyrozakk/tendaku.git
+    cd tendaku
+    ```
 
-3. **Salin File Environment & Generate Application Key:**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
+2. **Install dependency:**
 
-4. **Konfigurasi Database di File `.env`:**
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=tendaku
-   DB_USERNAME=root
-   DB_PASSWORD=
-   ```
+    ```bash
+    composer install
+    npm install
+    ```
 
-5. **Jalankan Migrasi Database & Seeder:**
-   ```bash
-   php artisan migrate --seed
-   ```
+3. **Salin `.env` & generate key:**
 
-6. **Jalankan Server Development:**
-   ```bash
-   php artisan serve
-   ```
-   *Di terminal terpisah, jalankan bundling aset:*
-   ```bash
-   npm run dev
-   ```
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+
+4. **Atur database di `.env`** (contoh MySQL):
+
+    ```env
+    DB_CONNECTION=mysql
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=tendaku
+    DB_USERNAME=root
+    DB_PASSWORD=
+    ```
+
+5. **Migrasi & seeder:**
+
+    ```bash
+    php artisan migrate --seed
+    ```
+
+6. **Jalankan server:**
+
+    ```bash
+    php artisan serve
+    ```
+
+    Di terminal terpisah, jalankan aset:
+
+    ```bash
+    npm run dev
+    ```
 
 ---
 
 ## 🧪 Pengujian & Code Formatting
 
-- **Menjalankan Test Suite:**
-  ```bash
-  php artisan test
-  ```
+```bash
+php artisan test          # menjalankan test suite
+vendor/bin/pint           # format kode PHP (Laravel Pint)
+```
 
-- **Format Kode PHP (Laravel Pint):**
-  ```bash
-  vendor/bin/pint --format agent
-  ```
+---
+
+## 🚀 Catatan Production
+
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan event:cache
+```
+
+Gunakan `APP_ENV=production` dan `APP_DEBUG=false`.
 
 ---
 
 ## 👥 Tim & Kontribusi
 
-Proyek ini dikembangkan untuk penyewaan peralatan outdoor modern. Pastikan seluruh perubahan kode mengacu pada acuan arsitektur di [PRD.md](file:///PRD.md).
+Tendaku dikembangkan bersama oleh Tim PBL Tendaku (SIB-3E), Politeknik Negeri Malang. Seluruh anggota tim adalah kontributor dan pemilik bersama proyek ini.
 
-# Panduan Style CSS Tendaku
+| Nama                     | Peran           |
+| ------------------------ | --------------- |
+| Boby Rozak Saputra       | Project Manager |
+| Anandya Almas Febyantoro | Developer       |
+| Andini Tribuana          | Developer       |
+| Arsya Fikri Sabilillah   | Developer       |
+| Bunga Aulia Sari         | Developer       |
 
-## Palet warna
+Daftar kontributor lengkap beserta riwayat commit ada di halaman [Contributors](https://github.com/bobyrozakk/tendaku/graphs/contributors).
 
-| Warna | Hex | Variabel CSS | Class warna dasar |
-| --- | --- | --- | --- |
-| Wheat | `#F9E3B6` | `--color-wheat` | `bg-wheat-300` |
-| Sunglow | `#FBCE6B` | `--color-sunglow` | `bg-sunglow-300` |
-| Goldenrod | `#D5A007` | `--color-goldenrod` | `bg-goldenrod-500` |
-| Avocado | `#6C8B08` | `--color-avocado` | `bg-avocado-500` |
-| Dark brown | `#2B2202` | `--color-dark-brown` | `bg-darkbrown-800` |
+### Panduan Kontribusi
 
-Setiap warna memiliki shade `50` sampai `900`; `darkbrown` juga memiliki shade `950`. Gunakan prefix `bg-`, `text-`, atau `border-` sesuai kebutuhan, misalnya `text-avocado-800` dan `border-wheat-200`.
+- Buat branch dari `develop`, lalu ajukan perubahan lewat Pull Request. Jangan push langsung ke `main`.
+- Gunakan nama dan email Git yang sama dengan akun GitHub masing-masing agar kontribusi tercatat.
+- Ikuti acuan arsitektur di [PRD.md](PRD.md) dan format kode dengan `vendor/bin/pint`.
 
-Alias semantik CSS tersedia sebagai `--brand-primary`, `--brand-accent`, `--brand-highlight`, `--brand-surface`, dan `--brand-dark`. Alias Tailwind yang setara tersedia melalui `bg-brand-primary`, `text-brand-accent`, dan `bg-brand-surface`. Warna dasar juga tersedia sebagai `bg-tendaku-avocado`, `bg-tendaku-wheat`, dan alias palet lainnya di konfigurasi.
+### Kepemilikan & Lisensi
 
-Nilai warna di `app.css` dan `tailwind.config.js` didefinisikan terpisah. Saat mengubah palet brand, periksa keduanya agar tetap konsisten.
-
-## Tipografi dan style dasar
-
-- Teks utama memakai **Plus Jakarta Sans**; heading `h1`–`h6` memakai **Outfit**.
-- Font dimuat melalui Google Fonts di `app.css`, dengan font fallback jika font eksternal tidak tersedia.
-- Warna teks dasar adalah `#2B2202` dan latar halaman `#FDFBF7`.
-- Seleksi teks memakai latar Sunglow dan teks Dark brown.
-
-## Class komponen
-
-### Tombol
-
-| Class | Tampilan |
-| --- | --- |
-| `btn-tendaku-primary` | Hijau Avocado dengan teks putih. |
-| `btn-tendaku-accent` | Sunglow dengan teks gelap. |
-| `btn-tendaku-gold` | Goldenrod dengan teks putih. |
-| `btn-tendaku-secondary` | Wheat dengan border lembut. |
-| `btn-tendaku-dark` | Dark brown dengan teks Wheat. |
-| `btn-tendaku-outline` | Border dan teks Avocado. |
-
-Semua class tombol menyediakan state hover, active, dan focus sesuai definisinya di `app.css`.
-
-```html
-<button type="button" class="btn-tendaku-primary">Sewa sekarang</button>
-<button type="button" class="btn-tendaku-outline">Lihat detail</button>
-```
-
-### Kartu
-
-| Class | Tampilan |
-| --- | --- |
-| `card-tendaku` | Latar putih, border Wheat, dan shadow yang berubah saat hover. |
-| `card-tendaku-warm` | Latar hangat `#FDFBF7` dengan border Wheat. |
-| `card-tendaku-dark` | Latar Dark brown dan teks Wheat. |
-
-Class kartu tidak menambahkan padding. Tambahkan utility seperti `p-6` sesuai isi kartu. Heading memiliki warna gelap bawaan; berikan warna terang secara eksplisit saat memakai kartu gelap.
-
-```html
-<article class="card-tendaku p-6">
-    <h2 class="text-xl font-bold">Tenda camping</h2>
-    <p class="mt-2 text-sm text-darkbrown-500">Kapasitas 4 orang.</p>
-</article>
-```
-
-### Badge dan input
-
-Badge tersedia melalui `badge-avocado`, `badge-goldenrod`, `badge-sunglow`, `badge-wheat`, dan `badge-dark`.
-
-```html
-<span class="badge-avocado">Tersedia</span>
-<span class="badge-goldenrod">Pilihan populer</span>
-
-<label for="destination" class="block text-sm font-medium">Tujuan camping</label>
-<input id="destination" name="destination" type="text"
-       class="input-tendaku mt-2" placeholder="Masukkan lokasi">
-```
-
-`input-tendaku` menyediakan lebar penuh, border Wheat, sudut membulat, serta border dan ring Avocado saat focus.
-
-## Gradien, pola, dan shadow
-
-| Class | Efek |
-| --- | --- |
-| `bg-gradient-tendaku` | Gradien hangat Wheat, Sunglow, dan emas. |
-| `bg-gradient-outdoor` | Gradien Dark brown menuju hijau gelap. |
-| `bg-gradient-avocado` | Gradien Avocado menuju hijau gelap. |
-| `bg-gradient-gold` | Gradien Sunglow menuju Goldenrod. |
-| `bg-camping-pattern` | Pola titik Wheat pada latar hangat. |
-
-Shadow khusus: `shadow-tendaku-sm`, `shadow-tendaku`, `shadow-tendaku-lg`, `shadow-tendaku-glow`, dan `shadow-tendaku-avocado-glow`.
-
-```html
-<section class="bg-gradient-outdoor rounded-2xl p-6 text-wheat-100 shadow-tendaku-lg">
-    <h2 class="text-2xl font-bold text-wheat-100">Siap untuk petualangan?</h2>
-</section>
-```
-
-## Gunakan komponen Blade yang sudah tersedia
-
-Untuk halaman aplikasi, gunakan komponen yang sudah ada agar style dan atribut konsisten:
-
-```blade
-<x-card title="Perlengkapan camping" variant="warm">
-    <div class="flex flex-wrap items-center gap-3">
-        <x-badge variant="avocado" :dot="true">Tersedia</x-badge>
-        <x-primary-button type="button" variant="avocado" size="md">
-            Sewa sekarang
-        </x-primary-button>
-    </div>
-</x-card>
-
-<x-input-label for="location" value="Lokasi" />
-<x-text-input id="location" name="location" class="mt-2 w-full" />
-```
-
-- `x-primary-button`: variant `avocado`, `goldenrod`, `sunglow`, dan `dark`; ukuran `sm`, `md`, dan `lg`. Tipe tombol default adalah `submit`.
-- `x-card`: variant `default`, `warm`, `dark`, dan `glass`; mendukung judul, subtitle, padding, serta slot `header`, `action`, dan `footer`.
-- `x-badge`: variant `avocado`, `goldenrod`, `sunglow`, `wheat`, `dark`, dan `danger`; ukuran `sm`, `md`, dan `lg`; opsi titik melalui `:dot="true"`.
-- `x-text-input`: mendukung atribut input dan opsi `:disabled="true"`.
-
-Komponen Blade memiliki definisi utility sendiri; tampilannya tidak selalu persis sama dengan class CSS yang namanya serupa.
-
-## Menjalankan aset
-
-Dari direktori utama proyek, setelah dependency JavaScript terpasang:
-
-```bash
-npm run dev
-```
-
-Untuk membuat bundle produksi:
-
-```bash
-npm run build
-```
-
-Layout yang ada memuat aset melalui:
-
-```blade
-@vite(['resources/css/app.css', 'resources/js/app.js'])
-```
-
-Jika perubahan style belum terlihat, pastikan server Vite berjalan atau jalankan build ulang.
-
-
-
-## Performa
-
-Optimasi yang sudah diterapkan:
-
-- Ikon Lucide di-tree-shake (`resources/js/lucide-icons.js`). Saat menambah `<i data-lucide="nama-ikon">` baru,
-  tambahkan ikonnya ke file tersebut (nama PascalCase), lalu `npm run build`.
-- Foto produk/paket yang diunggah vendor diperkecil (sisi terpanjang 1600px) lewat `App\Services\ImageOptimizer`.
-- Gambar hero/latar dan video landing sudah dikompres; aset statis di-cache lewat `public/.htaccess`.
-- Index tambahan untuk query ketersediaan stok, riwayat sewa, dan GMV (`2026_11_26_100000_add_performance_indexes`).
-
-Rekomendasi untuk production (konfigurasi server, bukan kode):
-
-```sh
-php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan event:cache
-composer install --no-dev --optimize-autoloader
-```
-
-Gunakan `APP_DEBUG=false`, `APP_ENV=production`, dan pertimbangkan `CACHE_STORE`/`SESSION_DRIVER` ke Redis
-agar tidak membebani database pada setiap request. Jika memakai Nginx, aktifkan `gzip on;` dan beri
-`Cache-Control: public, max-age=31536000, immutable` untuk `/build/assets/`.
+Hak cipta © 2026 Tim Tendaku. Penggunaan bagian proyek ini untuk portofolio pribadi diperbolehkan selama mencantumkan nama kontributornya. Detail lisensi ada di file [LICENSE](LICENSE).

@@ -84,15 +84,17 @@
         {{-- Bar bawah --}}
         <div class="site-footer__bottom">
             <p>&copy; {{ date('Y') }} {{ $f['brand']['name'] }}. Seluruh hak cipta dilindungi.</p>
-            <nav class="site-footer__legal" aria-label="Legal">
-                @foreach ($f['legal'] as $l)
-                    @isset($l['modal'])
-                        <button type="button" class="site-footer__link-btn" aria-haspopup="dialog" x-on:click="open('{{ $l['modal'] }}', $el)">{{ $l['label'] }}</button>
-                    @else
-                        <a href="{{ $href($l['url']) }}">{{ $l['label'] }}</a>
-                    @endisset
-                @endforeach
-            </nav>
+            @if(!empty($f['legal']))
+                <nav class="site-footer__legal" aria-label="Legal">
+                    @foreach ($f['legal'] as $l)
+                        @isset($l['modal'])
+                            <button type="button" class="site-footer__link-btn" aria-haspopup="dialog" x-on:click="open('{{ $l['modal'] }}', $el)">{{ $l['label'] }}</button>
+                        @else
+                            <a href="{{ $href($l['url']) }}">{{ $l['label'] }}</a>
+                        @endisset
+                    @endforeach
+                </nav>
+            @endif
         </div>
 
     </div>
