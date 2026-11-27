@@ -151,7 +151,8 @@
                             </div>
                         </div>
 
-                        <div class="space-y-2.5">
+                        {{-- Desktop saja. Di mobile/tablet CTA memakai sticky bar (mobile-checkout-bar). --}}
+                        <div class="hidden lg:block space-y-2.5">
                             <button type="button" x-on:click="submitBooking()" :disabled="!canSubmitBooking"
                                     :class="!canSubmitBooking ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
                                     class="w-full py-3.5 px-5 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">

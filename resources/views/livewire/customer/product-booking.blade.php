@@ -249,7 +249,10 @@
                 </p>
             </div>
 
-            <div class="space-y-3 border-t border-wheat-100 pt-5">
+            <div @class([
+                'space-y-3 lg:border-t lg:border-wheat-100 lg:pt-5',
+                'hidden lg:block' => ! ($inCart && ! $isGuest),
+            ])>
                 {{-- Khusus anggota: muncul jika produk ini sudah ada di keranjang --}}
                 @if($inCart && ! $isGuest)
                     <div class="flex flex-col gap-2 rounded-2xl border border-avocado-200 bg-avocado-50 p-3.5">
@@ -270,15 +273,18 @@
                     </div>
                 @endif
 
-                @include('livewire.customer.partials.product-booking-actions', [
-                    'idSuffix' => '',
-                ])
+                {{-- Desktop saja. Di mobile/tablet tombol ada di sticky bar bawah layar. --}}
+                <div class="hidden lg:block space-y-3">
+                    @include('livewire.customer.partials.product-booking-actions', [
+                        'idSuffix' => '',
+                    ])
 
-                @if($isGuest)
-                    <p class="text-center text-[11px] leading-relaxed text-darkbrown-500">
-                        Langsung checkout tanpa akun. Isi jadwal sewa dan data diri di halaman Booking.
-                    </p>
-                @endif
+                    @if($isGuest)
+                        <p class="text-center text-[11px] leading-relaxed text-darkbrown-500">
+                            Langsung checkout tanpa akun. Isi jadwal sewa dan data diri di halaman Booking.
+                        </p>
+                    @endif
+                </div>
             </div>
         </div>
     </aside>
@@ -399,5 +405,23 @@
                 </li>
             </ul>
         </section>
+    </div>
+    {{-- Bar sewa tetap di layar kecil: harga + tombol checkout/keranjang --}}
+    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-wheat-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(43,34,2,0.25)] backdrop-blur lg:hidden">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-3">
+            <div class="min-w-0 shrink-0">
+                <p class="text-[11px] text-darkbrown-500">Tarif per hari</p>
+                <p class="truncate text-lg font-extrabold leading-tight text-darkbrown-900">
+                    Rp {{ number_format($item->daily_rate, 0, ',', '.') }}
+                </p>
+            </div>
+
+            <div class="min-w-0 flex-1 sm:max-w-xs">
+                @include('livewire.customer.partials.product-booking-actions', [
+                    'idSuffix' => '-sticky',
+                    'compact' => true,
+                ])
+            </div>
+        </div>
     </div>
 </div>

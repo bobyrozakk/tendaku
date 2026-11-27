@@ -141,6 +141,7 @@
                                     :pickup-date="$initialPickupDate ?? ''"
                                     :return-date="$initialReturnDate ?? ''"
                                     :compact="true"
+                                    lazy="on-load"
                                     key="checkout-booking-weather"
                                 />
                             @endif

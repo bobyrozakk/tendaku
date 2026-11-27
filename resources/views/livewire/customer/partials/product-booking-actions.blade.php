@@ -1,5 +1,6 @@
 @php
     $checkoutAction = $canSubmit ? 'checkoutNow' : 'chooseSchedule';
+    $compact = $compact ?? false;
 @endphp
 
 <div
@@ -14,30 +15,24 @@
         id="{{ $isGuest ? 'btn-checkout' : 'btn-sewa-sekarang' }}{{ $idSuffix }}"
         wire:loading.attr="disabled"
         wire:loading.class="opacity-75 cursor-wait"
+        x-on:click="redirecting = true"
         x-bind:disabled="redirecting"
-        x-bind:class="{ 'opacity-75 cursor-wait': redirecting }"
-        class="btn-tendaku-primary min-w-0 flex-1 py-3.5 px-6 rounded-xl font-extrabold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer transition-all duration-200"
+        class="btn-tendaku-primary min-w-0 flex-[0.8] sm:flex-1 rounded-xl font-extrabold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer transition-all duration-200 {{ $compact ? 'py-3 px-3' : 'py-3 px-3' }}"
     >
-        <span x-show="!redirecting" class="contents">
-            <span wire:loading.remove wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
-                @if($canSubmit)
-                    <span>Checkout Sekarang</span>
-                    <i data-lucide="arrow-right-circle" class="w-4 h-4"></i>
-                @else
-                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                    <span>Pilih Jadwal Lain</span>
-                @endif
-            </span>
-
-            <span wire:loading wire:target="checkoutNow,chooseSchedule" class="flex items-center gap-2">
-                <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
-                <span>Menyiapkan checkout...</span>
-            </span>
+        <span
+            x-show="!redirecting"
+            x-cloak
+            class="flex items-center justify-center gap-2"
+        >
+            <span>Checkout</span>
         </span>
 
-        <span x-show="redirecting" x-cloak style="display: none" class="flex items-center gap-2">
+        <span
+            x-show="redirecting"
+            x-cloak
+            class="flex items-center justify-center gap-2"
+        >
             <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
-            <span>Menyiapkan checkout...</span>
         </span>
     </button>
 
@@ -61,6 +56,7 @@
             <span wire:loading.remove wire:target="addToCart" class="flex items-center gap-1.5">
                 <i data-lucide="shopping-cart" class="w-4 h-4 text-avocado-700"></i>
             </span>
+
             <span wire:loading wire:target="addToCart" class="flex items-center gap-1.5">
                 <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
                 <span>Menyimpan...</span>

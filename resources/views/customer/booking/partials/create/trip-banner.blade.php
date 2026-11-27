@@ -21,7 +21,7 @@
                     </h2>
                 </div>
 
-                <ol class="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm" aria-label="Tahapan pemesanan">
+                <ol class="hidden sm:flex flex-wrap items-center gap-x-2 gap-y-2 text-sm" aria-label="Tahapan pemesanan">
                     @foreach ($bannerSteps as $i => $step)
                         <li class="inline-flex items-center gap-2">
                             <a href="#{{ $step['id'] }}"
