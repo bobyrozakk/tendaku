@@ -29,7 +29,11 @@ new class extends Component
         $this->name = $user->name ?? '';
         $this->email = $user->email ?? '';
         $this->phone = $user->phone ?? '';
-        $this->nik = (string) ($user->nik ?? '');
+        try {
+            $this->nik = (string) ($user->nik ?? '');
+        } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+            $this->nik = '';
+        }
         $this->address = $user->address;
     }
 
@@ -48,7 +52,11 @@ new class extends Component
         $this->name = $user->name ?? '';
         $this->email = $user->email ?? '';
         $this->phone = $user->phone ?? '';
-        $this->nik = (string) ($user->nik ?? '');
+        try {
+            $this->nik = (string) ($user->nik ?? '');
+        } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+            $this->nik = '';
+        }
         $this->address = $user->address;
         $this->resetErrorBag();
     }
@@ -183,9 +191,14 @@ new class extends Component
          ============================================================ --}}
     @php
         $currentUser = Auth::user();
-        $maskedNik = $currentUser->nik
-            ? (strlen($currentUser->nik) === 16 ? substr($currentUser->nik, 0, 4) . ' **** **** ' . substr($currentUser->nik, -4) : $currentUser->nik)
-            : null;
+        try {
+            $rawNik = $currentUser->nik;
+            $maskedNik = $rawNik
+                ? (strlen($rawNik) === 16 ? substr($rawNik, 0, 4) . ' **** **** ' . substr($rawNik, -4) : $rawNik)
+                : null;
+        } catch (\Illuminate\Contracts\Encryption\DecryptException) {
+            $maskedNik = null;
+        }
     @endphp
 
     @if ($compact)
