@@ -191,6 +191,7 @@
                         :vendor-city="$vendor['city'] ?? ''"
                         :pickup-date="$cartSummary['pickup_date'] ?? ''"
                         :return-date="$cartSummary['return_date'] ?? ''"
+                        lazy="on-load"
                         key="cart-booking-weather"
                     />
                 @else
