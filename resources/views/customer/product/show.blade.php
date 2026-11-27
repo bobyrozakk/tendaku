@@ -6,7 +6,7 @@
     <!-- Container Utama Detail Produk -->
     <div x-data="{ showGuestStoreModal: false }"
          @open-guest-store-modal.window="showGuestStoreModal = true"
-         class="flex flex-col gap-6">
+         class="flex flex-col gap-6 pb-24 lg:pb-0">
 
         <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs font-semibold text-darkbrown-500">
             <a href="{{ route('customer.catalog.index', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="inline-flex shrink-0 items-center gap-1.5 transition hover:text-avocado-700">

@@ -421,7 +421,7 @@
                                     $normalPrice = (float) $package->normal_price;
                                     $pkgMeta = collect([
                                         $package->duration_days.' hari',
-                                        $package->total_items_count.' item',
+                                        $package->total_items_count.' unit',
                                         $package->max_people ? 'maks. '.$package->max_people.' orang' : null,
                                     ])->filter()->join(' · ');
                                 @endphp
@@ -437,7 +437,7 @@
                                         @endif
                                         @if($savings > 0)
                                             <span class="absolute left-2.5 top-2.5 rounded-full bg-sunglow-300 px-2.5 py-1 text-[11px] font-bold text-darkbrown-900 shadow-sm">
-                                                Hemat Rp {{ number_format($savings, 0, ',', '.') }}
+                                                Hemat Rp {{ number_format($savings, 0, ',', '.') }}/hari
                                             </span>
                                         @endif
                                     </a>
