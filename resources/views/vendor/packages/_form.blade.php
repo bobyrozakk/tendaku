@@ -44,11 +44,11 @@
           productById(id) {
               return this.products.find((product) => product.id === String(id)) || null;
           },
-          itemSubtotal(row) {
-              const product = this.productById(row.master_item_id);
-              if (!product) return 0;
-              return product.daily_rate * (parseInt(row.quantity) || 0) * (parseInt(this.duration) || 0);
-          },
+            itemSubtotal(row) {
+                const product = this.productById(row.master_item_id);
+                if (!product) return 0;
+                return product.daily_rate * (parseInt(row.quantity) || 0);
+            },
           normalTotal() {
               return this.rows.reduce((total, row) => total + this.itemSubtotal(row), 0);
           },
