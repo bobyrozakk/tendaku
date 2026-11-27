@@ -133,14 +133,39 @@
                                 </div>
                             </div>
 
-                            <livewire:customer.booking-weather
-                                :vendor-city="$booking['vendor']['city'] ?? ''"
-                                :pickup-date="$initialPickupDate ?? ''"
-                                :return-date="$initialReturnDate ?? ''"
-                                :compact="true"
-                                lazy="on-load"
-                                key="checkout-booking-weather"
-                            />
+                            @if (! $isGuest)
+                                <livewire:customer.booking-weather
+                                    :vendor-city="$booking['vendor']['city'] ?? ''"
+                                    :pickup-date="$initialPickupDate ?? ''"
+                                    :return-date="$initialReturnDate ?? ''"
+                                    :compact="true"
+                                    lazy="on-load"
+                                    key="checkout-booking-weather"
+                                />
+                            @else
+                                <div class="rounded-2xl border border-wheat-200 bg-gradient-to-r from-wheat-50/80 to-white p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    <div class="flex items-start sm:items-center gap-3">
+                                        <div class="w-10 h-10 rounded-2xl bg-wheat-200/60 border border-wheat-300/80 text-darkbrown-600 flex items-center justify-center shrink-0">
+                                            <x-icon name="cloud-sun" class="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <h3 class="text-sm font-extrabold text-darkbrown-900">Prakiraan Cuaca Masa Sewa</h3>
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                    <x-icon name="lock" class="w-3 h-3" />
+                                                    Khusus Member
+                                                </span>
+                                            </div>
+                                            <p class="text-xs text-darkbrown-600 mt-1">
+                                                Prakiraan cuaca harian dan peringatan cuaca ekstrem hanya dapat diakses oleh akun terdaftar.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <a href="{{ route('login') }}" class="btn-tendaku-secondary text-xs font-bold px-4 py-2 shrink-0">
+                                        Masuk Akun
+                                    </a>
+                                </div>
+                            @endif
                         </div>
 
                         <p x-show="errors.dates" x-text="errors.dates" x-cloak class="mt-2 text-sm text-red-700"></p>
