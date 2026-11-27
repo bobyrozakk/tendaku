@@ -92,8 +92,14 @@
     </section>
 
     {{-- Card Bantuan Singkat --}}
-    <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm px-5 py-4 text-sm">
-        <div class="font-bold text-darkbrown-900">Butuh bantuan?</div>
-        <div class="text-xs text-darkbrown-500 mt-0.5">Hubungi vendor untuk kendala serah terima atau jadwal.</div>
+    <div class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm px-5 py-4 flex items-center justify-between gap-3 text-sm">
+        <div>
+            <div class="font-bold text-darkbrown-900">Butuh bantuan?</div>
+            <div class="text-darkbrown-500">Hubungi kami untuk kendala pembayaran</div>
+        </div>
+        <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-wheat-300 bg-wheat-50 hover:bg-wheat-100 px-3 py-2 text-xs font-bold text-avocado-900 transition">
+            <i data-lucide="message-circle" class="w-4 h-4"></i>
+            WhatsApp CS
+        </a>
     </div>
 </aside>

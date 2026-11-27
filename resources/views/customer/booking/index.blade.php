@@ -61,7 +61,7 @@
                 </div>
 
                 <div class="pt-2">
-                    {{ $rentals->links() }}
+                    {{ $rentals->links('customer.partials.pagination') }}
                 </div>
             @endif
         @empty
