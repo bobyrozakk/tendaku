@@ -62,6 +62,13 @@
             <div wire:key="weather-strip-{{ $spot }}-{{ $days[0]['date'] }}-{{ count($days) }}"
                  x-data="{ picked: '{{ $days[0]['date'] }}' }"
                  class="flex items-center gap-2">
+                @if (count($days) > 4)
+                    <button type="button" @click="$refs.strip.scrollBy({ left: -$refs.strip.clientWidth * 0.7, behavior: 'smooth' })"
+                            aria-label="Hari sebelumnya"
+                            class="hidden md:inline-flex w-9 h-9 shrink-0 rounded-full bg-white border border-wheat-300 text-darkbrown-800 items-center justify-center hover:bg-wheat-100 transition">
+                        <x-icon name="chevron-left" class="w-4 h-4" />
+                    </button>
+                @endif
                 <div x-ref="strip"
                      class="flex-1 min-w-0 flex gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     @foreach ($days as $day)
@@ -69,7 +76,7 @@
                                 @click="picked = '{{ $day['date'] }}'"
                                 :aria-pressed="picked === '{{ $day['date'] }}' ? 'true' : 'false'"
                                 :class="picked === '{{ $day['date'] }}' ? 'border-avocado-500 bg-avocado-100/70' : 'border-wheat-200 bg-wheat-50/70 hover:border-avocado-300'"
-                                class="snap-start grow shrink-0 basis-[calc((100%-1.5rem)/4)] min-w-[6.5rem] rounded-xl border px-2 pt-3 pb-2 text-center space-y-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500/40">
+                                class="snap-start grow shrink-0 basis-[calc((100%-0.5rem)/2)] md:basis-[calc((100%-1.5rem)/4)] min-w-0 rounded-xl border px-2 pt-3 pb-2 text-center space-y-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500/40">
                             <p class="text-[11px] font-semibold text-darkbrown-800 whitespace-nowrap">
                                 {{ $day['date_compact'] }}
                                 @if ($day['is_today'])
@@ -90,7 +97,7 @@
                 @if (count($days) > 4)
                     <button type="button" @click="$refs.strip.scrollBy({ left: $refs.strip.clientWidth * 0.7, behavior: 'smooth' })"
                             aria-label="Hari berikutnya"
-                            class="w-9 h-9 shrink-0 rounded-full bg-white border border-wheat-300 text-darkbrown-800 inline-flex items-center justify-center hover:bg-wheat-100 transition">
+                            class="hidden md:inline-flex w-9 h-9 shrink-0 rounded-full bg-white border border-wheat-300 text-darkbrown-800 items-center justify-center hover:bg-wheat-100 transition">
                         <x-icon name="chevron-right" class="w-4 h-4" />
                     </button>
                 @endif

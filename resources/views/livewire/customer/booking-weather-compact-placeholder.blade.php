@@ -6,7 +6,7 @@
     <div class="col-span-full md:col-span-12 space-y-2">
         <div class="flex gap-2 overflow-hidden animate-pulse">
             @foreach (range(1, 4) as $skeleton)
-                <div class="grow shrink-0 basis-[calc((100%-1.5rem)/4)] min-w-[6.5rem] h-32 rounded-xl bg-wheat-100"></div>
+                <div class="grow shrink-0 basis-[calc((100%-0.5rem)/2)] md:basis-[calc((100%-1.5rem)/4)] min-w-0 h-32 rounded-xl bg-wheat-100"></div>
             @endforeach
         </div>
         <p x-show="!stalled" class="text-xs text-darkbrown-500">Menyiapkan prakiraan cuaca untuk periode sewa…</p>

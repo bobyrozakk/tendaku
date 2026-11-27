@@ -2,16 +2,14 @@
                 <section id="section-rental" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm scroll-mt-24">
                     @include('customer.booking.partials.create.section-heading', [
                         'step' => 1,
-                        'title' => $isLoggedIn ? 'Jadwal & Perkiraan Cuaca' : 'Jadwal Sewa',
-                        'subtitle' => $isLoggedIn
-                            ? 'Pilih tanggal sewa dan lihat prakiraan cuaca di lokasi.'
-                            : 'Pilih tanggal ambil dan kembali. Ketersediaan diperiksa otomatis.',
+                        'title' => 'Jadwal & Perkiraan Cuaca',
+                        'subtitle' => 'Pilih tanggal sewa dan lihat prakiraan cuaca di lokasi.',
                     ])
 
                     <div class="px-5 sm:px-6 pt-4 pb-5 sm:pb-6" @click.outside="calOpen = null; timeOpen = false">
-                        <div @class(['grid grid-cols-1 gap-3', 'md:grid-cols-12 md:items-start md:gap-x-4 md:gap-y-4' => $isLoggedIn])>
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-start md:gap-x-4 md:gap-y-4">
 
-                            <div @class(['relative', 'md:col-span-6' => $isLoggedIn, 'sm:max-w-md' => ! $isLoggedIn])>
+                            <div class="relative md:col-span-6">
                                 <span class="sr-only">Tanggal sewa</span>
 
                                 <button type="button" @click="openCalendar()" :aria-expanded="calOpen ? 'true' : 'false'" aria-haspopup="dialog"
@@ -135,16 +133,14 @@
                                 </div>
                             </div>
 
-                            @if ($isLoggedIn)
-                                <livewire:customer.booking-weather
-                                    :vendor-city="$booking['vendor']['city'] ?? ''"
-                                    :pickup-date="$initialPickupDate ?? ''"
-                                    :return-date="$initialReturnDate ?? ''"
-                                    :compact="true"
-                                    lazy="on-load"
-                                    key="checkout-booking-weather"
-                                />
-                            @endif
+                            <livewire:customer.booking-weather
+                                :vendor-city="$booking['vendor']['city'] ?? ''"
+                                :pickup-date="$initialPickupDate ?? ''"
+                                :return-date="$initialReturnDate ?? ''"
+                                :compact="true"
+                                lazy="on-load"
+                                key="checkout-booking-weather"
+                            />
                         </div>
 
                         <p x-show="errors.dates" x-text="errors.dates" x-cloak class="mt-2 text-sm text-red-700"></p>
