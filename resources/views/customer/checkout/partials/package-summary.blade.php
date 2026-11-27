@@ -46,7 +46,7 @@
                                 <span>Jarak pengiriman</span>
                                 <span x-text="shipping?.distance_km == null ? '—' : formatMeasurement(shipping.distance_km) + ' km'"></span>
                             </div>
-                            <div x-show="!shippingReady" x-cloak role="status" aria-live="polite" class="rounded-xl bg-wheat-50 border border-wheat-200 p-3 text-darkbrown-600">
+                            <div x-show="!shippingReady" x-cloak role="status" aria-live="polite" class="rounded-xl border p-3" :class="shippingState === 'out_of_range' ? 'bg-red-50 border-red-200 text-red-800 font-semibold' : 'bg-wheat-50 border-wheat-200 text-darkbrown-600'">
                                 <span x-text="shippingMessage"></span>
                                 <button type="button" x-show="shippingState === 'error' && !shippingReloadRequired" @click="scheduleShipping()" class="block mt-2 font-bold text-avocado-700">Coba lagi</button>
                                 <button type="button" x-show="shippingReloadRequired" @click="window.location.reload()" class="block mt-2 font-bold text-avocado-700">Muat ulang checkout</button>

@@ -3,7 +3,7 @@ import { checkoutAddressState } from "../../components/checkout-address.js";
 // Cache hasil preview per kombinasi input (jadwal + qty + metode). Menghindari request
 // ulang saat pelanggan bolak-balik memilih tanggal/jumlah yang sama.
 const SHIPPING_CACHE_TTL_MS = 60_000;
-const SHIPPING_MAX_RETRIES = 2;
+const SHIPPING_MAX_RETRIES = 1;
 const SHIPPING_REQUEST_TIMEOUT_MS = 12_000;
 
 document.addEventListener("alpine:init", () => {
@@ -690,6 +690,13 @@ document.addEventListener("alpine:init", () => {
                             : data?.message,
                         response,
                     );
+                    return;
+                }
+
+                if (data?.status === "out_of_delivery_range") {
+                    // Di luar jangkauan: bukan error sementara, jadi tanpa tombol "Coba lagi".
+                    this.shippingState = "out_of_range";
+                    this.shippingMessage = data.message;
                     return;
                 }
 

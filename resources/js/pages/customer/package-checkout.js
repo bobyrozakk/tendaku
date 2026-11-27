@@ -449,6 +449,11 @@ document.addEventListener("alpine:init", () => {
                 });
                 const data = await response.json();
                 if (sequence !== this.shippingSequence || key !== this.shippingKey) return;
+                if (data.status === "out_of_delivery_range") {
+                    this.shippingState = "out_of_range";
+                    this.shippingMessage = data.message;
+                    return;
+                }
                 if (!response.ok || !data.success) throw new Error(data.message || "Ongkir belum dapat dihitung.");
                 this.applyShipping(data, key);
             } catch (error) {
