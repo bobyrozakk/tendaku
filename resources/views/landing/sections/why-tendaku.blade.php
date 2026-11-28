@@ -1,6 +1,6 @@
-<section class="py-20 sm:py-24 w-full bg-[#FDFBF7]" id="keunggulan" aria-labelledby="feat-heading">
+<section class="py-12 sm:py-20 lg:py-24 w-full bg-[#FDFBF7]" id="keunggulan" aria-labelledby="feat-heading">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-12" data-sr>
+        <div class="text-center mb-8 sm:mb-12" data-sr>
             <span class="text-xs font-bold uppercase tracking-[.18em] text-goldenrod-600">Mengapa Tendaku?</span>
             <h2 id="feat-heading" class="font-display text-3xl sm:text-5xl text-darkbrown-900 mt-2">Alam Terbaik, Untuk Anda</h2>
             <p class="text-sm text-darkbrown-500 mt-3 max-w-lg mx-auto leading-relaxed">Dirancang untuk memudahkan camper Indonesia mendapatkan peralatan outdoor terawat tanpa ribet.</p>

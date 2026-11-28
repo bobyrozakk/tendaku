@@ -28,7 +28,7 @@
         <form action="{{ route('customer.catalog.index') }}" method="GET"
               class="relative z-30 w-full max-w-3xl bg-white/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl sm:rounded-full shadow-2xl border border-white/60 flex flex-col sm:flex-row items-center gap-2 mt-2"
               data-sr data-sr-delay="240">
-            <div class="flex-1 flex items-center gap-2.5 px-3 py-2 w-full">
+            <div class="flex-1 flex items-center gap-2.5 px-3 py-2 min-h-[44px] w-full">
                 <i data-lucide="search" class="w-4 h-4 text-darkbrown-400 shrink-0"></i>
                 <input type="text" name="search" placeholder="Cari tenda dome, nesting, carrier..." aria-label="Cari alat camping"
                        class="w-full bg-transparent border-none text-darkbrown-900 text-sm placeholder:text-darkbrown-400 focus:outline-none focus:ring-0 p-0 font-medium">
@@ -74,7 +74,7 @@
                 <i data-lucide="zap" class="w-3.5 h-3.5 text-sunglow-300"></i>
                 Booking Instan
             </span>
-            <a href="#ktp-jaminan" class="ld-btn-ul text-xs ml-1">
+            <a href="#ktp-jaminan" class="ld-btn-ul text-xs ml-1 min-h-[44px] px-2">
                 Pelajari Jaminan KTP ↓
             </a>
         </div>

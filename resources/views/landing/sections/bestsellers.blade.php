@@ -1,31 +1,30 @@
-<section class="py-20 sm:py-24 w-full bg-[#FDFBF7]" id="shop" aria-labelledby="shop-heading">
+<section class="py-12 sm:py-20 lg:py-24 w-full bg-[#FDFBF7]" id="shop" aria-labelledby="shop-heading">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10" data-sr>
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6 sm:mb-10" data-sr>
             <div>
-                <span class="text-xs font-bold uppercase tracking-[.18em] text-avocado-600">Paling Sering Disewa</span>
                 <h2 id="shop-heading" class="font-display text-3xl sm:text-4xl text-darkbrown-900 mt-1">Peralatan Terpopuler</h2>
             </div>
             <a href="{{ route('customer.catalog.index') }}"
-               class="text-sm font-semibold text-darkbrown-700 hover:text-avocado-700 flex items-center gap-1 transition-colors shrink-0">
+               class="text-sm font-semibold text-darkbrown-700 hover:text-avocado-700 inline-flex items-center gap-1 min-h-[44px] transition-colors shrink-0">
                 Lihat Semua Produk →
             </a>
         </div>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
-            <form method="GET" action="{{ route('home') }}#shop" class="flex flex-wrap items-end gap-3">
-                <label class="text-xs font-semibold text-darkbrown-700">
+            <form method="GET" action="{{ route('home') }}#shop" class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 w-full sm:w-auto">
+                <label class="text-xs font-semibold text-darkbrown-700 w-full sm:w-auto">
                     Mulai sewa
-                    <input type="date" name="start_date" value="{{ request('start_date', $dateRange['start_date'] ?? '') }}" min="{{ now()->toDateString() }}" class="input-tendaku block" required />
+                    <input type="date" name="start_date" value="{{ request('start_date', $dateRange['start_date'] ?? '') }}" min="{{ now()->toDateString() }}" class="input-tendaku block min-h-[44px]" required />
                 </label>
-                <label class="text-xs font-semibold text-darkbrown-700">
+                <label class="text-xs font-semibold text-darkbrown-700 w-full sm:w-auto">
                     Selesai sewa
-                    <input type="date" name="end_date" value="{{ request('end_date', $dateRange['end_date'] ?? '') }}" min="{{ now()->toDateString() }}" class="input-tendaku block" required />
+                    <input type="date" name="end_date" value="{{ request('end_date', $dateRange['end_date'] ?? '') }}" min="{{ now()->toDateString() }}" class="input-tendaku block min-h-[44px]" required />
                 </label>
-                <button type="submit" class="btn-tendaku-primary text-xs">Cek Ketersediaan</button>
+                <button type="submit" class="btn-tendaku-primary text-xs min-h-[44px] w-full sm:w-auto">Cek Ketersediaan</button>
             </form>
             <x-stock-period :date-range="$dateRange" />
         </div>
 
-        <div class="grid grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             @forelse($popularItems as $i => $product)
                 @php
                     $detailUrl = route('customer.product.show', ['id' => $product->id] + ($dateRange ?? request()->only('start_date', 'end_date')));
@@ -38,7 +37,7 @@
                                 <span class="text-[11px] font-semibold">Foto belum tersedia</span>
                             </div>
                             <img src="{{ $product->image_url ?: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80' }}" alt="{{ $product->name }}" loading="lazy" width="600" height="800" class="relative" onerror="this.style.display='none'">
-                            <div class="absolute top-3 left-3 z-10 max-w-[76%]">
+                            <div class="absolute top-3 left-3 z-10 max-w-[calc(100%-1.5rem)] sm:max-w-[76%]">
                                 <x-stock-status :stock="$dateStockMap[$product->id]" />
                             </div>
                             <div class="ld-sewa-btn">
