@@ -5,7 +5,7 @@
         <style>
             @media (max-width: 1023px) {
                 body {
-                    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+                    padding-bottom: calc(3.5rem + max(0.75rem, env(safe-area-inset-bottom)));
                 }
             }
         </style>
@@ -307,7 +307,7 @@
     <div class="fixed inset-x-0 bottom-0 z-30 border-t border-wheat-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(43,34,2,0.25)] backdrop-blur lg:hidden">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div class="min-w-0">
-                <p class="text-[11px] text-darkbrown-500">
+                <p class="truncate text-[11px] text-darkbrown-500">
                     Harga paket / hari
                     @if ($isSaving)
                         <span class="font-bold text-avocado-700">&middot; hemat {{ $rupiah($savings) }}</span>
