@@ -46,7 +46,7 @@
     @if (! empty($paidPayment?->payment_proof_url))
         <div class="receipt-row">
             <span>Bukti Pembayaran</span>
-            <a href="{{ $paidPayment->payment_proof_url }}" target="_blank" rel="noopener noreferrer">Lihat bukti</a>
+            <a href="{{ $paidPayment->payment_proof_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-[44px] sm:min-h-0 items-center">Lihat bukti</a>
         </div>
     @endif
 

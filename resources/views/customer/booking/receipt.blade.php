@@ -21,7 +21,7 @@
         {{-- Tombol vendor tetap sama --}}
     </div>
 
-    <main class="receipt-page mx-auto px-4 py-5">
+    <main class="receipt-page mx-auto px-0 sm:px-4 py-5">
         <article id="order-receipt" class="receipt-paper">
             @include('customer.booking.partials.receipt-header')
             @include('customer.booking.partials.receipt-customer')

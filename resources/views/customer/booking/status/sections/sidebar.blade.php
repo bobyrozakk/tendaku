@@ -41,7 +41,7 @@
 
             @if($vendorPhoneWa)
                 <a href="https://wa.me/{{ $vendorPhoneWa }}" target="_blank" rel="noopener noreferrer"
-                   class="mt-3.5 inline-flex items-center justify-center gap-2 w-full py-2 px-4 rounded-xl text-xs font-bold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 border border-goldenrod-400 transition shadow-sm">
+                   class="mt-3.5 inline-flex min-h-[44px] sm:min-h-0 items-center justify-center gap-2 w-full py-2 px-4 rounded-xl text-xs font-bold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 border border-goldenrod-400 transition shadow-sm">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                     Hubungi Vendor via WhatsApp
                 </a>
@@ -97,7 +97,7 @@
             <div class="font-bold text-darkbrown-900">Butuh bantuan?</div>
             <div class="text-darkbrown-500">Hubungi kami untuk kendala pembayaran</div>
         </div>
-        <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-wheat-300 bg-wheat-50 hover:bg-wheat-100 px-3 py-2 text-xs font-bold text-avocado-900 transition">
+        <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-xl border border-wheat-300 bg-wheat-50 hover:bg-wheat-100 px-3 py-2 text-xs font-bold text-avocado-900 transition">
             <i data-lucide="message-circle" class="w-4 h-4"></i>
             WhatsApp CS
         </a>

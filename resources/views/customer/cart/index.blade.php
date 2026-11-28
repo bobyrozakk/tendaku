@@ -4,7 +4,7 @@
     <div class="py-6 min-h-[65vh]">
         {{-- Breadcrumb --}}
         <nav class="flex items-center gap-2 text-xs text-darkbrown-500 mb-3" aria-label="Breadcrumb">
-            <a href="{{ url('/') }}" class="hover:text-avocado-700 transition">Beranda</a>
+            <a href="{{ url('/') }}" class="inline-flex min-h-[44px] sm:min-h-0 items-center hover:text-avocado-700 transition">Beranda</a>
             <span>/</span>
             <span class="font-semibold text-darkbrown-800">Keranjang Sewa</span>
         </nav>
@@ -85,8 +85,9 @@
                             </span>
                         </div>
                         @if (!empty($vendor['id']))
-                            <a href="{{ route('customer.catalog.index', ['vendor_id' => $vendor['id']]) }}" class="text-xs font-bold text-avocado-700 hover:text-avocado-800 transition">
-                                + Tambah Alat Dari Toko Ini →
+                            <a href="{{ route('customer.catalog.index', ['vendor_id' => $vendor['id']]) }}" class="inline-flex min-h-[44px] sm:min-h-0 items-center text-xs font-bold text-avocado-700 hover:text-avocado-800 transition">
+                                Tambah Alat Dari Toko Ini
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                             </a>
                         @endif
                     </div>
@@ -146,17 +147,17 @@
                                             <button type="button"
                                                     @click="decrement"
                                                     :disabled="loading || qty <= 0"
-                                                    class="w-9 h-9 md:w-8 md:h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    class="w-11 h-11 sm:w-9 sm:h-9 md:w-8 md:h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                     title="Kurangi kuantitas">
-                                                −
+                                                <i data-lucide="minus" class="w-3.5 h-3.5"></i>
                                             </button>
                                             <span class="w-10 text-center font-bold text-xs text-darkbrown-900" x-text="qty"></span>
                                             <button type="button"
                                                     @click="increment"
                                                     :disabled="loading || qty >= maxQty"
-                                                    class="w-9 h-9 md:w-8 md:h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    class="w-11 h-11 sm:w-9 sm:h-9 md:w-8 md:h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                     title="Tambah kuantitas">
-                                                +
+                                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                                             </button>
                                         </div>
                                     </div>
@@ -176,7 +177,7 @@
                                         <form method="POST" action="{{ route('customer.cart.remove') }}" onsubmit="return confirm('Hapus {{ addslashes($item['name']) }} dari keranjang?');">
                                             @csrf
                                             <input type="hidden" name="master_item_id" value="{{ $item['master_item_id'] }}">
-                                            <button type="submit" class="p-2.5 md:p-2 text-darkbrown-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" title="Hapus alat">
+                                            <button type="submit" class="inline-flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center text-darkbrown-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" title="Hapus alat">
                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
                                         </form>
@@ -216,7 +217,7 @@
                                 </p>
                             </div>
                         </div>
-                        <a href="{{ route('login') }}" class="btn-tendaku-secondary text-xs font-bold px-4 py-2 shrink-0">
+                        <a href="{{ route('login') }}" class="btn-tendaku-secondary min-h-[44px] sm:min-h-0 text-xs font-bold px-4 py-2 shrink-0">
                             Masuk Akun
                         </a>
                     </div>
@@ -224,14 +225,14 @@
 
                 {{-- Bar Checkout & Ringkasan Total --}}
                 <div class="bg-white rounded-2xl border border-wheat-200 shadow-tendaku p-4 sm:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                    <div class="order-2 sm:order-1 flex items-center justify-between sm:justify-start gap-3 border-t border-wheat-100 pt-3 sm:border-0 sm:pt-0">
+                    <div class="order-2 sm:order-1 flex flex-wrap items-center justify-between sm:justify-start gap-3 border-t border-wheat-100 pt-3 sm:border-0 sm:pt-0">
                         <a href="{{ route('customer.catalog.index', !empty($vendor['id']) ? ['vendor_id' => $vendor['id']] : []) }}" class="btn-tendaku-secondary text-xs sm:text-sm py-2.5 px-4 flex items-center gap-1.5">
                             <i data-lucide="plus" class="w-4 h-4"></i>
                             <span>Tambah Alat Lain</span>
                         </a>
                         <form method="POST" action="{{ route('customer.cart.clear') }}" onsubmit="return confirm('Kosongkan semua alat dari keranjang sewa?');">
                             @csrf
-                            <button type="submit" class="text-xs text-darkbrown-500 hover:text-red-600 font-semibold transition px-2 py-1">
+                            <button type="submit" class="inline-flex min-h-[44px] sm:min-h-0 items-center text-xs text-darkbrown-500 hover:text-red-600 font-semibold transition px-2 py-1">
                                 Kosongkan Keranjang
                             </button>
                         </form>
@@ -269,7 +270,7 @@
                                     <input type="date" name="pickup_date" required min="{{ now()->toDateString() }}"
                                            x-ref="pickupDate" @change="syncWeather()"
                                            value="{{ old('pickup_date', $cartSummary['pickup_date']) }}"
-                                           class="block w-full mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
+                                           class="block w-full min-h-[44px] sm:min-h-0 mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
                                     <x-input-error :messages="$errors->get('pickup_date')" class="mt-1" />
                                 </label>
                                 <label class="text-xs font-semibold text-darkbrown-700">
@@ -277,7 +278,7 @@
                                     <input type="date" name="return_date" required min="{{ now()->toDateString() }}"
                                            x-ref="returnDate" @change="syncWeather()"
                                            value="{{ old('return_date', $cartSummary['return_date']) }}"
-                                           class="block w-full mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
+                                           class="block w-full min-h-[44px] sm:min-h-0 mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
                                     <x-input-error :messages="$errors->get('return_date')" class="mt-1" />
                                 </label>
                             </div>

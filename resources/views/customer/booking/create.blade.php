@@ -1,4 +1,14 @@
 <x-layouts.customer>
+    @push('styles')
+        <style>
+            @media (max-width: 1023px) {
+                body {
+                    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+                }
+            }
+        </style>
+    @endpush
+
     <x-slot name="title">Checkout Sewa Alat Camping - Tendaku</x-slot>
     <x-slot name="header">
         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">

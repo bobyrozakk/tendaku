@@ -29,7 +29,7 @@
                                     <!-- Jam ambil (klik untuk buka timepicker) -->
                                     <span class="relative inline-flex">
                                         <button type="button" @click.stop="toggleTime()"
-                                                class="inline-flex items-center gap-1.5 text-xs font-semibold text-avocado-900 bg-avocado-100 hover:bg-avocado-200 border border-avocado-200 rounded-full px-3 py-1 transition">
+                                                class="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 text-xs font-semibold text-avocado-900 bg-avocado-100 hover:bg-avocado-200 border border-avocado-200 rounded-full px-3 py-1 transition">
                                             <i data-lucide="clock" class="w-3.5 h-3.5"></i>
                                             Jam ambil
                                             <span class="font-extrabold" x-text="pickupTime"></span>
@@ -37,7 +37,7 @@
 
                                         <!-- Timepicker wheel 24H (07.00 - 17.00) -->
                                         <div x-show="timeOpen" x-cloak x-transition.opacity.duration.150ms
-                                             class="absolute top-full left-0 mt-2 z-50 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg overflow-hidden"
+                                             class="absolute top-full left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-2 z-50 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg overflow-hidden"
                                              style="width: 13rem;">
                                             <div class="px-4 pt-3 pb-1">
                                                 <p class="text-xs font-bold text-darkbrown-700">Jam ambil</p>
@@ -82,7 +82,7 @@
 
                                             <div class="px-3 py-2 border-t border-wheat-100 flex justify-end">
                                                 <button type="button" @click="timeOpen = false"
-                                                        class="text-xs font-bold text-avocado-700 hover:text-avocado-900 px-3 py-1 rounded-lg hover:bg-avocado-50 transition">
+                                                        class="inline-flex min-h-[44px] sm:min-h-0 items-center text-xs font-bold text-avocado-700 hover:text-avocado-900 px-3 py-1 rounded-lg hover:bg-avocado-50 transition">
                                                     Selesai
                                                 </button>
                                             </div>
@@ -96,11 +96,11 @@
                                 <div x-show="calOpen" x-cloak x-transition.opacity.duration.150ms role="dialog" aria-label="Pilih rentang tanggal sewa"
                                      class="absolute top-full left-0 mt-2 z-40 w-[21rem] max-w-[calc(100vw-2.5rem)] p-4 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg">
                                     <div class="flex items-center justify-between mb-1">
-                                        <button type="button" @click="prevMonth()" aria-label="Bulan sebelumnya" class="w-9 h-9 rounded-full hover:bg-wheat-100 flex items-center justify-center text-darkbrown-800">
+                                        <button type="button" @click="prevMonth()" aria-label="Bulan sebelumnya" class="w-11 h-11 sm:w-9 sm:h-9 rounded-full hover:bg-wheat-100 flex items-center justify-center text-darkbrown-800">
                                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
                                         </button>
                                         <span class="text-sm font-extrabold text-darkbrown-900" x-text="calendarTitle"></span>
-                                        <button type="button" @click="nextMonth()" aria-label="Bulan berikutnya" class="w-9 h-9 rounded-full hover:bg-wheat-100 flex items-center justify-center text-darkbrown-800">
+                                        <button type="button" @click="nextMonth()" aria-label="Bulan berikutnya" class="w-11 h-11 sm:w-9 sm:h-9 rounded-full hover:bg-wheat-100 flex items-center justify-center text-darkbrown-800">
                                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                                         </button>
                                     </div>
@@ -111,7 +111,7 @@
                                     </div>
                                     <div class="grid grid-cols-7 gap-y-1 text-center">
                                         <template x-for="(cell, idx) in calendarDays" :key="idx">
-                                            <div class="h-10 flex items-center justify-center"
+                                            <div class="h-11 sm:h-10 flex items-center justify-center"
                                                  :class="[cell.inRange ? 'bg-avocado-100' : '', cell.start ? 'rounded-l-full' : '', cell.end ? 'rounded-r-full' : '']">
                                                 <template x-if="cell.empty"><span class="block h-9"></span></template>
                                                 <template x-if="!cell.empty">
@@ -123,7 +123,7 @@
                                                                 (cell.inRange ? 'text-avocado-900 font-semibold' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium')))
                                                                 , (cell.outside && !cell.start && !cell.end) ? 'opacity-50' : ''
                                                             ]"
-                                                            class="w-9 h-9 rounded-full inline-flex items-center justify-center transition text-sm"
+                                                            class="w-full max-w-[2.75rem] h-11 sm:w-9 sm:h-9 rounded-full inline-flex items-center justify-center transition text-sm"
                                                             x-text="cell.day">
                                                     </button>
                                                 </template>
@@ -161,7 +161,7 @@
                                             </p>
                                         </div>
                                     </div>
-                                    <a href="{{ route('login') }}" class="btn-tendaku-secondary text-xs font-bold px-4 py-2 shrink-0">
+                                    <a href="{{ route('login') }}" class="btn-tendaku-secondary min-h-[44px] sm:min-h-0 inline-flex items-center justify-center text-xs font-bold px-4 py-2 shrink-0">
                                         Masuk Akun
                                     </a>
                                 </div>

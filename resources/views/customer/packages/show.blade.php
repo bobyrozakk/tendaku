@@ -1,6 +1,16 @@
 <x-layouts.customer>
     <x-slot name="title">{{ $package->name }} - Paket Camping Tendaku</x-slot>
 
+    @push('styles')
+        <style>
+            @media (max-width: 1023px) {
+                body {
+                    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+                }
+            }
+        </style>
+    @endpush
+
     @php
         $image = $package->image_url ?: null;
         $price = (float) $package->price;
@@ -28,13 +38,13 @@
             ->filter()->unique()->values()->take(5)->all();
 
         $sectionHeadingClass = 'font-display text-xl font-normal text-darkbrown-900 sm:text-2xl';
-        $visitStorePillClass = 'inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-xs font-bold text-darkbrown-900 shadow-md backdrop-blur transition hover:bg-white hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-darkbrown-900';
+        $visitStorePillClass = 'inline-flex min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-xs font-bold text-darkbrown-900 shadow-md backdrop-blur transition hover:bg-white hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-darkbrown-900';
     @endphp
 
-    <div class="space-y-6 pb-24 lg:pb-0">
+    <div class="space-y-6">
         <!-- Breadcrumb -->
         <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-darkbrown-500">
-            <a href="{{ route('customer.packages.index') }}" class="inline-flex items-center gap-1 transition hover:text-avocado-700">
+            <a href="{{ route('customer.packages.index') }}" class="inline-flex min-h-[44px] items-center gap-1 py-2 transition hover:text-avocado-700">
                 <i data-lucide="arrow-left" class="h-3.5 w-3.5"></i>
                 <span>Kembali ke Paket Camping</span>
             </a>
@@ -53,7 +63,7 @@
                 <x-photo-carousel :images="$galleryImages" :alt="$package->name">
                 @if ($vendor)
                     {{-- Gradasi gelap di atas foto supaya teks header terbaca --}}
-                    <div class="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-darkbrown-900/80 via-darkbrown-900/30 to-transparent" aria-hidden="true"></div>
+                    <div class="pointer-events-none absolute inset-x-0 top-0 h-24 sm:h-32 bg-gradient-to-b from-darkbrown-900/80 via-darkbrown-900/30 to-transparent" aria-hidden="true"></div>
 
                     {{-- Header toko: identitas + lokasi di kiri, tombol pill di kanan --}}
                     <div class="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3.5 sm:p-4">
@@ -68,7 +78,7 @@
 
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                    <p class="truncate text-sm font-extrabold leading-tight drop-shadow">{{ $vendorName }}</p>
+                                    <p class="min-w-0 truncate text-sm font-extrabold leading-tight drop-shadow">{{ $vendorName }}</p>
                                     <span class="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold backdrop-blur">Official</span>
                                 </div>
                                 <p class="mt-0.5 flex items-center gap-1 text-xs text-white/90">
@@ -158,7 +168,7 @@
                 </div>
 
                 <a href="{{ route('customer.catalog.index') }}"
-                   class="block rounded-2xl border border-avocado-200 bg-avocado-50 py-2.5 text-center text-xs font-bold text-avocado-700 transition hover:bg-avocado-100 hover:text-avocado-800">
+                   class="flex min-h-[44px] items-center justify-center rounded-2xl border border-avocado-200 bg-avocado-50 px-4 py-2.5 text-center text-xs font-bold text-avocado-700 transition hover:bg-avocado-100 hover:text-avocado-800">
                     Ingin menyewa alat satuan? Lihat Katalog
                 </a>
             </aside>
@@ -214,7 +224,7 @@
                                 <div class="min-w-0 flex-1">
                                     <h3 class="truncate text-sm font-bold text-darkbrown-900">
                                         @if ($item)
-                                            <a href="{{ route('customer.product.show', $item->id) }}" class="transition-colors hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500">{{ $item->name }}</a>
+                                            <a href="{{ route('customer.product.show', $item->id) }}" class="inline-flex min-h-[44px] sm:min-h-0 max-w-full items-center transition-colors hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"><span class="truncate">{{ $item->name }}</span></a>
                                         @else
                                             Produk tidak tersedia
                                         @endif
@@ -294,7 +304,7 @@
     </div>
 
     <!-- Bar sewa tetap di layar kecil -->
-    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-wheat-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(43,34,2,0.25)] backdrop-blur lg:hidden">
+    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-wheat-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(43,34,2,0.25)] backdrop-blur lg:hidden">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <div class="min-w-0">
                 <p class="text-[11px] text-darkbrown-500">

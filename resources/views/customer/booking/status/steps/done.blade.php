@@ -105,7 +105,7 @@
                         };
                         $damageFee = (float) ($detail->damage_fee ?? 0);
                     @endphp
-                    <div class="flex items-center justify-between gap-3 py-2.5">
+                    <div class="flex flex-col gap-1.5 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                         <div class="min-w-0">
                             <p class="truncate text-sm font-semibold text-darkbrown-900">
                                 {{ $detail->masterItem?->name ?? 'Peralatan Camping' }}
@@ -116,7 +116,7 @@
                                 {{ $detail->itemUnit?->barcode ?? 'Tanpa barcode' }}
                             </p>
                         </div>
-                        <div class="shrink-0 text-right text-xs">
+                        <div class="shrink-0 text-left text-xs sm:text-right">
                             <p class="font-semibold {{ $conditionColor }}">{{ $conditionLabel }}</p>
                             <p class="mt-0.5 text-darkbrown-500">
                                 {{ $damageFee > 0 ? 'Denda '.$rupiah($damageFee) : 'Tanpa denda' }}
@@ -161,7 +161,7 @@
 
                 @if($canPayFine && $fineDue)
                     <button type="button" @click="payNow()" :disabled="paying"
-                            class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-70">
+                            class="mt-3 inline-flex min-h-[44px] sm:min-h-0 w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700 disabled:opacity-70">
                         <i data-lucide="credit-card" class="h-4 w-4"></i>
                         Bayar denda {{ $rupiah($fineAmount) }}
                     </button>
@@ -202,7 +202,7 @@
                 </div>
             </div>
 
-            <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-dashed border-wheat-300 pt-3 text-xs sm:grid-cols-4">
+            <dl class="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 border-t border-dashed border-wheat-300 pt-3 text-xs sm:grid-cols-4">
                 <div class="min-w-0">
                     <dt class="text-darkbrown-400">Kode Booking</dt>
                     <dd class="truncate font-mono font-semibold text-darkbrown-800">{{ $rental->booking_code }}</dd>
@@ -223,7 +223,7 @@
 
             <a href="{{ route('booking.receipt', $rental->booking_code) }}"
                target="_blank"
-               class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-wheat-400 bg-wheat-100 px-4 py-2.5 text-sm font-bold text-darkbrown-900 transition hover:bg-wheat-200">
+               class="mt-3 inline-flex min-h-[44px] sm:min-h-0 w-full items-center justify-center gap-2 rounded-xl border border-wheat-400 bg-wheat-100 px-4 py-2.5 text-sm font-bold text-darkbrown-900 transition hover:bg-wheat-200">
                 <i data-lucide="printer" class="h-4 w-4"></i>
                 Lihat & Cetak Struk
             </a>

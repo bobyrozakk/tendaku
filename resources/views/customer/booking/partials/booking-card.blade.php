@@ -118,7 +118,7 @@
             </div>
 
             <a href="{{ route('booking.status', $rental->booking_code) }}"
-               class="btn-tendaku-primary inline-flex items-center
+               class="btn-tendaku-primary inline-flex min-h-[44px] sm:min-h-0 items-center
                       justify-center gap-2 rounded-xl px-4 py-2.5
                       text-sm font-bold">
                 Lihat Detail

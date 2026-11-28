@@ -137,14 +137,14 @@
         <button type="button" x-data="{ copied: false }"
                 @click="navigator.clipboard?.writeText(@js($rental->booking_code)); copied = true; setTimeout(() => copied = false, 2000)"
                 aria-label="Salin kode booking {{ $rental->booking_code }}"
-                class="mt-2 inline-flex items-center gap-3 rounded-lg border border-wheat-200 bg-white px-3 py-2 font-mono text-sm font-bold text-darkbrown-900 transition hover:border-avocado-400">
+                class="mt-2 inline-flex min-h-[44px] sm:min-h-0 items-center gap-3 rounded-lg border border-wheat-200 bg-white px-3 py-2 font-mono text-sm font-bold text-darkbrown-900 transition hover:border-avocado-400">
             <span>{{ $rental->booking_code }}</span>
             <span class="font-sans text-xs font-bold" :class="copied ? 'text-avocado-700' : 'text-avocado-800 underline underline-offset-2'" x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
         </button>
 
         <div class="mt-4 flex flex-col gap-2 border-t border-wheat-200 pt-3 sm:flex-row sm:items-center">
             <a href="{{ route('booking.receipt', $rental->booking_code) }}"
-               class="inline-flex items-center justify-center gap-2 rounded-xl border border-wheat-300 bg-white px-4 py-2.5 text-sm font-semibold text-darkbrown-800 transition hover:bg-wheat-100">
+               class="inline-flex min-h-[44px] sm:min-h-0 items-center justify-center gap-2 rounded-xl border border-wheat-300 bg-white px-4 py-2.5 text-sm font-semibold text-darkbrown-800 transition hover:bg-wheat-100">
                 <i data-lucide="receipt-text" class="h-4 w-4"></i>
                 Lihat Resi Pesanan
             </a>
@@ -153,7 +153,7 @@
                 <div x-data="{ reason: @js(old('cancel_reason', '')) }"
                      x-init="@if ($errors->hasAny(['cancel_reason', 'cancel_note', 'confirm_cancel'])) $nextTick(() => $refs.cancelDialog.showModal()) @endif">
                     <button type="button" @click="$refs.cancelDialog.showModal()"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 sm:w-auto">
+                            class="inline-flex min-h-[44px] sm:min-h-0 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:bg-red-50 sm:w-auto">
                         <i data-lucide="x-circle" class="h-4 w-4"></i>
                         Batalkan Pesanan
                     </button>
@@ -205,11 +205,11 @@
 
                             <div class="flex items-center justify-end gap-2 pt-1">
                                 <button type="button" @click="$refs.cancelDialog.close()"
-                                        class="rounded-xl border border-wheat-300 bg-wheat-100 px-4 py-2 text-sm font-bold text-darkbrown-800 transition hover:bg-wheat-200">
+                                        class="min-h-[44px] sm:min-h-0 rounded-xl border border-wheat-300 bg-wheat-100 px-4 py-2 text-sm font-bold text-darkbrown-800 transition hover:bg-wheat-200">
                                     Kembali
                                 </button>
                                 <button type="submit"
-                                        class="rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">
+                                        class="min-h-[44px] sm:min-h-0 rounded-xl border border-red-300 bg-white px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">
                                     Ya, Batalkan Pesanan
                                 </button>
                             </div>
