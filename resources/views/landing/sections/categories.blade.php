@@ -50,7 +50,8 @@
             <a href="{{ route('customer.catalog.index') }}"
                class="inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] rounded-full text-white text-sm font-bold transition-colors duration-200"
                style="background:#546E06;hover:background:#3F5306">
-                Semua Kategori →
+                Semua Kategori
+                <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
             </a>
         </div>
     </div>

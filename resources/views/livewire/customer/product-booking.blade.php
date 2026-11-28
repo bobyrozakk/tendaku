@@ -68,7 +68,7 @@
                                 {{ $vendorName }}
                             </p>
 
-                            <span class="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold backdrop-blur">
+                            <span class="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold backdrop-blur">
                                 Official
                             </span>
                         </div>
@@ -112,7 +112,7 @@
             </h1>
 
             <div>
-                <p class="text-[11px] font-bold uppercase tracking-widest text-darkbrown-500">
+                <p class="text-xs font-bold uppercase tracking-widest text-darkbrown-500">
                     Tarif Sewa Peralatan
                 </p>
 
@@ -192,7 +192,7 @@
                     <x-stock-status :stock="$this->availableStock" />
 
                     @error('quantity')
-                        <p class="flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                        <p class="flex items-center gap-1 text-xs font-semibold text-red-600">
                             {{ $message }}
                         </p>
                     @enderror
@@ -232,7 +232,7 @@
                     ])
 
                     @if($isGuest)
-                        <p class="text-center text-[11px] leading-relaxed text-darkbrown-500">
+                        <p class="text-center text-xs leading-relaxed text-darkbrown-500">
                             Langsung checkout tanpa akun. Isi jadwal sewa dan data diri di halaman Booking.
                         </p>
                     @endif
@@ -362,7 +362,7 @@
     <div class="fixed inset-x-0 bottom-0 z-30 border-t border-wheat-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(43,34,2,0.25)] backdrop-blur lg:hidden">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-3">
             <div class="min-w-0 flex-1">
-                <p class="text-[11px] text-darkbrown-500">Tarif per hari</p>
+                <p class="text-xs text-darkbrown-500">Tarif per hari</p>
                 <p class="truncate text-lg font-extrabold leading-tight text-darkbrown-900">
                     Rp {{ number_format($item->daily_rate, 0, ',', '.') }}
                 </p>

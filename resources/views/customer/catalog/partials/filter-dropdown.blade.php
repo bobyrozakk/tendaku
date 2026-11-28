@@ -13,7 +13,7 @@
     >
         <i data-lucide="sliders-horizontal" class="h-4 w-4" aria-hidden="true"></i>
         @if ($advancedFilterCount > 0)
-            <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold text-avocado-800" aria-hidden="true">
+            <span class="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white px-1 text-xs font-bold text-avocado-800" aria-hidden="true">
                 {{ $advancedFilterCount }}
             </span>
         @endif

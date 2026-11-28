@@ -77,16 +77,16 @@
                                 :aria-pressed="picked === '{{ $day['date'] }}' ? 'true' : 'false'"
                                 :class="picked === '{{ $day['date'] }}' ? 'border-avocado-500 bg-avocado-100/70' : 'border-wheat-200 bg-wheat-50/70 hover:border-avocado-300'"
                                 class="snap-start grow shrink-0 basis-[calc((100%-0.5rem)/2)] md:basis-[calc((100%-1.5rem)/4)] min-w-0 rounded-xl border px-2 pt-3 pb-2 text-center space-y-1.5 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500/40">
-                            <p class="text-[11px] font-semibold text-darkbrown-800 whitespace-nowrap">
+                            <p class="text-xs font-semibold text-darkbrown-800 whitespace-nowrap">
                                 {{ $day['date_compact'] }}
                                 @if ($day['is_today'])
-                                    <span class="block text-[9px] font-black uppercase tracking-wide text-avocado-700">Hari ini</span>
+                                    <span class="block text-xs font-black uppercase tracking-wide text-avocado-700">Hari ini</span>
                                 @endif
                             </p>
                             <x-icon :name="$day['icon']" class="w-7 h-7 mx-auto {{ $iconTone[$day['severity']] ?? 'text-sunglow-500' }}" />
                             <p class="text-sm font-extrabold text-darkbrown-900 whitespace-nowrap">{{ $day['temp_range'] }}</p>
-                            <p class="text-[11px] font-semibold leading-tight {{ $labelTone[$day['severity']] ?? 'text-darkbrown-600' }}">{{ $day['label'] }}</p>
-                            <p class="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-700">
+                            <p class="text-xs font-semibold leading-tight {{ $labelTone[$day['severity']] ?? 'text-darkbrown-600' }}">{{ $day['label'] }}</p>
+                            <p class="inline-flex items-center gap-1 text-xs font-semibold text-sky-700">
                                 <x-icon name="droplets" class="w-3 h-3" />
                                 {{ (int) $day['precipitation_probability'] }}%
                             </p>
@@ -103,7 +103,7 @@
                 @endif
             </div>
 
-            <p class="flex items-start gap-1.5 text-[11px] text-darkbrown-500 leading-relaxed">
+            <p class="flex items-start gap-1.5 text-xs text-darkbrown-500 leading-relaxed">
                 <x-icon name="info" class="w-3.5 h-3.5 text-avocado-700 shrink-0 mt-0.5" />
                 <span>
                     Sumber: Open-Meteo{{ $generatedAt ? ' · Diperbarui '.$generatedAt.' WIB' : '' }}.<br>Cuaca dapat berubah sewaktu-waktu, pastikan membawa perlengkapan yang sesuai.

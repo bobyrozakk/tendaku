@@ -29,7 +29,7 @@
 
     @if ($categories->isNotEmpty())
         <div class="mt-7 border-t border-wheat-200 pt-5">
-            <p class="text-[11px] font-bold uppercase tracking-[.18em] text-darkbrown-500">Coba kategori lain</p>
+            <p class="text-xs font-bold uppercase tracking-[.18em] text-darkbrown-500">Coba kategori lain</p>
             <div class="mt-3 flex flex-wrap justify-center gap-2">
                 @foreach ($categories->take(4) as $cat)
                     <button

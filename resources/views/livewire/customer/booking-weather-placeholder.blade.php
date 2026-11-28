@@ -1,7 +1,7 @@
 <div class="rounded-2xl border border-wheat-200/90 bg-gradient-to-b from-white via-wheat-50/40 to-wheat-50/70 p-4 sm:p-5 md:p-6 shadow-sm shadow-darkbrown-900/5 space-y-4" aria-busy="true">
     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div class="flex items-start gap-3.5 min-w-0">
-            <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-avocado-100 to-avocado-200/60 border border-avocado-300/50 text-avocado-800 flex items-center justify-center shadow-2xs shrink-0">
+            <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-avocado-100 to-avocado-200/60 border border-avocado-300/50 text-avocado-800 flex items-center justify-center shadow-sm shrink-0">
                 <x-icon name="cloud-sun" class="w-6 h-6" />
             </span>
             <div>

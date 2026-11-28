@@ -104,7 +104,7 @@
                     <div x-show="month === {{ $index }}" @if ($index > 0) x-cloak @endif>
                         <div class="grid grid-cols-7 gap-y-1 text-center">
                             @foreach ($weekdayNames as $weekday)
-                                <span class="pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{{ $weekday }}</span>
+                                <span class="pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{{ $weekday }}</span>
                             @endforeach
 
                             @foreach ($calendarMonth['cells'] as $cellIndex => $cell)
@@ -149,7 +149,7 @@
             </div>
         </div>
 
-        <ul class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-darkbrown-600">
+        <ul class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-darkbrown-600">
             <li class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded border border-gray-300 bg-gray-50"></span>Tersedia</li>
             <li class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-sky-200"></span>Sebagian dibooking</li>
             <li class="inline-flex items-center gap-1.5"><span class="h-3 w-3 rounded-full bg-red-200"></span>Semua {{ $unitLabel }} dibooking</li>

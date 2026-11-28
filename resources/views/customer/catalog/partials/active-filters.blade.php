@@ -11,10 +11,10 @@ $activeChips = collect([
 
 @if ($hasActiveFilters)
     <div class="flex flex-wrap items-center gap-2">
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-darkbrown-500">Filter aktif</span>
+        <span class="text-xs font-semibold uppercase tracking-wider text-darkbrown-500">Filter aktif</span>
 
         @foreach ($activeChips as $chip)
-            <span class="inline-flex min-h-7 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-[11px] font-semibold text-avocado-900">
+            <span class="inline-flex min-h-7 items-center gap-1.5 rounded-full border border-avocado-200 bg-avocado-50 px-2.5 py-1 text-xs font-semibold text-avocado-900">
                 <i data-lucide="{{ $chip['icon'] }}" class="h-3 w-3" aria-hidden="true"></i>
                 <span class="{{ $chip['max'] }} truncate">{{ $chip['label'] }}</span>
                 <button
@@ -31,7 +31,7 @@ $activeChips = collect([
         <button
             type="button"
             wire:click="resetFilters"
-            class="ml-auto inline-flex min-h-[44px] sm:min-h-8 items-center gap-1 rounded-full px-2 text-[11px] font-bold text-darkbrown-500 transition hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+            class="ml-auto inline-flex min-h-[44px] sm:min-h-8 items-center gap-1 rounded-full px-2 text-xs font-bold text-darkbrown-500 transition hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
         >
             <i data-lucide="rotate-ccw" class="h-3 w-3" aria-hidden="true"></i>
             Hapus semua

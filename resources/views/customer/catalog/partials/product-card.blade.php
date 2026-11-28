@@ -14,7 +14,7 @@
     <div class="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-wheat-100 via-white to-sunglow-100">
         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-darkbrown-500" aria-hidden="true">
             <i data-lucide="image" class="h-8 w-8"></i>
-            <span class="text-[11px] font-semibold">Foto belum tersedia</span>
+            <span class="text-xs font-semibold">Foto belum tersedia</span>
         </div>
 
         <img
@@ -66,7 +66,7 @@
             $dominantCondition = $item->dominant_condition;
             $itemAge = $item->item_age;
         @endphp
-        <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-darkbrown-500">
+        <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-darkbrown-500">
             @if ($dominantCondition)
                 <span class="inline-flex items-center gap-1">
                     <i data-lucide="shield-check" class="h-3 w-3 text-avocado-600" aria-hidden="true"></i>
@@ -83,10 +83,10 @@
     <div class="border-t border-wheat-100 p-4 pt-3">
         <div class="flex items-end justify-between gap-3 pb-3">
             <div class="min-w-0">
-                <span class="block text-[11px] font-semibold uppercase tracking-wider text-darkbrown-500">Harga sewa</span>
+                <span class="block text-xs font-semibold uppercase tracking-wider text-darkbrown-500">Harga sewa</span>
                 <div class="flex items-baseline gap-1">
                     <span class="font-heading text-lg font-extrabold tracking-tight text-darkbrown-900 sm:text-xl">Rp {{ $formattedRate }}</span>
-                    <span class="text-[11px] font-semibold text-darkbrown-500">/hari</span>
+                    <span class="text-xs font-semibold text-darkbrown-500">/hari</span>
                 </div>
             </div>
         </div>

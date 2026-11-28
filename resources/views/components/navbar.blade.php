@@ -7,7 +7,7 @@
     <div x-data="{ mobileOpen: false, scrolled: false }"
          x-init="scrolled = window.scrollY > 8"
          @scroll.window.passive="scrolled = window.scrollY > 8"
-         class="sticky top-0 z-40">
+         class="sticky top-0 z-50">
         <!-- Customer Top Navigation Bar -->
         <header x-ref="navbarHeader"
                 class="tendaku-navbar"

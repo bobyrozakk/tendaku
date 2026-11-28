@@ -6,7 +6,8 @@
             </div>
             <a href="{{ route('customer.catalog.index') }}"
                class="text-sm font-semibold text-darkbrown-700 hover:text-avocado-700 inline-flex items-center gap-1 min-h-[44px] transition-colors shrink-0">
-                Lihat Semua Produk →
+                Lihat Semua Produk
+                <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
             </a>
         </div>
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
