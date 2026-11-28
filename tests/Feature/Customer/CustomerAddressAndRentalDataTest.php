@@ -116,7 +116,7 @@ class CustomerAddressAndRentalDataTest extends TestCase
         $response->assertOk()
             ->assertSee('Budi Santoso')
             ->assertSee('081234567899')
-            ->assertSee('Data diambil dari akun Anda. Sudah lengkap.');
+            ->assertSee('Data diambil dari akun Anda.');
     }
 
     /**

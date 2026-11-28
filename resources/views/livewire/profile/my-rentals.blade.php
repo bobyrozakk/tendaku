@@ -224,28 +224,30 @@ new class extends Component
                                 <b>#{{ $rental->booking_code }}</b>@if ($rental->vendor?->name) &middot; {{ $rental->vendor->name }}@endif
                             </p>
 
-                            @if ($isActive)
-                                <ol class="rent-steps" aria-label="Progres sewa">
-                                    @foreach ($stepLabels as $index => $stepLabel)
-                                        @php $state = $index < $steps ? 'done' : ($index === $steps ? 'current' : 'todo'); @endphp
-                                        <li class="rent-step" data-state="{{ $state }}">
-                                            <span class="rent-dot">
-                                                @if ($state === 'done')
-                                                    <i data-lucide="check"></i>
-                                                @endif
-                                            </span>
-                                            <span class="rent-step-label">{{ $stepLabel }}</span>
-                                        </li>
-                                    @endforeach
-                                </ol>
-                            @else
+                            @unless ($isActive)
                                 @php [$rangeText, $totalText] = $this->historyMeta($rental); @endphp
                                 <div class="rent-chips">
                                     <span class="rent-chip"><i data-lucide="calendar-days"></i>{{ $rangeText }}</span>
                                     <span class="rent-chip"><i data-lucide="wallet"></i>{{ $totalText }}</span>
                                 </div>
-                            @endif
+                            @endunless
                         </div>
+
+                        @if ($isActive)
+                            <ol class="rent-steps" aria-label="Progres sewa">
+                                @foreach ($stepLabels as $index => $stepLabel)
+                                    @php $state = $index < $steps ? 'done' : ($index === $steps ? 'current' : 'todo'); @endphp
+                                    <li class="rent-step" data-state="{{ $state }}">
+                                        <span class="rent-dot">
+                                            @if ($state === 'done')
+                                                <i data-lucide="check"></i>
+                                            @endif
+                                        </span>
+                                        <span class="rent-step-label">{{ $stepLabel }}</span>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        @endif
 
                         <div class="rent-aside">
                             <x-rental-status-badge :status="$rental->status" :label="$rental->displayStatusLabel()" class="self-start" />
@@ -277,7 +279,7 @@ new class extends Component
                     </div>
                     @unless ($showHistory)
                         <a href="{{ route('customer.catalog.index') }}"
-                           class="btn-tendaku-primary inline-flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold shadow-sm">
+                           class="btn-tendaku-primary inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 py-2 px-4 rounded-xl text-xs font-bold shadow-sm">
                             <i data-lucide="search" class="w-3.5 h-3.5"></i>
                             <span>{{ __('Cari Perlengkapan') }}</span>
                         </a>

@@ -171,7 +171,7 @@ new class extends Component
             type="button"
             x-show="! editing"
             x-on:click="editing = true; $nextTick(() => $refs.nameInput?.focus())"
-            class="btn-tendaku-primary inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all self-start sm:self-auto"
+            class="btn-tendaku-primary inline-flex items-center justify-center gap-2 min-h-[44px] sm:min-h-0 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all self-start sm:self-auto"
         >
             <i data-lucide="edit-3" class="w-4 h-4"></i>
             <span>{{ __('Edit Biodata') }}</span>
@@ -337,7 +337,7 @@ new class extends Component
                 @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! auth()->user()->hasVerifiedEmail())
                     <div class="mt-2 text-xs text-darkbrown-600">
                         {{ __('Email Anda belum terverifikasi.') }}
-                        <button wire:click.prevent="sendVerification" class="underline text-avocado-700 hover:text-avocado-800 font-bold ml-1">
+                        <button wire:click.prevent="sendVerification" class="inline-flex items-center min-h-[44px] sm:min-h-0 underline text-avocado-700 hover:text-avocado-800 font-bold ml-1">
                             {{ __('Kirim ulang tautan verifikasi') }}
                         </button>
                         @if (session('status') === 'verification-link-sent')
@@ -386,16 +386,18 @@ new class extends Component
         <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
             <button
                 type="submit"
-                class="btn-tendaku-primary inline-flex items-center gap-2 py-2.5 px-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                aria-label="Simpan"
+                class="btn-tendaku-primary inline-flex items-center justify-center gap-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 py-2.5 px-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition-all"
             >
                 <i data-lucide="check" class="w-4 h-4"></i>
             </button>
 
             <button
                 type="button"
+                aria-label="Batal"
                 x-on:click="editing = false"
                 wire:click="cancelEditing"
-                class="btn-tendaku-secondary inline-flex items-center gap-2 py-2.5 px-2.5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
+                class="btn-tendaku-secondary inline-flex items-center justify-center gap-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 py-2.5 px-2.5 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
             >
                 <i data-lucide="x" class="w-4 h-4"></i>
             </button>

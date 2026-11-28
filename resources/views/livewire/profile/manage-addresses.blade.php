@@ -381,7 +381,7 @@ new class extends Component
                     id="addr_label"
                     type="text"
                     placeholder="Contoh: Rumah, Kos, Kantor, Titik Kumpul"
-                    class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                    class="input-tendaku w-full min-h-[44px] py-2.5 px-3 rounded-xl text-base sm:text-sm sm:min-h-0 sm:py-2 font-medium border-wheat-300"
                     required
                 />
 
@@ -407,7 +407,7 @@ new class extends Component
                             id="addr_province"
                             type="text"
                             placeholder="Contoh: Jawa Timur"
-                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                            class="input-tendaku w-full min-h-[44px] py-2.5 px-3 rounded-xl text-base sm:text-sm sm:min-h-0 sm:py-2 font-medium border-wheat-300"
                             required
                         />
 
@@ -426,7 +426,7 @@ new class extends Component
                             id="addr_city"
                             type="text"
                             placeholder="Contoh: Kota Malang"
-                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                            class="input-tendaku w-full min-h-[44px] py-2.5 px-3 rounded-xl text-base sm:text-sm sm:min-h-0 sm:py-2 font-medium border-wheat-300"
                             required
                         />
 
@@ -445,7 +445,7 @@ new class extends Component
                             id="addr_district"
                             type="text"
                             placeholder="Contoh: Lowokwaru"
-                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                            class="input-tendaku w-full min-h-[44px] py-2.5 px-3 rounded-xl text-base sm:text-sm sm:min-h-0 sm:py-2 font-medium border-wheat-300"
                             required
                         />
 
@@ -464,7 +464,7 @@ new class extends Component
                             id="addr_village"
                             type="text"
                             placeholder="Contoh: Ketawanggede"
-                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                            class="input-tendaku w-full min-h-[44px] py-2.5 px-3 rounded-xl text-base sm:text-sm sm:min-h-0 sm:py-2 font-medium border-wheat-300"
                         />
 
                         <x-input-error class="mt-1" :messages="$errors->get('village')" />
@@ -482,7 +482,7 @@ new class extends Component
                             id="addr_postal"
                             type="text"
                             placeholder="65145"
-                            class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                            class="input-tendaku w-full min-h-[44px] py-2.5 px-3 rounded-xl text-base sm:text-sm sm:min-h-0 sm:py-2 font-medium border-wheat-300"
                         />
 
                         <x-input-error class="mt-1" :messages="$errors->get('postal_code')" />
@@ -508,7 +508,7 @@ new class extends Component
                         id="addr_full"
                         rows="3"
                         placeholder="Tuliskan nama jalan, nomor rumah, blok, RT/RW, dan detail alamat lainnya..."
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                        class="input-tendaku w-full min-h-[44px] py-2.5 px-3 rounded-xl text-base sm:text-sm sm:min-h-0 sm:py-2 font-medium border-wheat-300"
                         required
                     ></textarea>
 
@@ -526,7 +526,7 @@ new class extends Component
                         id="addr_notes"
                         type="text"
                         placeholder="Contoh: Pagar hitam, dekat pos satpam, atau samping minimarket"
-                        class="input-tendaku w-full py-2 px-3 rounded-xl text-xs font-medium border-wheat-300"
+                        class="input-tendaku w-full min-h-[44px] py-2.5 px-3 rounded-xl text-base sm:text-sm sm:min-h-0 sm:py-2 font-medium border-wheat-300"
                     />
 
                     <x-input-error class="mt-1" :messages="$errors->get('notes')" />
@@ -556,7 +556,7 @@ new class extends Component
             </div>
 
             {{-- Jadikan Alamat Utama --}}
-            <div class="flex items-center gap-2 pt-1">
+            <div class="min-h-[44px] sm:min-h-0 flex items-center gap-2 pt-1">
                 <input
                     wire:model="is_default"
                     id="addr_is_default"
@@ -564,7 +564,7 @@ new class extends Component
                     class="rounded border-wheat-300 text-avocado-600 focus:ring-avocado-500"
                 />
 
-                <label for="addr_is_default" class="text-xs font-semibold text-darkbrown-800 cursor-pointer">
+                <label for="addr_is_default" class="min-h-[44px] sm:min-h-0 flex items-center text-xs font-semibold text-darkbrown-800 cursor-pointer">
                     Jadikan alamat utama (dipilih otomatis saat pemesanan)
                 </label>
             </div>
@@ -573,7 +573,7 @@ new class extends Component
             <div class="flex items-center gap-3 pt-3 border-t border-wheat-200">
                 <button
                     type="submit"
-                    class="btn-tendaku-primary inline-flex items-center gap-2 py-2 px-5 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all"
+                    class="btn-tendaku-primary inline-flex items-center gap-2 min-h-[44px] sm:min-h-0 py-2 px-5 rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all"
                 >
                     <i data-lucide="check" class="w-4 h-4"></i>
                     <span>{{ __('Simpan Alamat') }}</span>
@@ -582,7 +582,7 @@ new class extends Component
                 <button
                     type="button"
                     wire:click="cancelForm"
-                    class="btn-tendaku-secondary inline-flex items-center gap-2 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
+                    class="btn-tendaku-secondary inline-flex items-center gap-2 min-h-[44px] sm:min-h-0 py-2 px-4 rounded-xl text-xs sm:text-sm font-bold hover:bg-wheat-100 transition-all"
                 >
                     <i data-lucide="x" class="w-4 h-4"></i>
                     <span>{{ __('Batal') }}</span>

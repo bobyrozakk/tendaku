@@ -37,7 +37,7 @@
                         </div>
 
                         {{-- Tombol Aksi per Alamat --}}
-                        <div class="flex items-center gap-0.5 shrink-0">
+                        <div class="flex items-center gap-2 sm:gap-0.5 shrink-0">
                             <button
                                 type="button"
                                 wire:click="startEditing({{ $selectedAddress->id }})"
@@ -75,7 +75,7 @@
                             @click="open = ! open"
                             :aria-expanded="open"
                             aria-controls="daftar-alamat-lainnya"
-                            class="flex w-full items-center justify-between gap-3 text-left cursor-pointer text-xs sm:text-sm font-semibold text-darkbrown-800"
+                            class="flex w-full min-h-[44px] sm:min-h-0 items-center justify-between gap-3 text-left cursor-pointer text-xs sm:text-sm font-semibold text-darkbrown-800 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                         >
                             <span>Alamat lainnya ({{ $otherAddresses->count() }})</span>
 
@@ -150,7 +150,7 @@
                         wire:loading.attr="disabled"
                         wire:loading.class="opacity-60 cursor-wait"
                         wire:target="startCreating"
-                        class="btn-tendaku-primary inline-flex items-center gap-1.5 py-2 px-4 rounded-xl text-xs font-bold shadow-sm"
+                        class="btn-tendaku-primary inline-flex items-center gap-1.5 min-h-[44px] sm:min-h-0 py-2 px-4 rounded-xl text-xs font-bold shadow-sm"
                     >
                         <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                         <span>Tambah Alamat Pertama</span>
