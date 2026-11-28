@@ -39,7 +39,7 @@
         @if ($item->vendor)
             <a
                 href="{{ route('customer.stores.show', $item->vendor->slug ?? $item->vendor_id) }}"
-                class="group/store inline-flex min-w-0 items-center gap-1.5 py-1 text-xs font-semibold text-goldenrod-800 transition hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
+                class="group/store inline-flex min-h-[44px] min-w-0 items-center gap-1.5 py-2.5 sm:min-h-0 sm:py-1 text-xs font-semibold text-goldenrod-800 transition hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
                 title="Kunjungi Toko {{ $vendorName }}"
             >
                 <i data-lucide="store" class="h-3.5 w-3.5 shrink-0 text-goldenrod-600 transition-colors group-hover/store:text-avocado-600" aria-hidden="true"></i>
@@ -53,7 +53,7 @@
         @endif
 
         <h3 class="min-w-0 font-heading text-base font-extrabold leading-snug tracking-tight text-darkbrown-900 transition-colors group-hover:text-avocado-700">
-            <a href="{{ $detailUrl }}" class="line-clamp-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2">
+            <a href="{{ $detailUrl }}" class="line-clamp-2 min-h-[44px] py-2 sm:min-h-0 sm:py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2">
                 {{ $item->name }}
             </a>
         </h3>

@@ -67,7 +67,7 @@
         'out' => 'text-gray-300',
     ];
 
-    $navButtonClass = 'flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-200 bg-white text-darkbrown-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40';
+    $navButtonClass = 'flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-200 bg-white text-darkbrown-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40';
 @endphp
 
 @if ($calendarMonths !== [])

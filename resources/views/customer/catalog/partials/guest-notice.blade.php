@@ -7,7 +7,7 @@
         </p>
     </div>
     <div class="flex items-center gap-2 sm:shrink-0">
-        <a href="{{ route('login') }}" class="btn-tendaku-secondary min-h-[36px] px-3 py-1.5 text-xs">Masuk</a>
-        <a href="{{ route('register') }}" class="btn-tendaku-primary min-h-[36px] px-3 py-1.5 text-xs">Daftar</a>
+        <a href="{{ route('login') }}" class="btn-tendaku-secondary min-h-[44px] sm:min-h-[36px] px-3 py-1.5 text-xs">Masuk</a>
+        <a href="{{ route('register') }}" class="btn-tendaku-primary min-h-[44px] sm:min-h-[36px] px-3 py-1.5 text-xs">Daftar</a>
     </div>
 </section>

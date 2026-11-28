@@ -12,7 +12,7 @@
         <p x-show="!stalled" class="text-xs text-darkbrown-500">Menyiapkan prakiraan cuaca untuk periode sewa…</p>
         <p x-show="stalled" x-cloak class="text-xs text-darkbrown-600">
             Prakiraan cuaca belum bisa dimuat.
-            <button type="button" onclick="window.location.reload()" class="font-bold text-avocado-700 underline underline-offset-2">Muat ulang</button>
+            <button type="button" onclick="window.location.reload()" class="inline-flex min-h-[44px] items-center px-1 font-bold text-avocado-700 underline underline-offset-2">Muat ulang</button>
             <span class="text-darkbrown-500">Booking tetap bisa dilanjutkan.</span>
         </p>
     </div>

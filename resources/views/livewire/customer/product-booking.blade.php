@@ -24,7 +24,7 @@
 
     $sectionHeadingClass = 'font-display text-xl font-normal text-darkbrown-900 sm:text-2xl';
 
-    $stepperClass = 'flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-wheat-300 bg-wheat-100 font-extrabold text-darkbrown-800 transition hover:bg-wheat-200 disabled:cursor-not-allowed disabled:opacity-40';
+    $stepperClass = 'flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-wheat-300 bg-wheat-100 font-extrabold text-darkbrown-800 transition hover:bg-wheat-200 disabled:cursor-not-allowed disabled:opacity-40';
 @endphp
 
 {{--
@@ -38,12 +38,12 @@
         <x-photo-carousel :images="$galleryImages" :alt="$item->name">
         @if($vendor)
             @php
-                $visitStorePillClass = 'inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-xs font-bold text-darkbrown-900 shadow-md backdrop-blur transition hover:bg-white hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-darkbrown-900';
+                $visitStorePillClass = 'inline-flex min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-xs font-bold text-darkbrown-900 shadow-md backdrop-blur transition hover:bg-white hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-darkbrown-900';
             @endphp
 
             {{-- Gradasi gelap di atas foto supaya teks header terbaca --}}
             <div
-                class="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-darkbrown-900/80 via-darkbrown-900/30 to-transparent"
+                class="pointer-events-none absolute inset-x-0 top-0 h-24 sm:h-32 bg-gradient-to-b from-darkbrown-900/80 via-darkbrown-900/30 to-transparent"
                 aria-hidden="true"
             ></div>
 
@@ -64,7 +64,7 @@
 
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <p class="truncate text-sm font-extrabold leading-tight drop-shadow">
+                            <p class="min-w-0 truncate text-sm font-extrabold leading-tight drop-shadow">
                                 {{ $vendorName }}
                             </p>
 
@@ -296,7 +296,7 @@
                     @click="open = !open"
                     :aria-expanded="open"
                     aria-controls="syarat-ketentuan"
-                    class="flex w-full cursor-pointer items-center justify-between gap-3 text-left"
+                    class="flex min-h-[44px] w-full cursor-pointer items-center justify-between gap-3 rounded-lg py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                 >
                     <span>Syarat dan Ketentuan</span>
 
@@ -359,9 +359,9 @@
         </section>
     </div>
     {{-- Bar sewa tetap di layar kecil: harga + tombol checkout/keranjang --}}
-    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-wheat-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(43,34,2,0.25)] backdrop-blur lg:hidden">
+    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-wheat-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(43,34,2,0.25)] backdrop-blur lg:hidden">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-3">
-            <div class="min-w-0 shrink-0">
+            <div class="min-w-0 flex-1">
                 <p class="text-[11px] text-darkbrown-500">Tarif per hari</p>
                 <p class="truncate text-lg font-extrabold leading-tight text-darkbrown-900">
                     Rp {{ number_format($item->daily_rate, 0, ',', '.') }}

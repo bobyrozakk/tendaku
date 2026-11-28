@@ -40,7 +40,7 @@ $categoryIcon = static function ($category) use ($iconByCategoryIcon, $iconByCat
     return 'tag';
 };
 
-$categoryButtonClass = static fn (bool $active): string => 'inline-flex min-h-[2rem] shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 '.($active
+$categoryButtonClass = static fn (bool $active): string => 'inline-flex min-h-[44px] sm:min-h-[2rem] shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 '.($active
     ? 'border-avocado-700 bg-avocado-600 text-white shadow-sm'
     : 'border-wheat-300 bg-white text-darkbrown-700 hover:border-avocado-400 hover:bg-wheat-50');
 @endphp

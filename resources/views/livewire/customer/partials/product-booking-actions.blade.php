@@ -17,7 +17,7 @@
         wire:loading.class="opacity-75 cursor-wait"
         x-on:click="redirecting = true"
         x-bind:disabled="redirecting"
-        class="btn-tendaku-primary min-w-0 rounded-xl font-extrabold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer transition-all duration-200 py-3 {{ $compact ? 'flex-none px-8' : 'flex-[0.8] sm:flex-1 px-3' }}"
+        class="btn-tendaku-primary h-11 min-w-0 rounded-xl font-extrabold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 cursor-pointer transition-all duration-200 {{ $compact ? 'flex-none px-4 sm:px-6' : 'flex-[0.8] sm:flex-1 px-3' }}"
     >
         <span
             x-show="!redirecting"
@@ -46,7 +46,7 @@
             wire:loading.attr="disabled"
             wire:loading.class="opacity-75 cursor-wait"
             @class([
-                'w-14 shrink-0 rounded-xl shadow-sm transition-all duration-150',
+                'h-11 w-14 shrink-0 rounded-xl shadow-sm transition-all duration-150',
                 'flex items-center justify-center',
                 'btn-tendaku-secondary hover:border-avocado-500 hover:text-avocado-700 cursor-pointer' => $canSubmit,
                 'bg-wheat-200 text-darkbrown-400 cursor-not-allowed opacity-60' => ! $canSubmit,
@@ -57,9 +57,9 @@
                 <i data-lucide="shopping-cart" class="w-4 h-4 text-avocado-700"></i>
             </span>
 
-            <span wire:loading wire:target="addToCart" class="flex items-center gap-1.5">
+            <span wire:loading wire:target="addToCart" class="flex items-center justify-center">
                 <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
-                <span>Menyimpan...</span>
+                <span class="sr-only">Menyimpan...</span>
             </span>
         </button>
     @endunless

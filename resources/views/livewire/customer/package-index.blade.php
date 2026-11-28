@@ -10,8 +10,8 @@
     <section aria-labelledby="package-filter-heading">
         <h2 id="package-filter-heading" class="sr-only">Pencarian dan filter paket</h2>
 
-        <div class="grid grid-cols-2 gap-2.5 lg:flex lg:items-center">
-            <form wire:submit.prevent role="search" class="relative col-span-2 min-w-0 lg:flex-1">
+        <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:flex lg:items-center">
+            <form wire:submit.prevent role="search" class="relative min-w-0 sm:col-span-2 lg:flex-1">
                 <label for="package-search" class="sr-only">Cari paket camping</label>
                 <i data-lucide="search" class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-darkbrown-400" aria-hidden="true"></i>
                 <input
@@ -34,7 +34,7 @@
                         <button
                             type="button"
                             wire:click="$set('search', '')"
-                            class="inline-flex h-8 w-8 items-center justify-center rounded-full text-darkbrown-400 transition hover:bg-wheat-100 hover:text-darkbrown-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                            class="inline-flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full text-darkbrown-400 transition hover:bg-wheat-100 hover:text-darkbrown-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                             title="Hapus Pencarian"
                             aria-label="Hapus pencarian"
                         >
@@ -57,6 +57,7 @@
                 <x-dropdown-select
                     wire:model.live="sort"
                     size="lg"
+                    align="right"
                     label="Urutkan paket"
                     :options="['latest' => 'Terbaru', 'price_asc' => 'Harga: Termurah', 'price_desc' => 'Harga: Termahal', 'duration_asc' => 'Durasi Terpendek']"
                 />
@@ -66,7 +67,7 @@
                 <button
                     type="button"
                     wire:click="resetFilters"
-                    class="btn-tendaku-secondary col-span-2 h-11 px-4 text-sm lg:col-span-1 lg:shrink-0"
+                    class="btn-tendaku-secondary h-11 px-4 text-sm sm:col-span-2 lg:col-span-1 lg:shrink-0"
                     title="Reset filter"
                 >
                     <i data-lucide="rotate-ccw" class="h-4 w-4" aria-hidden="true"></i>
@@ -151,7 +152,7 @@
                             @if ($package->vendor)
                                 <a
                                     href="{{ route('customer.stores.show', $package->vendor->slug ?? $package->vendor_id) }}"
-                                    class="group/store inline-flex min-w-0 items-center gap-1.5 py-1 text-xs font-semibold text-goldenrod-800 transition hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
+                                    class="group/store inline-flex min-h-[44px] min-w-0 items-center gap-1.5 py-2.5 sm:min-h-0 sm:py-1 text-xs font-semibold text-goldenrod-800 transition hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
                                     title="Kunjungi Toko {{ $vendorName }}"
                                 >
                                     <i data-lucide="store" class="h-3.5 w-3.5 shrink-0 text-goldenrod-600 transition-colors group-hover/store:text-avocado-600" aria-hidden="true"></i>
@@ -165,7 +166,7 @@
                             @endif
 
                             <h3 class="min-w-0 font-heading text-base font-extrabold leading-snug tracking-tight text-darkbrown-900 transition-colors group-hover:text-avocado-700">
-                                <a href="{{ $detailUrl }}" class="line-clamp-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2">
+                                <a href="{{ $detailUrl }}" class="line-clamp-2 min-h-[44px] py-2 sm:min-h-0 sm:py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2">
                                     {{ $package->name }}
                                 </a>
                             </h3>

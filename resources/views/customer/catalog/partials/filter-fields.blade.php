@@ -26,7 +26,7 @@
                     wire:model.live.debounce.400ms="minPrice"
                     placeholder="Min"
                     aria-label="Harga minimum per hari"
-                    class="input-tendaku h-10 w-full pl-9 pr-2 text-sm font-medium"
+                    class="input-tendaku h-11 sm:h-10 w-full pl-9 pr-2 text-sm font-medium"
                 />
             </div>
             <span class="text-xs text-darkbrown-400" aria-hidden="true">–</span>
@@ -40,7 +40,7 @@
                     wire:model.live.debounce.400ms="maxPrice"
                     placeholder="Maks"
                     aria-label="Harga maksimum per hari"
-                    class="input-tendaku h-10 w-full pl-9 pr-2 text-sm font-medium"
+                    class="input-tendaku h-11 sm:h-10 w-full pl-9 pr-2 text-sm font-medium"
                 />
             </div>
         </div>
@@ -57,7 +57,7 @@
                     type="date"
                     wire:model.live="startDate"
                     min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                    class="input-tendaku h-10 min-w-0 flex-1 px-3 text-xs font-medium"
+                    class="input-tendaku h-11 sm:h-10 min-w-0 flex-1 px-3 text-xs font-medium"
                 />
             </label>
             <label class="flex min-w-0 items-center gap-2">
@@ -66,7 +66,7 @@
                     type="date"
                     wire:model.live="endDate"
                     min="{{ $startDate ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
-                    class="input-tendaku h-10 min-w-0 flex-1 px-3 text-xs font-medium"
+                    class="input-tendaku h-11 sm:h-10 min-w-0 flex-1 px-3 text-xs font-medium"
                 />
             </label>
         </div>

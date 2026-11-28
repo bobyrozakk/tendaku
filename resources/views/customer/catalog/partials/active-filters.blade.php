@@ -20,7 +20,7 @@ $activeChips = collect([
                 <button
                     type="button"
                     wire:click="{{ $chip['clear'] }}"
-                    class="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                    class="-mr-1 inline-flex h-11 w-11 sm:h-6 sm:w-6 items-center justify-center rounded-full text-avocado-700 transition hover:bg-avocado-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                     aria-label="{{ $chip['aria'] }}"
                 >
                     <i data-lucide="x" class="h-3 w-3" aria-hidden="true"></i>
@@ -31,7 +31,7 @@ $activeChips = collect([
         <button
             type="button"
             wire:click="resetFilters"
-            class="ml-auto inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-[11px] font-bold text-darkbrown-500 transition hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+            class="ml-auto inline-flex min-h-[44px] sm:min-h-8 items-center gap-1 rounded-full px-2 text-[11px] font-bold text-darkbrown-500 transition hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
         >
             <i data-lucide="rotate-ccw" class="h-3 w-3" aria-hidden="true"></i>
             Hapus semua

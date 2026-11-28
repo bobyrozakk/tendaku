@@ -35,7 +35,7 @@
                     <button
                         type="button"
                         wire:click="selectCategory({{ $cat->id }})"
-                        class="inline-flex min-h-[2.25rem] items-center gap-1.5 rounded-xl border border-wheat-300 bg-white px-3 py-1.5 text-xs font-semibold text-darkbrown-700 transition hover:border-avocado-400 hover:bg-wheat-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
+                        class="inline-flex min-h-[44px] sm:min-h-[2.25rem] items-center gap-1.5 rounded-xl border border-wheat-300 bg-white px-3 py-1.5 text-xs font-semibold text-darkbrown-700 transition hover:border-avocado-400 hover:bg-wheat-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
                     >
                         <i data-lucide="tag" class="h-3.5 w-3.5" aria-hidden="true"></i>
                         {{ $cat->name }}
