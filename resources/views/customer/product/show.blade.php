@@ -1,4 +1,14 @@
 <x-layouts.customer>
+    @push('styles')
+        <style>
+            @media (max-width: 1023px) {
+                body {
+                    padding-bottom: calc(3.5rem + max(0.75rem, env(safe-area-inset-bottom)));
+                }
+            }
+        </style>
+    @endpush
+
     @php
         $vendorName = $item->vendor?->name ?? 'Tendaku Vendor';
     @endphp
@@ -9,7 +19,7 @@
          class="flex flex-col gap-6">
 
         <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs font-semibold text-darkbrown-500">
-            <a href="{{ route('customer.catalog.index', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="inline-flex shrink-0 items-center gap-1.5 transition hover:text-avocado-700">
+            <a href="{{ route('customer.catalog.index', ['start_date' => $startDate, 'end_date' => $endDate]) }}" class="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 py-2 transition hover:text-avocado-700">
                 <i data-lucide="arrow-left" class="h-3.5 w-3.5"></i>
                 <span>Kembali ke Katalog</span>
             </a>
@@ -51,7 +61,7 @@
                         <!-- Tombol Tutup X -->
                         <button type="button"
                                 @click="showGuestStoreModal = false"
-                                class="absolute top-4 right-4 text-darkbrown-400 hover:text-darkbrown-700 p-1.5 rounded-xl hover:bg-wheat-100 transition"
+                                class="absolute top-4 right-4 flex h-11 w-11 items-center justify-center text-darkbrown-400 hover:text-darkbrown-700 rounded-xl hover:bg-wheat-100 transition"
                                 aria-label="Tutup modal">
                             <i data-lucide="x" class="w-4 h-4"></i>
                         </button>

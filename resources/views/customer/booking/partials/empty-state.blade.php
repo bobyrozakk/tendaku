@@ -23,7 +23,7 @@
         </p>
 
         <a href="{{ route('customer.booking.index') }}"
-           class="mt-6 inline-flex items-center justify-center
+           class="mt-6 inline-flex min-h-[44px] sm:min-h-0 items-center justify-center
                   gap-2 rounded-xl border border-wheat-300
                   bg-white px-5 py-2.5 text-sm font-bold
                   text-darkbrown-800 transition hover:bg-wheat-100">
@@ -45,7 +45,7 @@
         </p>
 
         <a href="{{ route('customer.catalog.index') }}"
-           class="btn-tendaku-primary mt-6 inline-flex
+           class="btn-tendaku-primary mt-6 inline-flex min-h-[44px] sm:min-h-0
                   items-center justify-center gap-2
                   rounded-xl px-6 py-2.5 text-sm font-bold">
             <i data-lucide="compass"

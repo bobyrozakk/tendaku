@@ -11,7 +11,7 @@
 
                             <!-- Ambil di tempat: semua orang -->
                             <label :class="pickupMethod === 'self_pickup' ? 'border-avocado-800 bg-avocado-100/60 shadow-tendaku-sm' : 'border-wheat-200 bg-wheat-50/60 hover:border-avocado-400'"
-                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition">
+                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-avocado-600 has-[:focus-visible]:ring-offset-2">
                                 <input type="radio" name="ui_pickup_method" value="self_pickup" x-model="pickupMethod" class="sr-only">
                                 <span class="mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
                                       :class="pickupMethod === 'self_pickup' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
@@ -29,7 +29,7 @@
                             <!-- Diantar: hanya member login -->
                             @if ($isLoggedIn)
                             <label :class="pickupMethod === 'delivery' ? 'border-avocado-800 bg-avocado-100/60 shadow-tendaku-sm' : 'border-wheat-200 bg-wheat-50/60 hover:border-avocado-400'"
-                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition">
+                                   class="relative flex gap-3 rounded-2xl border-2 p-4 cursor-pointer transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-avocado-600 has-[:focus-visible]:ring-offset-2">
                                 <input type="radio" name="ui_pickup_method" value="delivery" x-model="pickupMethod" class="sr-only">
                                 <span class="mt-1 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
                                       :class="pickupMethod === 'delivery' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
@@ -51,7 +51,7 @@
                                 <div class="min-w-0 flex-1">
                                     <span class="font-bold text-lg text-darkbrown-900 leading-tight">Diantar ke lokasi</span>
                                     <p class="mt-1 text-sm text-darkbrown-600 leading-relaxed">Khusus member, karena alamat dan serah terima kurir perlu akun terverifikasi.</p>
-                                    <a href="{{ route('login') }}" class="mt-2 inline-flex items-center gap-1 text-sm font-bold text-avocado-800 hover:text-avocado-900 underline underline-offset-2">
+                                    <a href="{{ route('login') }}" class="mt-2 inline-flex min-h-[44px] sm:min-h-0 items-center gap-1 text-sm font-bold text-avocado-800 hover:text-avocado-900 underline underline-offset-2">
                                         Masuk atau daftar dulu
                                         <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                                     </a>
@@ -92,7 +92,7 @@
                                             href="https://www.google.com/maps/search/?api=1&query={{ urlencode($mapsQuery) }}"
                                             target="_blank"
                                             rel="noopener"
-                                            class="inline-flex h-9 min-w-[128px] items-center justify-center gap-1.5 rounded-full border border-avocado-700 bg-avocado-800 px-4 text-xs font-bold text-white transition-colors hover:bg-avocado-900"
+                                            class="inline-flex min-h-[44px] sm:min-h-0 sm:h-9 min-w-[128px] items-center justify-center gap-1.5 rounded-full border border-avocado-700 bg-avocado-800 px-4 text-xs font-bold text-white transition-colors hover:bg-avocado-900"
                                         >
                                             <i data-lucide="map-pin" class="h-3.5 w-3.5 shrink-0"></i>
                                             <span>Lihat di Maps</span>
@@ -103,7 +103,7 @@
                                         <a
                                             href="tel:{{ $vendorPhone }}"
                                             aria-label="Hubungi vendor {{ $vendorPhone }}"
-                                            class="inline-flex h-9 min-w-[128px] items-center justify-center gap-1.5 rounded-full border border-avocado-700 bg-avocado-800 px-4 text-xs font-bold text-white transition-colors hover:bg-avocado-900"
+                                            class="inline-flex min-h-[44px] sm:min-h-0 sm:h-9 min-w-[128px] items-center justify-center gap-1.5 rounded-full border border-avocado-700 bg-avocado-800 px-4 text-xs font-bold text-white transition-colors hover:bg-avocado-900"
                                         >
                                             <i data-lucide="phone" class="h-3.5 w-3.5 shrink-0"></i>
                                             <span>Hubungi vendor</span>
@@ -123,7 +123,7 @@
                                     <span class="font-bold text-darkbrown-900">Alamat Pengantaran</span>
                                 </div>
                                 <button type="button" @click="openAddAddressModal()"
-                                        class="inline-flex items-center gap-1.5 text-xs font-bold text-avocado-700 hover:text-avocado-800 bg-white border border-wheat-300 hover:border-avocado-500 px-3 py-1.5 rounded-lg shadow-sm transition">
+                                        class="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 text-xs font-bold text-avocado-700 hover:text-avocado-800 bg-white border border-wheat-300 hover:border-avocado-500 px-3 py-1.5 rounded-lg shadow-sm transition">
                                     <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                                     <span>Tambah Alamat</span>
                                 </button>
@@ -143,7 +143,7 @@
                                                 </template>
                                             </div>
                                             <button type="button" x-show="addresses.length > 1" @click="showAddressPicker = !showAddressPicker"
-                                                    class="text-xs font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2"
+                                                    class="inline-flex min-h-[44px] sm:min-h-0 items-center text-xs font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2"
                                                     x-text="showAddressPicker ? 'Tutup Pilihan' : 'Pilih Alamat Lain'"></button>
                                         </div>
 
@@ -198,7 +198,7 @@
                                         <p class="text-[11px] text-darkbrown-500 mt-0.5">Simpan alamat pengantaran lengkap agar kurir vendor dapat mengirimkan alat ke lokasi Anda.</p>
                                     </div>
                                     <button type="button" @click="openAddAddressModal()"
-                                            class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 px-3.5 py-2 rounded-xl shadow-sm transition">
+                                            class="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 px-3.5 py-2 rounded-xl shadow-sm transition">
                                         <i data-lucide="plus" class="w-4 h-4"></i>
                                         <span>Tambah Alamat Pengantaran</span>
                                     </button>

@@ -3,13 +3,13 @@
                     @php
                         $identitySubtitle = ($isGuest || $needsName || $needsPhone || $needsNik)
                             ? 'Dipakai vendor untuk mencocokkan identitas saat serah terima alat.'
-                            : 'Data diambil dari akun Anda. Sudah lengkap.';
+                            : 'Data diambil dari akun Anda.';
                     @endphp
                     @include('customer.booking.partials.create.section-heading', [
                         'step' => 4,
                         'title' => 'Data Penyewa',
                         'subtitle' => $identitySubtitle,
-                        'aside' => $isGuest ? '<a href="'.e(route('login')).'" class="font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2 whitespace-nowrap">Sudah punya akun? Masuk</a>' : null,
+                        'aside' => $isGuest ? '<a href="'.e(route('login')).'" class="font-bold text-avocado-700 hover:text-avocado-800 underline underline-offset-2 sm:whitespace-nowrap">Sudah punya akun? Masuk</a>' : null,
                     ])
 
                     <div class="p-5 sm:p-6 space-y-4">
@@ -102,7 +102,7 @@
                                 </div>
                             </div>
                             <a href="{{ route('login') }}"
-                               class="inline-flex items-center justify-center rounded-xl border border-goldenrod-400 bg-white px-4 py-2 text-sm font-bold text-darkbrown-900 hover:bg-sunglow-100 transition shrink-0">
+                               class="inline-flex min-h-[44px] sm:min-h-0 items-center justify-center rounded-xl border border-goldenrod-400 bg-white px-4 py-2 text-sm font-bold text-darkbrown-900 hover:bg-sunglow-100 transition shrink-0">
                                 Masuk Akun
                             </a>
                         </div>

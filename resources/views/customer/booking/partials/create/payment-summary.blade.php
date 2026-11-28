@@ -57,10 +57,10 @@
                                 <span>Jarak pengiriman</span>
                                 <span x-text="shipping?.distance_km == null ? '—' : formatMeasurement(shipping.distance_km) + ' km'"></span>
                             </div>
-                            <div x-show="!shippingReady" x-cloak role="status" aria-live="polite" class="rounded-xl bg-wheat-50 border border-wheat-200 p-3 text-darkbrown-600">
+                            <div x-show="!shippingReady" x-cloak role="status" aria-live="polite" class="rounded-xl border p-3" :class="shippingState === 'out_of_range' ? 'bg-red-50 border-red-200 text-red-800 font-semibold' : 'bg-wheat-50 border-wheat-200 text-darkbrown-600'">
                                 <span x-text="shippingMessage"></span>
-                                <button type="button" x-show="shippingState === 'error' && !shippingReloadRequired" @click="scheduleShipping()" class="block mt-2 font-bold text-avocado-700">Coba lagi</button>
-                                <button type="button" x-show="shippingReloadRequired" @click="window.location.reload()" class="block mt-2 font-bold text-avocado-700">Muat ulang checkout</button>
+                                <button type="button" x-show="shippingState === 'error' && !shippingReloadRequired" @click="scheduleShipping()" class="inline-flex min-h-[44px] sm:min-h-0 items-center mt-2 font-bold text-avocado-700">Coba lagi</button>
+                                <button type="button" x-show="shippingReloadRequired" @click="window.location.reload()" class="inline-flex min-h-[44px] sm:min-h-0 items-center mt-2 font-bold text-avocado-700">Muat ulang checkout</button>
                             </div>
 
                             <div x-show="discount > 0" x-cloak class="flex items-center justify-between text-avocado-700">
@@ -81,7 +81,7 @@
                             </legend>
                             <div class="space-y-2.5">
                                 <label :class="paymentOption === 'full' ? 'border-avocado-700 bg-avocado-100/60' : 'border-wheat-200 bg-white hover:border-avocado-400'"
-                                       class="relative flex items-center gap-3 rounded-xl border-2 p-3.5 cursor-pointer transition">
+                                       class="relative flex items-center gap-3 rounded-xl border-2 p-3.5 cursor-pointer transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-avocado-600 has-[:focus-visible]:ring-offset-2">
                                     <input type="radio" name="ui_payment_option" value="full" x-model="paymentOption" class="sr-only">
                                     <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
                                           :class="paymentOption === 'full' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
@@ -93,7 +93,7 @@
                                     </span>
                                 </label>
                                 <label :class="paymentOption === 'dp' ? 'border-avocado-700 bg-avocado-100/60' : 'border-wheat-200 bg-white hover:border-avocado-400'"
-                                       class="relative flex items-center gap-3 rounded-xl border-2 p-3.5 cursor-pointer transition">
+                                       class="relative flex items-center gap-3 rounded-xl border-2 p-3.5 cursor-pointer transition has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-avocado-600 has-[:focus-visible]:ring-offset-2">
                                     <input type="radio" name="ui_payment_option" value="dp" x-model="paymentOption" class="sr-only">
                                     <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition"
                                           :class="paymentOption === 'dp' ? 'bg-avocado-800 border-avocado-800' : 'border-wheat-400 bg-white'" aria-hidden="true">
@@ -115,7 +115,7 @@
 
                         <div x-show="shippingNeedsApproval" x-cloak class="rounded-xl border border-wheat-300 bg-wheat-50 p-3 text-sm text-darkbrown-700 space-y-2">
                             <p>Periksa ongkir dan total terbaru di atas sebelum melanjutkan.</p>
-                            <button type="button" @click="approveShippingChange()" class="font-bold text-avocado-700">Saya setuju dengan total terbaru</button>
+                            <button type="button" @click="approveShippingChange()" class="inline-flex min-h-[44px] sm:min-h-0 items-center font-bold text-avocado-700">Saya setuju dengan total terbaru</button>
                         </div>
 
                         <div class="rounded-xl border border-wheat-200 bg-wheat-50/60 p-4 text-sm text-darkbrown-800 space-y-2.5">
@@ -151,7 +151,8 @@
                             </div>
                         </div>
 
-                        <div class="space-y-2.5">
+                        {{-- Desktop saja. Di mobile/tablet CTA memakai sticky bar (mobile-checkout-bar). --}}
+                        <div class="hidden lg:block space-y-2.5">
                             <button type="button" x-on:click="submitBooking()" :disabled="!canSubmitBooking"
                                     :class="!canSubmitBooking ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400 hover:shadow-tendaku-lg'"
                                     class="w-full py-3.5 px-5 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
@@ -174,7 +175,7 @@
                         <div class="font-bold text-darkbrown-900">Butuh bantuan?</div>
                         <div class="text-darkbrown-500">Kendala bayar atau ubah jadwal.</div>
                     </div>
-                    <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-wheat-300 bg-wheat-50 hover:bg-wheat-100 px-3 py-2 text-xs font-bold text-avocado-900 transition">
+                    <a href="https://wa.me/6281234567890" target="_blank" rel="noopener" class="shrink-0 inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-xl border border-wheat-300 bg-wheat-50 hover:bg-wheat-100 px-3 py-2 text-xs font-bold text-avocado-900 transition">
                         <i data-lucide="message-circle" class="w-4 h-4"></i>
                         WhatsApp CS
                     </a>

@@ -1,10 +1,9 @@
-<section class="py-20 sm:py-24 w-full" style="background:#2A370A" id="vendor" aria-labelledby="vend-heading">
+<section class="py-12 sm:py-20 lg:py-24 w-full" style="background:#2A370A" id="vendor" aria-labelledby="vend-heading">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col lg:flex-row items-start gap-14">
+        <div class="flex flex-col lg:flex-row items-start gap-8 sm:gap-14">
             {{-- Left heading --}}
             <div class="lg:w-[36%] shrink-0 space-y-6" data-sr>
                 <div>
-                    <span class="text-xs font-bold uppercase tracking-[.18em]" style="color:#90B123">Untuk Pemilik Rental</span>
                     <h2 id="vend-heading" class="font-display text-3xl sm:text-4xl lg:text-5xl leading-tight mt-2" style="color:#FAF6ED">
                         Bergabung sebagai<br><span style="color:#FBCE6B">Vendor Tendaku</span>
                     </h2>
@@ -19,7 +18,7 @@
                         <i data-lucide="store" class="w-4 h-4" aria-hidden="true"></i>
                         Masuk Portal Vendor
                     </a>
-                    <p class="text-xs" style="color:#7A9A30">Hubungi kami untuk proses pendaftaran vendor baru.</p>
+                    <p class="text-xs text-avocado-200">Hubungi kami untuk proses pendaftaran vendor baru.</p>
                 </div>
 
                 {{-- Vendor stats --}}
@@ -31,7 +30,7 @@
                     @foreach($vStats as $vs)
                         <div>
                             <span class="font-display text-2xl font-bold block" style="color:#FBCE6B">{{ $vs['num'] }}</span>
-                            <span class="text-xs mt-0.5 block" style="color:#7A9A30">{{ $vs['label'] }}</span>
+                            <span class="text-xs mt-0.5 block text-avocado-200">{{ $vs['label'] }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -65,7 +64,7 @@
                             </div>
                             <div>
                                 <h4 class="text-sm font-bold" style="color:#FAF6ED">{{ $b['title'] }}</h4>
-                                <p class="text-xs leading-relaxed mt-1" style="color:#9BAD6B">{{ $b['desc'] }}</p>
+                                <p class="text-xs leading-relaxed mt-1 text-avocado-200">{{ $b['desc'] }}</p>
                             </div>
                         </div>
                     </div>

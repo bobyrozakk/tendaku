@@ -2,16 +2,14 @@
                 <section id="section-rental" class="rounded-2xl bg-white border border-wheat-200 shadow-tendaku-sm scroll-mt-24">
                     @include('customer.booking.partials.create.section-heading', [
                         'step' => 1,
-                        'title' => $isLoggedIn ? 'Jadwal & Perkiraan Cuaca' : 'Jadwal Sewa',
-                        'subtitle' => $isLoggedIn
-                            ? 'Pilih tanggal sewa dan lihat prakiraan cuaca di lokasi.'
-                            : 'Pilih tanggal ambil dan kembali. Ketersediaan diperiksa otomatis.',
+                        'title' => 'Jadwal & Perkiraan Cuaca',
+                        'subtitle' => 'Pilih tanggal sewa dan lihat prakiraan cuaca di lokasi.',
                     ])
 
-                    <div class="px-5 sm:px-6 pt-4 pb-5 sm:pb-6" @click.outside="calOpen = null; timeOpen = false">
-                        <div @class(['grid grid-cols-1 gap-3', 'md:grid-cols-12 md:items-start md:gap-x-4 md:gap-y-4' => $isLoggedIn])>
+                    <div class="px-5 sm:px-6 pt-4 pb-5 sm:pb-6" @click.outside="calOpen = null; timeOpen = false" @keydown.escape.window="calOpen = null; timeOpen = false">
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-start md:gap-x-4 md:gap-y-4">
 
-                            <div @class(['relative', 'md:col-span-6' => $isLoggedIn, 'sm:max-w-md' => ! $isLoggedIn])>
+                            <div class="relative md:col-span-6">
                                 <span class="sr-only">Tanggal sewa</span>
 
                                 <button type="button" @click="openCalendar()" :aria-expanded="calOpen ? 'true' : 'false'" aria-haspopup="dialog"
@@ -31,7 +29,7 @@
                                     <!-- Jam ambil (klik untuk buka timepicker) -->
                                     <span class="relative inline-flex">
                                         <button type="button" @click.stop="toggleTime()"
-                                                class="inline-flex items-center gap-1.5 text-xs font-semibold text-avocado-900 bg-avocado-100 hover:bg-avocado-200 border border-avocado-200 rounded-full px-3 py-1 transition">
+                                                class="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 text-xs font-semibold text-avocado-900 bg-avocado-100 hover:bg-avocado-200 border border-avocado-200 rounded-full px-3 py-1 transition">
                                             <i data-lucide="clock" class="w-3.5 h-3.5"></i>
                                             Jam ambil
                                             <span class="font-extrabold" x-text="pickupTime"></span>
@@ -39,7 +37,7 @@
 
                                         <!-- Timepicker wheel 24H (07.00 - 17.00) -->
                                         <div x-show="timeOpen" x-cloak x-transition.opacity.duration.150ms
-                                             class="absolute top-full left-0 mt-2 z-50 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg overflow-hidden"
+                                             class="absolute top-full left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mt-2 z-50 max-w-[calc(100vw-2rem)] rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg overflow-hidden"
                                              style="width: 13rem;">
                                             <div class="px-4 pt-3 pb-1">
                                                 <p class="text-xs font-bold text-darkbrown-700">Jam ambil</p>
@@ -84,7 +82,7 @@
 
                                             <div class="px-3 py-2 border-t border-wheat-100 flex justify-end">
                                                 <button type="button" @click="timeOpen = false"
-                                                        class="text-xs font-bold text-avocado-700 hover:text-avocado-900 px-3 py-1 rounded-lg hover:bg-avocado-50 transition">
+                                                        class="inline-flex min-h-[44px] sm:min-h-0 items-center text-xs font-bold text-avocado-700 hover:text-avocado-900 px-3 py-1 rounded-lg hover:bg-avocado-50 transition">
                                                     Selesai
                                                 </button>
                                             </div>
@@ -94,55 +92,41 @@
                                     <span class="text-xs text-darkbrown-500">Kembali paling lambat <strong class="text-darkbrown-800" x-text="pickupTime"></strong></span>
                                 </div>
 
-                                <!-- Dropdown kalender rentang (Senin - Minggu) -->
-                                <div x-show="calOpen" x-cloak x-transition.opacity.duration.150ms role="dialog" aria-label="Pilih rentang tanggal sewa"
-                                     class="absolute top-full left-0 mt-2 z-40 w-[21rem] max-w-[calc(100vw-2.5rem)] p-4 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <button type="button" @click="prevMonth()" aria-label="Bulan sebelumnya" class="w-9 h-9 rounded-full hover:bg-wheat-100 flex items-center justify-center text-darkbrown-800">
-                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-                                        </button>
-                                        <span class="text-sm font-extrabold text-darkbrown-900" x-text="calendarTitle"></span>
-                                        <button type="button" @click="nextMonth()" aria-label="Bulan berikutnya" class="w-9 h-9 rounded-full hover:bg-wheat-100 flex items-center justify-center text-darkbrown-800">
-                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                                        </button>
-                                    </div>
-                                    <p class="text-center text-xs font-bold text-darkbrown-900 bg-sunglow-200 border border-sunglow-300 rounded-lg px-3 py-1.5 mb-3"
-                                       x-text="calOpen === 'return' ? 'Pilih tanggal kembali' : 'Pilih tanggal ambil'"></p>
-                                    <div class="grid grid-cols-7 text-center text-[11px] font-semibold text-darkbrown-500 mb-1.5">
-                                        <span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span>
-                                    </div>
-                                    <div class="grid grid-cols-7 gap-y-1 text-center">
-                                        <template x-for="(cell, idx) in calendarDays" :key="idx">
-                                            <div class="h-10 flex items-center justify-center"
-                                                 :class="[cell.inRange ? 'bg-avocado-100' : '', cell.start ? 'rounded-l-full' : '', cell.end ? 'rounded-r-full' : '']">
-                                                <template x-if="cell.empty"><span class="block h-9"></span></template>
-                                                <template x-if="!cell.empty">
-                                                    <button type="button" :disabled="cell.disabled" @click="selectCalDate(cell.iso)"
-                                                            :class="[
-                                                                (cell.start || cell.end) ? 'bg-avocado-900 text-white font-bold shadow-xs' :
-                                                                (cell.unavailable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
-                                                                (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' :
-                                                                (cell.inRange ? 'text-avocado-900 font-semibold' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium')))
-                                                                , (cell.outside && !cell.start && !cell.end) ? 'opacity-50' : ''
-                                                            ]"
-                                                            class="w-9 h-9 rounded-full inline-flex items-center justify-center transition text-sm"
-                                                            x-text="cell.day">
-                                                    </button>
-                                                </template>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
+                                <x-date-range-calendar />
                             </div>
 
-                            @if ($isLoggedIn)
+                            @if (! $isGuest)
                                 <livewire:customer.booking-weather
                                     :vendor-city="$booking['vendor']['city'] ?? ''"
                                     :pickup-date="$initialPickupDate ?? ''"
                                     :return-date="$initialReturnDate ?? ''"
                                     :compact="true"
+                                    lazy="on-load"
                                     key="checkout-booking-weather"
                                 />
+                            @else
+                                <div class="rounded-2xl border border-wheat-200 bg-gradient-to-r from-wheat-50/80 to-white p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                    <div class="flex items-start sm:items-center gap-3">
+                                        <div class="w-10 h-10 rounded-2xl bg-wheat-200/60 border border-wheat-300/80 text-darkbrown-600 flex items-center justify-center shrink-0">
+                                            <x-icon name="cloud-sun" class="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <h3 class="text-sm font-extrabold text-darkbrown-900">Prakiraan Cuaca Masa Sewa</h3>
+                                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                    <x-icon name="lock" class="w-3 h-3" />
+                                                    Khusus Member
+                                                </span>
+                                            </div>
+                                            <p class="text-xs text-darkbrown-600 mt-1">
+                                                Prakiraan cuaca harian dan peringatan cuaca ekstrem hanya dapat diakses oleh akun terdaftar.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <a href="{{ route('login') }}" class="btn-tendaku-secondary min-h-[44px] sm:min-h-0 inline-flex items-center justify-center text-xs font-bold px-4 py-2 shrink-0">
+                                        Masuk Akun
+                                    </a>
+                                </div>
                             @endif
                         </div>
 

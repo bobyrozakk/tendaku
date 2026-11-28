@@ -97,19 +97,19 @@
     }
 
     .tendaku-nav-link-block {
-        @apply flex px-3.5 py-2.5;
+        @apply flex min-h-[44px] items-center px-3.5 py-2.5;
     }
 
     .tendaku-nav-icon {
-        @apply inline-flex items-center justify-center p-2 rounded-lg text-wheat-200/80 transition-colors duration-200 hover:text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/40;
+        @apply inline-flex min-h-[44px] min-w-[44px] items-center justify-center p-2 rounded-lg text-wheat-200/80 transition-colors duration-200 hover:text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/40;
     }
 
     .tendaku-nav-btn-secondary {
-        @apply items-center justify-center px-4 py-2 rounded-xl text-sm font-semibold text-wheat-100 border border-wheat-300/25 transition-colors duration-200 hover:text-white hover:bg-white/[0.07] hover:border-wheat-300/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/40;
+        @apply inline-flex items-center justify-center text-center px-4 py-2 rounded-xl text-sm font-semibold text-wheat-100 border border-wheat-300/25 transition-colors duration-200 hover:text-white hover:bg-white/[0.07] hover:border-wheat-300/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/40;
     }
 
     .tendaku-nav-btn-primary {
-        @apply inline-flex items-center justify-center px-4 py-2 rounded-xl text-sm font-bold text-darkbrown-900 bg-sunglow-300 shadow-sm transition-colors duration-200 hover:bg-sunglow-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#161d15];
+        @apply inline-flex items-center justify-center text-center px-4 py-2 rounded-xl text-sm font-bold text-darkbrown-900 bg-sunglow-300 shadow-sm transition-colors duration-200 hover:bg-sunglow-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#161d15];
     }
     /* Tendaku Custom Buttons */
     .btn-tendaku-primary {

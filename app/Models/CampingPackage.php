@@ -56,8 +56,9 @@ class CampingPackage extends Model
     }
 
     /**
-     * Total tarif harian seluruh isi paket bila disewa satuan.
-     * Dipakai untuk menampilkan nilai hemat paket.
+     * Total tarif harian seluruh isi paket bila disewa satuan (per HARI).
+     *
+     * Contoh: sleeping bag 4 x Rp15.000 + lampu 1 x Rp10.000 = Rp70.000 per hari.
      */
     protected function itemDailyRateTotal(): Attribute
     {
@@ -69,22 +70,46 @@ class CampingPackage extends Model
     }
 
     /**
-     * Harga normal bila isi paket disewa terpisah selama durasi paket.
+     * Harga normal PER HARI bila isi paket disewa satuan.
+     *
+     * Harga paket (`price`) adalah tarif per hari — saat checkout total dihitung
+     * `price x jumlah hari` — sehingga pembandingnya juga harus per hari. Dulu nilai ini
+     * dikali `duration_days` sehingga "hemat" membandingkan total N hari dengan harga 1 hari.
      */
     protected function normalPrice(): Attribute
     {
         return Attribute::make(
-            get: fn (): float => $this->item_daily_rate_total * max(1, (int) $this->duration_days)
+            get: fn (): float => $this->item_daily_rate_total
         );
     }
 
     /**
-     * Nominal penghematan dibanding menyewa alat satu per satu.
+     * Penghematan PER HARI dibanding menyewa alat satu per satu (0 bila paket tidak lebih murah).
      */
     protected function savings(): Attribute
     {
         return Attribute::make(
             get: fn (): float => max(0, $this->normal_price - (float) $this->price)
+        );
+    }
+
+    /**
+     * Total harga paket untuk durasi standar (`price x duration_days`).
+     */
+    protected function defaultTotalPrice(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): float => (float) $this->price * max(1, (int) $this->duration_days)
+        );
+    }
+
+    /**
+     * Jumlah jenis alat berbeda di dalam paket (bukan jumlah unit).
+     */
+    protected function itemTypesCount(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): int => (int) $this->packageItems->count()
         );
     }
 

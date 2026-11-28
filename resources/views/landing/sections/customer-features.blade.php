@@ -1,10 +1,9 @@
-<section class="py-20 sm:py-24 w-full" style="background:#F4F7F2" id="fitur-akun" aria-labelledby="cust-feat-heading">
+<section class="py-12 sm:py-20 lg:py-24 w-full" style="background:#F4F7F2" id="fitur-akun" aria-labelledby="cust-feat-heading">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col lg:flex-row items-start gap-14 lg:gap-20">
+        <div class="flex flex-col lg:flex-row items-start gap-8 sm:gap-14 lg:gap-20">
             {{-- Left: heading + CTA --}}
             <div class="lg:w-[38%] shrink-0 space-y-6" data-sr>
                 <div>
-                    <span class="text-xs font-bold uppercase tracking-[.18em] text-avocado-600">Untuk Penyewa</span>
                     <h2 id="cust-feat-heading" class="font-display text-3xl sm:text-4xl lg:text-5xl text-darkbrown-900 leading-tight mt-2">
                         Daftar Akun,<br>Nikmati Semua<br><span class="text-avocado-700">Kemudahannya</span>
                     </h2>

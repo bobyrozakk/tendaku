@@ -15,6 +15,8 @@ use Carbon\Carbon;
 
 class CheckoutShippingService
 {
+    public const OUT_OF_RANGE_MESSAGE = 'Lokasi pengantaran berada di luar jangkauan layanan antar vendor.';
+
     public function __construct(
         private readonly CartService $cart,
         private readonly AvailabilityService $availability,
@@ -62,6 +64,11 @@ class CheckoutShippingService
         if (! $vendor->hasCoordinates()) {
             throw new ShippingPreviewException('vendor_coordinates_missing', 'Lokasi pengiriman toko belum tersedia. Silakan pilih ambil sendiri.');
         }
+        $maxKm = (float) config('booking.max_delivery_km', 10);
+        // Garis lurus selalu <= jarak berkendara: kalau sudah lewat batas, tolak tanpa memanggil ORS.
+        if (OpenRouteService::straightLineKm((float) $vendor->latitude, (float) $vendor->longitude, (float) $address->latitude, (float) $address->longitude) > $maxKm) {
+            throw new ShippingPreviewException('out_of_delivery_range', self::OUT_OF_RANGE_MESSAGE);
+        }
         $setting = $this->calculator->resolveVendorSetting($vendor);
         if ($setting === null) {
             throw new ShippingPreviewException('shipping_unconfigured', 'Tarif pengiriman toko belum tersedia.');
@@ -79,7 +86,11 @@ class CheckoutShippingService
                     : 'Jarak pengiriman belum dapat dihitung. Silakan coba lagi.',
                 $route['status'] === OpenRouteService::STATUS_ROUTE_NOT_FOUND ? 422 : 503);
         }
+        if ($route['distance_km'] > $maxKm) {
+            throw new ShippingPreviewException('out_of_delivery_range', self::OUT_OF_RANGE_MESSAGE);
+        }
         $shipping = $this->calculator->calculate($setting, $route['distance_km'], $weight, $input['pickup_method']);
+        $result['distance_estimated'] = (bool) ($route['estimated'] ?? false);
         $result['distance_km'] = $route['distance_km'];
         $result['distance_fee'] = $shipping['distance_fee'];
         $result['weight_fee'] = $shipping['weight_fee'];

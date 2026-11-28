@@ -7,15 +7,15 @@
     <div x-data="{ mobileOpen: false, scrolled: false }"
          x-init="scrolled = window.scrollY > 8"
          @scroll.window.passive="scrolled = window.scrollY > 8"
-         class="sticky top-0 z-40">
+         class="sticky top-0 z-50">
         <!-- Customer Top Navigation Bar -->
         <header x-ref="navbarHeader"
                 class="tendaku-navbar"
                 :class="{ 'is-scrolled': scrolled || mobileOpen }">
-        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
             <!-- Brand Logo -->
             <div class="flex items-center gap-6 lg:gap-10">
-                <a href="{{ url('/') }}" class="focus:outline-none flex items-center group py-1" aria-label="Tendaku">
+                <a href="{{ url('/') }}" class="focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300/60 rounded-lg flex items-center group py-1" aria-label="Tendaku">
                     <img src="{{ asset('images/Logo.svg') }}"
                          alt="Tendaku"
                          class="h-10 sm:h-11 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
@@ -89,14 +89,14 @@
                         <a href="{{ route('customer.cart.index') }}"
                            class="tendaku-nav-icon relative"
                            title="Keranjang Sewa"
+                           aria-label="Keranjang Sewa"
                         >
                             <i data-lucide="shopping-cart" class="w-5 h-5"></i>
                             <span
                                 x-show="qty > 0"
                                 x-cloak
                                 x-text="qty"
-                                class="absolute -top-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full font-bold text-[10px] flex items-center justify-center text-darkbrown-900 font-bold"
-                                style="background: linear-gradient(135deg, #fbce6b, #d5a007); box-shadow: 0 1px 6px rgba(213,160,7,0.5);"
+                                class="absolute -top-0.5 -right-0.5 min-w-[1.25rem] h-5 px-1 rounded-full bg-sunglow-300 font-bold text-xs flex items-center justify-center text-darkbrown-900"
                             >
                                 {{ $cartQty > 0 ? $cartQty : '' }}
                             </span>
@@ -116,20 +116,22 @@
                         @endphp
 
                         <a href="{{ $vendorDashboard }}"
-                           class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
-                            Dashboard Vendor
+                           class="btn-tendaku-primary min-h-[44px] !py-2 !px-3 sm:!px-3.5 text-xs sm:text-sm shrink-0 whitespace-nowrap">
+                            <span class="sm:hidden">Dashboard</span>
+                            <span class="hidden sm:inline">Dashboard Vendor</span>
                         </a>
                     @elseif (auth()->user()->isSuperAdmin())
                         <a href="{{ route('dashboard') }}"
-                           class="btn-tendaku-primary !py-2 !px-3.5 text-xs sm:text-sm">
-                            Dashboard Admin
+                           class="btn-tendaku-primary min-h-[44px] !py-2 !px-3 sm:!px-3.5 text-xs sm:text-sm shrink-0 whitespace-nowrap">
+                            <span class="sm:hidden">Dashboard</span>
+                            <span class="hidden sm:inline">Dashboard Admin</span>
                         </a>
                     @else
                         @php
                             $navbarUser = auth()->user();
                         @endphp
                         <a href="{{ route('profile') }}"
-                           class="inline-flex items-center justify-center rounded-full p-0.5 transition-all duration-200 hover:ring-2 hover:ring-sunglow-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300"
+                           class="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full p-0.5 transition-all duration-200 hover:ring-2 hover:ring-sunglow-400/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-300"
                            title="{{ $navbarUser->name }} (Akun Saya)"
                            aria-label="Akun Saya">
                             @if ($navbarUser->avatar_url)
@@ -237,11 +239,11 @@
                             class="w-6 h-6 rounded-full object-cover border border-white/20 shadow-sm"
                             onerror="this.onerror=null; this.parentElement.querySelector('.mobile-initials-fallback')?.classList.remove('hidden'); this.remove();"
                         >
-                        <span class="mobile-initials-fallback hidden w-6 h-6 rounded-full bg-gradient-to-br from-sunglow-300 to-goldenrod-500 text-darkbrown-900 font-bold text-[10px] flex items-center justify-center border border-white/20 shadow-sm">
+                        <span class="mobile-initials-fallback hidden w-6 h-6 rounded-full bg-sunglow-300 text-darkbrown-900 font-bold text-xs flex items-center justify-center border border-white/20 shadow-sm">
                             {{ auth()->user()->initials }}
                         </span>
                     @else
-                        <span class="w-6 h-6 rounded-full bg-gradient-to-br from-sunglow-300 to-goldenrod-500 text-darkbrown-900 font-bold text-[10px] flex items-center justify-center border border-white/20 shadow-sm">
+                        <span class="w-6 h-6 rounded-full bg-sunglow-300 text-darkbrown-900 font-bold text-xs flex items-center justify-center border border-white/20 shadow-sm">
                             {{ auth()->user()->initials }}
                         </span>
                     @endif

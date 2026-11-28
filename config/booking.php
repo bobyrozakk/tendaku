@@ -5,6 +5,8 @@ return [
     'admin_fee_rate' => (float) env('BOOKING_ADMIN_FEE_RATE', 0.03),
     'admin_fee_minimum' => (int) env('BOOKING_ADMIN_FEE_MINIMUM', 2000),
     'delivery_fee' => (int) env('BOOKING_DELIVERY_FEE', 20000),
+    // Batas jarak antar vendor (km). Di atas ini ongkir tidak dihitung otomatis.
+    'max_delivery_km' => (float) env('BOOKING_MAX_DELIVERY_KM', 10),
     'default_pickup_time' => '09:00',
     'default_return_time' => '09:00',
 

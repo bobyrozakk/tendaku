@@ -32,7 +32,7 @@
         <div class="rounded-xl border-2 border-goldenrod-400 bg-white p-3 space-y-2">
             <span>Metode pembayaran</span>
 
-            <div class="va-pill rounded-full border border-goldenrod-400 bg-white" :aria-busy="vaLoading.toString()">
+            <div class="va-pill rounded-2xl sm:rounded-full border border-goldenrod-400 bg-white" :aria-busy="vaLoading.toString()">
                 <div class="va-pill-bank bg-wheat-100 border-goldenrod-400" @click.outside="vaOpen = false" @keydown.escape="vaOpen = false">
                     <button type="button" x-ref="vaBtn" class="va-bank-btn text-darkbrown-900"
                             @click="toggleBank()" :disabled="vaLoading || expired"
@@ -55,7 +55,7 @@
                     </div>
                 </div>
 
-                <div x-show="vaBank !== 'qris'" x-cloak class="min-w-0 flex-1">
+                <div x-show="vaBank !== 'qris'" x-cloak class="min-w-0 w-full sm:w-auto sm:flex-1">
                     <div x-show="vaBiller" x-cloak>
                         <div class="text-xs text-darkbrown-500">Kode perusahaan (biller code)</div>
                         <span class="mt-1 inline-block font-mono text-sm font-bold text-darkbrown-900 bg-wheat-100 px-2.5 py-1 rounded-lg border border-wheat-300 select-all" x-text="vaBiller">{{ $vaInfo['biller_code'] ?? '' }}</span>
@@ -65,7 +65,7 @@
                         <span x-show="!vaLoading" class="va-num min-w-0 flex-1 truncate font-mono font-black text-darkbrown-900 select-all"
                               x-text="vaNumber || '-'">{{ $vaInfo['va_number'] ?? '-' }}</span>
                         <button type="button" @click="copy(vaNumber)" :disabled="vaLoading || !vaNumber"
-                                class="shrink-0 px-2.5 py-1 rounded-full text-xs font-bold bg-white hover:bg-wheat-100 border border-wheat-300 transition disabled:opacity-60">
+                                class="shrink-0 min-h-[44px] sm:min-h-0 px-2.5 py-1 rounded-full text-xs font-bold bg-white hover:bg-wheat-100 border border-wheat-300 transition disabled:opacity-60">
                             <span x-text="copied ? 'Tersalin' : 'Salin'">Salin</span>
                         </button>
                     </div>
@@ -84,7 +84,7 @@
             <button type="button" class="absolute inset-0 cursor-default" @click="qrisOpen = false" aria-label="Tutup popup QRIS"></button>
             <section class="relative z-10 w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-2xl">
                 <button type="button" @click="qrisOpen = false"
-                        class="absolute right-3 top-3 rounded-full p-2 text-darkbrown-500 hover:bg-wheat-100"
+                        class="absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-full text-darkbrown-500 hover:bg-wheat-100"
                         aria-label="Tutup popup QRIS">
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                         <path d="m18 6-12 12M6 6l12 12" />
@@ -110,7 +110,7 @@
                     <div x-show="qrisImageFailed" x-cloak class="p-4 text-center">
                         <p class="text-sm font-semibold text-red-700">Gambar QRIS gagal dimuat.</p>
                         <button type="button" @click="retryQrisImage()"
-                                class="mt-2 px-3 py-1 text-xs font-bold bg-wheat-100 hover:bg-wheat-200 rounded-lg text-darkbrown-800 transition">
+                                class="mt-2 min-h-[44px] sm:min-h-0 px-3 py-1 text-xs font-bold bg-wheat-100 hover:bg-wheat-200 rounded-lg text-darkbrown-800 transition">
                             Coba muat ulang
                         </button>
                     </div>
@@ -121,11 +121,11 @@
                 @if(!config('services.midtrans.is_production'))
                     <div class="mt-4 flex items-center gap-2">
                         <a href="https://simulator.sandbox.midtrans.com/v2/qris/index" target="_blank" rel="noopener"
-                           class="flex-1 py-2.5 px-4 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition text-center">
+                           class="flex-1 min-h-[44px] sm:min-h-0 inline-flex items-center justify-center py-2.5 px-4 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition text-center">
                             <span>Bayar sekarang</span>
                         </a>
                         <button type="button" @click="copy(qrisRawUrl || currentQrisImageUrl)"
-                                class="py-2.5 px-4 rounded-xl text-sm font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition shrink-0">
+                                class="min-h-[44px] sm:min-h-0 inline-flex items-center justify-center py-2.5 px-4 rounded-xl text-sm font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition shrink-0">
                             <span x-text="copied ? 'Tersalin' : 'Salin URL'">Salin URL</span>
                         </button>
                     </div>
@@ -144,24 +144,24 @@
             {{-- Sandbox: VA otomatis tersalin, lalu simulator Midtrans terbuka di tab baru --}}
             <a x-show="orderId && vaBank !== 'qris' && vaNumber" x-cloak href="https://simulator.sandbox.midtrans.com/" target="_blank" rel="noopener"
                @click="copy(vaNumber)"
-               class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2">
+               class="min-h-[44px] sm:min-h-0 py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2">
                 <span>Bayar sekarang</span>
             </a>
             <button type="button" x-show="vaBank === 'qris' && qrisAvailable" x-cloak @click="openQris()"
-                    class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition">
+                    class="min-h-[44px] sm:min-h-0 py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition">
                 Tampilkan QRIS
             </button>
         @else
             <button type="button" x-show="orderId" @click="payNow()" :disabled="paying"
-                    class="py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-                <svg x-show="paying" x-cloak class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"></path></svg>
-                <span x-text="paying ? 'Memproses...' : 'Bayar sekarang'">Bayar sekarang</span>
+                    class="min-h-[44px] sm:min-h-0 py-2.5 px-5 rounded-xl text-sm font-extrabold text-darkbrown-900 bg-sunglow-300 hover:bg-sunglow-400 active:bg-goldenrod-400 border border-goldenrod-400 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                <i x-show="paying" x-cloak data-lucide="loader-circle" class="w-4 h-4 animate-spin" aria-hidden="true"></i>
+                <span>Bayar sekarang</span>
             </button>
         @endif
 
         <button type="button" x-show="orderId" @click="sync()" :disabled="syncing"
-                class="py-2.5 px-4 rounded-xl text-sm font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
-            <svg class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5.6 9A8 8 0 0119 11m-.6 4A8 8 0 015 13" /></svg>
+                class="min-h-[44px] sm:min-h-0 py-2.5 px-4 rounded-xl text-sm font-bold text-darkbrown-800 bg-white hover:bg-wheat-100 border border-wheat-300 shadow-sm transition flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+            <i data-lucide="refresh-cw" class="w-4 h-4" :class="syncing ? 'animate-spin' : ''" aria-hidden="true"></i>
             <span x-text="syncing ? 'Mengecek...' : 'Cek status'">Cek status</span>
         </button>
     </div>

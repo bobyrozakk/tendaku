@@ -47,7 +47,7 @@
                                      :class="cardCls('{{ $key }}')"
                                      :aria-current="current === '{{ $key }}' ? 'step' : null">
 
-                                <header class="flex items-start justify-between gap-3 p-4 sm:p-5">
+                                <header class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3 p-4 sm:p-5">
                                     <div class="min-w-0">
                                         <h3 class="font-extrabold text-darkbrown-900 leading-snug">{{ $n['title'] }}</h3>
                                         @unless($key === 'pickup')
@@ -57,7 +57,7 @@
                                             <p class="mt-1 text-xs font-semibold text-darkbrown-500">{{ $times[$key] }}</p>
                                         @endif
                                     </div>
-                                    <div class="flex items-center gap-2 shrink-0 text-right">
+                                    <div class="flex flex-wrap items-center gap-2 sm:shrink-0 sm:text-right">
                                         @unless($key === 'rental')
                                             <span x-show="times['{{ $key }}']" class="text-xs font-semibold text-darkbrown-500" x-text="times['{{ $key }}']">{{ $times[$key] }}</span>
                                         @endunless

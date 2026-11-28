@@ -1,14 +1,24 @@
 <x-layouts.customer>
+    @push('styles')
+        <style>
+            @media (max-width: 1023px) {
+                body {
+                    padding-bottom: calc(4.95rem + env(safe-area-inset-bottom));
+                }
+            }
+        </style>
+    @endpush
+
     <x-slot name="title">Checkout Paket Camping - Tendaku</x-slot>
     <x-slot name="header">
         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-                <nav class="flex items-center gap-2 text-sm text-darkbrown-500 mb-1.5">
-                    <a href="{{ route('home') }}" class="hover:text-avocado-700 transition">Beranda</a>
+                <nav class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-darkbrown-500 mb-1.5">
+                    <a href="{{ route('home') }}" class="inline-flex min-h-[44px] items-center hover:text-avocado-700 transition">Beranda</a>
                     <span class="text-wheat-400">/</span>
-                    <a href="{{ route('customer.packages.index') }}" class="hover:text-avocado-700 transition">Paket Camping</a>
+                    <a href="{{ route('customer.packages.index') }}" class="inline-flex min-h-[44px] items-center hover:text-avocado-700 transition">Paket Camping</a>
                     <span class="text-wheat-400">/</span>
-                    <a href="{{ route('customer.packages.show', $package) }}" class="hover:text-avocado-700 transition">{{ $package->name }}</a>
+                    <a href="{{ route('customer.packages.show', $package) }}" class="inline-flex min-h-[44px] items-center max-w-[12rem] sm:max-w-none hover:text-avocado-700 transition"><span class="truncate">{{ $package->name }}</span></a>
                     <span class="text-wheat-400">/</span>
                     <span class="text-darkbrown-800 font-semibold">Booking</span>
                 </nav>

@@ -142,8 +142,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     border: 1px solid rgba(255, 255, 255, 0.55);
     border-radius: 999px;
     color: #fff;
@@ -208,7 +208,7 @@
 /* ---------- Responsif ---------- */
 @media (max-width: 1100px) {
     .site-footer__grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         column-gap: 28px;
     }
     .site-footer__brand {
@@ -224,25 +224,70 @@
 
 @media (max-width: 720px) {
     .site-footer {
-        --footer-scene: clamp(460px, 120vw, 600px);
+        margin-top: 3rem;
+        --footer-scene: 260px;
     }
     .site-footer__inner {
-        padding-top: calc(var(--footer-scene) * 0.76);
+        padding-top: 160px;
     }
     .site-footer__grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        column-gap: 20px;
+        column-gap: 24px;
+        row-gap: 28px;
     }
+    .site-footer__brand,
+    .site-footer__contact {
+        grid-column: 1 / -1;
+    }
+    /* Semua judul kolom setinggi sama supaya garis bawahnya sejajar,
+       walau ada judul yang turun ke dua baris. */
     .site-footer__head {
-        min-height: 0;
+        min-height: 44px;
         margin-bottom: 14px;
+        padding-bottom: 10px;
+        align-items: flex-end;
+    }
+    .site-footer__title {
+        font-size: 14px;
+        line-height: 1.3;
+        text-wrap: balance;
     }
     .site-footer__brand .site-footer__head {
         min-height: 56px;
     }
+    .site-footer .site-footer__desc {
+        max-width: none;
+    }
+    .site-footer__list {
+        gap: 4px;
+    }
+    .site-footer__list a,
+    .site-footer .site-footer__link-btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+    /* Kontak: dua kolom ikon + teks yang rapi, teks panjang boleh turun baris */
+    .site-footer__contact li > span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+    /* Bar bawah: rata tengah supaya tidak "menggantung" di kiri */
     .site-footer__bottom {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
+        text-align: center;
+        gap: 10px;
+    }
+    .site-footer__legal {
+        justify-content: center;
+        gap: 6px 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .site-footer__grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -336,8 +381,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border: 0;
     border-radius: 999px;
     background: transparent;
@@ -446,6 +491,6 @@
         border-radius: 1.25rem 1.25rem 0 0;
     }
     .footer-dialog__body {
-        padding: 20px 18px 28px;
+        padding: 20px 18px max(28px, env(safe-area-inset-bottom));
     }
 }

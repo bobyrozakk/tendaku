@@ -80,7 +80,7 @@
                     @endforelse
 
                     <div>
-                        {{ $rentals->links() }}
+                        {{ $rentals->links('customer.partials.pagination') }}
                     </div>
                 </div>
             </aside>

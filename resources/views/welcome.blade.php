@@ -41,8 +41,10 @@
                 @click="window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })"
                 aria-label="Kembali ke atas"
                 title="Kembali ke atas"
-                class="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-darkbrown-900/90 text-sunglow-300 border border-sunglow-300/35 shadow-xl backdrop-blur-md hover:bg-darkbrown-800 hover:text-sunglow-200 hover:-translate-y-0.5 active:translate-y-0 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-400 focus-visible:ring-offset-2">
-            <i data-lucide="arrow-up" class="w-5 h-5" aria-hidden="true"></i>
+                class="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-darkbrown-900/45 border border-white/15 shadow-xl backdrop-blur-xl hover:bg-darkbrown-900/60 hover:-translate-y-0.5 transition-all motion-reduce:transition-none motion-reduce:transform-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sunglow-400 focus-visible:ring-offset-2">
+            <i data-lucide="arrow-up"
+               class="w-5 h-5 text-sunglow-300"
+               aria-hidden="true"></i>
         </button>
     </div>
 

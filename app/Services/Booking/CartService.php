@@ -213,6 +213,13 @@ class CartService
     {
         $direct = $this->getDirect();
 
+        // Preview ongkir dipanggil berulang. Bila tanggal/jam sama dengan yang sudah
+        // tersimpan, lewati penulisan session + UPDATE users.cart (ke DB remote).
+        $current = $direct ?? $this->get($user);
+        if ($current !== null && $this->datesUnchanged($current, $dates)) {
+            return;
+        }
+
         if ($direct !== null) {
             Session::put(self::DIRECT_SESSION_KEY, $this->withDates($direct, $dates));
 
@@ -220,6 +227,28 @@ class CartService
         }
 
         $this->updateDates($dates, $user);
+    }
+
+    /**
+     * @param  array<string, mixed>  $cart
+     * @param  array<string, mixed>  $dates
+     */
+    private function datesUnchanged(array $cart, array $dates): bool
+    {
+        // Tanggal: Y-m-d (10 karakter). Jam: H:i (5 karakter, abaikan detik).
+        $lengths = ['pickup_date' => 10, 'return_date' => 10, 'pickup_time' => 5, 'return_time' => 5];
+
+        foreach ($lengths as $key => $length) {
+            if (! array_key_exists($key, $dates)) {
+                continue;
+            }
+
+            if (substr((string) ($cart[$key] ?? ''), 0, $length) !== substr((string) $dates[$key], 0, $length)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

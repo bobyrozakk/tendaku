@@ -40,15 +40,15 @@ $categoryIcon = static function ($category) use ($iconByCategoryIcon, $iconByCat
     return 'tag';
 };
 
-$categoryButtonClass = static fn (bool $active): string => 'inline-flex min-h-[2rem] shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 '.($active
+$categoryButtonClass = static fn (bool $active): string => 'inline-flex min-h-[44px] sm:min-h-[2rem] shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 '.($active
     ? 'border-avocado-700 bg-avocado-600 text-white shadow-sm'
     : 'border-wheat-300 bg-white text-darkbrown-700 hover:border-avocado-400 hover:bg-wheat-50');
 @endphp
 
 <div class="space-y-2.5">
     <div class="flex items-center justify-between gap-3">
-        <span class="text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">Kategori</span>
-        <span class="hidden text-[11px] font-medium text-darkbrown-400 sm:inline">
+        <span class="text-xs font-bold uppercase tracking-wider text-darkbrown-500">Kategori</span>
+        <span class="hidden text-xs font-medium text-darkbrown-500 sm:inline">
             Pilih satu kategori untuk mempersempit hasil
         </span>
     </div>
@@ -78,7 +78,7 @@ $categoryButtonClass = static fn (bool $active): string => 'inline-flex min-h-[2
                 <i data-lucide="{{ $categoryIcon($cat) }}" class="h-3.5 w-3.5" aria-hidden="true"></i>
                 <span>{{ $cat->name }}</span>
                 @if (isset($cat->items_count))
-                    <span class="rounded-full px-1.5 text-[10px] leading-4 {{ $isActive ? 'bg-avocado-800 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
+                    <span class="rounded-full px-1.5 text-xs leading-4 {{ $isActive ? 'bg-avocado-800 text-white' : 'bg-wheat-200 text-darkbrown-800' }}">
                         {{ $cat->items_count }}
                     </span>
                 @endif

@@ -14,7 +14,7 @@
     <div class="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-wheat-100 via-white to-sunglow-100">
         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-darkbrown-500" aria-hidden="true">
             <i data-lucide="image" class="h-8 w-8"></i>
-            <span class="text-[11px] font-semibold">Foto belum tersedia</span>
+            <span class="text-xs font-semibold">Foto belum tersedia</span>
         </div>
 
         <img
@@ -39,7 +39,7 @@
         @if ($item->vendor)
             <a
                 href="{{ route('customer.stores.show', $item->vendor->slug ?? $item->vendor_id) }}"
-                class="group/store inline-flex min-w-0 items-center gap-1.5 py-1 text-xs font-semibold text-goldenrod-800 transition hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
+                class="group/store inline-flex min-h-[44px] min-w-0 items-center gap-1.5 py-2.5 sm:min-h-0 sm:py-1 text-xs font-semibold text-goldenrod-800 transition hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2"
                 title="Kunjungi Toko {{ $vendorName }}"
             >
                 <i data-lucide="store" class="h-3.5 w-3.5 shrink-0 text-goldenrod-600 transition-colors group-hover/store:text-avocado-600" aria-hidden="true"></i>
@@ -53,7 +53,7 @@
         @endif
 
         <h3 class="min-w-0 font-heading text-base font-extrabold leading-snug tracking-tight text-darkbrown-900 transition-colors group-hover:text-avocado-700">
-            <a href="{{ $detailUrl }}" class="line-clamp-2 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2">
+            <a href="{{ $detailUrl }}" class="line-clamp-2 min-h-[44px] py-2 sm:min-h-0 sm:py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2">
                 {{ $item->name }}
             </a>
         </h3>
@@ -66,7 +66,7 @@
             $dominantCondition = $item->dominant_condition;
             $itemAge = $item->item_age;
         @endphp
-        <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-darkbrown-500">
+        <div class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-darkbrown-500">
             @if ($dominantCondition)
                 <span class="inline-flex items-center gap-1">
                     <i data-lucide="shield-check" class="h-3 w-3 text-avocado-600" aria-hidden="true"></i>
@@ -83,10 +83,10 @@
     <div class="border-t border-wheat-100 p-4 pt-3">
         <div class="flex items-end justify-between gap-3 pb-3">
             <div class="min-w-0">
-                <span class="block text-[11px] font-semibold uppercase tracking-wider text-darkbrown-500">Harga sewa</span>
+                <span class="block text-xs font-semibold uppercase tracking-wider text-darkbrown-500">Harga sewa</span>
                 <div class="flex items-baseline gap-1">
                     <span class="font-heading text-lg font-extrabold tracking-tight text-darkbrown-900 sm:text-xl">Rp {{ $formattedRate }}</span>
-                    <span class="text-[11px] font-semibold text-darkbrown-500">/hari</span>
+                    <span class="text-xs font-semibold text-darkbrown-500">/hari</span>
                 </div>
             </div>
         </div>

@@ -101,6 +101,52 @@ class AuthenticationTest extends TestCase
         ];
     }
 
+    #[DataProvider('nonOwnerRoles')]
+    public function test_non_owner_login_falls_back_when_vendor_owner_page_was_intended(string $role, string $expectedRoute): void
+    {
+        $this->get(route('vendor.owner.dashboard'))
+            ->assertRedirect(route('login'));
+
+        $user = User::factory()->create(['role' => $role]);
+
+        $component = Volt::test('pages.auth.login')
+            ->set('form.email', $user->email)
+            ->set('form.password', 'password');
+
+        $component->call('login');
+
+        $component
+            ->assertHasNoErrors()
+            ->assertRedirect(route($expectedRoute, absolute: false))
+            ->assertSessionMissing('url.intended');
+    }
+
+    public static function nonOwnerRoles(): array
+    {
+        return [
+            'customer' => ['customer', 'home'],
+            'vendor admin' => ['vendor_admin', 'kasir.dashboard'],
+        ];
+    }
+
+    public function test_login_preserves_an_intended_route_allowed_for_the_user_role(): void
+    {
+        $this->get(route('locations.reverse-geocode'))
+            ->assertRedirect(route('login'));
+
+        $user = User::factory()->create(['role' => 'customer']);
+
+        $component = Volt::test('pages.auth.login')
+            ->set('form.email', $user->email)
+            ->set('form.password', 'password');
+
+        $component->call('login');
+
+        $component
+            ->assertHasNoErrors()
+            ->assertRedirect(route('locations.reverse-geocode', absolute: false));
+    }
+
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create();

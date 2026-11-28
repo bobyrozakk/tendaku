@@ -1,5 +1,10 @@
 import { checkoutAddressState } from "../../components/checkout-address.js";
 
+const shippingCache = new Map();
+const SHIPPING_CACHE_TTL_MS = 60_000;
+const SHIPPING_MAX_RETRIES = 1;
+const SHIPPING_REQUEST_TIMEOUT_MS = 12_000;
+
 document.addEventListener("alpine:init", () => {
     Alpine.data("packageCheckout", (cfg) => ({
         ...cfg,
@@ -218,7 +223,7 @@ document.addEventListener("alpine:init", () => {
                 this.returnDate = iso;
                 this.returnTime = this.pickupTime;
                 this.onReturnChange();
-                this.calOpen = null;
+                this.calOpen = "pickup";
                 return;
             }
             // Langkah 1 (atau mulai ulang rentang): set tanggal ambil, lanjut pilih kembali
@@ -423,14 +428,44 @@ document.addEventListener("alpine:init", () => {
                 this.shippingMessage = "Lengkapi titik lokasi alamat pengantaran terlebih dahulu.";
                 return;
             }
+            const key = this.shippingKey;
+            // Input yang sama baru saja dihitung: pakai hasilnya, tanpa request.
+            const hit = shippingCache.get(key);
+            if (hit && Date.now() - hit.at < SHIPPING_CACHE_TTL_MS) {
+                this.applyShipping(hit.data, key);
+                return;
+            }
             this.shippingState = "loading";
             this.shippingMessage = "Menghitung rincian pengiriman...";
-            const key = this.shippingKey;
-            this.shippingTimer = setTimeout(() => this.loadShipping(sequence, key), 450);
+            this.shippingTimer = setTimeout(() => this.loadShipping(sequence, key), 250);
         },
-        async loadShipping(sequence, key) {
+        shippingRetryDelay(response, attempt) {
+            const header = Number(response?.headers?.get("Retry-After"));
+            if (Number.isFinite(header) && header > 0) return Math.min(header, 8) * 1000;
+            return 600 * (attempt + 1);
+        },
+        async loadShipping(sequence, key, attempt = 0) {
+            const stale = () => sequence !== this.shippingSequence || key !== this.shippingKey;
             const controller = new AbortController();
             this.shippingController = controller;
+            let timedOut = false;
+            const timeoutId = setTimeout(() => {
+                timedOut = true;
+                controller.abort();
+            }, SHIPPING_REQUEST_TIMEOUT_MS);
+
+            // Gagal sementara (jaringan lambat, 429, 5xx, timeout): ulang otomatis sebelum tombol "Coba lagi".
+            const retryOrFail = (message, response = null) => {
+                if (attempt < SHIPPING_MAX_RETRIES) {
+                    this.shippingState = "loading";
+                    this.shippingMessage = "Menghitung ulang...";
+                    this.shippingTimer = setTimeout(() => this.loadShipping(sequence, key, attempt + 1), this.shippingRetryDelay(response, attempt));
+                    return;
+                }
+                this.shippingState = "error";
+                this.shippingMessage = message || "Koneksi bermasalah. Silakan coba lagi.";
+            };
+
             try {
                 const response = await fetch(this.shippingPreviewUrl, {
                     method: "POST",
@@ -447,12 +482,40 @@ document.addEventListener("alpine:init", () => {
                         return_time: this.returnTime,
                     }),
                 });
-                const data = await response.json();
-                if (sequence !== this.shippingSequence || key !== this.shippingKey) return;
-                if (!response.ok || !data.success) throw new Error(data.message || "Ongkir belum dapat dihitung.");
+                clearTimeout(timeoutId);
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (_) {
+                    data = null;
+                }
+                if (stale()) return;
+
+                const transient = response.status === 429 || response.status >= 500 || (!response.ok && data === null);
+                if (transient) {
+                    retryOrFail(response.status === 429 ? "Terlalu banyak permintaan. Coba lagi sebentar." : data?.message, response);
+                    return;
+                }
+                if (data?.status === "out_of_delivery_range") {
+                    // Di luar jangkauan: bukan error sementara, jadi tanpa tombol "Coba lagi".
+                    this.shippingState = "out_of_range";
+                    this.shippingMessage = data.message;
+                    return;
+                }
+                if (!response.ok || !data?.success) throw new Error(data?.message || "Ongkir belum dapat dihitung.");
+                shippingCache.set(key, { at: Date.now(), data });
                 this.applyShipping(data, key);
             } catch (error) {
-                if (error.name === "AbortError" || sequence !== this.shippingSequence || key !== this.shippingKey) return;
+                clearTimeout(timeoutId);
+                if (stale()) return;
+                if (error.name === "AbortError") {
+                    if (timedOut) retryOrFail("Perhitungan terlalu lama.");
+                    return;
+                }
+                if (error instanceof TypeError) {
+                    retryOrFail("Koneksi bermasalah. Silakan coba lagi.");
+                    return;
+                }
                 this.shippingState = "error";
                 this.shippingMessage = error.message || "Koneksi bermasalah. Silakan coba lagi.";
             }

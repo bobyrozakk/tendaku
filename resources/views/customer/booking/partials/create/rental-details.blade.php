@@ -43,13 +43,13 @@
                                         <div class="flex flex-col items-end sm:items-center">
                                             <div class="inline-flex items-center rounded-lg border border-wheat-300 bg-white overflow-hidden">
                                                 <button type="button" @click="changeQty(i, -1)" :disabled="item.qty <= 1" aria-label="Kurangi unit"
-                                                        class="w-9 h-9 flex items-center justify-center text-darkbrown-800 hover:bg-wheat-100 active:bg-wheat-200 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                                                        class="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-darkbrown-800 hover:bg-wheat-100 active:bg-wheat-200 disabled:opacity-30 disabled:cursor-not-allowed transition">
                                                     <i data-lucide="minus" class="h-4 w-4"></i>
                                                 </button>
                                                 <input type="number" min="1" :max="item.max_qty" x-model.number="item.qty" @change="clampQty(i)" aria-label="Jumlah unit"
-                                                       class="w-9 h-9 border-0 p-0 text-center text-sm font-black text-darkbrown-900 focus:ring-0">
+                                                       class="w-11 h-11 sm:w-9 sm:h-9 border-0 p-0 text-center text-sm font-black text-darkbrown-900 focus:ring-0">
                                                 <button type="button" @click="changeQty(i, 1)" :disabled="item.qty >= item.max_qty" aria-label="Tambah unit"
-                                                        class="w-9 h-9 flex items-center justify-center text-darkbrown-800 hover:bg-wheat-100 active:bg-wheat-200 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                                                        class="w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-darkbrown-800 hover:bg-wheat-100 active:bg-wheat-200 disabled:opacity-30 disabled:cursor-not-allowed transition">
                                                     <i data-lucide="plus" class="h-4 w-4"></i>
                                                 </button>
                                             </div>

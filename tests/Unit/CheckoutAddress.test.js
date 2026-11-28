@@ -14,7 +14,7 @@ function page(kind, fetch) {
         Alpine: { data: (_, callback) => { factory = callback; } },
         AbortController, FormData, fetch, window,
         CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
-        setTimeout: callback => { timers.set(++timerId, callback); return timerId; },
+        setTimeout: (callback, delay = 0) => { timers.set(++timerId, { callback, delay }); return timerId; },
         clearTimeout: id => timers.delete(id), clearInterval() {},
     };
     const source = ['components/location-picker.js', 'components/checkout-address.js', `pages/customer/${kind === 'package' ? 'package-checkout' : 'booking-create'}.js`]
@@ -30,7 +30,7 @@ function page(kind, fetch) {
         latitude: null, longitude: null,
     };
     const component = factory({
-        ...(kind === 'package' ? { method: 'delivery' } : { pickupMethod: 'delivery' }),
+        pickupMethod: 'delivery',
         addresses: [legacy], selectedAddressId: 7, isLoggedIn: true,
         items: [{ id: 1, qty: 1, price_per_day: 50000 }], packageItems: [],
         packageId: 4, packagePrice: 50000, subtotal: 50000, durationDays: 1, initialDays: 1, discount: 0,
@@ -41,16 +41,17 @@ function page(kind, fetch) {
     component.$watch = () => {};
     return {
         component, legacy, pickerRefreshes,
-        canSubmit: () => kind === 'package' ? component.canSubmit : component.canSubmitBooking,
+        canSubmit: () => component.canSubmitBooking,
         run: async () => {
-            const pending = [...timers.values()]; timers.clear();
-            for (const callback of pending) await callback();
+            const pending = [...timers.entries()].filter(([, timer]) => timer.delay < 12000);
+            for (const [id] of pending) timers.delete(id);
+            await Promise.all(pending.map(([, timer]) => timer.callback()));
         },
         createPicker: () => vm.runInNewContext('createLocationPickerState({ pickerId: "picker" })', context),
     };
 }
 
-const response = (data, status = 200) => ({ ok: status === 200, json: async () => data });
+const response = (data, status = 200) => ({ ok: status === 200, status, headers: { get: () => null }, json: async () => data });
 const quote = (fee = 20000) => ({
     success: true, package_id: 4, package_name: 'Paket', package_price: 50000,
     items: [{ id: 1, qty: 1, price_per_day: 50000 }], rental_days: 1, total_hours: 24,
@@ -162,6 +163,7 @@ for (const kind of ['regular', 'package']) {
         assert.equal(component.editingAddressId, null);
         assert.equal(component.newAddressForm.full_address, '');
         component.syncNewAddressCoordinates({ latitude: -7.9, longitude: 112.6 });
+        component.newAddressForm.phone_number = '081234567890';
         component.newAddressForm.full_address = 'Alamat baru';
         await component.saveAddress();
         assert.equal(request.url, '/addresses');
@@ -194,8 +196,7 @@ for (const kind of ['regular', 'package']) {
 
     test(`${kind}: self pickup still works with a legacy address without coordinates`, async () => {
         const { component, canSubmit, run } = page(kind, async () => response(quote(0)));
-        if (kind === 'regular') component.pickupMethod = 'self_pickup';
-        else component.method = 'self_pickup';
+        component.pickupMethod = 'self_pickup';
         component.init();
         await run();
         assert.equal(component.deliveryFee, 0);

@@ -1,6 +1,14 @@
 import { checkoutAddressState } from "../../components/checkout-address.js";
 
+// Cache hasil preview per kombinasi input (jadwal + qty + metode). Menghindari request
+// ulang saat pelanggan bolak-balik memilih tanggal/jumlah yang sama.
+const SHIPPING_CACHE_TTL_MS = 60_000;
+const SHIPPING_MAX_RETRIES = 1;
+const SHIPPING_REQUEST_TIMEOUT_MS = 12_000;
+
 document.addEventListener("alpine:init", () => {
+    const shippingCache = new Map();
+
     Alpine.data("checkoutPage", (cfg) => ({
         ...cfg,
         paymentOption: "full",
@@ -446,7 +454,7 @@ document.addEventListener("alpine:init", () => {
             ) {
                 this.returnDate = iso;
                 this.onReturnChange();
-                this.calOpen = null;
+                this.calOpen = "pickup";
                 return;
             }
 
@@ -581,18 +589,61 @@ document.addEventListener("alpine:init", () => {
                     "Lengkapi titik lokasi alamat pengantaran terlebih dahulu.";
                 return;
             }
-            this.shippingState = "loading";
-            this.shippingMessage = "Menghitung rincian pengiriman…";
-            const sequence = this.shippingSequence;
+
             const key = this.shippingInputKey;
+
+            // Input yang sama baru saja dihitung: pakai hasilnya, tanpa request.
+            const hit = shippingCache.get(key);
+            if (hit && Date.now() - hit.at < SHIPPING_CACHE_TTL_MS) {
+                this.applyShipping(hit.data, key);
+                return;
+            }
+
+            this.shippingState = "loading";
+            this.shippingMessage = "Menghitung rincian pesanan…";
+            const sequence = this.shippingSequence;
             this.shippingTimer = setTimeout(
                 () => this.loadShipping(sequence, key),
-                450,
+                250,
             );
         },
-        async loadShipping(sequence, key) {
+        shippingRetryDelay(response, attempt) {
+            const header = Number(response?.headers?.get("Retry-After"));
+            if (Number.isFinite(header) && header > 0) {
+                return Math.min(header, 8) * 1000;
+            }
+            return 600 * (attempt + 1);
+        },
+        async loadShipping(sequence, key, attempt = 0) {
+            const stale = () =>
+                sequence !== this.shippingSequence ||
+                key !== this.shippingInputKey;
+
             const controller = new AbortController();
             this.shippingController = controller;
+            let timedOut = false;
+            const timeoutId = setTimeout(() => {
+                timedOut = true;
+                controller.abort();
+            }, SHIPPING_REQUEST_TIMEOUT_MS);
+
+            // Gagal sementara (jaringan lambat, 429, 5xx, timeout): coba lagi otomatis
+            // beberapa kali sebelum menampilkan tombol "Coba lagi" ke pelanggan.
+            const retryOrFail = (message, response = null) => {
+                if (attempt < SHIPPING_MAX_RETRIES) {
+                    this.shippingState = "loading";
+                    this.shippingMessage = "Menghitung ulang…";
+                    this.shippingTimer = setTimeout(
+                        () => this.loadShipping(sequence, key, attempt + 1),
+                        this.shippingRetryDelay(response, attempt),
+                    );
+                    return;
+                }
+                this.shippingState = "error";
+                this.shippingMessage =
+                    message || "Koneksi bermasalah. Silakan coba lagi.";
+            };
+
             try {
                 const response = await fetch(this.shippingPreviewUrl, {
                     method: "POST",
@@ -618,24 +669,57 @@ document.addEventListener("alpine:init", () => {
                         })),
                     }),
                 });
-                const data = await response.json();
-                if (
-                    sequence !== this.shippingSequence ||
-                    key !== this.shippingInputKey
-                )
-                    return;
-                if (!response.ok || !data.success)
-                    throw new Error(
-                        data.message || "Ongkir belum dapat dihitung.",
+                clearTimeout(timeoutId);
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (_) {
+                    data = null;
+                }
+                if (stale()) return;
+
+                const transient =
+                    response.status === 429 ||
+                    response.status >= 500 ||
+                    (!response.ok && data === null);
+                if (transient) {
+                    retryOrFail(
+                        response.status === 429
+                            ? "Terlalu banyak permintaan. Coba lagi sebentar."
+                            : data?.message,
+                        response,
                     );
+                    return;
+                }
+
+                if (data?.status === "out_of_delivery_range") {
+                    // Di luar jangkauan: bukan error sementara, jadi tanpa tombol "Coba lagi".
+                    this.shippingState = "out_of_range";
+                    this.shippingMessage = data.message;
+                    return;
+                }
+
+                if (!response.ok || !data?.success)
+                    throw new Error(
+                        data?.message || "Ongkir belum dapat dihitung.",
+                    );
+
+                shippingCache.set(key, { at: Date.now(), data });
                 this.applyShipping(data, key);
             } catch (error) {
-                if (
-                    error.name === "AbortError" ||
-                    sequence !== this.shippingSequence ||
-                    key !== this.shippingInputKey
-                )
+                clearTimeout(timeoutId);
+                if (stale()) return;
+                if (error.name === "AbortError") {
+                    // Dibatalkan sendiri karena terlalu lama: anggap gagal sementara.
+                    if (timedOut) retryOrFail("Perhitungan terlalu lama.");
                     return;
+                }
+                if (error instanceof TypeError) {
+                    // fetch gagal total (offline / koneksi putus)
+                    retryOrFail("Koneksi bermasalah. Silakan coba lagi.");
+                    return;
+                }
                 this.shippingState = "error";
                 this.shippingMessage =
                     error.message || "Koneksi bermasalah. Silakan coba lagi.";
@@ -721,18 +805,31 @@ document.addEventListener("alpine:init", () => {
             if (this.pickupMethod === "self_pickup") return 0;
             return this.shippingReady ? this.shipping.delivery_fee : null;
         },
+        // Ambil di toko tidak ada ongkir, jadi total bisa langsung dihitung di browser
+        // sementara server memverifikasi stok. Tombol booking tetap menunggu server.
+        get canEstimateLocally() {
+            return (
+                this.pickupMethod === "self_pickup" &&
+                !!this.pickupDate &&
+                !!this.returnDate &&
+                this.shippingState !== "error"
+            );
+        },
+        get hasTotal() {
+            return this.shippingReady || this.canEstimateLocally;
+        },
         get grandTotal() {
-            if (!this.shippingReady) return null;
+            if (!this.hasTotal) return null;
             return Math.max(
                 0,
-                this.subtotal + this.deliveryFee - this.discount,
+                this.subtotal + (this.deliveryFee ?? 0) - this.discount,
             );
         },
         get dpAmount() {
-            if (!this.shippingReady) return null;
+            if (!this.hasTotal) return null;
             const base = Math.max(
                 0,
-                this.subtotal + this.deliveryFee - this.discount,
+                this.subtotal + (this.deliveryFee ?? 0) - this.discount,
             );
             return Math.floor((base * this.dpPercentage + 99) / 100);
         },

@@ -59,7 +59,7 @@ class ShippingPreviewTest extends TestCase
 
     private function fakeRoute(): void
     {
-        Http::fake(['https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 1000]]]])]);
+        Http::fake(['https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 8240, 'duration' => 1000]]]])]);
     }
 
     public function test_guest_pickup_has_no_distance_and_does_not_call_ors(): void
@@ -78,7 +78,7 @@ class ShippingPreviewTest extends TestCase
         $c = $this->context();
         $this->fakeRoute();
         $this->actingAs($c['customer'])->postJson(self::ENDPOINT, $this->delivery($c) + ['items' => [['id' => $c['item']->id, 'qty' => 2, 'weight_kg' => 0]], 'vendor_id' => 999, 'delivery_fee' => 0, 'distance_km' => 0, 'rate_per_km' => 0, 'latitude' => 0, 'longitude' => 0])
-            ->assertOk()->assertJson(['success' => true, 'status' => 'ready', 'pickup_method' => 'delivery', 'distance_km' => 12.34, 'total_weight_kg' => 6.5, 'distance_fee' => 24680, 'weight_fee' => 2000, 'delivery_fee' => 26680]);
+            ->assertOk()->assertJson(['success' => true, 'status' => 'ready', 'pickup_method' => 'delivery', 'distance_km' => 8.24, 'total_weight_kg' => 6.5, 'distance_fee' => 16480, 'weight_fee' => 2000, 'delivery_fee' => 18480]);
         Http::assertSent(fn ($request) => $request['coordinates'] === [[112.6, -7.9], [112.6304, -7.9797]]);
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
@@ -88,9 +88,9 @@ class ShippingPreviewTest extends TestCase
     {
         $c = $this->context();
         $this->fakeRoute();
-        $this->actingAs($c['customer'])->postJson(self::ENDPOINT, $this->delivery($c))->assertOk()->assertJsonPath('total_weight_kg', 3.25)->assertJsonPath('delivery_fee', 24680);
+        $this->actingAs($c['customer'])->postJson(self::ENDPOINT, $this->delivery($c))->assertOk()->assertJsonPath('total_weight_kg', 3.25)->assertJsonPath('delivery_fee', 16480);
         $c['vendor']->shippingSetting()->update(['rate_per_km' => 3000]);
-        $this->postJson(self::ENDPOINT, $this->delivery($c) + ['items' => [['id' => $c['item']->id, 'qty' => 3]]])->assertOk()->assertJsonPath('total_weight_kg', 9.75)->assertJsonPath('delivery_fee', 42020);
+        $this->postJson(self::ENDPOINT, $this->delivery($c) + ['items' => [['id' => $c['item']->id, 'qty' => 3]]])->assertOk()->assertJsonPath('total_weight_kg', 9.75)->assertJsonPath('delivery_fee', 29720);
         Http::assertSentCount(1);
     }
 
@@ -99,9 +99,9 @@ class ShippingPreviewTest extends TestCase
         $c = $this->context();
         $this->fakeRoute();
         $payload = ['checkout_type' => 'package', 'package_id' => $c['package']->id, 'pickup_method' => 'delivery', 'customer_address_id' => $c['address']->id, 'quantity' => 20, 'duration_days' => 90];
-        $this->actingAs($c['customer'])->postJson(self::ENDPOINT, $payload)->assertOk()->assertJsonPath('total_weight_kg', 6.5)->assertJsonPath('delivery_fee', 26680);
+        $this->actingAs($c['customer'])->postJson(self::ENDPOINT, $payload)->assertOk()->assertJsonPath('total_weight_kg', 6.5)->assertJsonPath('delivery_fee', 18480);
         $c['package']->packageItems()->update(['quantity' => 3]);
-        $this->postJson(self::ENDPOINT, $payload)->assertOk()->assertJsonPath('total_weight_kg', 9.75)->assertJsonPath('delivery_fee', 29680);
+        $this->postJson(self::ENDPOINT, $payload)->assertOk()->assertJsonPath('total_weight_kg', 9.75)->assertJsonPath('delivery_fee', 21480);
         Http::assertSentCount(1);
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
@@ -156,6 +156,7 @@ class ShippingPreviewTest extends TestCase
     #[DataProvider('apiFailures')]
     public function test_ors_errors_never_return_free_delivery(int $httpCode, array $body, int $expectedHttp, string $code): void
     {
+        config(['services.openrouteservice.fallback_factor' => 0]);
         $c = $this->context();
         Http::fake(['https://api.openrouteservice.org/v2/directions/driving-car' => Http::response($body, $httpCode)]);
         $this->actingAs($c['customer'])->postJson(self::ENDPOINT, $this->delivery($c))->assertStatus($expectedHttp)->assertJsonPath('success', false)->assertJsonPath('status', $code)->assertJsonPath('delivery_fee', null)->assertJsonStructure(['message']);
@@ -164,9 +165,47 @@ class ShippingPreviewTest extends TestCase
 
     public function test_ors_connection_timeout_is_safe(): void
     {
+        config(['services.openrouteservice.fallback_factor' => 0]);
         $c = $this->context();
         Http::fake(['https://api.openrouteservice.org/v2/directions/driving-car' => Http::failedConnection('timeout')]);
         $this->actingAs($c['customer'])->postJson(self::ENDPOINT, $this->delivery($c))->assertStatus(503)->assertJsonPath('status', 'api_error')->assertJsonPath('delivery_fee', null);
+        Http::assertSentCount(1);
+    }
+
+    public function test_ors_error_uses_estimated_fallback_when_within_delivery_range(): void
+    {
+        $c = $this->context();
+        $c['address']->update(['latitude' => -7.94, 'longitude' => 112.65]);
+        Http::fake(['https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['error' => 'internal'], 500)]);
+
+        $this->actingAs($c['customer'])
+            ->postJson(self::ENDPOINT, $this->delivery($c))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('distance_estimated', true)
+            ->assertJsonPath('distance_km', 9.2)
+            ->assertJsonPath('delivery_fee', 18400);
+        Http::assertSentCount(1);
+    }
+
+    public function test_out_of_delivery_range_is_rejected_for_straight_line_and_driving_distance(): void
+    {
+        $c = $this->context();
+        $farAddress = CustomerAddress::factory()->for($c['customer'])->withCoordinates(-7.8, 112.7)->create();
+        Http::fake(['https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 1000]]]])]);
+
+        $this->actingAs($c['customer'])
+            ->postJson(self::ENDPOINT, ['checkout_type' => 'regular', 'pickup_method' => 'delivery', 'customer_address_id' => $farAddress->id])
+            ->assertUnprocessable()
+            ->assertJsonPath('status', 'out_of_delivery_range')
+            ->assertJsonPath('delivery_fee', null);
+        Http::assertNothingSent();
+
+        $this->actingAs($c['customer'])
+            ->postJson(self::ENDPOINT, $this->delivery($c))
+            ->assertUnprocessable()
+            ->assertJsonPath('status', 'out_of_delivery_range')
+            ->assertJsonPath('delivery_fee', null);
         Http::assertSentCount(1);
     }
 
@@ -261,7 +300,7 @@ class ShippingPreviewTest extends TestCase
         $a['package']->packageItems()->create(['master_item_id' => $secondItem->id, 'quantity' => 3]);
         $b['vendor']->shippingSetting()->update(['rate_per_km' => 9000]);
         $this->fakeRoute();
-        $this->actingAs($a['customer'])->postJson(self::ENDPOINT, ['checkout_type' => 'package', 'package_id' => $a['package']->id, 'pickup_method' => 'delivery', 'customer_address_id' => $a['address']->id, 'vendor_id' => $b['vendor']->id])->assertOk()->assertJsonPath('total_weight_kg', 11)->assertJsonPath('distance_fee', 24680)->assertJsonPath('delivery_fee', 30680);
+        $this->actingAs($a['customer'])->postJson(self::ENDPOINT, ['checkout_type' => 'package', 'package_id' => $a['package']->id, 'pickup_method' => 'delivery', 'customer_address_id' => $a['address']->id, 'vendor_id' => $b['vendor']->id])->assertOk()->assertJsonPath('total_weight_kg', 11)->assertJsonPath('distance_fee', 16480)->assertJsonPath('delivery_fee', 22480);
         Http::assertSentCount(1);
     }
 
@@ -307,10 +346,11 @@ class ShippingPreviewTest extends TestCase
 
     public function test_preview_is_throttled_without_affecting_other_routes(): void
     {
-        foreach (range(1, 10) as $attempt) {
+        foreach (range(1, 90) as $attempt) {
             $this->postJson(self::ENDPOINT, [])->assertUnprocessable();
         }
         $this->postJson(self::ENDPOINT, [])->assertStatus(429)->assertJsonPath('status', 'too_many_requests')->assertJsonPath('delivery_fee', null)->assertHeader('Retry-After');
+        $this->get(route('home'))->assertOk();
     }
 
     public function test_csrf_is_required_and_accepts_valid_token(): void

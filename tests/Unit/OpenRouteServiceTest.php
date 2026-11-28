@@ -25,7 +25,10 @@ class OpenRouteServiceTest extends TestCase
     public function test_http_error_does_not_log_or_return_raw_response_credentials(): void
     {
         $credential = 'synthetic-ors-credential-for-test';
-        config(['services.openrouteservice.api_key' => $credential]);
+        config([
+            'services.openrouteservice.api_key' => $credential,
+            'services.openrouteservice.fallback_factor' => 0,
+        ]);
         Http::preventStrayRequests();
         Http::fake([
             'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['error' => 'Rejected '.$credential], 403),
@@ -43,7 +46,10 @@ class OpenRouteServiceTest extends TestCase
     public function test_connection_error_does_not_log_or_return_exception_credentials(): void
     {
         $credential = 'synthetic-ors-credential-for-test';
-        config(['services.openrouteservice.api_key' => $credential]);
+        config([
+            'services.openrouteservice.api_key' => $credential,
+            'services.openrouteservice.fallback_factor' => 0,
+        ]);
         Http::preventStrayRequests();
         Http::fake([
             'https://api.openrouteservice.org/v2/directions/driving-car' => Http::failedConnection('Connection failed: '.$credential),
@@ -343,6 +349,8 @@ class OpenRouteServiceTest extends TestCase
 
     public function test_handles_http_server_error_and_does_not_cache_failed_response(): void
     {
+        config(['services.openrouteservice.fallback_factor' => 0]);
+
         Http::fakeSequence('https://api.openrouteservice.org/v2/directions/driving-car')
             ->push(['error' => 'Internal Server Error'], 500)
             ->push([
@@ -372,6 +380,8 @@ class OpenRouteServiceTest extends TestCase
 
     public function test_handles_network_connection_exception_gracefully(): void
     {
+        config(['services.openrouteservice.fallback_factor' => 0]);
+
         Http::fake(function () {
             throw new ConnectionException('Connection timed out');
         });
@@ -382,6 +392,44 @@ class OpenRouteServiceTest extends TestCase
         $this->assertSame(OpenRouteService::STATUS_API_ERROR, $result['status']);
         $this->assertNull($result['distance_meters']);
         $this->assertNull($result['distance_km']);
+    }
+
+    public function test_falls_back_to_cached_straight_line_estimate_on_http_server_error_by_default(): void
+    {
+        config(['services.openrouteservice.fallback_factor' => 1.3]);
+
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::response(['error' => 'Internal Server Error'], 500),
+        ]);
+
+        $firstResult = $this->service->getDrivingDistance(-7.96662, 112.63263, -7.87121, 112.52691);
+        $secondResult = $this->service->getDrivingDistance(-7.96662, 112.63263, -7.87121, 112.52691);
+
+        $this->assertTrue($firstResult['success']);
+        $this->assertSame(OpenRouteService::STATUS_OK, $firstResult['status']);
+        $this->assertTrue($firstResult['estimated'] ?? false);
+        $this->assertFalse($firstResult['from_cache']);
+        $this->assertSame(20.48, $firstResult['distance_km']);
+        $this->assertTrue($secondResult['from_cache']);
+        $this->assertSame(20.48, $secondResult['distance_km']);
+        Http::assertSentCount(1);
+    }
+
+    public function test_falls_back_to_straight_line_estimate_on_connection_exception_by_default(): void
+    {
+        config(['services.openrouteservice.fallback_factor' => 1.3]);
+
+        Http::fake([
+            'https://api.openrouteservice.org/v2/directions/driving-car' => Http::failedConnection('Connection timed out'),
+        ]);
+
+        $result = $this->service->getDrivingDistance(-7.9, 112.6, -7.94, 112.65);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(OpenRouteService::STATUS_OK, $result['status']);
+        $this->assertTrue($result['estimated'] ?? false);
+        $this->assertSame(9.2, $result['distance_km']);
+        Http::assertSentCount(1);
     }
 
     public function test_integrates_distance_from_openrouteservice_with_shipping_calculator(): void

@@ -2,7 +2,14 @@
 
 namespace App\Services\Auth;
 
+use App\Http\Middleware\EnsureSuperAdmin;
+use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\EnsureVendorOwner;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Router;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class AuthRedirectService
 {
@@ -18,6 +25,57 @@ class AuthRedirectService
             $user->isCustomer() => route('home', absolute: $absolute),
             default => route('dashboard', absolute: $absolute),
         };
+    }
+
+    /**
+     * Forget an intended URL when the authenticated user cannot access its route.
+     */
+    public function clearInaccessibleIntendedDestination(User $user): void
+    {
+        $intended = session('url.intended');
+
+        if (! is_string($intended) || $intended === '') {
+            return;
+        }
+
+        $router = app(Router::class);
+
+        try {
+            $route = $router->getRoutes()->match(Request::create($intended));
+        } catch (MethodNotAllowedHttpException|NotFoundHttpException) {
+            session()->forget('url.intended');
+
+            return;
+        }
+
+        foreach ($router->gatherRouteMiddleware($route) as $middleware) {
+            [$middlewareClass, $parameters] = array_pad(explode(':', $middleware, 2), 2, null);
+
+            if (
+                $middlewareClass === EnsureUserHasRole::class &&
+                $parameters !== null &&
+                ! $user->hasRole(explode(',', $parameters))
+            ) {
+                session()->forget('url.intended');
+
+                return;
+            }
+
+            if (
+                $middlewareClass === EnsureVendorOwner::class &&
+                (! $user->isVendorOwner() || empty($user->vendor_id))
+            ) {
+                session()->forget('url.intended');
+
+                return;
+            }
+
+            if ($middlewareClass === EnsureSuperAdmin::class && ! $user->isSuperAdmin()) {
+                session()->forget('url.intended');
+
+                return;
+            }
+        }
     }
 
     /**

@@ -14,6 +14,13 @@ class ReconcilePaidPaymentsTest extends TestCase
     use CreatesRevenueFixtures;
     use LazilyRefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['services.midtrans.server_key' => 'test-midtrans-server-key']);
+    }
+
     protected function tearDown(): void
     {
         Carbon::setTestNow();

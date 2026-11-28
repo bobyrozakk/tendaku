@@ -127,9 +127,19 @@
     }
 }
 
+@media (max-width: 639px) {
+    .receipt-page {
+        padding: 16px 0;
+    }
+
+    .receipt-paper {
+        padding: 20px 14px;
+    }
+}
+
 @media (max-width: 480px) {
     .receipt-paper {
-        padding: 20px 16px;
+        padding: 20px 14px;
     }
 
     .receipt-row {
@@ -150,7 +160,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 42px;
+    min-height: 44px;
     padding: 10px 16px;
     border: 1px solid #d1d5db;
     border-radius: 8px;

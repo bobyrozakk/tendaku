@@ -18,7 +18,7 @@
 
 @if($canPayFine)
     <button type="button" @click="payNow()" :disabled="paying"
-            class="w-full py-2.5 px-4 rounded-xl font-bold text-sm bg-red-600 hover:bg-red-700 text-white shadow transition disabled:opacity-70">
+            class="min-h-[44px] sm:min-h-0 w-full py-2.5 px-4 rounded-xl font-bold text-sm bg-red-600 hover:bg-red-700 text-white shadow transition disabled:opacity-70">
         Bayar denda ({{ $rupiah($fineAmount) }})
     </button>
 @endif

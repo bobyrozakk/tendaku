@@ -1,6 +1,6 @@
 <div class="grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
     <div>
-        <span class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+        <span class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-darkbrown-500">
             Vendor / Toko
         </span>
         <x-dropdown-select
@@ -12,12 +12,12 @@
     </div>
 
     <div>
-        <span class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+        <span class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-darkbrown-500">
             Rentang Harga / Hari
         </span>
         <div class="flex items-center gap-2">
             <div class="relative min-w-0 flex-1">
-                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-400" aria-hidden="true">Rp</span>
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-500" aria-hidden="true">Rp</span>
                 <input
                     type="number"
                     inputmode="numeric"
@@ -26,12 +26,12 @@
                     wire:model.live.debounce.400ms="minPrice"
                     placeholder="Min"
                     aria-label="Harga minimum per hari"
-                    class="input-tendaku h-10 w-full pl-9 pr-2 text-sm font-medium"
+                    class="input-tendaku h-11 sm:h-10 w-full pl-9 pr-2 text-sm font-medium"
                 />
             </div>
-            <span class="text-xs text-darkbrown-400" aria-hidden="true">–</span>
+            <span class="text-xs text-darkbrown-500" aria-hidden="true">–</span>
             <div class="relative min-w-0 flex-1">
-                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-400" aria-hidden="true">Rp</span>
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-darkbrown-500" aria-hidden="true">Rp</span>
                 <input
                     type="number"
                     inputmode="numeric"
@@ -40,33 +40,33 @@
                     wire:model.live.debounce.400ms="maxPrice"
                     placeholder="Maks"
                     aria-label="Harga maksimum per hari"
-                    class="input-tendaku h-10 w-full pl-9 pr-2 text-sm font-medium"
+                    class="input-tendaku h-11 sm:h-10 w-full pl-9 pr-2 text-sm font-medium"
                 />
             </div>
         </div>
     </div>
 
     <div class="sm:col-span-2">
-        <span class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-darkbrown-500">
+        <span class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-darkbrown-500">
             Tanggal Sewa
         </span>
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label class="flex min-w-0 items-center gap-2">
-                <span class="w-14 shrink-0 text-[11px] font-semibold text-darkbrown-600">Mulai</span>
+                <span class="w-14 shrink-0 text-xs font-semibold text-darkbrown-600">Mulai</span>
                 <input
                     type="date"
                     wire:model.live="startDate"
                     min="{{ \Carbon\Carbon::today()->format('Y-m-d') }}"
-                    class="input-tendaku h-10 min-w-0 flex-1 px-3 text-xs font-medium"
+                    class="input-tendaku h-11 sm:h-10 min-w-0 flex-1 px-3 text-xs font-medium"
                 />
             </label>
             <label class="flex min-w-0 items-center gap-2">
-                <span class="w-14 shrink-0 text-[11px] font-semibold text-darkbrown-600">Selesai</span>
+                <span class="w-14 shrink-0 text-xs font-semibold text-darkbrown-600">Selesai</span>
                 <input
                     type="date"
                     wire:model.live="endDate"
                     min="{{ $startDate ?: \Carbon\Carbon::today()->format('Y-m-d') }}"
-                    class="input-tendaku h-10 min-w-0 flex-1 px-3 text-xs font-medium"
+                    class="input-tendaku h-11 sm:h-10 min-w-0 flex-1 px-3 text-xs font-medium"
                 />
             </label>
         </div>
@@ -75,7 +75,7 @@
     <label class="flex cursor-pointer items-center justify-between gap-3 rounded-xl bg-wheat-50 px-3 py-2.5 transition hover:bg-wheat-100/70 sm:col-span-2">
         <span class="min-w-0">
             <span class="block text-xs font-bold text-darkbrown-900">Hanya tampilkan yang tersedia</span>
-            <span class="mt-0.5 block text-[11px] leading-snug text-darkbrown-500">
+            <span class="mt-0.5 block text-xs leading-snug text-darkbrown-500">
                 Sembunyikan alat yang sudah penuh pada tanggal sewa yang dipilih.
             </span>
         </span>

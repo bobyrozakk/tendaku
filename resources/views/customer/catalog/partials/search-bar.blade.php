@@ -21,7 +21,7 @@
             <button
                 type="button"
                 wire:click="$set('search', '')"
-                class="inline-flex h-8 w-8 items-center justify-center rounded-full text-darkbrown-400 transition hover:bg-wheat-100 hover:text-darkbrown-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
+                class="inline-flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-full text-darkbrown-400 transition hover:bg-wheat-100 hover:text-darkbrown-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                 title="Hapus Pencarian"
                 aria-label="Hapus pencarian"
             >

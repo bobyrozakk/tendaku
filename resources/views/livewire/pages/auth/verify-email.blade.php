@@ -27,6 +27,9 @@ new #[Layout('layouts.guest')] class extends Component
             session()->forget('url.intended');
         }
 
+        $redirectService = app(\App\Services\Auth\AuthRedirectService::class);
+        $redirectService->clearInaccessibleIntendedDestination($user);
+
         $this->redirectIntended(
             default: $destination,
             navigate: false
@@ -42,6 +45,8 @@ new #[Layout('layouts.guest')] class extends Component
             $user = Auth::user();
 
             $destination = app(\App\Services\Auth\AuthRedirectService::class)->getDestination($user, absolute: false);
+
+            app(\App\Services\Auth\AuthRedirectService::class)->clearInaccessibleIntendedDestination($user);
 
             $this->redirectIntended(default: $destination, navigate: true);
 

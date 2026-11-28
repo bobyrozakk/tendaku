@@ -26,25 +26,31 @@
 
         {{-- Interactive Search & Filter Bar --}}
         <form action="{{ route('customer.catalog.index') }}" method="GET"
-              class="w-full max-w-3xl bg-white/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl sm:rounded-full shadow-2xl border border-white/60 flex flex-col sm:flex-row items-center gap-2 mt-2"
+              class="relative z-30 w-full max-w-3xl bg-white/95 backdrop-blur-md p-2 sm:p-2.5 rounded-2xl sm:rounded-full shadow-2xl border border-white/60 flex flex-col sm:flex-row items-center gap-2 mt-2"
               data-sr data-sr-delay="240">
-            <div class="flex-1 flex items-center gap-2.5 px-3 py-2 w-full">
+            <div class="flex-1 flex items-center gap-2.5 px-3 py-2 min-h-[44px] w-full">
                 <i data-lucide="search" class="w-4 h-4 text-darkbrown-400 shrink-0"></i>
                 <input type="text" name="search" placeholder="Cari tenda dome, nesting, carrier..." aria-label="Cari alat camping"
                        class="w-full bg-transparent border-none text-darkbrown-900 text-sm placeholder:text-darkbrown-400 focus:outline-none focus:ring-0 p-0 font-medium">
             </div>
             <div class="hidden sm:block h-6 w-px bg-wheat-300"></div>
-            <div class="flex items-center gap-2 px-3 py-2 w-full sm:w-auto">
-                <i data-lucide="tag" class="w-4 h-4 text-darkbrown-400 shrink-0"></i>
-                <select name="category_id" aria-label="Pilih kategori" class="bg-transparent border-none text-darkbrown-800 text-sm focus:outline-none focus:ring-0 p-0 pr-6 font-semibold cursor-pointer">
-                    <option value="">Semua Kategori</option>
-                    <option value="1">Tenda & Flysheet</option>
-                    <option value="2">Sleeping Bag & Matras</option>
-                    <option value="3">Masak & Nesting</option>
-                    <option value="4">Carrier & Ransel</option>
-                    <option value="5">Lampu & Headlamp</option>
-                    <option value="6">Meja & Kursi Lipat</option>
-                </select>
+            <div class="w-full sm:w-auto sm:min-w-[13.5rem] px-1 sm:px-0">
+                <x-dropdown-select
+                    name="category_id"
+                    icon="tag"
+                    size="lg"
+                    label="Pilih kategori"
+                    placeholder="Semua Kategori"
+                    :options="[
+                        '' => 'Semua Kategori',
+                        '1' => 'Tenda & Flysheet',
+                        '2' => 'Sleeping Bag & Matras',
+                        '3' => 'Masak & Nesting',
+                        '4' => 'Carrier & Ransel',
+                        '5' => 'Lampu & Headlamp',
+                        '6' => 'Meja & Kursi Lipat',
+                    ]"
+                />
             </div>
             <button type="submit"
                     class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl sm:rounded-full text-white text-sm font-bold shadow-md hover:shadow-lg transition-all duration-200 shrink-0 cursor-pointer"
@@ -68,7 +74,7 @@
                 <i data-lucide="zap" class="w-3.5 h-3.5 text-sunglow-300"></i>
                 Booking Instan
             </span>
-            <a href="#ktp-jaminan" class="ld-btn-ul text-xs ml-1">
+            <a href="#ktp-jaminan" class="ld-btn-ul text-xs ml-1 min-h-[44px] px-2">
                 Pelajari Jaminan KTP ↓
             </a>
         </div>

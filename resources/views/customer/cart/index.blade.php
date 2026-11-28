@@ -4,15 +4,15 @@
     <div class="py-6 min-h-[65vh]">
         {{-- Breadcrumb --}}
         <nav class="flex items-center gap-2 text-xs text-darkbrown-500 mb-3" aria-label="Breadcrumb">
-            <a href="{{ url('/') }}" class="hover:text-avocado-700 transition">Beranda</a>
+            <a href="{{ url('/') }}" class="inline-flex min-h-[44px] sm:min-h-0 items-center hover:text-avocado-700 transition">Beranda</a>
             <span>/</span>
             <span class="font-semibold text-darkbrown-800">Keranjang Sewa</span>
         </nav>
 
         {{-- Header Halaman --}}
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5 sm:mb-6">
             <div>
-                <h1 class="font-display font-normal tracking-tight text-3xl sm:text-4xl text-darkbrown-900">
+                <h1 class="font-display font-normal tracking-tight text-2xl sm:text-4xl text-darkbrown-900">
                     Keranjang Sewa
                 </h1>
                 <p class="text-xs sm:text-sm text-darkbrown-600 mt-1">
@@ -20,7 +20,7 @@
                 </p>
             </div>
             @if (!empty($items))
-                <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
+                <span class="inline-flex self-start sm:self-auto items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-avocado-100 text-avocado-800 border border-avocado-200">
                     <span class="w-2 h-2 rounded-full bg-avocado-500 animate-pulse"></span>
                     <span>{{ count($items) }} Jenis Alat ({{ $cartSummary['total_qty'] ?? count($items) }} Unit)</span>
                 </span>
@@ -70,8 +70,8 @@
                 {{-- Card Toko Vendor --}}
                 <div class="bg-white rounded-2xl border border-wheat-200 shadow-tendaku overflow-hidden">
                     {{-- Header Vendor --}}
-                    <div class="flex items-center justify-between px-5 py-3.5 border-b border-wheat-100 bg-wheat-50/40">
-                        <div class="flex items-center gap-2.5">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-5 py-3.5 border-b border-wheat-100 bg-wheat-50/40">
+                        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-extrabold text-white uppercase tracking-wider bg-avocado-700">
                                 Official Partner
                             </span>
@@ -85,8 +85,9 @@
                             </span>
                         </div>
                         @if (!empty($vendor['id']))
-                            <a href="{{ route('customer.catalog.index', ['vendor_id' => $vendor['id']]) }}" class="text-xs font-bold text-avocado-700 hover:text-avocado-800 transition">
-                                + Tambah Alat Dari Toko Ini →
+                            <a href="{{ route('customer.catalog.index', ['vendor_id' => $vendor['id']]) }}" class="inline-flex min-h-[44px] sm:min-h-0 items-center text-xs font-bold text-avocado-700 hover:text-avocado-800 transition">
+                                Tambah Alat Dari Toko Ini
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                             </a>
                         @endif
                     </div>
@@ -94,10 +95,10 @@
                     {{-- Daftar Baris Barang --}}
                     <div class="divide-y divide-wheat-100">
                         @foreach ($items as $item)
-                            <div class="p-5 hover:bg-wheat-50/30 transition">
-                                <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                            <div class="p-4 sm:p-5 hover:bg-wheat-50/30 transition">
+                                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5 items-center">
                                     {{-- Info Produk --}}
-                                    <div class="col-span-1 md:col-span-5 flex gap-4">
+                                    <div class="col-span-1 md:col-span-5 flex gap-3 sm:gap-4">
                                         <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden bg-wheat-100 border border-wheat-200 shrink-0">
                                             <img src="{{ $item['image'] }}"
                                                  alt="{{ $item['name'] }}"
@@ -121,16 +122,18 @@
                                         </div>
                                     </div>
 
+                                    {{-- Mobile: tarif, subtotal, stepper, hapus tersusun 2 kolom. Desktop: tetap kolom tabel (md:contents). --}}
+                                    <div class="grid grid-cols-2 items-center gap-x-4 gap-y-3 rounded-xl border border-wheat-100 bg-wheat-50/60 p-3 md:contents">
                                     {{-- Tarif per Hari --}}
-                                    <div class="col-span-1 md:col-span-2 text-left md:text-center">
-                                        <span class="md:hidden text-xs text-darkbrown-500 block mb-0.5 font-medium">Tarif / Hari:</span>
+                                    <div class="order-1 md:order-none col-span-1 md:col-span-2 text-left md:text-center">
+                                        <span class="md:hidden text-[11px] text-darkbrown-500 block mb-0.5 font-medium">Tarif / Hari</span>
                                         <span class="text-sm font-semibold text-darkbrown-800">
                                             Rp {{ number_format($item['price_per_day'], 0, ',', '.') }}
                                         </span>
                                     </div>
 
                                     {{-- Stepper Kuantitas (AJAX) --}}
-                                    <div class="col-span-1 md:col-span-2 flex flex-col md:items-center"
+                                    <div class="order-3 md:order-none col-span-1 md:col-span-2 flex flex-col md:items-center"
                                          x-data="cartStepper({
                                              itemId: {{ $item['master_item_id'] }},
                                              initialQty: {{ $item['qty'] }},
@@ -139,45 +142,46 @@
                                              durationDays: {{ $item['duration_days'] }}
                                          })"
                                     >
-                                        <span class="md:hidden text-xs text-darkbrown-500 block mb-1 font-medium">Jumlah Unit:</span>
+                                        <span class="md:hidden text-[11px] text-darkbrown-500 block mb-1 font-medium">Jumlah Unit</span>
                                         <div class="flex items-center border border-wheat-300 rounded-lg overflow-hidden bg-white w-fit shadow-sm">
                                             <button type="button"
                                                     @click="decrement"
                                                     :disabled="loading || qty <= 0"
-                                                    class="w-8 h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    class="w-11 h-11 sm:w-9 sm:h-9 md:w-8 md:h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                     title="Kurangi kuantitas">
-                                                −
+                                                <i data-lucide="minus" class="w-3.5 h-3.5"></i>
                                             </button>
                                             <span class="w-10 text-center font-bold text-xs text-darkbrown-900" x-text="qty"></span>
                                             <button type="button"
                                                     @click="increment"
                                                     :disabled="loading || qty >= maxQty"
-                                                    class="w-8 h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    class="w-11 h-11 sm:w-9 sm:h-9 md:w-8 md:h-8 flex items-center justify-center font-bold text-darkbrown-700 hover:bg-wheat-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                                     title="Tambah kuantitas">
-                                                +
+                                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                                             </button>
                                         </div>
                                     </div>
 
                                     {{-- Subtotal --}}
-                                    <div class="col-span-1 md:col-span-2 text-left md:text-right"
+                                    <div class="order-2 md:order-none col-span-1 md:col-span-2 text-right"
                                          x-data="{ total: {{ $item['total_price'] }} }"
                                          @item-total-updated-{{ $item['master_item_id'] }}.window="total = $event.detail.total"
                                     >
-                                        <span class="md:hidden text-xs text-darkbrown-500 block font-medium">Subtotal:</span>
+                                        <span class="md:hidden text-[11px] text-darkbrown-500 block font-medium">Subtotal</span>
                                         <span class="text-base sm:text-lg font-extrabold text-goldenrod-700 font-heading"
                                               x-text="'Rp ' + total.toLocaleString('id-ID')"></span>
                                     </div>
 
                                     {{-- Aksi Hapus --}}
-                                    <div class="col-span-1 md:col-span-1 flex items-center justify-start md:justify-center">
+                                    <div class="order-4 md:order-none col-span-1 md:col-span-1 flex items-center justify-end md:justify-center">
                                         <form method="POST" action="{{ route('customer.cart.remove') }}" onsubmit="return confirm('Hapus {{ addslashes($item['name']) }} dari keranjang?');">
                                             @csrf
                                             <input type="hidden" name="master_item_id" value="{{ $item['master_item_id'] }}">
-                                            <button type="submit" class="p-2 text-darkbrown-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" title="Hapus alat">
+                                            <button type="submit" class="inline-flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center text-darkbrown-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition" title="Hapus alat">
                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
                                         </form>
+                                    </div>
                                     </div>
                                 </div>
                             </div>
@@ -191,6 +195,7 @@
                         :vendor-city="$vendor['city'] ?? ''"
                         :pickup-date="$cartSummary['pickup_date'] ?? ''"
                         :return-date="$cartSummary['return_date'] ?? ''"
+                        lazy="on-load"
                         key="cart-booking-weather"
                     />
                 @else
@@ -212,38 +217,38 @@
                                 </p>
                             </div>
                         </div>
-                        <a href="{{ route('login') }}" class="btn-tendaku-secondary text-xs font-bold px-4 py-2 shrink-0">
+                        <a href="{{ route('login') }}" class="btn-tendaku-secondary min-h-[44px] sm:min-h-0 text-xs font-bold px-4 py-2 shrink-0">
                             Masuk Akun
                         </a>
                     </div>
                 @endauth
 
                 {{-- Bar Checkout & Ringkasan Total --}}
-                <div class="bg-white rounded-2xl border border-wheat-200 shadow-tendaku p-5 sm:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                    <div class="flex items-center gap-3">
+                <div class="bg-white rounded-2xl border border-wheat-200 shadow-tendaku p-4 sm:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                    <div class="order-2 sm:order-1 flex flex-wrap items-center justify-between sm:justify-start gap-3 border-t border-wheat-100 pt-3 sm:border-0 sm:pt-0">
                         <a href="{{ route('customer.catalog.index', !empty($vendor['id']) ? ['vendor_id' => $vendor['id']] : []) }}" class="btn-tendaku-secondary text-xs sm:text-sm py-2.5 px-4 flex items-center gap-1.5">
                             <i data-lucide="plus" class="w-4 h-4"></i>
                             <span>Tambah Alat Lain</span>
                         </a>
                         <form method="POST" action="{{ route('customer.cart.clear') }}" onsubmit="return confirm('Kosongkan semua alat dari keranjang sewa?');">
                             @csrf
-                            <button type="submit" class="text-xs text-darkbrown-500 hover:text-red-600 font-semibold transition px-2 py-1">
+                            <button type="submit" class="inline-flex min-h-[44px] sm:min-h-0 items-center text-xs text-darkbrown-500 hover:text-red-600 font-semibold transition px-2 py-1">
                                 Kosongkan Keranjang
                             </button>
                         </form>
                     </div>
 
-                    <div class="flex items-center justify-between sm:justify-end gap-5"
+                    <div class="order-1 sm:order-2 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4 sm:gap-5"
                          x-data="{ cartTotal: {{ $cartSummary['total_price'] ?? 0 }}, cartQty: {{ $cartSummary['total_qty'] ?? count($items) }} }"
                          @cart-total-updated.window="cartTotal = $event.detail.total; cartQty = $event.detail.count"
                     >
-                        <div class="text-right">
-                            <span class="text-xs text-darkbrown-500 block">Total Sewa (<span x-text="cartQty"></span> Unit):</span>
+                        <div class="flex items-baseline justify-between gap-3 sm:block sm:text-right">
+                            <span class="text-xs text-darkbrown-500 sm:block">Total Sewa (<span x-text="cartQty"></span> Unit):</span>
                             <span class="text-xl sm:text-2xl font-extrabold text-goldenrod-700 font-heading"
                                   x-text="'Rp ' + cartTotal.toLocaleString('id-ID')"></span>
                         </div>
 
-                        <form method="POST" action="{{ route('customer.cart.checkout') }}"
+                        <form method="POST" action="{{ route('customer.cart.checkout') }}" class="w-full sm:w-auto"
                               x-data="{
                                   syncWeather() {
                                       const detail = {
@@ -265,7 +270,7 @@
                                     <input type="date" name="pickup_date" required min="{{ now()->toDateString() }}"
                                            x-ref="pickupDate" @change="syncWeather()"
                                            value="{{ old('pickup_date', $cartSummary['pickup_date']) }}"
-                                           class="block w-full mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
+                                           class="block w-full min-h-[44px] sm:min-h-0 mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
                                     <x-input-error :messages="$errors->get('pickup_date')" class="mt-1" />
                                 </label>
                                 <label class="text-xs font-semibold text-darkbrown-700">
@@ -273,11 +278,11 @@
                                     <input type="date" name="return_date" required min="{{ now()->toDateString() }}"
                                            x-ref="returnDate" @change="syncWeather()"
                                            value="{{ old('return_date', $cartSummary['return_date']) }}"
-                                           class="block w-full mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
+                                           class="block w-full min-h-[44px] sm:min-h-0 mt-1 rounded-xl border-wheat-300 text-sm focus:border-avocado-600 focus:ring-avocado-500">
                                     <x-input-error :messages="$errors->get('return_date')" class="mt-1" />
                                 </label>
                             </div>
-                            <button type="submit" class="btn-tendaku-primary !py-3.5 !px-8 text-sm font-extrabold shadow-md hover:shadow-lg flex items-center gap-2">
+                            <button type="submit" class="btn-tendaku-primary !py-3.5 !px-8 text-sm font-extrabold shadow-md hover:shadow-lg flex w-full sm:w-auto items-center justify-center gap-2">
                                 <span>Lanjut ke Checkout</span>
                                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
                             </button>

@@ -219,7 +219,7 @@ function mapGeolocationError(error) {
 
     switch (error.code) {
         case 1:
-            return "Izin akses lokasi ditolak. Silakan aktifkan izin lokasi pada browser atau pilih titik secara manual di peta.";
+            return "Izin akses lokasi ditolak. Silakan aktifkan izin lokasi pada peramban atau pilih titik secara manual di peta.";
         case 2:
             return "Informasi lokasi perangkat tidak tersedia saat ini. Silakan pilih titik langsung pada peta.";
         case 3:
@@ -448,7 +448,7 @@ export function createLocationPickerState(config = {}) {
 
             if (!isValidCoordinatePair(parsedLat, parsedLng)) {
                 this.setFeedback(
-                    "Koordinat tidak valid. Latitude harus di antara -90 s/d 90 dan Longitude di antara -180 s/d 180.",
+                    "Koordinat tidak valid. Lintang harus di antara -90 sampai 90 dan bujur di antara -180 sampai 180.",
                     "error",
                 );
                 return false;
@@ -520,7 +520,7 @@ export function createLocationPickerState(config = {}) {
 
             if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
                 this.setFeedback(
-                    "Browser Anda tidak mendukung fitur deteksi lokasi otomatis. Silakan klik titik lokasi langsung pada peta.",
+                    "Peramban Anda tidak mendukung fitur deteksi lokasi otomatis. Silakan klik titik lokasi langsung pada peta.",
                     "error",
                 );
                 return;
@@ -541,7 +541,7 @@ export function createLocationPickerState(config = {}) {
 
                     if (updated) {
                         this.setFeedback(
-                            "Lokasi perangkat ditemukan. Anda dapat menggeser pin agar lebih presisi.",
+                            "Lokasi perangkat ditemukan. Anda dapat menggeser penanda lokasi agar lebih tepat.",
                             "info",
                         );
                     }

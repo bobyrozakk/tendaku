@@ -15,7 +15,7 @@ export function createAddressAutofillState(config = {}) {
     const fields = () => Array.from(root.querySelectorAll("[data-address-field]"));
     const coordinateKey = (latitude, longitude) => isValidCoordinatePair(latitude, longitude)
         ? `${latitude},${longitude}` : null;
-    const districtNotice = () => districtCleared ? "Kecamatan otomatis sebelumnya dikosongkan karena pin berubah. " : "";
+    const districtNotice = () => districtCleared ? "Kecamatan otomatis sebelumnya dikosongkan karena penanda lokasi berubah. " : "";
 
     return {
         autofillMessage: "",

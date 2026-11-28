@@ -1,8 +1,8 @@
-<section class="py-20 sm:py-24 w-full" style="background:#F4F7F2" id="ktp-jaminan" aria-labelledby="ktp-heading">
+<section class="py-12 sm:py-20 lg:py-24 w-full" style="background:#F4F7F2" id="ktp-jaminan" aria-labelledby="ktp-heading">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+        <div class="flex flex-col lg:flex-row items-center gap-8 sm:gap-12 lg:gap-20">
             <div class="w-full lg:w-[42%] shrink-0" data-sr>
-                <div class="relative overflow-hidden shadow-2xl group" style="aspect-ratio:4/5;border-radius:1.5rem">
+                <div class="relative overflow-hidden shadow-2xl group aspect-[4/3] sm:aspect-[4/5]" style="border-radius:1.5rem">
                     <img src="{{ asset('images/superadmin-bg.jpg') }}"
                          alt="Pemandangan Camping Tendaku"
                          class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -18,7 +18,6 @@
             </div>
             <div class="flex-1 space-y-6">
                 <div data-sr data-sr-delay="100">
-                    <span class="text-xs font-bold uppercase tracking-[.18em] text-avocado-600">Sistem Jaminan Tendaku</span>
                     <h2 id="ktp-heading" class="font-display text-3xl sm:text-4xl lg:text-5xl text-darkbrown-900 leading-tight mt-2">
                         Tanpa Deposit Uang.<br>Hanya <span class="text-avocado-700">KTP Asli</span>.
                     </h2>

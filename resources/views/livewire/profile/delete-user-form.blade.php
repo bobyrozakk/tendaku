@@ -86,7 +86,7 @@ new class extends Component
                     wire:model="password"
                     id="password"
                     name="password"
-                    wrapper-class="mt-1 w-3/4"
+                    wrapper-class="mt-1 w-full sm:w-3/4"
                     class="block w-full"
                     placeholder="{{ __('Kata Sandi') }}"
                 />

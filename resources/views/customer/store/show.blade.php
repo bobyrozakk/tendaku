@@ -77,7 +77,7 @@
                     <!-- Tombol Tutup X -->
                     <button type="button"
                             @click="showGuestLoginModal = false"
-                            class="absolute top-4 right-4 text-darkbrown-400 hover:text-darkbrown-700 p-1.5 rounded-xl hover:bg-wheat-100 transition"
+                            class="absolute top-4 right-4 flex h-11 w-11 items-center justify-center text-darkbrown-400 hover:text-darkbrown-700 rounded-xl hover:bg-wheat-100 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                             aria-label="Tutup modal">
                         <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
@@ -195,7 +195,7 @@
                     </ul>
 
                     <!-- Statistik ringkas -->
-                    <dl class="mt-6 grid max-w-xl grid-cols-3 gap-2 sm:gap-3">
+                    <dl class="mt-6 grid max-w-xl grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                         <div class="rounded-2xl border border-wheat-200 bg-white/80 p-3 backdrop-blur">
                             <dt class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Total Alat Sewa</dt>
                             <dd class="mt-1 flex flex-col leading-tight">
@@ -210,7 +210,7 @@
                                 <span class="text-[11px] text-darkbrown-500">Pilihan Paket</span>
                             </dd>
                         </div>
-                        <div class="rounded-2xl border border-wheat-200 bg-white/80 p-3 backdrop-blur">
+                        <div class="col-span-2 sm:col-span-1 rounded-2xl border border-wheat-200 bg-white/80 p-3 backdrop-blur">
                             <dt class="text-[10px] font-bold uppercase tracking-wider text-darkbrown-500">Bergabung Sejak</dt>
                             <dd class="mt-1 flex flex-col leading-tight">
                                 <span class="text-sm font-extrabold text-darkbrown-900">{{ $joinedDate }}</span>
@@ -265,7 +265,7 @@
                 <button type="button"
                         @click="open = !open"
                         :aria-expanded="open.toString()"
-                        class="flex w-full items-center justify-between rounded-2xl border border-wheat-200 bg-white px-4 py-3 text-sm font-bold text-darkbrown-900 shadow-tendaku-sm lg:hidden">
+                        class="flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-wheat-200 bg-white px-4 py-3 text-sm font-bold text-darkbrown-900 shadow-tendaku-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 lg:hidden">
                     <span class="inline-flex items-center gap-2">
                         <i data-lucide="sliders-horizontal" class="h-4 w-4 text-avocado-600"></i>
                         Filter
@@ -281,7 +281,7 @@
                     <div class="flex items-center justify-between">
                         <h2 class="text-lg font-extrabold tracking-tight text-darkbrown-900">Filter</h2>
                         @if($hasFilters)
-                            <a href="{{ $resetUrl }}" class="text-xs font-bold text-avocado-700 underline-offset-2 hover:underline">Reset</a>
+                            <a href="{{ $resetUrl }}" class="inline-flex min-h-[44px] sm:min-h-0 items-center rounded-lg px-1 text-xs font-bold text-avocado-700 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500">Reset</a>
                         @endif
                     </div>
 
@@ -294,7 +294,7 @@
                                     @php $isActive = $categoryId === $cat->id; @endphp
                                     <a href="{{ $storeUrl(['category_id' => $isActive ? null : $cat->id]) }}"
                                        aria-pressed="{{ $isActive ? 'true' : 'false' }}"
-                                       class="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isActive ? 'border-darkbrown-800 bg-darkbrown-800 text-wheat-100' : 'border-wheat-300/80 bg-wheat-100 text-darkbrown-800 hover:bg-wheat-200' }}">
+                                       class="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isActive ? 'border-darkbrown-800 bg-darkbrown-800 text-wheat-100' : 'border-wheat-300/80 bg-wheat-100 text-darkbrown-800 hover:bg-wheat-200' }}">
                                         {{ $cat->name }}
                                         <span class="text-[10px] {{ $isActive ? 'text-wheat-300' : 'text-darkbrown-400' }}">{{ $cat->items_count }}</span>
                                     </a>
@@ -318,7 +318,7 @@
                                     <a @if(! $disabled) href="{{ $storeUrl(['price' => $isActive ? null : $key]) }}" @endif
                                        @if($disabled) aria-disabled="true" @endif
                                        aria-pressed="{{ $isActive ? 'true' : 'false' }}"
-                                       class="flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-xs transition {{ $disabled ? 'cursor-not-allowed opacity-45' : 'hover:bg-wheat-100' }} {{ $isActive ? 'bg-wheat-100 font-extrabold text-darkbrown-900' : 'font-medium text-darkbrown-700' }}">
+                                       class="flex min-h-[44px] sm:min-h-0 items-center gap-2.5 rounded-xl px-2 py-1.5 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 {{ $disabled ? 'cursor-not-allowed opacity-45' : 'hover:bg-wheat-100' }} {{ $isActive ? 'bg-wheat-100 font-extrabold text-darkbrown-900' : 'font-medium text-darkbrown-700' }}">
                                         <span class="w-[7.25rem] shrink-0 leading-tight">{{ $bucket['label'] }}</span>
                                         <span class="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-wheat-200" aria-hidden="true">
                                             <span class="block h-full rounded-full {{ $isActive ? 'bg-avocado-600' : 'bg-goldenrod-400' }}" style="width: {{ $width }}%"></span>
@@ -337,7 +337,7 @@
                             <a href="{{ $storeUrl(['stock' => $inStock ? null : 1]) }}"
                                role="switch"
                                aria-checked="{{ $inStock ? 'true' : 'false' }}"
-                               class="mt-2.5 flex items-center justify-between gap-3 rounded-xl px-2 py-1.5 text-xs font-medium text-darkbrown-800 transition hover:bg-wheat-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500">
+                               class="mt-2.5 flex min-h-[44px] sm:min-h-0 items-center justify-between gap-3 rounded-xl px-2 py-1.5 text-xs font-medium text-darkbrown-800 transition hover:bg-wheat-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500">
                                 <span>Stok tersedia <span class="ml-1 text-[11px] text-darkbrown-400">{{ $stockCount }}</span></span>
                                 <span class="relative h-6 w-11 shrink-0 rounded-full transition {{ $inStock ? 'bg-avocado-600' : 'bg-wheat-300' }}" aria-hidden="true">
                                     <span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all {{ $inStock ? 'left-[22px]' : 'left-0.5' }}"></span>
@@ -355,13 +355,13 @@
                     <div class="flex flex-wrap items-center gap-2" role="tablist">
                         <a href="{{ $storeUrl(['tab' => null, 'price' => null, 'category_id' => null, 'stock' => null]) }}"
                            role="tab" aria-selected="{{ $isPackages ? 'false' : 'true' }}"
-                           class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isPackages ? 'bg-white text-darkbrown-700 shadow-tendaku-sm hover:bg-wheat-100' : 'bg-darkbrown-800 text-wheat-100 shadow-tendaku-sm' }}">
+                           class="inline-flex min-h-[44px] sm:min-h-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isPackages ? 'bg-white text-darkbrown-700 shadow-tendaku-sm hover:bg-wheat-100' : 'bg-darkbrown-800 text-wheat-100 shadow-tendaku-sm' }}">
                             <i data-lucide="tent" class="h-4 w-4"></i>
                             Alat Satuan <span class="opacity-70">{{ $vendor->items_count }}</span>
                         </a>
                         <a href="{{ $storeUrl(['tab' => 'packages', 'price' => null, 'category_id' => null, 'stock' => null]) }}"
                            role="tab" aria-selected="{{ $isPackages ? 'true' : 'false' }}"
-                           class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isPackages ? 'bg-darkbrown-800 text-wheat-100 shadow-tendaku-sm' : 'bg-white text-darkbrown-700 shadow-tendaku-sm hover:bg-wheat-100' }}">
+                           class="inline-flex min-h-[44px] sm:min-h-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 {{ $isPackages ? 'bg-darkbrown-800 text-wheat-100 shadow-tendaku-sm' : 'bg-white text-darkbrown-700 shadow-tendaku-sm hover:bg-wheat-100' }}">
                             <i data-lucide="package" class="h-4 w-4"></i>
                             Paket Camping <span class="opacity-70">{{ $vendor->camping_packages_count }}</span>
                         </a>
@@ -389,10 +389,10 @@
                                    value="{{ $search }}"
                                    aria-label="Cari di toko {{ $vendor->name }}"
                                    placeholder="Cari di toko ini..."
-                                   class="input-tendaku !rounded-full py-2 pl-10 pr-4 text-xs font-medium sm:w-56" />
+                                   class="input-tendaku min-h-[44px] sm:min-h-0 !rounded-full py-2 pl-10 pr-4 text-xs font-medium sm:w-56" />
                         </div>
 
-                        <div class="inline-flex items-center gap-2 rounded-full border border-wheat-200 bg-white py-1 pl-4 pr-1 text-xs shadow-tendaku-sm">
+                        <div class="ml-auto sm:ml-0 inline-flex items-center gap-2 rounded-full border border-wheat-200 bg-white py-1 pl-4 pr-1 text-xs shadow-tendaku-sm">
                             <span class="text-darkbrown-500">Urutkan</span>
                             <x-dropdown-select
                                 variant="inline"
@@ -421,7 +421,7 @@
                                     $normalPrice = (float) $package->normal_price;
                                     $pkgMeta = collect([
                                         $package->duration_days.' hari',
-                                        $package->total_items_count.' item',
+                                        $package->total_items_count.' unit',
                                         $package->max_people ? 'maks. '.$package->max_people.' orang' : null,
                                     ])->filter()->join(' · ');
                                 @endphp
@@ -437,7 +437,7 @@
                                         @endif
                                         @if($savings > 0)
                                             <span class="absolute left-2.5 top-2.5 rounded-full bg-sunglow-300 px-2.5 py-1 text-[11px] font-bold text-darkbrown-900 shadow-sm">
-                                                Hemat Rp {{ number_format($savings, 0, ',', '.') }}
+                                                Hemat Rp {{ number_format($savings, 0, ',', '.') }}/hari
                                             </span>
                                         @endif
                                     </a>
@@ -461,7 +461,7 @@
                                             <a href="{{ route('customer.packages.booking', $package->id) }}"
                                                title="Sewa {{ $package->name }}"
                                                aria-label="Sewa paket {{ $package->name }}"
-                                               class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-darkbrown-800 text-wheat-200 transition hover:bg-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 active:scale-95">
+                                               class="inline-flex h-11 w-11 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-darkbrown-800 text-wheat-200 transition hover:bg-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 active:scale-95">
                                                 <i data-lucide="arrow-up-right" class="h-4 w-4"></i>
                                             </a>
                                         </div>
@@ -549,11 +549,11 @@
                                                 <a href="{{ $detailUrl }}"
                                                    title="Sewa {{ $item->name }} Sekarang"
                                                    aria-label="Sewa {{ $item->name }}"
-                                                   class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-darkbrown-800 text-wheat-200 transition hover:bg-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 active:scale-95">
+                                                   class="inline-flex h-11 w-11 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-full bg-darkbrown-800 text-wheat-200 transition hover:bg-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500 focus-visible:ring-offset-2 active:scale-95">
                                                     <i data-lucide="arrow-up-right" class="h-4 w-4"></i>
                                                 </a>
                                             @else
-                                                <span class="inline-flex h-10 w-10 shrink-0 rounded-full border-2 border-wheat-300" aria-hidden="true"></span>
+                                                <span class="inline-flex h-11 w-11 sm:h-10 sm:w-10 shrink-0 rounded-full border-2 border-wheat-300" aria-hidden="true"></span>
                                             @endif
                                         </div>
                                     </div>

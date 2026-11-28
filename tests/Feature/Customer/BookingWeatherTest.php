@@ -359,11 +359,12 @@ class BookingWeatherTest extends TestCase
 
         Http::fake();
 
-        // Checkout guest tidak memuat panel cuaca; ajakan masuk akun ada di bagian Data Penyewa.
+        // Checkout guest menampilkan banner kunci cuaca tanpa memuat komponen Livewire cuaca.
         $this->get(route('checkout.index'))
             ->assertOk()
             ->assertDontSee('Menyiapkan prakiraan cuaca untuk periode sewa')
-            ->assertDontSee('Prakiraan Cuaca Masa Sewa')
+            ->assertSee('Prakiraan Cuaca Masa Sewa')
+            ->assertSee('Khusus Member')
             ->assertSee('Masuk Akun');
 
         // Banner kunci cuaca untuk guest ada di halaman keranjang.

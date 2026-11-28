@@ -63,6 +63,14 @@
     font-weight: 600;
 }
 
+@media (max-width: 639px) {
+    .tendaku-location-picker__canvas .leaflet-control-zoom a {
+        width: 44px !important;
+        height: 44px !important;
+        line-height: 42px !important;
+    }
+}
+
 .tendaku-location-picker__canvas .leaflet-control-zoom a:hover {
     background-color: var(--lp-surface-muted) !important;
     color: var(--lp-accent) !important;

@@ -27,19 +27,19 @@
         ->first(fn ($attrValue, $attrName) => str_starts_with((string) $attrName, 'wire:model'));
 
     $sizes = [
-        'sm' => 'h-10 px-3 text-xs font-semibold',
-        'md' => 'h-10 px-3.5 text-sm font-semibold',
+        'sm' => 'h-11 sm:h-10 px-3 text-xs font-semibold',
+        'md' => 'h-11 sm:h-10 px-3.5 text-sm font-semibold',
         'lg' => 'h-11 px-3.5 text-sm font-semibold',
-        'xl' => 'px-4 py-3 text-sm font-bold',
+        'xl' => 'min-h-[44px] px-4 py-3 text-sm font-bold',
     ];
 
     $triggerClass = $variant === 'inline'
-        ? 'inline-flex items-center gap-1 rounded-full py-1.5 pl-1 pr-2 text-xs font-bold text-darkbrown-900 hover:bg-wheat-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500/40 transition'
+        ? 'inline-flex min-h-[44px] items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-bold text-darkbrown-900 hover:bg-wheat-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500/40 transition'
         : 'w-full flex items-center justify-between gap-2 rounded-xl border border-wheat-300 bg-white text-left text-darkbrown-900 shadow-2xs hover:border-avocado-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500/30 transition '.($sizes[$size] ?? $sizes['md']);
 
     $panelClass = $variant === 'inline'
-        ? 'right-0 w-52'
-        : ($align === 'right' ? 'right-0' : 'left-0').' w-max min-w-full max-w-[min(20rem,calc(100vw-2rem))]';
+        ? 'right-0 w-52 max-w-[calc(100vw-2rem)]'
+        : ($align === 'right' ? 'right-0' : 'left-0 right-0 sm:right-auto').' sm:w-max min-w-full max-w-[min(20rem,calc(100vw-2rem))]';
 @endphp
 
 <div
@@ -106,7 +106,7 @@
                     <button type="button" role="option" @click="pick(item.value)"
                             :aria-selected="String(value ?? '') === item.value ? 'true' : 'false'"
                             :class="String(value ?? '') === item.value ? 'bg-avocado-100 text-avocado-900 font-bold' : 'text-darkbrown-800 hover:bg-wheat-100'"
-                            class="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition">
+                            class="w-full min-h-[44px] flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition">
                         <span class="truncate" x-text="item.label"></span>
                         <svg x-show="String(value ?? '') === item.value" class="w-4 h-4 shrink-0 text-avocado-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
                     </button>

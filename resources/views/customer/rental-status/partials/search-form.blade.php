@@ -65,7 +65,7 @@
     <button
         type="submit"
         class="{{ $compact
-            ? 'btn-tendaku-primary shrink-0 sm:mt-0'
+            ? 'btn-tendaku-primary min-h-[44px] sm:min-h-0 shrink-0 sm:mt-0'
             : 'btn-tendaku-primary w-full py-3.5'
         }}"
     >

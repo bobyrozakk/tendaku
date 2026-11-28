@@ -14,7 +14,6 @@ return [
                        .'agar pengalaman berkemah semakin nyaman dan menyenangkan.',
     ],
 
-    // Sosial media: hanya WhatsApp (Instagram dan TikTok dihapus sesuai permintaan)
     'social' => [
         ['icon' => 'whatsapp', 'label' => 'WhatsApp', 'url' => 'https://wa.me/6281234567890'],
     ],

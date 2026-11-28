@@ -10,9 +10,9 @@
         </button>
         <button type="button" x-on:click="submitBooking()" :disabled="!canSubmitBooking"
                 :class="!canSubmitBooking ? 'opacity-70 cursor-not-allowed' : 'hover:bg-sunglow-400 active:bg-goldenrod-400'"
-                class="ml-auto shrink-0 inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
+                class="ml-auto shrink-0 inline-flex items-center justify-center gap-1 h-12 px-4 rounded-xl font-extrabold text-base text-darkbrown-900 bg-sunglow-300 shadow-tendaku transition focus:outline-none focus:ring-2 focus:ring-goldenrod-500 focus:ring-offset-2">
             <i x-show="isProcessing" x-cloak data-lucide="loader" class="w-5 h-5 animate-spin"></i>
-            <span x-text="isProcessing ? 'Memproses...' : 'Buat booking'"></span>
+            <span x-text="isProcessing ? '' : 'Buat booking'"></span>
         </button>
     </div>
 </div>

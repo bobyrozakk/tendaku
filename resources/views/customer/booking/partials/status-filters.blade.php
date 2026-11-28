@@ -22,7 +22,7 @@
                     $filterStatus ? ['status' => $filterStatus] : []
                 ) }}"
                 @if ($isActive) aria-current="page" @endif
-                class="rounded-xl border px-3.5 py-2 text-xs
+                class="inline-flex min-h-[44px] sm:min-h-0 items-center rounded-xl border px-3.5 py-2 text-xs
                        font-bold whitespace-nowrap transition
                        {{ $isActive
                             ? 'border-darkbrown-900 bg-darkbrown-900 text-wheat-200'

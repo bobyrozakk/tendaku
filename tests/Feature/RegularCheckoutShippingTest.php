@@ -24,7 +24,12 @@ class RegularCheckoutShippingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.openrouteservice.api_key' => 'test-key', 'services.openrouteservice.retry_times' => 1, 'services.openrouteservice.retry_sleep_ms' => 0]);
+        config([
+            'services.midtrans.server_key' => 'test-midtrans-server-key',
+            'services.openrouteservice.api_key' => 'test-key',
+            'services.openrouteservice.retry_times' => 1,
+            'services.openrouteservice.retry_sleep_ms' => 0,
+        ]);
         Http::preventStrayRequests();
     }
 
@@ -62,7 +67,7 @@ class RegularCheckoutShippingTest extends TestCase
         Http::fake(['api.openrouteservice.org/*' => function () use ($transactionLevel) {
             $this->assertSame($transactionLevel, DB::transactionLevel(), 'ORS must not run inside an additional booking transaction.');
 
-            return Http::response(['routes' => [['summary' => ['distance' => 12340, 'duration' => 900]]]]);
+            return Http::response(['routes' => [['summary' => ['distance' => 8240, 'duration' => 900]]]]);
         }]);
     }
 
@@ -83,11 +88,11 @@ class RegularCheckoutShippingTest extends TestCase
         $this->fakeRoute();
         $input = $this->confirmedInput($this->input($c));
         Cache::flush();
-        $this->postJson(route('checkout.store'), $input + ['delivery_fee' => 0, 'rate_per_km' => 0, 'weight_kg' => 0, 'distance_km' => 0, 'latitude' => 0, 'longitude' => 0])->assertOk()->assertJsonPath('payment_amount', 126680);
+        $this->postJson(route('checkout.store'), $input + ['delivery_fee' => 0, 'rate_per_km' => 0, 'weight_kg' => 0, 'distance_km' => 0, 'latitude' => 0, 'longitude' => 0])->assertOk()->assertJsonPath('payment_amount', 118480);
         $rental = Rental::sole();
-        $this->assertSame('26680.00', $rental->delivery_fee);
+        $this->assertSame('18480.00', $rental->delivery_fee);
         $this->assertSame('100000.00', $rental->subtotal);
-        $this->assertSame('126680.00', $rental->grand_total);
+        $this->assertSame('118480.00', $rental->grand_total);
         $this->assertSame($c['address']->id, $rental->customer_address_id);
         $this->assertSame($c['address']->toDeliverySnapshot(), $rental->delivery_address);
         $this->assertSame(2, $rental->details()->count());
@@ -133,8 +138,8 @@ class RegularCheckoutShippingTest extends TestCase
         $latest = $this->postJson(route('checkout.store'), $input)->assertStatus(409)->json('shipping');
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
-        $this->postJson(route('checkout.store'), array_replace($input, ['expected_delivery_fee' => $latest['delivery_fee'], 'expected_shipping_context' => $latest['shipping_context']]))->assertOk()->assertJsonPath('payment_amount', 139020);
-        $this->assertSame('39020.00', Rental::sole()->delivery_fee);
+        $this->postJson(route('checkout.store'), array_replace($input, ['expected_delivery_fee' => $latest['delivery_fee'], 'expected_shipping_context' => $latest['shipping_context']]))->assertOk()->assertJsonPath('payment_amount', 126720);
+        $this->assertSame('26720.00', Rental::sole()->delivery_fee);
         $this->assertDatabaseCount('payments', 0);
         Http::assertSentCount(1);
     }
@@ -145,7 +150,7 @@ class RegularCheckoutShippingTest extends TestCase
         $this->actingAs($c['customer']);
         $this->fakeRoute();
         $input = $this->confirmedInput($this->input($c));
-        $this->postJson(route('checkout.store'), array_replace($input, ['expected_delivery_fee' => 0]))->assertStatus(409)->assertJsonPath('shipping.delivery_fee', 26680);
+        $this->postJson(route('checkout.store'), array_replace($input, ['expected_delivery_fee' => 0]))->assertStatus(409)->assertJsonPath('shipping.delivery_fee', 18480);
         $this->postJson(route('checkout.store'), $this->input($c))->assertStatus(409);
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
@@ -159,6 +164,7 @@ class RegularCheckoutShippingTest extends TestCase
         $this->fakeRoute();
         $input = $this->confirmedInput($this->input($c));
         Cache::flush();
+        config(['services.openrouteservice.fallback_factor' => 0]);
         Http::fake(['api.openrouteservice.org/*' => Http::failedConnection('timeout')]);
         $this->postJson(route('checkout.store'), $input)->assertStatus(503);
         $this->assertDatabaseCount('rentals', 0);
@@ -185,11 +191,11 @@ class RegularCheckoutShippingTest extends TestCase
         $c = $this->context();
         $this->actingAs($c['customer']);
         Http::fake(['api.openrouteservice.org/*' => Http::sequence()
-            ->push(['routes' => [['summary' => ['distance' => 12340]]]])
-            ->push(['routes' => [['summary' => ['distance' => 20000]]]])]);
+            ->push(['routes' => [['summary' => ['distance' => 8240]]]])
+            ->push(['routes' => [['summary' => ['distance' => 9500]]]])]);
         $input = $this->confirmedInput($this->input($c));
-        $other = CustomerAddress::factory()->for($c['customer'])->withCoordinates(-7.8, 112.7)->create();
-        $this->postJson(route('checkout.store'), array_replace($input, ['customer_address_id' => $other->id]))->assertStatus(409)->assertJsonPath('shipping.delivery_fee', 42000)->assertJsonPath('shipping.distance_km', 20);
+        $other = CustomerAddress::factory()->for($c['customer'])->withCoordinates(-7.94, 112.65)->create();
+        $this->postJson(route('checkout.store'), array_replace($input, ['customer_address_id' => $other->id]))->assertStatus(409)->assertJsonPath('shipping.delivery_fee', 21000)->assertJsonPath('shipping.distance_km', 9.5);
         $this->assertDatabaseCount('rentals', 0);
         $this->assertDatabaseCount('payments', 0);
         Http::assertSentCount(2);
@@ -221,7 +227,7 @@ class RegularCheckoutShippingTest extends TestCase
             $sessionId = session()->getId();
             $this->assertFalse(Cache::lock('session:'.$sessionId, 120)->get());
 
-            return Http::response(['routes' => [['summary' => ['distance' => 12340]]]]);
+            return Http::response(['routes' => [['summary' => ['distance' => 8240]]]]);
         }]);
         $this->postJson(route('checkout.store'), $this->input($c))->assertStatus(409);
         $lock = Cache::lock('session:'.$sessionId, 120);

@@ -1,10 +1,7 @@
-<section class="py-20 sm:py-24 w-full scroll-mt-20" style="background:#1B1501" id="cara-penyewaan" aria-labelledby="cara-sewa-heading">
+<section class="py-12 sm:py-20 lg:py-24 w-full scroll-mt-20" style="background:#1B1501" id="cara-penyewaan" aria-labelledby="cara-sewa-heading">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {{-- Section Header --}}
-        <div class="text-center mb-16 max-w-3xl mx-auto" data-sr>
-            <span class="inline-block px-3.5 py-1 rounded-full text-xs font-bold uppercase tracking-[.18em] border border-avocado-500/30 bg-avocado-950/40 text-avocado-300">
-                Alur Resmi Tendaku
-            </span>
+        <div class="text-center mb-10 sm:mb-16 max-w-3xl mx-auto" data-sr>
             <h2 id="cara-sewa-heading" class="font-display text-3xl sm:text-5xl mt-3 tracking-tight" style="color:#FAF6ED">
                 Cara Penyewaan pada Tendaku
             </h2>
@@ -85,11 +82,11 @@
             </div>
             <div class="flex flex-wrap items-center justify-center gap-3 shrink-0">
                 <a href="{{ route('customer.catalog.index') }}"
-                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm bg-sunglow-400 text-darkbrown-900 hover:bg-sunglow-300 transition-colors shadow-sm">
+                   class="inline-flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full font-bold text-sm bg-sunglow-400 text-darkbrown-900 hover:bg-sunglow-300 transition-colors shadow-sm">
                     Buka Katalog
                 </a>
                 <a href="{{ url('/layanan#panduan-penyewaan') }}"
-                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm border border-white/20 text-[#FAF6ED] hover:bg-white/10 transition-colors">
+                   class="inline-flex items-center gap-2 px-5 py-3 min-h-[44px] rounded-full font-bold text-sm border border-white/20 text-[#FAF6ED] hover:bg-white/10 transition-colors">
                     Pelajari Lengkap
                     <i data-lucide="arrow-right" class="w-4 h-4" aria-hidden="true"></i>
                 </a>

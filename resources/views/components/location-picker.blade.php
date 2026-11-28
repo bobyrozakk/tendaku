@@ -11,7 +11,7 @@
     'defaultZoom' => 13,
     'selectedZoom' => 16,
     'label' => 'Titik Lokasi pada Peta',
-    'helpText' => 'Klik pada peta atau geser pin untuk menentukan titik lokasi yang presisi.',
+    'helpText' => 'Klik pada peta atau geser penanda lokasi untuk menentukan titik yang tepat.',
     'heightClass' => 'h-64 sm:h-72',
     'required' => false,
     'disabled' => false,
@@ -113,15 +113,9 @@
                     type="button"
                     @click="useCurrentLocation()"
                     :disabled="isLocating"
-                    class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-avocado-700 bg-avocado-50 hover:bg-avocado-100 border border-avocado-600/30 transition duration-150 focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed"
+                    class="inline-flex min-h-[44px] items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-avocado-700 bg-avocado-50 hover:bg-avocado-100 border border-avocado-600/30 transition duration-150 focus:outline-none focus:ring-2 focus:ring-avocado-500 focus:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                    <svg class="w-3.5 h-3.5 text-avocado-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M12 2v3"></path>
-                        <path d="M12 19v3"></path>
-                        <path d="M2 12h3"></path>
-                        <path d="M19 12h3"></path>
-                    </svg>
+                    <i data-lucide="sun" class="w-3.5 h-3.5 text-avocado-600 shrink-0" aria-hidden="true"></i>
                     <span x-text="isLocating ? 'Mendeteksi lokasi...' : 'Gunakan Lokasi Saya'">Gunakan Lokasi Saya</span>
                 </button>
 
@@ -130,12 +124,9 @@
                     x-cloak
                     x-show="hasSelectedCoordinates"
                     @click="clearLocation()"
-                    class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-darkbrown-700 bg-white hover:bg-wheat-100 border border-wheat-300 transition duration-150 focus:outline-none focus:ring-2 focus:ring-wheat-400 focus:ring-offset-1"
+                    class="inline-flex min-h-[44px] items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-darkbrown-700 bg-white hover:bg-wheat-100 border border-wheat-300 transition duration-150 focus:outline-none focus:ring-2 focus:ring-wheat-400 focus:ring-offset-1"
                 >
-                    <svg class="w-3.5 h-3.5 text-darkbrown-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M18 6 6 18"></path>
-                        <path d="m6 6 12 12"></path>
-                    </svg>
+                    <i data-lucide="x" class="w-3.5 h-3.5 text-darkbrown-500 shrink-0" aria-hidden="true"></i>
                     <span>Hapus Titik</span>
                 </button>
             </div>
@@ -156,7 +147,7 @@
         <button
             type="button"
             @click="clearFeedback()"
-            class="shrink-0 text-current opacity-70 hover:opacity-100 focus:outline-none"
+            class="shrink-0 inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-current opacity-70 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-current"
             aria-label="Tutup pesan"
         >
             &times;
@@ -195,10 +186,10 @@
                 class="flex flex-wrap items-center gap-3 font-mono text-xs text-darkbrown-700"
             >
                 <span>
-                    Lat: <strong class="font-semibold text-darkbrown-900" x-text="formattedLatitude">{{ $initialLatitudeInputValue }}</strong>
+                    Lintang: <strong class="font-semibold text-darkbrown-900" x-text="formattedLatitude">{{ $initialLatitudeInputValue }}</strong>
                 </span>
                 <span>
-                    Lng: <strong class="font-semibold text-darkbrown-900" x-text="formattedLongitude">{{ $initialLongitudeInputValue }}</strong>
+                    Bujur: <strong class="font-semibold text-darkbrown-900" x-text="formattedLongitude">{{ $initialLongitudeInputValue }}</strong>
                 </span>
             </div>
         </div>

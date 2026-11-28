@@ -11,7 +11,7 @@
                    wire:navigate
                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-darkbrown-800 bg-white hover:bg-wheat-100/90 border border-wheat-300/80 transition-all duration-150 active:scale-95 shadow-xs group cursor-pointer">
                     <i data-lucide="arrow-left" class="w-4 h-4 transition-transform group-hover:-translate-x-0.5 text-darkbrown-600"></i>
-                    <span>Kembali ke POS</span>
+                    <span>Kembali ke Dasbor Kasir</span>
                 </a>
 
                 <div class="h-5 w-px bg-wheat-300/80 hidden sm:block"></div>
@@ -19,7 +19,7 @@
                 <div class="hidden sm:flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span class="text-xs font-bold text-darkbrown-700 truncate max-w-[200px]">
-                        {{ $vendor?->name ?? 'Tendaku Store Central' }}
+                        {{ $vendor?->name ?? 'Toko Pusat Tendaku' }}
                     </span>
                 </div>
             </div>
@@ -30,9 +30,9 @@
                    class="hidden sm:inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-all duration-150 hover:opacity-90 shadow-xs"
                    style="background: linear-gradient(135deg, #1e1a10 0%, #2b2202 100%); border: 1px solid rgba(255,255,255,0.12);"
                    title="Tendaku — Kembali ke Beranda"
-                   aria-label="Tendaku Home">
+                   aria-label="Beranda Tendaku">
                     <img src="{{ asset('images/Logo.svg') }}"
-                         alt="Tendaku Logo"
+                         alt="Logo Tendaku"
                          class="h-6 w-auto object-contain block"
                          style="filter: brightness(1.7) contrast(1.1) drop-shadow(0 1px 2px rgba(0,0,0,0.5));">
                     <span class="text-[11px] font-bold tracking-wider uppercase text-wheat-200 border-l border-white/20 pl-2">
@@ -46,7 +46,7 @@
                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100/90 border border-rose-200/90 transition-all duration-150 active:scale-95 shadow-xs cursor-pointer"
                             title="Keluar dari sesi akun">
                         <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                        <span class="hidden sm:inline">Logout</span>
+                        <span class="hidden sm:inline">Keluar</span>
                     </button>
                 </form>
             </div>
@@ -88,7 +88,7 @@
                             </h1>
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/15 text-sunglow-300 border border-white/20 backdrop-blur-md shadow-xs">
                                 <i data-lucide="shield-check" class="w-3.5 h-3.5 text-sunglow-400"></i>
-                                <span>{{ $user->isVendorOwner() ? 'Vendor Owner' : 'Kasir Toko (Admin)' }}</span>
+                                <span>{{ $user->isVendorOwner() ? 'Pemilik Vendor' : 'Kasir Toko' }}</span>
                             </span>
                         </div>
                         <p class="text-xs sm:text-sm text-wheat-200/90 flex items-center gap-2">
@@ -97,7 +97,7 @@
                         </p>
                         <div class="flex items-center gap-3 text-[11px] text-wheat-300/80 font-medium flex-wrap pt-0.5">
                             <span class="font-mono bg-white/10 px-2 py-0.5 rounded border border-white/15">
-                                ID: #USR-{{ str_pad($user->id, 4, '0', STR_PAD_LEFT) }}
+                                No.: #USR-{{ str_pad($user->id, 4, '0', STR_PAD_LEFT) }}
                             </span>
                             <span>•</span>
                             <span class="flex items-center gap-1">
@@ -111,7 +111,7 @@
                 {{-- Toko Card (Right Island Glass) --}}
                 <div class="w-full md:w-auto bg-white/10 backdrop-blur-xl rounded-2xl p-5 border border-white/20 shrink-0 md:min-w-[260px] shadow-lg">
                     <div class="flex items-center justify-between gap-3 mb-2.5">
-                        <span class="text-[10px] font-extrabold text-sunglow-300 uppercase tracking-wider block">Toko Penugasan</span>
+                        <span class="text-[10px] font-extrabold text-sunglow-300 uppercase tracking-wider block">Toko Tempat Bertugas</span>
                         <span class="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-300 bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                             Terhubung
@@ -142,7 +142,7 @@
                         </div>
                         <div>
                             <h2 class="text-sm font-extrabold text-darkbrown-900 leading-tight">Informasi Toko</h2>
-                            <p class="text-[11px] text-darkbrown-500">Cabang outlet tempat bertugas</p>
+                            <p class="text-[11px] text-darkbrown-500">Cabang tempat Anda bertugas</p>
                         </div>
                     </div>
 
@@ -182,15 +182,15 @@
                     <ul class="space-y-2 text-[11px] text-darkbrown-700 font-medium">
                         <li class="flex items-center gap-2">
                             <i data-lucide="check-circle" class="w-3.5 h-3.5 text-avocado-700 shrink-0"></i>
-                            <span>Transaksi & Checkout POS Kasir</span>
+                            <span>Transaksi dan Pembayaran di Kasir</span>
                         </li>
                         <li class="flex items-center gap-2">
                             <i data-lucide="check-circle" class="w-3.5 h-3.5 text-avocado-700 shrink-0"></i>
-                            <span>Scan Barcode & Alokasi Unit Fisik</span>
+                            <span>Pemindaian Kode Batang dan Penetapan Unit Fisik</span>
                         </li>
                         <li class="flex items-center gap-2">
                             <i data-lucide="check-circle" class="w-3.5 h-3.5 text-avocado-700 shrink-0"></i>
-                            <span>Serah Terima Barang (Pickup Order)</span>
+                            <span>Serah Terima Pesanan</span>
                         </li>
                         <li class="flex items-center gap-2">
                             <i data-lucide="check-circle" class="w-3.5 h-3.5 text-avocado-700 shrink-0"></i>

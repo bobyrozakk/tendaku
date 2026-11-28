@@ -135,11 +135,11 @@ class CampingPackageCatalogTest extends TestCase
         $response->assertSee('Paket Detail Lengkap');
         $response->assertSee('Tenda Dome 4P');
         $response->assertSee('Rp 275.000');
-        $response->assertSee('Harga Paket per Hari');
+        $response->assertSee('Harga paket per hari');
         $response->assertSee('/ hari');
         $response->assertSee($package->description);
         $response->assertSee($this->activeVendor->name);
-        $response->assertSee('2 item');
+        $response->assertSee('2 unit (1 jenis)');
         $response->assertSee('2x');
         $response->assertSee('3 hari');
 

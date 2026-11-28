@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -102,14 +104,73 @@ class OpenRouteService
             return $cached;
         }
 
+        // ORS sedang bermasalah: pakai perkiraan singkat tanpa menunggu timeout lagi.
+        $estimateKey = $cacheKey.':est';
+        $estimated = Cache::get($estimateKey);
+        if (is_array($estimated) && isset($estimated['distance_km'])) {
+            return array_merge($estimated, ['from_cache' => true]);
+        }
+
         $result = $this->requestDirections($apiKey, $profile, $apiCoordinates, $coordinatesMeta);
 
         if ($result['success'] === true) {
             $ttlMinutes = max(1, (int) config('services.openrouteservice.cache_ttl_minutes', 60));
             Cache::put($cacheKey, $result, now()->addMinutes($ttlMinutes));
+        } elseif ($result['status'] === self::STATUS_API_ERROR) {
+            $fallback = $this->estimatedResult(
+                $profile,
+                $coordinatesMeta,
+                self::straightLineKm($vendorLatitude, $vendorLongitude, $customerLatitude, $customerLongitude)
+            );
+            if ($fallback !== null) {
+                $ttl = max(30, (int) config('services.openrouteservice.fallback_ttl_seconds', 300));
+                Cache::put($estimateKey, $fallback, now()->addSeconds($ttl));
+
+                return $fallback;
+            }
         }
 
         return $result;
+    }
+
+    /**
+     * Jarak garis lurus (haversine) dalam km. Selalu <= jarak berkendara,
+     * jadi aman dipakai untuk menolak lokasi yang pasti terlalu jauh tanpa memanggil API.
+     */
+    public static function straightLineKm(float $lat1, float $lon1, float $lat2, float $lon2): float
+    {
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
+
+        return 2 * 6371.0088 * asin(min(1.0, sqrt($a)));
+    }
+
+    /**
+     * @param  array{vendor: array{0: float, 1: float}, customer: array{0: float, 1: float}}  $coordinatesMeta
+     * @return array<string, mixed>|null
+     */
+    protected function estimatedResult(string $profile, array $coordinatesMeta, float $straightKm): ?array
+    {
+        $factor = (float) config('services.openrouteservice.fallback_factor', 1.3);
+        if ($factor < 1.0) {
+            return null;
+        }
+
+        $km = round($straightKm * $factor, 2);
+
+        return [
+            'success' => true,
+            'status' => self::STATUS_OK,
+            'profile' => $profile,
+            'distance_meters' => round($km * 1000, 2),
+            'distance_km' => $km,
+            'duration_seconds' => null,
+            'coordinates' => $coordinatesMeta,
+            'from_cache' => false,
+            'estimated' => true,
+            'error_message' => null,
+        ];
     }
 
     /**
@@ -262,19 +323,24 @@ class OpenRouteService
         array $coordinatesMeta
     ): array {
         $endpoint = $this->buildDirectionsUrl($profile);
-        $timeout = max(1, (int) config('services.openrouteservice.timeout', 10));
-        $retryTimes = max(0, (int) config('services.openrouteservice.retry_times', 2));
-        $retrySleepMs = max(0, (int) config('services.openrouteservice.retry_sleep_ms', 300));
+        $timeout = max(1, (int) config('services.openrouteservice.timeout', 4));
+        $connectTimeout = max(1, (int) config('services.openrouteservice.connect_timeout', 2));
+        $retryTimes = max(0, (int) config('services.openrouteservice.retry_times', 1));
+        $retrySleepMs = max(0, (int) config('services.openrouteservice.retry_sleep_ms', 150));
 
         try {
             $response = Http::withHeaders([
                 'Authorization' => $apiKey,
                 'Accept' => 'application/json, application/geo+json',
             ])
+                ->connectTimeout($connectTimeout)
                 ->timeout($timeout)
+                // Retry hanya untuk gangguan jaringan / 5xx; 4xx (mis. 429, rute tidak ada) tidak diulang.
                 ->retry(
                     $retryTimes,
                     $retrySleepMs,
+                    fn ($e) => $e instanceof ConnectionException
+                        || ($e instanceof RequestException && $e->response->serverError()),
                     throw: false,
                 )
                 ->post($endpoint, [

@@ -24,7 +24,7 @@
 
     $sectionHeadingClass = 'font-display text-xl font-normal text-darkbrown-900 sm:text-2xl';
 
-    $stepperClass = 'flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-wheat-300 bg-wheat-100 font-extrabold text-darkbrown-800 transition hover:bg-wheat-200 disabled:cursor-not-allowed disabled:opacity-40';
+    $stepperClass = 'flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-wheat-300 bg-wheat-100 font-extrabold text-darkbrown-800 transition hover:bg-wheat-200 disabled:cursor-not-allowed disabled:opacity-40';
 @endphp
 
 {{--
@@ -33,117 +33,71 @@
 --}}
 <div class="grid grid-cols-1 items-start gap-x-6 gap-y-6 lg:grid-cols-12">
 
-    {{-- Foto produk --}}
-    <div
-        @if($mainImage) x-data="{ activeImage: @js($mainImage) }" @endif
-        class="lg:col-span-7 lg:col-start-1 lg:row-start-1"
-    >
-        <div class="rounded-[2rem] border border-wheat-200/90 bg-white p-2.5 shadow-tendaku-sm">
-            <div class="relative aspect-[4/3] overflow-hidden rounded-3xl bg-gradient-to-br from-wheat-100 to-sunglow-100">
+    {{-- Foto produk (carousel: bisa digeser + auto-scroll, bar durasi di bawah foto) --}}
+    <div class="lg:col-span-7 lg:col-start-1 lg:row-start-1">
+        <x-photo-carousel :images="$galleryImages" :alt="$item->name">
+        @if($vendor)
+            @php
+                $visitStorePillClass = 'inline-flex min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-xs font-bold text-darkbrown-900 shadow-md backdrop-blur transition hover:bg-white hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-darkbrown-900';
+            @endphp
 
-                <span
-                    class="absolute inset-0 flex items-center justify-center text-darkbrown-300"
-                    aria-hidden="true"
-                >
-                    <i data-lucide="tent" class="h-14 w-14"></i>
-                </span>
+            {{-- Gradasi gelap di atas foto supaya teks header terbaca --}}
+            <div
+                class="pointer-events-none absolute inset-x-0 top-0 h-24 sm:h-32 bg-gradient-to-b from-darkbrown-900/80 via-darkbrown-900/30 to-transparent"
+                aria-hidden="true"
+            ></div>
 
-                @if($mainImage)
-                    <img
-                        src="{{ $mainImage }}"
-                        :src="activeImage"
-                        alt="{{ $item->name }}"
-                        decoding="async"
-                        onerror="this.style.display='none'"
-                        class="relative h-full w-full object-cover transition-all duration-300"
-                        id="mainProductImage"
-                    />
-                @endif
+            {{-- Header toko: identitas + lokasi di kiri, tombol pill di kanan --}}
+            <div class="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3.5 sm:p-4">
+                <div class="flex min-w-0 items-center gap-3 text-white">
+                    @if(! empty($vendor->logo_url))
+                        <img
+                            src="{{ $vendor->logo_url }}"
+                            alt="{{ $vendorName }}"
+                            class="h-11 w-11 shrink-0 rounded-2xl border-2 border-white/80 bg-white object-cover"
+                        />
+                    @else
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-white/80 bg-gradient-to-br from-avocado-600 to-avocado-800 text-sm font-extrabold">
+                            {{ strtoupper(substr($vendorName, 0, 2)) }}
+                        </div>
+                    @endif
 
-                @if($vendor)
-                    @php
-                        $visitStorePillClass = 'inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full bg-white/95 px-3.5 py-2 text-xs font-bold text-darkbrown-900 shadow-md backdrop-blur transition hover:bg-white hover:text-avocado-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-darkbrown-900';
-                    @endphp
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <p class="min-w-0 truncate text-sm font-extrabold leading-tight drop-shadow">
+                                {{ $vendorName }}
+                            </p>
 
-                    {{-- Gradasi gelap di atas foto supaya teks header terbaca --}}
-                    <div
-                        class="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-darkbrown-900/80 via-darkbrown-900/30 to-transparent"
-                        aria-hidden="true"
-                    ></div>
-
-                    {{-- Header toko: identitas + lokasi di kiri, tombol pill di kanan --}}
-                    <div class="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3.5 sm:p-4">
-                        <div class="flex min-w-0 items-center gap-3 text-white">
-                            @if(! empty($vendor->logo_url))
-                                <img
-                                    src="{{ $vendor->logo_url }}"
-                                    alt="{{ $vendorName }}"
-                                    class="h-11 w-11 shrink-0 rounded-2xl border-2 border-white/80 bg-white object-cover"
-                                />
-                            @else
-                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 border-white/80 bg-gradient-to-br from-avocado-600 to-avocado-800 text-sm font-extrabold">
-                                    {{ strtoupper(substr($vendorName, 0, 2)) }}
-                                </div>
-                            @endif
-
-                            <div class="min-w-0">
-                                <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                    <p class="truncate text-sm font-extrabold leading-tight drop-shadow">
-                                        {{ $vendorName }}
-                                    </p>
-
-                                    <span class="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold backdrop-blur">
-                                        Official
-                                    </span>
-                                </div>
-
-                                <p class="mt-0.5 flex items-center gap-1 text-xs text-white/90">
-                                    <i data-lucide="map-pin" class="h-3 w-3 shrink-0"></i>
-                                    <span class="truncate">{{ $vendor->city ?: 'Kota Penyedia' }}</span>
-                                </p>
-                            </div>
+                            <span class="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold backdrop-blur">
+                                Official
+                            </span>
                         </div>
 
-                        @auth
-                            <a href="{{ $storeUrl }}" class="{{ $visitStorePillClass }}">
-                                <i data-lucide="store" class="h-3.5 w-3.5"></i>
-                                <span>Kunjungi Toko</span>
-                            </a>
-                        @else
-                            <button
-                                type="button"
-                                @click="$dispatch('open-guest-store-modal')"
-                                class="{{ $visitStorePillClass }}"
-                            >
-                                <i data-lucide="store" class="h-3.5 w-3.5"></i>
-                                <span>Kunjungi Toko</span>
-                            </button>
-                        @endauth
+                        <p class="mt-0.5 flex items-center gap-1 text-xs text-white/90">
+                            <i data-lucide="map-pin" class="h-3 w-3 shrink-0"></i>
+                            <span class="truncate">{{ $vendor->city ?: 'Kota Penyedia' }}</span>
+                        </p>
                     </div>
-                @endif
-            </div>
-        </div>
+                </div>
 
-        @if(count($galleryImages) > 1)
-            <div class="flex flex-wrap gap-2 px-1 pb-1 pt-3">
-                @foreach($galleryImages as $index => $imgUrl)
+                @auth
+                    <a href="{{ $storeUrl }}" class="{{ $visitStorePillClass }}">
+                        <i data-lucide="store" class="h-3.5 w-3.5"></i>
+                        <span>Kunjungi Toko</span>
+                    </a>
+                @else
                     <button
                         type="button"
-                        @click="activeImage = @js($imgUrl)"
-                        :class="activeImage === @js($imgUrl) ? 'ring-2 ring-avocado-500 ring-offset-2 border-transparent' : 'opacity-70 hover:opacity-100 border-wheat-200'"
-                        aria-label="Tampilkan foto {{ $index + 1 }}"
-                        class="relative h-16 w-16 overflow-hidden rounded-2xl border bg-wheat-50 transition-all"
+                        @click="$dispatch('open-guest-store-modal')"
+                        class="{{ $visitStorePillClass }}"
                     >
-                        <img
-                            src="{{ $imgUrl }}"
-                            alt="Thumbnail {{ $index + 1 }}"
-                            loading="lazy"
-                            class="h-full w-full object-cover"
-                        />
+                        <i data-lucide="store" class="h-3.5 w-3.5"></i>
+                        <span>Kunjungi Toko</span>
                     </button>
-                @endforeach
+                @endauth
             </div>
         @endif
+        </x-photo-carousel>
     </div>
 
     {{-- Panel beli: nama, harga sewa, ketersediaan, jumlah, CTA --}}
@@ -158,7 +112,7 @@
             </h1>
 
             <div>
-                <p class="text-[11px] font-bold uppercase tracking-widest text-darkbrown-500">
+                <p class="text-xs font-bold uppercase tracking-widest text-darkbrown-500">
                     Tarif Sewa Peralatan
                 </p>
 
@@ -238,7 +192,7 @@
                     <x-stock-status :stock="$this->availableStock" />
 
                     @error('quantity')
-                        <p class="flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                        <p class="flex items-center gap-1 text-xs font-semibold text-red-600">
                             {{ $message }}
                         </p>
                     @enderror
@@ -249,7 +203,8 @@
                 </p>
             </div>
 
-            <div class="space-y-3 border-t border-wheat-100 pt-5">
+            {{-- Desktop saja. Di mobile/tablet semua aksi ada di sticky bar bawah layar. --}}
+            <div class="hidden space-y-3 lg:block lg:border-t lg:border-wheat-100 lg:pt-5">
                 {{-- Khusus anggota: muncul jika produk ini sudah ada di keranjang --}}
                 @if($inCart && ! $isGuest)
                     <div class="flex flex-col gap-2 rounded-2xl border border-avocado-200 bg-avocado-50 p-3.5">
@@ -270,15 +225,18 @@
                     </div>
                 @endif
 
-                @include('livewire.customer.partials.product-booking-actions', [
-                    'idSuffix' => '',
-                ])
+                {{-- Desktop saja. Di mobile/tablet tombol ada di sticky bar bawah layar. --}}
+                <div class="hidden lg:block space-y-3">
+                    @include('livewire.customer.partials.product-booking-actions', [
+                        'idSuffix' => '',
+                    ])
 
-                @if($isGuest)
-                    <p class="text-center text-[11px] leading-relaxed text-darkbrown-500">
-                        Langsung checkout tanpa akun. Isi jadwal sewa dan data diri di halaman Booking.
-                    </p>
-                @endif
+                    @if($isGuest)
+                        <p class="text-center text-xs leading-relaxed text-darkbrown-500">
+                            Langsung checkout tanpa akun. Isi jadwal sewa dan data diri di halaman Booking.
+                        </p>
+                    @endif
+                </div>
             </div>
         </div>
     </aside>
@@ -338,7 +296,7 @@
                     @click="open = !open"
                     :aria-expanded="open"
                     aria-controls="syarat-ketentuan"
-                    class="flex w-full cursor-pointer items-center justify-between gap-3 text-left"
+                    class="flex min-h-[44px] w-full cursor-pointer items-center justify-between gap-3 rounded-lg py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                 >
                     <span>Syarat dan Ketentuan</span>
 
@@ -399,5 +357,23 @@
                 </li>
             </ul>
         </section>
+    </div>
+    {{-- Bar sewa tetap di layar kecil: harga + tombol checkout/keranjang --}}
+    <div class="fixed inset-x-0 bottom-0 z-30 border-t border-wheat-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(43,34,2,0.25)] backdrop-blur lg:hidden">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+                <p class="text-xs text-darkbrown-500">Tarif per hari</p>
+                <p class="truncate text-lg font-extrabold leading-tight text-darkbrown-900">
+                    Rp {{ number_format($item->daily_rate, 0, ',', '.') }}
+                </p>
+            </div>
+
+            <div class="ml-auto shrink-0">
+                @include('livewire.customer.partials.product-booking-actions', [
+                    'idSuffix' => '-sticky',
+                    'compact' => true,
+                ])
+            </div>
+        </div>
     </div>
 </div>

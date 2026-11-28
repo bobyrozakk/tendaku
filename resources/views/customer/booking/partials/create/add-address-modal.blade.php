@@ -40,7 +40,7 @@
                                 <p class="text-xs text-darkbrown-500">Alamat otomatis tersimpan ke akun Anda untuk sewa berikutnya.</p>
                             </div>
                         </div>
-                        <button type="button" @click="closeAddAddressModal()" class="text-darkbrown-400 hover:text-darkbrown-700 p-1.5 rounded-lg hover:bg-wheat-100 transition">
+                        <button type="button" @click="closeAddAddressModal()" class="inline-flex h-11 w-11 items-center justify-center text-darkbrown-400 hover:text-darkbrown-700 rounded-lg hover:bg-wheat-100 transition">
                             <i data-lucide="x" class="w-5 h-5"></i>
                         </button>
                     </div>
@@ -62,11 +62,11 @@
                                 <template x-for="l in ['Rumah', 'Kos', 'Kantor']" :key="l">
                                     <button type="button" @click="newAddressForm.label = l"
                                             :class="newAddressForm.label === l ? 'bg-avocado-700 text-white border-avocado-700' : 'bg-wheat-50 text-darkbrown-700 border-wheat-300 hover:bg-wheat-100'"
-                                            class="px-3 py-1 text-xs font-semibold rounded-lg border transition" x-text="l"></button>
+                                            class="min-h-[44px] sm:min-h-0 px-3 py-1 text-xs font-semibold rounded-lg border transition" x-text="l"></button>
                                 </template>
                             </div>
                             <input type="text" x-model="newAddressForm.label" required placeholder="Cth: Rumah, Kos, Kantor, Villa"
-                                   class="{{ $inputBase }} text-xs">
+                                   class="{{ $inputBase }} text-base sm:text-xs">
                             <p x-show="newAddressErrors.label" x-text="newAddressErrors.label?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                         </div>
 
@@ -75,13 +75,15 @@
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Nama Penerima *</label>
                                 <input type="text" x-model="newAddressForm.recipient_name" required placeholder="Nama lengkap penerima"
-                                       class="{{ $inputBase }} text-xs">
+                                       class="{{ $inputBase }} text-base sm:text-xs">
                                 <p x-show="newAddressErrors.recipient_name" x-text="newAddressErrors.recipient_name?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">No. WhatsApp Penerima *</label>
                                 <input type="tel" x-model="newAddressForm.phone_number" required placeholder="08xxxxxxxxxx"
-                                       class="{{ $inputBase }} text-xs">
+                                       inputmode="numeric" pattern="[0-9]*" maxlength="13" autocomplete="tel-national"
+                                       @input="$el.value = $el.value.replace(/\D/g, '').slice(0, 13); newAddressForm.phone_number = $el.value"
+                                       class="{{ $inputBase }} text-base sm:text-xs">
                                 <p x-show="newAddressErrors.phone_number" x-text="newAddressErrors.phone_number?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                         </div>
@@ -90,7 +92,7 @@
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Alamat Lengkap (Jalan, No, RT/RW) *</label>
                             <textarea rows="2" x-model="newAddressForm.full_address" data-address-field="full_address" required placeholder="Nama jalan, nomor rumah/gedung, RT/RW"
-                                      class="{{ $inputBase }} resize-none text-xs"></textarea>
+                                      class="{{ $inputBase }} resize-none text-base sm:text-xs"></textarea>
                             <p x-show="newAddressErrors.full_address" x-text="newAddressErrors.full_address?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                         </div>
 
@@ -99,13 +101,13 @@
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Provinsi *</label>
                                 <input type="text" x-model="newAddressForm.province" data-address-field="province" required placeholder="Cth: Jawa Barat"
-                                       class="{{ $inputBase }} text-xs">
+                                       class="{{ $inputBase }} text-base sm:text-xs">
                                 <p x-show="newAddressErrors.province" x-text="newAddressErrors.province?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kota / Kabupaten *</label>
                                 <input type="text" x-model="newAddressForm.city" data-address-field="city" required placeholder="Cth: Bandung"
-                                       class="{{ $inputBase }} text-xs">
+                                       class="{{ $inputBase }} text-base sm:text-xs">
                                 <p x-show="newAddressErrors.city" x-text="newAddressErrors.city?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                         </div>
@@ -115,13 +117,13 @@
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kecamatan *</label>
                                 <input type="text" x-model="newAddressForm.district" data-address-field="district" required placeholder="Cth: Coblong"
-                                       class="{{ $inputBase }} text-xs">
+                                       class="{{ $inputBase }} text-base sm:text-xs">
                                 <p x-show="newAddressErrors.district" x-text="newAddressErrors.district?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kelurahan / Desa</label>
                                 <input type="text" x-model="newAddressForm.village" data-address-field="village" placeholder="Cth: Dago"
-                                       class="{{ $inputBase }} text-xs">
+                                       class="{{ $inputBase }} text-base sm:text-xs">
                             </div>
                         </div>
 
@@ -129,13 +131,16 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Kode Pos</label>
-                                <input type="text" x-model="newAddressForm.postal_code" data-address-field="postal_code" placeholder="40135" maxlength="10"
-                                       class="{{ $inputBase }} text-xs">
+                                <input type="text" x-model="newAddressForm.postal_code" data-address-field="postal_code" placeholder="40135"
+                                       inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="postal-code"
+                                       @input="$el.value = $el.value.replace(/\D/g, '').slice(0, 5); newAddressForm.postal_code = $el.value"
+                                       class="{{ $inputBase }} text-base sm:text-xs">
+                                <p x-show="newAddressErrors.postal_code" x-text="newAddressErrors.postal_code?.[0]" class="text-[11px] text-red-600 mt-1"></p>
                             </div>
                             <div class="sm:col-span-2">
                                 <label class="block text-xs font-bold uppercase tracking-wider text-darkbrown-700 mb-1">Patokan Lokasi</label>
                                 <input type="text" x-model="newAddressForm.notes" placeholder="Cth: Depan minimarket, pagar hitam"
-                                       class="{{ $inputBase }} text-xs">
+                                       class="{{ $inputBase }} text-base sm:text-xs">
                             </div>
                         </div>
 
@@ -155,17 +160,17 @@
                         <div class="flex items-center gap-2 pt-1">
                             <input type="checkbox" id="modal_is_default" x-model="newAddressForm.is_default"
                                    class="rounded border-wheat-300 text-avocado-700 focus:ring-avocado-600">
-                            <label for="modal_is_default" class="text-xs text-darkbrown-800 font-medium">Jadikan alamat utama untuk pengantaran berikutnya</label>
+                            <label for="modal_is_default" class="inline-flex min-h-[44px] sm:min-h-0 items-center text-xs text-darkbrown-800 font-medium cursor-pointer">Jadikan alamat utama untuk pengantaran berikutnya</label>
                         </div>
 
                         <!-- Action Buttons -->
                         <div class="flex items-center justify-end gap-3 pt-4 border-t border-wheat-200">
                             <button type="button" @click="closeAddAddressModal()"
-                                    class="px-4 py-2 text-xs font-bold text-darkbrown-700 bg-white border border-wheat-300 hover:bg-wheat-100 rounded-xl transition">
+                                    class="min-h-[44px] sm:min-h-0 px-4 py-2 text-xs font-bold text-darkbrown-700 bg-white border border-wheat-300 hover:bg-wheat-100 rounded-xl transition">
                                 Batal
                             </button>
                             <button type="button" @click="saveAddress()" :disabled="newAddressSubmitting"
-                                    class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 rounded-xl shadow-sm disabled:opacity-50 transition">
+                                    class="inline-flex min-h-[44px] sm:min-h-0 items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-avocado-700 hover:bg-avocado-800 rounded-xl shadow-sm disabled:opacity-50 transition">
                                 <span x-show="!newAddressSubmitting">Simpan & Gunakan</span>
                                 <span x-show="newAddressSubmitting">Menyimpan...</span>
                             </button>

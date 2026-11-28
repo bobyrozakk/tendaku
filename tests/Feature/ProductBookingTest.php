@@ -85,7 +85,8 @@ class ProductBookingTest extends TestCase
         $this->createUnit($product, 'TD-001');
 
         Livewire::test(ProductBooking::class, ['product' => $product])
-            ->assertSee('Checkout Sekarang')
+            ->assertSee('Checkout')
+            ->assertSee('Langsung checkout tanpa akun')
             ->assertDontSee('Masukkan ke Keranjang');
     }
 
