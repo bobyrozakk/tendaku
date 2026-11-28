@@ -15,10 +15,6 @@
                 Tidak ada peralatan yang ditemukan.
             @endif
         </p>
-        <div class="mt-1 flex items-start gap-1.5 text-xs text-darkbrown-600">
-            <i data-lucide="calendar" class="mt-0.5 h-3.5 w-3.5 shrink-0 text-avocado-600" aria-hidden="true"></i>
-            <x-stock-period :date-range="$dateRange" />
-        </div>
     </div>
 
     <div class="flex w-full shrink-0 items-center gap-2 sm:w-auto">

@@ -223,7 +223,7 @@ document.addEventListener("alpine:init", () => {
                 this.returnDate = iso;
                 this.returnTime = this.pickupTime;
                 this.onReturnChange();
-                this.calOpen = null;
+                this.calOpen = "pickup";
                 return;
             }
             // Langkah 1 (atau mulai ulang rentang): set tanggal ambil, lanjut pilih kembali

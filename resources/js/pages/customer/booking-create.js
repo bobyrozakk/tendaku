@@ -454,7 +454,7 @@ document.addEventListener("alpine:init", () => {
             ) {
                 this.returnDate = iso;
                 this.onReturnChange();
-                this.calOpen = null;
+                this.calOpen = "pickup";
                 return;
             }
 

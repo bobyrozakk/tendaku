@@ -293,7 +293,7 @@
                                 </p>
                             @else
                                 <p class="mt-1 text-xs leading-relaxed text-darkbrown-500">
-                                    Sudah mencakup semua alat. Contoh {{ $duration }} hari = {{ $rupiah($defaultTotal) }}.
+                                    Sudah mencakup semua alat.
                                 </p>
                             @endif
                         </div>

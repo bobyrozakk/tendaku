@@ -6,7 +6,7 @@
                         'subtitle' => 'Pilih tanggal sewa dan lihat prakiraan cuaca di lokasi.',
                     ])
 
-                    <div class="px-5 sm:px-6 pt-4 pb-5 sm:pb-6" @click.outside="calOpen = null; timeOpen = false">
+                    <div class="px-5 sm:px-6 pt-4 pb-5 sm:pb-6" @click.outside="calOpen = null; timeOpen = false" @keydown.escape.window="calOpen = null; timeOpen = false">
                         <div class="grid grid-cols-1 gap-3 md:grid-cols-12 md:items-start md:gap-x-4 md:gap-y-4">
 
                             <div class="relative md:col-span-6">
@@ -92,45 +92,7 @@
                                     <span class="text-xs text-darkbrown-500">Kembali paling lambat <strong class="text-darkbrown-800" x-text="pickupTime"></strong></span>
                                 </div>
 
-                                <!-- Dropdown kalender rentang (Senin - Minggu) -->
-                                <div x-show="calOpen" x-cloak x-transition.opacity.duration.150ms role="dialog" aria-label="Pilih rentang tanggal sewa"
-                                     class="absolute top-full left-0 mt-2 z-40 w-[21rem] max-w-[calc(100vw-2.5rem)] p-4 rounded-2xl bg-white border border-wheat-200 shadow-tendaku-lg">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <button type="button" @click="prevMonth()" aria-label="Bulan sebelumnya" class="w-11 h-11 sm:w-9 sm:h-9 rounded-full hover:bg-wheat-100 flex items-center justify-center text-darkbrown-800">
-                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-                                        </button>
-                                        <span class="text-sm font-extrabold text-darkbrown-900" x-text="calendarTitle"></span>
-                                        <button type="button" @click="nextMonth()" aria-label="Bulan berikutnya" class="w-11 h-11 sm:w-9 sm:h-9 rounded-full hover:bg-wheat-100 flex items-center justify-center text-darkbrown-800">
-                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                                        </button>
-                                    </div>
-                                    <p class="text-center text-xs font-bold text-darkbrown-900 bg-sunglow-200 border border-sunglow-300 rounded-lg px-3 py-1.5 mb-3"
-                                       x-text="calOpen === 'return' ? 'Pilih tanggal kembali' : 'Pilih tanggal ambil'"></p>
-                                    <div class="grid grid-cols-7 text-center text-[11px] font-semibold text-darkbrown-500 mb-1.5">
-                                        <span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span>
-                                    </div>
-                                    <div class="grid grid-cols-7 gap-y-1 text-center">
-                                        <template x-for="(cell, idx) in calendarDays" :key="idx">
-                                            <div class="h-11 sm:h-10 flex items-center justify-center"
-                                                 :class="[cell.inRange ? 'bg-avocado-100' : '', cell.start ? 'rounded-l-full' : '', cell.end ? 'rounded-r-full' : '']">
-                                                <template x-if="cell.empty"><span class="block h-9"></span></template>
-                                                <template x-if="!cell.empty">
-                                                    <button type="button" :disabled="cell.disabled" @click="selectCalDate(cell.iso)"
-                                                            :class="[
-                                                                (cell.start || cell.end) ? 'bg-avocado-900 text-white font-bold shadow-xs' :
-                                                                (cell.unavailable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
-                                                                (cell.disabled ? 'text-wheat-400 opacity-40 cursor-not-allowed' :
-                                                                (cell.inRange ? 'text-avocado-900 font-semibold' : 'text-darkbrown-800 hover:bg-wheat-100 font-medium')))
-                                                                , (cell.outside && !cell.start && !cell.end) ? 'opacity-50' : ''
-                                                            ]"
-                                                            class="w-full max-w-[2.75rem] h-11 sm:w-9 sm:h-9 rounded-full inline-flex items-center justify-center transition text-sm"
-                                                            x-text="cell.day">
-                                                    </button>
-                                                </template>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
+                                <x-date-range-calendar />
                             </div>
 
                             @if (! $isGuest)
