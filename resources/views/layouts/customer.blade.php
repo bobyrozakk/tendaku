@@ -43,8 +43,6 @@
 
     <x-toast />
 
-    <x-desktop-mode-notice />
-
     <main class="flex-1 w-full {{ $fullWidth ? '' : 'max-w-7xl mx-auto p-4 sm:p-6 lg:p-8' }}">
         {{ $slot }}
     </main>

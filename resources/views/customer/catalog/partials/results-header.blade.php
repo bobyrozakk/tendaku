@@ -5,7 +5,7 @@
                 Daftar Peralatan Tersedia
             </h2>
             <span wire:loading class="animate-pulse text-[11px] font-semibold text-avocado-700">
-                Memuat data...
+                <i data-lucide="loader" class="h-3.5 w-3.5" aria-hidden="true"></i>
             </span>
         </div>
         <p class="mt-1 text-xs text-darkbrown-600" role="status" aria-live="polite">

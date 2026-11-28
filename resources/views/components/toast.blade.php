@@ -71,8 +71,9 @@
                 <button
                     type="button"
                     @click="remove(toast.id)"
-                    class="shrink-0 rounded-lg p-1 text-darkbrown-400 transition hover:bg-wheat-100 hover:text-darkbrown-700"
+                    class="shrink-0 -m-2 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-darkbrown-400 transition hover:bg-wheat-100 hover:text-darkbrown-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-avocado-500"
                     title="Tutup"
+                    aria-label="Tutup notifikasi"
                 >
                     <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

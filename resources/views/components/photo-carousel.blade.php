@@ -127,15 +127,14 @@
 
             {{-- Garis durasi: menyatu dengan foto, warna bening. Klik segmen untuk lompat ke foto itu --}}
             @if ($count > 1)
-                <div class="absolute z-20 flex gap-1.5" style="left:1rem;right:1rem;bottom:0.5rem" role="group" aria-label="Pilih foto">
+                <div class="absolute z-20 flex gap-1.5" style="left:1rem;right:1rem;bottom:0" role="group" aria-label="Pilih foto">
                     <template x-for="(img, i) in images" :key="i">
                         <button
                             type="button"
                             @click="go(i)"
                             :aria-label="'Tampilkan foto ' + (i + 1)"
                             :aria-current="i === index ? 'true' : 'false'"
-                            class="group flex flex-1 cursor-pointer items-center focus-visible:outline-none"
-                            style="height:1.25rem"
+                            class="group flex min-h-[44px] flex-1 cursor-pointer items-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1"
                         >
                             <span class="relative block w-full overflow-hidden rounded-full" style="height:3px;background:rgba(255,255,255,0.55);box-shadow:0 0 3px rgba(0,0,0,0.25)">
                                 <span class="absolute inset-y-0 left-0 rounded-full" style="background:#fff" :style="{ width: fill(i) + '%' }"></span>
